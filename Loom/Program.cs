@@ -1,3 +1,10 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using Loom;
 
-Console.WriteLine("Hello, World!");
+var file = FileLoader.LoadSingle("test.loom");
+var lexer = new Lexer(file);
+var tokens = lexer.Tokenize();
+
+foreach (var token in tokens)
+{
+    Console.WriteLine(token.Examine());
+}
