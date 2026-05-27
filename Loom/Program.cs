@@ -2,12 +2,14 @@
 using Loom.Diagnostics;
 using Loom.Lexing;
 using Loom.Parsing;
+using Loom.Parsing.AST.Traversal;
 
 var file = FileLoader.LoadSingle("test.loom");
 var lexer = new Lexer(file);
 var lexerResult = lexer.Tokenize();
 var parser = new Parser(lexerResult.Tokens);
 var parserResult = parser.Parse();
+var astDisplayer = new ASTDisplayer();
 
 DiagnosticBag.FilterSeverity = DiagnosticSeverity.Error;
 var lexerDiagnostics = lexerResult.Diagnostics.ToString();
@@ -20,7 +22,9 @@ foreach (var token in lexerResult.Tokens)
 }
 Console.WriteLine();
 Console.WriteLine("AST:");
-Console.WriteLine(parserResult.Tree);
+astDisplayer.Display(parserResult.Tree);
+Console.WriteLine();
+Console.WriteLine($"Rebuilt program: {parserResult.Tree}");
 
 Console.WriteLine();
 Console.WriteLine("Diagnostics:");

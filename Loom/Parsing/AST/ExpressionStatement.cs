@@ -1,3 +1,5 @@
+using Loom.Parsing.AST.Traversal;
+
 namespace Loom.Parsing.AST;
 
 public class ExpressionStatement(Expression expression) : Statement([expression])
