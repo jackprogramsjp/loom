@@ -12,6 +12,10 @@ public interface IVisitor<out T>
     T VisitBinaryOperator(BinaryOperator binaryOperator);
     T VisitUnaryOperator(UnaryOperator unaryOperator);
     
+    T VisitTypeName(TypeName typeName);
+    T VisitPrimitiveType(PrimitiveType primitiveType);
+    T VisitOptionalType(OptionalType optionalType);
+    
     T VisitColonTypeClause(ColonTypeClause colonTypeClause);
     T VisitEqualsValueClause(EqualsValueClause equalsValueClause);
     

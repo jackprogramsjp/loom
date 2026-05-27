@@ -53,44 +53,52 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
     private Expression ParseAdditive()
     {
         var left = ParseMultiplicative();
-        if (!Match(SyntaxKind.Plus, SyntaxKind.Minus))
-            return left;
+        while (Match(SyntaxKind.Plus, SyntaxKind.Minus))
+        {
+            var op = Last();
+            var right = ParseMultiplicative();
+            left = new BinaryOperator(op, left, right);
+        }
 
-        var op = Last();
-        var right = ParseMultiplicative();
-        return new BinaryOperator(op, left, right);
+        return left;
     }
     
     private Expression ParseMultiplicative()
     {
         var left = ParseExponential();
-        if (!Match(SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.Percent))
-            return left;
+        while (Match(SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.Percent))
+        {
+            var op = Last();
+            var right = ParseExponential();
+            left = new BinaryOperator(op, left, right);
+        }
 
-        var op = Last();
-        var right = ParseExponential();
-        return new BinaryOperator(op, left, right);
+        return left;
     }
     
     private Expression ParseExponential()
     {
         var left = ParseUnary();
-        if (!Match(SyntaxKind.Carat))
-            return left;
-        
-        var op = Last();
-        var right = ParseExponential();
-        return new BinaryOperator(op, left, right);
+        while (Match(SyntaxKind.Carat))
+        {
+            var op = Last();
+            var right = ParseExponential();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
     }
 
     private Expression ParseUnary()
-    {
-        if (!Match(SyntaxFacts.IsUnaryOperator))
-            return ParsePrimary();
+    { 
+        var operand = ParsePrimary();
+        while (Match(SyntaxFacts.IsUnaryOperator))
+        {
+            var op = Last();
+            operand = new UnaryOperator(op, operand);
+        }
 
-        var op = Last();
-        var operand = ParseExpression();
-        return new UnaryOperator(op, operand);
+        return operand;
     }
 
     private Expression ParsePrimary()
@@ -117,8 +125,32 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
         return new NullExpression();   
     }
 
-    private TypeExpression ParseType()
+    private TypeExpression ParseType() => ParseOptionalType();
+
+    private TypeExpression ParseOptionalType()
     {
+        var inner = ParsePrimaryType();
+        if (Current().Kind == SyntaxKind.QuestionQuestion)
+        {
+            Diagnostics.Error(Last().Span, InternalCodes.RedundantOptionalType, "Cannot make already optional type optional.");
+            Advance();
+        }
+
+        if (!Match(SyntaxKind.Question))
+            return inner;
+
+        var question = Last();
+        return new OptionalType(question, inner);
+    }
+
+    private TypeExpression ParsePrimaryType()
+    {
+        if (Match(SyntaxKind.Identifier))
+        {
+            var name = Last();
+            return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
+        }
+
         Diagnostics.Error(Current().Span, InternalCodes.UnexpectedType, "Unexpected type.");
         return new NullTypeExpression();
     }

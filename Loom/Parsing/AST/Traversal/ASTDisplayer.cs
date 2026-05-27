@@ -63,6 +63,20 @@ public class ASTDisplayer : IVisitor<string>
         return "UnaryOperator(\n" + op + operand + Indented(")");
     }
 
+    public string VisitTypeName(TypeName typeName) => $"TypeName({typeName})";
+
+    public string VisitPrimitiveType(PrimitiveType primitiveType) => $"PrimitiveType({primitiveType})";
+
+    public string VisitOptionalType(OptionalType optionalType)
+    {
+        _indent++;
+        
+        var type = Indented($"requiredType: {Visit(optionalType.RequiredType)}\n");
+        
+        _indent--;
+        return "OptionalType(\n" + type + Indented(")");
+    }
+
     public string VisitColonTypeClause(ColonTypeClause colonTypeClause)
     {
         _indent++;

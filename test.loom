@@ -1,1 +1,1 @@
-let abc = 1 + 2 * 3;
+let abc: number?? = 1 + 2 * 3;
