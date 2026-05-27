@@ -1,8 +1,6 @@
-using Loom.Diagnostics.Debug;
-
 namespace Loom.Syntax;
 
-public class Token : IExaminable
+public class Token
 {
     public SyntaxKind Kind { get; }
     public LocationSpan Span { get; }
@@ -17,6 +15,6 @@ public class Token : IExaminable
 
     public string Examine()
     {
-        return $"Token {{ kind: {Kind}, span: {Span.Examine()}, text: \"{Text}\" }}";
+        return $"Token {{ kind: {Kind}, span: {Span}, text: \"{Text}\" }}";
     }
 }

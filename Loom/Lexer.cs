@@ -1,9 +1,10 @@
 using System.Text.RegularExpressions;
+using Loom.Diagnostics;
 using Loom.Syntax;
 
 namespace Loom;
 
-public class Lexer
+public class Lexer : Diagnosable
 {
     private readonly SourceFile _file;
     private int _character = 0;
@@ -41,13 +42,14 @@ public class Lexer
 
     private IEnumerable<Token> Lex()
     {
+        var start = GetLocation();
         var match = _regex.Match(_file.SourceText, _position);
         if (!match.Success || match.Index != _position)
         {
-            throw new Exception($"Unexpected character at line {_line}, col {_character}"); // TODO: real errors
+            var span = new LocationSpan(start, start);
+            Diagnostics.Error(span, InternalCodes.UnexpectedCharacter, "Unexpected character.");
         }
 
-        var start = GetLocation();
         _position  = match.Index + match.Length;
         foreach (var (kind, _) in _patterns)
         {
@@ -68,6 +70,8 @@ public class Lexer
             {
                 var end = GetLocation();
                 var span = new LocationSpan(start, end);
+                Diagnostics.Info(span, "Lexed token (" + kind + ")");
+                
                 yield return new Token(kind, span);
             }
                 
