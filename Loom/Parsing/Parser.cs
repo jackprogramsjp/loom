@@ -10,7 +10,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
 
     public ParserResult Parse()
     {
-        var statements = new List<Statement>();
+        var statements = new List<ASTNode>();
         while (!IsEof())
             statements.Add(ParseStatement());
         
@@ -132,7 +132,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
         var inner = ParsePrimaryType();
         if (Current().Kind == SyntaxKind.QuestionQuestion)
         {
-            Diagnostics.Error(Last().Span, InternalCodes.RedundantOptionalType, "Cannot make already optional type optional.");
+            Diagnostics.Error(inner.Span, InternalCodes.RedundantOptionalType, "Cannot make already optional type optional.");
             Advance();
         }
 

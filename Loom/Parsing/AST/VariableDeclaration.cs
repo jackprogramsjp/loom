@@ -4,7 +4,7 @@ using Loom.Syntax;
 namespace Loom.Parsing.AST;
 
 public class VariableDeclaration(Token keyword, Token name, ColonTypeClause? colonTypeClause, EqualsValueClause? equalsValueClause)
-    : Statement([colonTypeClause?.Type, equalsValueClause?.Value])
+    : Statement([keyword, name, ..colonTypeClause?.Tokens ?? [], ..equalsValueClause?.Tokens ?? []], [colonTypeClause?.Type, equalsValueClause?.Value])
 {
     public Token Keyword { get; } = keyword;
     public Token Name { get; } = name;
@@ -12,5 +12,4 @@ public class VariableDeclaration(Token keyword, Token name, ColonTypeClause? col
     public EqualsValueClause? EqualsValueClause { get; } = equalsValueClause;
 
     public override T Accept<T>(IVisitor<T> visitor) => visitor.VisitVariableDeclaration(this);
-    public override string ToString() => $"{Keyword.Text} {Name.Text}{ColonTypeClause}{EqualsValueClause}";
 }

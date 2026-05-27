@@ -3,11 +3,10 @@ using Loom.Syntax;
 
 namespace Loom.Parsing.AST;
 
-public class UnaryOperator(Token @operator, Expression operand) : Expression([operand])
+public class UnaryOperator(Token @operator, Expression operand) : Expression([@operator], [operand])
 {
     public Token Operator { get; } = @operator;
     public Expression Operand { get; } = operand;
 
     public override T Accept<T>(IVisitor<T> visitor) => visitor.VisitUnaryOperator(this);
-    public override string ToString() => Operator.Text + Operand;
 }
