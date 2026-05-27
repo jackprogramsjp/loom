@@ -26,11 +26,11 @@ public class Lexer : Diagnosable
             var span = GetSpan(start);
             if (rule == null)
             {
-                Diagnostics.Error(span, InternalCodes.UnexpectedCharacter, "Unexpected character.");
+                Diagnostics.Error(span, InternalCodes.UnexpectedCharacter, "Unexpected character."); // TODO: more detailed lexer errors
                 break;
             }
 
-            if (SyntaxFacts.IsTrivia(rule.Syntax) || rule.Skip) continue;
+            if (SyntaxFacts.IsTrivia(rule.Syntax)) continue;
 
             Diagnostics.Info(span, $"Lexed token {rule.Syntax}");
             yield return new Token(rule.Syntax, span);
@@ -62,7 +62,7 @@ public class Lexer : Diagnosable
         if (lines > 0)
         {
             _line += lines;
-            _character = length - bestMatch.LastIndexOf('\n');
+            _character = length - bestMatch.LastIndexOf('\n') - 1;
         }
         else
         {

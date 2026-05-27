@@ -49,5 +49,15 @@ public enum SyntaxKind : ushort
     RBrace,
     
     IntegerLiteral,
-    FloatLiteral
+    FloatLiteral,
+    StringLiteral,
+    TrueLiteral,
+    FalseLiteral,
+    NoneLiteral,
+    
+    LetKeyword,
+    MutKeyword,
+    FnKeyword,
+    
+    Identifier
 }
