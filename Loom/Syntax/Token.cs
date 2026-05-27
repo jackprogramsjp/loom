@@ -13,8 +13,5 @@ public class Token
         Text = Span.GetText();
     }
 
-    public string Examine()
-    {
-        return $"Token {{ kind: {Kind}, span: {Span}, text: \"{Text}\" }}";
-    }
+    public override string ToString() => $"Token {{ kind: {Kind}, span: {Span}, text: \"{Text}\" }}";
 }

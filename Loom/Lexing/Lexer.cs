@@ -15,8 +15,14 @@ public class Lexer : Diagnosable
         _file = file;
         LexerRules.Standard.Sort((a, b) => b.Kind - a.Kind);
     }
+
+    public LexerResult Tokenize()
+    {
+        var tokens = GetTokens();
+        return new LexerResult(tokens.ToList(), Diagnostics);
+    }
     
-    public IEnumerable<Token> Tokenize()
+    private IEnumerable<Token> GetTokens()
     {
         var sourceLength = _file.SourceText.Length;
         while (_position < sourceLength)
