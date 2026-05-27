@@ -1,1 +1,1 @@
-let abc = 69;
+let abc = 1 + 2 * 3;
