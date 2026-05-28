@@ -1,4 +1,6 @@
-namespace Loom.Parsing.AST.Traversal;
+using Loom.Parsing.AST;
+
+namespace Loom.Utility;
 
 public class ASTDisplayer(Tree ast) : IVisitor<string>
 {
@@ -11,7 +13,7 @@ public class ASTDisplayer(Tree ast) : IVisitor<string>
     }
 
     public string Visit(ASTNode node) => node.Accept(this);
-    public string VisitTree(Tree tree) => tree.Statements.Aggregate("", (current, node) => current + Visit(node));
+    public string VisitTree(Tree tree) => string.Join('\n', tree.Statements.Select(Visit));
 
     public string VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {

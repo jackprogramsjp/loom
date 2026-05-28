@@ -1,6 +1,5 @@
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
-using Loom.Parsing.AST.Traversal;
 using Loom.Syntax;
 
 namespace Loom.SemanticAnalysis;

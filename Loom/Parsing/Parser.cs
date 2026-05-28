@@ -175,7 +175,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
     {
         if (IsEof())
         {
-            Diagnostics.Error(Last().Span, InternalCodes.UnexpectedEOF, "Unexpected end of file.");
+            Diagnostics.Error(Last().Span, InternalCodes.UnexpectedEof, "Unexpected end of file.");
             return Last();
         }
         

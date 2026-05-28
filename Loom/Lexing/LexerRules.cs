@@ -68,7 +68,7 @@ public static class LexerRules
         MultiCharacter(MutKeyword, "mut"),
         MultiCharacter(FnKeyword, "fn"),
         
-        RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]+)"),
+        RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
         
         SingleCharacter(Semicolon, ';'),
         RegEx(Whitespace, @"\s+")

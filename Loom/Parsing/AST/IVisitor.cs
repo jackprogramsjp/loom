@@ -1,4 +1,4 @@
-namespace Loom.Parsing.AST.Traversal;
+namespace Loom.Parsing.AST;
 
 public interface IVisitor<out T>
 {

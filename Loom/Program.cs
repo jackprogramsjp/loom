@@ -2,8 +2,8 @@
 using Loom.Diagnostics;
 using Loom.Lexing;
 using Loom.Parsing;
-using Loom.Parsing.AST.Traversal;
 using Loom.SemanticAnalysis;
+using Loom.Utility;
 
 var file = FileLoader.LoadSingle("test.loom");
 var lexer = new Lexer(file);
