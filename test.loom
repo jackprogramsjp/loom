@@ -1,2 +1,1 @@
-let x: number = true;
-x;
+mut x;

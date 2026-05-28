@@ -11,7 +11,8 @@ public class PrimitiveType(PrimitiveTypeKind kind) : Type
 
     public PrimitiveTypeKind Kind { get; } = kind;
 
-    public override bool IsAssignableTo(Type other) => Kind == PrimitiveTypeKind.Unknown || other is PrimitiveType primitive && IsKind(primitive.Kind);
+    public override bool IsAssignableTo(Type other) =>
+        Kind == PrimitiveTypeKind.Unknown || other is PrimitiveType primitive && (primitive.Kind == PrimitiveTypeKind.Unknown || IsKind(primitive.Kind));
 
     public override string ToString() => Kind.ToString().ToLower();
 
