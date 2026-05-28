@@ -1,12 +1,12 @@
 namespace Loom.Parsing.AST.Traversal;
 
-public class ASTDisplayer : IVisitor<string>
+public class ASTDisplayer(Tree ast) : IVisitor<string>
 {
     private int _indent;
 
-    public void Display(Tree tree)
+    public void Display()
     {
-        var content = VisitTree(tree);
+        var content = VisitTree(ast);
         Console.WriteLine(content);
     }
 

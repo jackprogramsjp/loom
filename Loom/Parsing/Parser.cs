@@ -30,7 +30,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
     private VariableDeclaration ParseVariableDeclaration()
     {
         var keyword = Last();
-        var name = Expect(SyntaxKind.Identifier);
+        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got '{token.Text}'");
         ColonTypeClause? colonTypeClause = null;
         EqualsValueClause? equalsValueClause = null;
         if (Match(SyntaxKind.Colon))
@@ -173,6 +173,12 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
     private Token Expect(SyntaxKind kind, string message) => Expect(kind, _ => message);
     private Token Expect(SyntaxKind kind, Func<Token, string>? message = null)
     {
+        if (IsEof())
+        {
+            Diagnostics.Error(Last().Span, InternalCodes.UnexpectedEOF, "Unexpected end of file.");
+            return Last();
+        }
+        
         var token = Advance();
         if (token.Kind == kind)
             return token;

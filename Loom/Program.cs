@@ -3,26 +3,31 @@ using Loom.Diagnostics;
 using Loom.Lexing;
 using Loom.Parsing;
 using Loom.Parsing.AST.Traversal;
+using Loom.SemanticAnalysis;
 
 var file = FileLoader.LoadSingle("test.loom");
 var lexer = new Lexer(file);
 var lexerResult = lexer.Tokenize();
-var parser = new Parser(lexerResult.Tokens);
-var parserResult = parser.Parse();
-var astDisplayer = new ASTDisplayer();
-
-DiagnosticBag.FilterSeverity = DiagnosticSeverity.Error;
-var lexerDiagnostics = lexerResult.Diagnostics.ToString();
-var parserDiagnostics = parserResult.Diagnostics.ToString();
-
 Console.WriteLine("Tokens:");
 foreach (var token in lexerResult.Tokens)
 {
     Console.WriteLine(token.ToString());
 }
+
+var parser = new Parser(lexerResult.Tokens);
+var parserResult = parser.Parse();
+var astDisplayer = new ASTDisplayer(parserResult.Tree);
+var resolver = new Resolver(parserResult.Tree);
+var resolverResult = resolver.Resolve();
+
+DiagnosticBag.FilterSeverity = DiagnosticSeverity.Error;
+var lexerDiagnostics = lexerResult.Diagnostics.ToString();
+var parserDiagnostics = parserResult.Diagnostics.ToString();
+var resolverDiagnostics = resolverResult.Diagnostics.ToString();
+
 Console.WriteLine();
 Console.WriteLine("AST:");
-astDisplayer.Display(parserResult.Tree);
+astDisplayer.Display();
 Console.WriteLine();
 Console.WriteLine($"Rebuilt program: {parserResult.Tree}");
 
@@ -32,3 +37,5 @@ Console.WriteLine("-- lexer --");
 Console.WriteLine(string.IsNullOrEmpty(lexerDiagnostics) ? "(none)" : lexerDiagnostics);
 Console.WriteLine("-- parser --");
 Console.WriteLine(string.IsNullOrEmpty(parserDiagnostics) ? "(none)" : parserDiagnostics);
+Console.WriteLine("-- semantic analysis --");
+Console.WriteLine(string.IsNullOrEmpty(resolverDiagnostics) ? "(none)" : resolverDiagnostics);
