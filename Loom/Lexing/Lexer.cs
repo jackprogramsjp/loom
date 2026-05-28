@@ -4,11 +4,12 @@ using Loom.Syntax;
 
 namespace Loom.Lexing;
 
-public class Lexer : Diagnosable
+public class Lexer
 {
+    private readonly DiagnosticBag _diagnostics = new();
     private readonly SourceFile _file;
-    private int _line = 1;
     private int _character, _position;
+    private int _line = 1;
 
     public Lexer(SourceFile file)
     {
@@ -19,9 +20,9 @@ public class Lexer : Diagnosable
     public LexerResult Tokenize()
     {
         var tokens = GetTokens();
-        return new LexerResult(tokens.ToList(), Diagnostics);
+        return new LexerResult(tokens.ToList(), _diagnostics);
     }
-    
+
     private IEnumerable<Token> GetTokens()
     {
         var sourceLength = _file.SourceText.Length;
@@ -32,19 +33,18 @@ public class Lexer : Diagnosable
             var span = GetSpan(start);
             if (rule == null)
             {
-                Diagnostics.Error(span, InternalCodes.UnexpectedCharacter, "Unexpected character."); // TODO: more detailed lexer errors
+                _diagnostics.Error(span, InternalCodes.UnexpectedCharacter, "Unexpected character."); // TODO: more detailed lexer errors
                 break;
             }
 
             if (SyntaxFacts.IsTrivia(rule.Syntax)) continue;
 
-            Diagnostics.Info(span, $"Lexed token {rule.Syntax}");
             yield return new Token(rule.Syntax, span);
         }
     }
 
     private LexerRule? Lex()
-    {    
+    {
         string? bestMatch = null;
         LexerRule? bestRule = null;
         foreach (var rule in LexerRules.Standard)
@@ -55,6 +55,7 @@ public class Lexer : Diagnosable
             var (content, position) = match.Value;
             if (position != _position) continue;
             if (bestMatch != null && content.Length <= bestMatch.Length) continue;
+
             bestMatch = content;
             bestRule = rule;
         }
@@ -86,14 +87,14 @@ public class Lexer : Diagnosable
             var match = regEx.Match(_file.SourceText, _position);
             return match.Success ? (match.Value, match.Index) : null;
         }
-        
+
         var isMatch = rule.Kind switch
         {
             LexerRuleKind.SingleCharacter => !IsEof() && Current().ToString() == rule.Pattern,
             LexerRuleKind.MultiCharacter => !IsEof(rule.Pattern.Length) && PeekNext(rule.Pattern.Length) == rule.Pattern,
             _ => false
         };
-        
+
         return isMatch ? (rule.Pattern, _position) : null;
     }
 

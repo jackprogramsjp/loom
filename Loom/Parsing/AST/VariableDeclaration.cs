@@ -10,5 +10,5 @@ public class VariableDeclaration(Token keyword, Token name, ColonTypeClause? col
     public ColonTypeClause? ColonTypeClause { get; } = colonTypeClause;
     public EqualsValueClause? EqualsValueClause { get; } = equalsValueClause;
 
-    public override T Accept<T>(IVisitor<T> visitor) => visitor.VisitVariableDeclaration(this);
+    public override T Accept<T>(Visitor<T> visitor) => visitor.VisitVariableDeclaration(this);
 }

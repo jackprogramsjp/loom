@@ -9,9 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Content Include="..\test.loom">
-        <Link>test.loom</Link>
-      </Content>
+        <Content Include="..\test.loom">
+            <Link>test.loom</Link>
+        </Content>
     </ItemGroup>
 
 </Project>

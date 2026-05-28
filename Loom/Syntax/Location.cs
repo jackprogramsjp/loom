@@ -6,6 +6,6 @@ public class Location(SourceFile file, int character, int line, int position)
     public int Character { get; } = character;
     public int Line { get; } = line;
     public int Position { get; } = position;
-    
+
     public override string ToString() => $"{Line}:{Character}:{File.RelativePath()}";
 }

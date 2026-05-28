@@ -4,8 +4,9 @@ using Loom.Syntax;
 
 namespace Loom.Parsing;
 
-public class Parser(IEnumerable<Token> tokens) : Diagnosable
+public class Parser(IEnumerable<Token> tokens)
 {
+    private readonly DiagnosticBag _diagnostics = new();
     private int _position;
 
     public ParserResult Parse()
@@ -13,9 +14,9 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
         var statements = new List<Node>();
         while (!IsEof())
             statements.Add(ParseStatement());
-        
+
         var tree = new Tree(statements);
-        return new ParserResult(tree, Diagnostics);
+        return new ParserResult(tree, _diagnostics);
     }
 
     private Statement ParseStatement()
@@ -39,15 +40,17 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
             var type = ParseType();
             colonTypeClause = new ColonTypeClause(colon, type);
         }
+
         if (Match(SyntaxKind.Equals))
         {
             var equals = Last();
             var initializer = ParseExpression();
             equalsValueClause = new EqualsValueClause(equals, initializer);
         }
-        
+
         return new VariableDeclaration(keyword, name, colonTypeClause, equalsValueClause);
     }
+
     private Expression ParseExpression() => ParseAdditive();
 
     private Expression ParseAdditive()
@@ -62,7 +65,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
 
         return left;
     }
-    
+
     private Expression ParseMultiplicative()
     {
         var left = ParseExponential();
@@ -75,7 +78,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
 
         return left;
     }
-    
+
     private Expression ParseExponential()
     {
         var left = ParseUnary();
@@ -90,7 +93,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
     }
 
     private Expression ParseUnary()
-    { 
+    {
         var operand = ParsePrimary();
         while (Match(SyntaxFacts.IsUnaryOperator))
         {
@@ -110,19 +113,26 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
             var rightParen = Expect(SyntaxKind.RParen, token => $"Expected ')', got '{token.Text}'");
             return new Parenthesized(leftParen, rightParen, expression);
         }
+
         if (Match(SyntaxKind.Identifier))
         {
             var name = Last();
             return new Identifier(name);
         }
-        if (Match(SyntaxKind.IntegerLiteral, SyntaxKind.FloatLiteral, SyntaxKind.StringLiteral, SyntaxKind.TrueLiteral, SyntaxKind.FalseLiteral, SyntaxKind.NoneLiteral))
+
+        if (Match(SyntaxKind.IntegerLiteral,
+                  SyntaxKind.FloatLiteral,
+                  SyntaxKind.StringLiteral,
+                  SyntaxKind.TrueLiteral,
+                  SyntaxKind.FalseLiteral,
+                  SyntaxKind.NoneLiteral))
         {
             var token = Last();
             return new Literal(token);
         }
-        
-        Diagnostics.Error(Current().Span, InternalCodes.UnexpectedToken, "Unexpected token.");
-        return new NullExpression();   
+
+        _diagnostics.Error(Current().Span, InternalCodes.UnexpectedToken, "Unexpected token.");
+        return new NullExpression();
     }
 
     private TypeExpression ParseType() => ParseOptionalType();
@@ -132,7 +142,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
         var inner = ParsePrimaryType();
         if (Current().Kind == SyntaxKind.QuestionQuestion)
         {
-            Diagnostics.Error(inner.Span, InternalCodes.RedundantOptionalType, "Cannot make already optional type optional.");
+            _diagnostics.Error(inner.Span, InternalCodes.RedundantOptionalType, "Cannot make already optional type optional.");
             Advance();
         }
 
@@ -151,39 +161,41 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
             return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
         }
 
-        Diagnostics.Error(Current().Span, InternalCodes.UnexpectedType, "Unexpected type.");
+        _diagnostics.Error(Current().Span, InternalCodes.UnexpectedType, "Unexpected type.");
         return new NullTypeExpression();
     }
 
     private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);
     private bool Match(SyntaxKind kind) => Match(otherKind => otherKind == kind);
+
     private bool Match(Predicate<SyntaxKind> predicate)
     {
         if (IsEof())
             return false;
-        
+
         var token = Current();
         var match = predicate(token.Kind);
         if (match)
             Advance();
-        
+
         return match;
     }
 
     private Token Expect(SyntaxKind kind, string message) => Expect(kind, _ => message);
+
     private Token Expect(SyntaxKind kind, Func<Token, string>? message = null)
     {
         if (IsEof())
         {
-            Diagnostics.Error(Last().Span, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+            _diagnostics.Error(Last().Span, InternalCodes.UnexpectedEof, "Unexpected end of file.");
             return Last();
         }
-        
+
         var token = Advance();
         if (token.Kind == kind)
             return token;
 
-        Diagnostics.Error(token.Span, InternalCodes.UnexpectedToken, message != null ? message(token) : $"Unexpected token '{token.Text}'");
+        _diagnostics.Error(token.Span, InternalCodes.UnexpectedToken, message != null ? message(token) : $"Unexpected token '{token.Text}'");
         return token;
     }
 
@@ -193,7 +205,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
         _position++;
         return current;
     }
-    
+
     private Token Current() => Peek(0);
     private Token Last() => Peek(-1);
     private Token Peek(int offset) => tokens.ElementAt(_position + offset);

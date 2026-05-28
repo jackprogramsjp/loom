@@ -29,20 +29,28 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
         var lineDigits = lineNumber.ToString().Length;
         var indent = new string(' ', lineDigits + 1);
         var gutter = $"{Colors.Dim}{indent}│{Colors.Reset}";
-        var aboveLine = lineIndex > 0 
-            ? $"{Colors.Dim}{sourceLines[lineIndex - 1]}{Colors.Reset}" 
+        var aboveLine = lineIndex > 0
+            ? $"{Colors.Dim}{sourceLines[lineIndex - 1]}{Colors.Reset}"
             : "";
-        
+
         var errorLine = sourceLines[lineIndex];
         var arrowLength = Math.Max(Span.End.Character - Span.Start.Character, 1);
         var padding = new string(' ', Span.Start.Character);
         var arrows = new string('^', arrowLength);
         var underline = $"{severityColor}{padding}{arrows}{Colors.Reset}";
-        var belowLine = lineIndex + 1 < sourceLines.Length 
-            ? $"{Colors.Dim}{sourceLines[lineIndex + 1]}{Colors.Reset}" 
+        var belowLine = lineIndex + 1 < sourceLines.Length
+            ? $"{Colors.Dim}{sourceLines[lineIndex + 1]}{Colors.Reset}"
             : "";
 
-        List<string> lines = [header, location, $"{gutter}   {aboveLine}", $"{Colors.Bold}{lineNumber} │{Colors.Reset}   {errorLine}", $"{gutter}   {underline}", $"{gutter}   {belowLine}"];
+        List<string> lines =
+        [
+            header,
+            location,
+            $"{gutter}   {aboveLine}",
+            $"{Colors.Bold}{lineNumber} │{Colors.Reset}   {errorLine}",
+            $"{gutter}   {underline}",
+            $"{gutter}   {belowLine}"
+        ];
 
         return string.Join(Environment.NewLine, lines);
     }

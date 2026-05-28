@@ -4,9 +4,8 @@ namespace Loom.Diagnostics;
 
 public class DiagnosticBag
 {
-    public static DiagnosticSeverity? FilterSeverity { get; set; }
-    
     private readonly HashSet<Diagnostic> _diagnostics = [];
+    public static DiagnosticSeverity? FilterSeverity { get; set; }
 
     public void Info(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Info, null, message);
     public void Info(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Info, code, message);

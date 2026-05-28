@@ -1,17 +1,10 @@
 using Loom.Syntax;
+using Loom.TypeChecking.Types;
 
 namespace Loom.Parsing.AST;
 
-public enum PrimitiveTypeKind
-{
-    Number,
-    String,
-    Bool,
-    None,
-    Void
-}
-
-public class PrimitiveType(Token name) : TypeName(name)
+public class PrimitiveType(Token name)
+    : TypeName(name)
 {
     public PrimitiveTypeKind Kind { get; } = name.Text switch
     {
@@ -19,8 +12,9 @@ public class PrimitiveType(Token name) : TypeName(name)
         "string" => PrimitiveTypeKind.String,
         "bool" => PrimitiveTypeKind.Bool,
         "void" => PrimitiveTypeKind.Void,
-        _ => PrimitiveTypeKind.None
+        "none" => PrimitiveTypeKind.None,
+        _ => PrimitiveTypeKind.Unknown
     };
-    
-    public override T Accept<T>(IVisitor<T> visitor) => visitor.VisitPrimitiveType(this);
+
+    public override T Accept<T>(Visitor<T> visitor) => visitor.VisitPrimitiveType(this);
 }

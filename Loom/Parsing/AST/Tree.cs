@@ -6,12 +6,10 @@ public class Tree
     : Node
 {
     public Tree(List<Node> statements)
-        : base([], statements, new LocationSpan(statements.First().Span.Start, statements.Last().Span.End))
-    {
+        : base([], statements, new LocationSpan(statements.First().Span.Start, statements.Last().Span.End)) =>
         Statements = Children;
-    }
 
     public List<Node> Statements { get; }
-    
-    public override T Accept<T>(IVisitor<T> visitor) => visitor.VisitTree(this);
+
+    public override T Accept<T>(Visitor<T> visitor) => visitor.VisitTree(this);
 }

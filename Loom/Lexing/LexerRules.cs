@@ -1,6 +1,7 @@
 using Loom.Syntax;
 
 namespace Loom.Lexing;
+
 using static LexerRule;
 using static SyntaxKind;
 
@@ -56,20 +57,16 @@ public static class LexerRules
         SingleCharacter(RBracket, ']'),
         SingleCharacter(LBrace, '{'),
         SingleCharacter(RBrace, '}'),
-        
         RegEx(IntegerLiteral, @"\d+"),
         RegEx(FloatLiteral, @"(\d+\.\d+|\.\d+|\d+\.\d+)"),
         RegEx(StringLiteral, "\".*\"|'.*'"),
         MultiCharacter(TrueLiteral, "true"),
         MultiCharacter(FalseLiteral, "false"),
         MultiCharacter(NoneLiteral, "none"),
-        
         MultiCharacter(LetKeyword, "let"),
         MultiCharacter(MutKeyword, "mut"),
         MultiCharacter(FnKeyword, "fn"),
-        
         RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
-        
         SingleCharacter(Semicolon, ';'),
         RegEx(Whitespace, @"\s+")
     ];
