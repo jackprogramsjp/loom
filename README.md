@@ -1,18 +1,12 @@
-\# Loom
-
-
+# Loom
 
 Domain-specific-language for Roblox that transpiles to Luau.
 
-
-
-\## Notes
+## Notes
 
 This project is a work-in-progress. Nothing is final.
 
-
-
-\## Features
+## Features
 
 * Immutability by default
 * Structural type system
@@ -23,4 +17,3 @@ This project is a work-in-progress. Nothing is final.
 * Async support
 * Timing blocks (`after`/`every`)
 * ...and more
-
