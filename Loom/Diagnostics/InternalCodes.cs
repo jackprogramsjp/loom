@@ -10,6 +10,8 @@ internal static class InternalCodes
     public const string RedundantOptionalType = "L104";
     
     public const string CannotFindName = "L201";
-    public const string UseOfUnassigned = "L202";
-    public const string MustHaveInitializer = "L203";
+    public const string DuplicateName = "L202";
+    public const string UseOfUnassigned = "L203";
+    public const string VariableSelfReference = "L204";
+    public const string MustHaveInitializer = "L205";
 }

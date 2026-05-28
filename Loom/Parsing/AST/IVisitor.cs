@@ -22,5 +22,5 @@ public interface IVisitor<out T>
     T VisitNullExpression(NullExpression nullExpression) => default!;
     T VisitNullStatement(NullStatement nullStatement) => default!;
     T VisitNullTypeExpression(NullTypeExpression nullTypeExpression) => default!;
-    T Visit(ASTNode node);
+    T Visit(Node node);
 }

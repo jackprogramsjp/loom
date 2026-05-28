@@ -12,7 +12,7 @@ public class ASTDisplayer(Tree ast) : IVisitor<string>
         Console.WriteLine(content);
     }
 
-    public string Visit(ASTNode node) => node.Accept(this);
+    public string Visit(Node node) => node.Accept(this);
     public string VisitTree(Tree tree) => string.Join('\n', tree.Statements.Select(Visit));
 
     public string VisitVariableDeclaration(VariableDeclaration variableDeclaration)

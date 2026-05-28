@@ -8,22 +8,22 @@ using Loom.Utility;
 var file = FileLoader.LoadSingle("test.loom");
 var lexer = new Lexer(file);
 var lexerResult = lexer.Tokenize();
+var parser = new Parser(lexerResult.Tokens);
+var parserResult = parser.Parse();
+var astDisplayer = new ASTDisplayer(parserResult.Tree);
+var resolver = new Resolver(parserResult.Tree);
+var semanticModel = resolver.Resolve();
+
+DiagnosticBag.FilterSeverity = DiagnosticSeverity.Error;
+var lexerDiagnostics = lexerResult.Diagnostics.ToString();
+var parserDiagnostics = parserResult.Diagnostics.ToString();
+var resolverDiagnostics = semanticModel.Diagnostics.ToString();
+
 Console.WriteLine("Tokens:");
 foreach (var token in lexerResult.Tokens)
 {
     Console.WriteLine(token.ToString());
 }
-
-var parser = new Parser(lexerResult.Tokens);
-var parserResult = parser.Parse();
-var astDisplayer = new ASTDisplayer(parserResult.Tree);
-var resolver = new Resolver(parserResult.Tree);
-var resolverResult = resolver.Resolve();
-
-DiagnosticBag.FilterSeverity = DiagnosticSeverity.Error;
-var lexerDiagnostics = lexerResult.Diagnostics.ToString();
-var parserDiagnostics = parserResult.Diagnostics.ToString();
-var resolverDiagnostics = resolverResult.Diagnostics.ToString();
 
 Console.WriteLine();
 Console.WriteLine("AST:");

@@ -10,7 +10,7 @@ public class Parser(IEnumerable<Token> tokens) : Diagnosable
 
     public ParserResult Parse()
     {
-        var statements = new List<ASTNode>();
+        var statements = new List<Node>();
         while (!IsEof())
             statements.Add(ParseStatement());
         
