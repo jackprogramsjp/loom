@@ -2,7 +2,10 @@ using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
+using Loom.TypeChecking.Types;
+using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
+using TypeName = Loom.Parsing.AST.TypeName;
 
 namespace Loom.TypeChecking;
 
@@ -54,21 +57,16 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         {
             finalType = initializerType;
         }
+
+        if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
+            finalType = Widen(finalType);
         
         AssertAssignability(finalType, initializerType, variableDeclaration.EqualsValueClause?.Value.Span ?? variableDeclaration.Span);
         semanticModel.Types.SetType(variableDeclaration, finalType);
         return finalType;
     }
 
-    public override Type VisitLiteral(Literal literal) =>
-        literal.Token.Kind switch
-        {
-            SyntaxKind.FloatLiteral or SyntaxKind.IntegerLiteral => Types.PrimitiveType.Number,
-            SyntaxKind.StringLiteral => Types.PrimitiveType.String,
-            SyntaxKind.TrueLiteral or SyntaxKind.FalseLiteral => Types.PrimitiveType.Bool,
-            SyntaxKind.NoneLiteral => Types.PrimitiveType.None,
-            _ => Types.PrimitiveType.Unknown
-        };
+    public override Type VisitLiteral(Literal literal) => new LiteralType(literal.Value);
 
     public override Type VisitIdentifier(Identifier identifier)
     {
@@ -90,4 +88,11 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         _diagnostics.Error(span, InternalCodes.TypeMismatch, $"Type '{b}' is not assignable to type '{a}'.");
     }
+
+    private static Type Widen(Type type) =>
+        type switch
+        {
+            LiteralType literal => new Types.PrimitiveType(LiteralType.PrimitiveKindFromLiteralValue(literal.Value)),
+            _ => type
+        };
 }

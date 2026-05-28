@@ -128,7 +128,17 @@ public class Parser(IEnumerable<Token> tokens)
                   SyntaxKind.NoneLiteral))
         {
             var token = Last();
-            return new Literal(token);
+            object? value = token.Kind switch
+            {
+                SyntaxKind.IntegerLiteral => int.Parse(token.Text),
+                SyntaxKind.FloatLiteral => double.Parse(token.Text),
+                SyntaxKind.StringLiteral => token.Text.Substring(1, token.Text.Length - 2),
+                SyntaxKind.TrueLiteral => true,
+                SyntaxKind.FalseLiteral => false,
+                _ => null
+            };
+            
+            return new Literal(token, value);
         }
 
         _diagnostics.Error(Current().Span, InternalCodes.UnexpectedToken, "Unexpected token.");
