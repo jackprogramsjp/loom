@@ -6,7 +6,7 @@ public static class InternalCodes
 
     public const string UnexpectedToken = "L101";
     public const string UnexpectedEof = "L102";
-    public const string UnexpectedType = "L103";
+    public const string ExpectedType = "L103";
     public const string RedundantOptionalType = "L104";
 
     public const string CannotFindName = "L201";

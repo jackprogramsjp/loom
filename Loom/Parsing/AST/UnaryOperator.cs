@@ -3,7 +3,7 @@ using Loom.Syntax;
 namespace Loom.Parsing.AST;
 
 public class UnaryOperator(Token @operator, Expression operand)
-    : Expression([@operator], [operand])
+    : Expression([@operator, ..operand.Tokens], [operand])
 {
     public Token Operator { get; } = @operator;
     public Expression Operand { get; } = operand;

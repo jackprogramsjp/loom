@@ -94,14 +94,11 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private Expression ParseUnary()
     {
-        var operand = ParsePrimary();
-        while (Match(SyntaxFacts.IsUnaryOperator))
-        {
-            var op = Last();
-            operand = new UnaryOperator(op, operand);
-        }
+        if (!Match(SyntaxFacts.IsUnaryOperator))
+            return ParsePrimary();
 
-        return operand;
+        var op = Last();
+        return new UnaryOperator(op, ParseUnary());
     }
 
     private Expression ParsePrimary()
@@ -171,7 +168,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
             return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
         }
 
-        _diagnostics.Error(Current().Span, InternalCodes.UnexpectedType, "Unexpected type.");
+        _diagnostics.Error(Current().Span, InternalCodes.ExpectedType, $"Expected type, got '{Current().Text}'");
         return new NullTypeExpression(Advance());
     }
 
