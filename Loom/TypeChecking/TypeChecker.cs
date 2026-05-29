@@ -26,7 +26,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var type = base.VisitExpressionStatement(expressionStatement);
-        _diagnostics.Info(expressionStatement.Span,$"Solved type '{type}' for expression: {expressionStatement.Expression}");
+        _diagnostics.Info(expressionStatement.Span,$"Solved type '{TypeSimplifier.Simplify(type)}' for expression: {expressionStatement.Expression}");
         return type;
     }
     
@@ -59,7 +59,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         }
 
         if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
-            finalType = Widen(finalType);
+            finalType = finalType.Widen();
         
         AssertAssignability(finalType, initializerType, variableDeclaration.EqualsValueClause?.Value.Span ?? variableDeclaration.Span);
         semanticModel.Types.SetType(variableDeclaration, finalType);
@@ -92,11 +92,4 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         _diagnostics.Error(span, InternalCodes.TypeMismatch, $"Type '{b}' is not assignable to type '{a}'.");
     }
-
-    private static Type Widen(Type type) =>
-        type switch
-        {
-            LiteralType literal => new Types.PrimitiveType(literal.PrimitiveKind),
-            _ => type
-        };
 }

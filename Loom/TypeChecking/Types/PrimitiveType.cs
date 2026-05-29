@@ -11,17 +11,20 @@ public class PrimitiveType(PrimitiveTypeKind kind) : Type
     public static readonly PrimitiveType Never = new(PrimitiveTypeKind.Never);
 
     public PrimitiveTypeKind Kind { get; } = kind;
+    
+    public override bool Equals(Type? other) => other is PrimitiveType primitive && primitive.Kind == Kind;
 
     public override bool IsAssignableTo(Type other)
     {
-        // never is assignable to everything, nothing is assignable to it
-        if (Kind is PrimitiveTypeKind.Unknown or PrimitiveTypeKind.Never)
+        if (Kind == PrimitiveTypeKind.Never)
             return true;
-        
-        if (other is PrimitiveType primitiveType)
-            return primitiveType.Kind == PrimitiveTypeKind.Unknown ||  Kind == primitiveType.Kind;
 
-        return false;
+        return other switch
+        {
+            LiteralType => false,
+            PrimitiveType primitiveType => primitiveType.Kind == PrimitiveTypeKind.Unknown || IsKind(primitiveType.Kind),
+            _ => base.IsAssignableTo(other)
+        };
     }
 
     public override string ToString() => Kind.ToString().ToLower();

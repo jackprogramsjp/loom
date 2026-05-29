@@ -141,12 +141,14 @@ public class TypeStore(DiagnosticBag diagnostics)
         return type;
     }
 
-    public record TypeConstraint(Type A, Type B, LocationSpan Span);
+    private record TypeConstraint(Type A, Type B, LocationSpan Span);
 
-    internal class TypeVariable(int id) : Types_Type
+    private class TypeVariable(int id) : Types_Type
     {
         public int Id { get; } = id;
 
+        public override bool Equals(Type? other) => other is TypeVariable v && Id == v.Id;
+        
         public override string ToString() => $"T{Id}";
     }
 }

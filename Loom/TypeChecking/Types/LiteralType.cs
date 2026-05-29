@@ -12,9 +12,6 @@ public sealed class LiteralType(object? value)
             _ => PrimitiveTypeKind.None
         };
     
-    public PrimitiveTypeKind PrimitiveKind { get; } =
-        GetPrimitiveKind(value);
-
     public object? Value { get; } = value switch
     {
         int or double => value,
@@ -23,6 +20,8 @@ public sealed class LiteralType(object? value)
         null => value,
         _ => throw new ArgumentException($"Unsupported literal type: {value.GetType()}")
     };
+
+    public override bool Equals(Type? other) => base.Equals(other) && other is LiteralType literal && literal.Value == Value;
 
     public override bool IsAssignableTo(Type other) => base.IsAssignableTo(other) || other is LiteralType otherLiteral && otherLiteral.Value == Value;
 

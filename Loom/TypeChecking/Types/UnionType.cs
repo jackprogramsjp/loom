@@ -4,6 +4,9 @@ public class UnionType(List<Type> types) : Type
 {
     public List<Type> Types { get; } = types;
 
-    public override bool IsAssignableTo(Type other) => Types.Any(other.IsAssignableTo);
+    public override bool Equals(Type? other) => other is UnionType union && union.Types.SequenceEqual(Types);
+
+    public override bool IsAssignableTo(Type other) => base.IsAssignableTo(other) || other is UnionType && Types.Any(t => t.IsAssignableTo(other));
+    
     public override string ToString() => string.Join(" | ", Types.ConvertAll(type => type.ToString()));
 }
