@@ -6,6 +6,8 @@ public class LocationSpan(Location start, Location end)
     public Location Start { get; } = start;
     public Location End { get; } = end;
 
+    public static LocationSpan Empty(SourceFile file) => new(Location.Empty(file), Location.Empty(file));
+
     public string GetText() => File.SourceText[Start.Position..End.Position];
     public override string ToString() => $"{File.RelativePath()} @ {Start.Line}:{Start.Character} - {End.Line}:{End.Character}";
 }

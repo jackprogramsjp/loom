@@ -36,6 +36,6 @@ public abstract class Visitor<T>
     public virtual T VisitNullStatement(NullStatement nullStatement) => default!;
     public virtual T VisitNullTypeExpression(NullTypeExpression nullTypeExpression) => default!;
     
-    protected virtual T CombineResults(IEnumerable<T> results) => results.Last();
+    protected virtual T CombineResults(IEnumerable<T> results) => results.LastOrDefault()!;
     private T VisitList(List<Node> nodes) => CombineResults(nodes.ConvertAll(Visit));
 }

@@ -4,7 +4,7 @@ using Loom.Syntax;
 
 namespace Loom.Parsing;
 
-public class Parser(IEnumerable<Token> tokens)
+public class Parser(SourceFile file, IEnumerable<Token> tokens)
 {
     private readonly DiagnosticBag _diagnostics = new();
     private int _position;
@@ -15,7 +15,7 @@ public class Parser(IEnumerable<Token> tokens)
         while (!IsEof())
             statements.Add(ParseStatement());
 
-        var tree = new Tree(statements);
+        var tree = new Tree(file, statements);
         return new ParserResult(tree, _diagnostics);
     }
 
@@ -142,7 +142,7 @@ public class Parser(IEnumerable<Token> tokens)
         }
 
         _diagnostics.Error(Current().Span, InternalCodes.UnexpectedToken, "Unexpected token.");
-        return new NullExpression();
+        return new NullExpression(Advance());
     }
 
     private TypeExpression ParseType() => ParseOptionalType();
@@ -172,7 +172,7 @@ public class Parser(IEnumerable<Token> tokens)
         }
 
         _diagnostics.Error(Current().Span, InternalCodes.UnexpectedType, "Unexpected type.");
-        return new NullTypeExpression();
+        return new NullTypeExpression(Advance());
     }
 
     private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);

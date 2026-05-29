@@ -1,7 +1,9 @@
+using Loom.Syntax;
+
 namespace Loom.Parsing.AST;
 
-public class NullTypeExpression()
-    : TypeExpression([], [])
+public class NullTypeExpression(Token token)
+    : TypeExpression([token], [])
 {
     public override T Accept<T>(Visitor<T> visitor) => visitor.VisitNullTypeExpression(this);
 }

@@ -14,7 +14,7 @@ public class Lexer
     public Lexer(SourceFile file)
     {
         _file = file;
-        LexerRules.Standard.Sort((a, b) => b.Kind - a.Kind);
+        LexerRules.Standard.Sort((a, b) => b.Kind  - a.Kind);
     }
 
     public LexerResult Tokenize()
@@ -45,38 +45,36 @@ public class Lexer
 
     private LexerRule? Lex()
     {
-        string? bestMatch = null;
-        LexerRule? bestRule = null;
-        foreach (var rule in LexerRules.Standard)
-        {
-            var match = GetMatch(rule);
-            if (match == null) continue;
+        var matches = LexerRules.Standard
+                                .ConvertAll(r => (r, GetMatch(r)))
+                                .FindAll(pair => pair.Item2.HasValue && pair.Item2.Value.Item2 == _position) // silly
+                                .ConvertAll(pair => (pair.Item1, pair.Item2!.Value))
+                                .OrderByDescending(pair => pair.Item2.Item1.Length)
+                                .ToList();
 
-            var (content, position) = match.Value;
-            if (position != _position) continue;
-            if (bestMatch != null && content.Length <= bestMatch.Length) continue;
-
-            bestMatch = content;
-            bestRule = rule;
-        }
-
-        if (bestMatch == null)
+        if (matches.Count == 0)
             return null;
 
-        var lines = bestMatch.Split('\n').Length - 1;
-        var length = bestMatch.Length;
+        foreach (var (_, (c, _)) in matches)
+        {
+            Console.WriteLine(c);
+        }
+
+        var (rule, (content, _)) = matches.First();
+        var lines = content.Split('\n').Length - 1;
+        var length = content.Length;
         _position += length;
         if (lines > 0)
         {
             _line += lines;
-            _character = length - bestMatch.LastIndexOf('\n') - 1;
+            _character = length - content.LastIndexOf('\n') - 1;
         }
         else
         {
             _character += length;
         }
 
-        return bestRule;
+        return rule;
     }
 
     private (string, int)? GetMatch(LexerRule rule)
@@ -91,7 +89,7 @@ public class Lexer
         var isMatch = rule.Kind switch
         {
             LexerRuleKind.SingleCharacter => !IsEof() && Current().ToString() == rule.Pattern,
-            LexerRuleKind.MultiCharacter => !IsEof(rule.Pattern.Length) && PeekNext(rule.Pattern.Length) == rule.Pattern,
+            LexerRuleKind.MultiCharacter => !IsEof(rule.Pattern.Length - 1) && PeekNext(rule.Pattern.Length) == rule.Pattern,
             _ => false
         };
 
