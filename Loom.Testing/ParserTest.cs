@@ -10,27 +10,21 @@ public class ParserTest
     public void ThrowsFor_ExpectedIdentifier()
     {
         var diagnostics = Utility.GetParserDiagnostics("let");
-        var diagnostic = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof);
-        Assert.NotNull(diagnostic);
-        Assert.Equal("Expected identifier, got EOF.", diagnostic.Message);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected identifier, got EOF.");
     }
     
     [Fact]
     public void ThrowsFor_ExpectedType()
     {
         var diagnostics = Utility.GetParserDiagnostics("let x:");
-        var diagnostic = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof);
-        Assert.NotNull(diagnostic);
-        Assert.Equal("Expected type, got EOF.", diagnostic.Message);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected type, got EOF.");
     }
     
     [Fact]
     public void ThrowsFor_UnexpectedToken()
     {
         var diagnostics = Utility.GetParserDiagnostics("!");
-        var diagnostic = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedToken);
-        Assert.NotNull(diagnostic);
-        Assert.Equal("Unexpected token.", diagnostic.Message);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Unexpected token.");
     }
     
     [Fact]
@@ -38,12 +32,8 @@ public class ParserTest
     {
         var diagnostics = Utility.GetParserDiagnostics("(1 + 2");
         var diagnostics2 = Utility.GetParserDiagnostics("(1 + 2]");
-        var unexpectedEof = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof);
-        var unexpectedToken = diagnostics2.Find(d => d.Code == InternalCodes.UnexpectedToken);
-        Assert.NotNull(unexpectedEof);
-        Assert.NotNull(unexpectedToken);
-        Assert.Equal("Expected ')' here to close '(' at character 0, got EOF.", unexpectedEof.Message);
-        Assert.Equal("Expected ')' here to close '(' at character 0, got ']'.", unexpectedToken.Message);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 0, got EOF.");
+        Utility.AssertDiagnostic(diagnostics2, InternalCodes.UnexpectedToken, "Expected ')' here to close '(' at character 0, got ']'.");
     }
     
     [Fact]

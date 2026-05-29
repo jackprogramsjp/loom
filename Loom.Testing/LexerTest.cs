@@ -65,9 +65,7 @@ public class LexerTest
     public void ThrowsFor_UnexpectedCharacters(string source)
     {
         var diagnostics = Utility.GetLexerDiagnostics(source);
-        var diagnostic = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedCharacter);
-        Assert.NotNull(diagnostic);
-        Assert.Equal("Unexpected character.", diagnostic.Message);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedCharacter, "Unexpected character.");
     }
     
     [Fact]
