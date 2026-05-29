@@ -75,10 +75,14 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return semanticModel.Types.GetType(symbol.DeclaringNode);
 
         _diagnostics.Error(identifier.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of '{identifier.Name.Text}'");
-        return Types.PrimitiveType.Unknown;
+        return Types.PrimitiveType.Never;
     }
 
-    public override Type VisitTypeName(TypeName typeName) => throw new NotImplementedException();
+    public override Type VisitTypeName(TypeName typeName)
+    {
+        _diagnostics.NotImplemented(typeName.Span);
+        return Types.PrimitiveType.Never;
+    }
 
     public override Type VisitPrimitiveType(PrimitiveType primitiveType) => new Types.PrimitiveType(primitiveType.Kind);
 
@@ -92,7 +96,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     private static Type Widen(Type type) =>
         type switch
         {
-            LiteralType literal => new Types.PrimitiveType(LiteralType.PrimitiveKindFromLiteralValue(literal.Value)),
+            LiteralType literal => new Types.PrimitiveType(literal.PrimitiveKind),
             _ => type
         };
 }

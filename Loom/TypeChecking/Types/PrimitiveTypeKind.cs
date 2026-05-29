@@ -1,11 +1,12 @@
 namespace Loom.TypeChecking.Types;
 
-public enum PrimitiveTypeKind
+public enum PrimitiveTypeKind : byte
 {
     Number,
     String,
     Bool,
     Unknown,
+    Never,
     None,
     Void
 }

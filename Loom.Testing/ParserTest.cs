@@ -1,15 +1,33 @@
+using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Syntax;
-using Loom.TypeChecking.Types;
-using OptionalType = Loom.Parsing.AST.OptionalType;
-using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
-using Type = System.Type;
-using TypeName = Loom.Parsing.AST.TypeName;
 
 namespace Loom.Testing;
 
 public class ParserTest
 {
+    [Fact]
+    public void ThrowsFor_UnexpectedToken()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("!");
+        var diagnostic = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedToken);
+        Assert.NotNull(diagnostic);
+        Assert.Equal("Unexpected token.", diagnostic.Message);
+    }
+    
+    [Fact]
+    public void ThrowsFor_UnterminatedParens()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("(1 + 2");
+        var diagnostics2 = Utility.GetParserDiagnostics("(1 + 2]");
+        var unexpectedEof = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof);
+        var unexpectedToken = diagnostics2.Find(d => d.Code == InternalCodes.UnexpectedToken);
+        Assert.NotNull(unexpectedEof);
+        Assert.NotNull(unexpectedToken);
+        Assert.Equal("Expected ')' here to close '(' at character 0, got EOF.", unexpectedEof.Message);
+        Assert.Equal("Expected ')' here to close '(' at character 0, got ']'.", unexpectedToken.Message);
+    }
+    
     [Fact]
     public void Parses_OptionalType()
     {
@@ -40,11 +58,11 @@ public class ParserTest
     [Theory]
     [InlineData("mut x;", true, false, null)]
     [InlineData("mut x = 1;", true, true, null)]
-    [InlineData("mut x: number = 1;", true, true, PrimitiveTypeKind.Number)]
+    [InlineData("mut x: number = 1;", true, true, TypeChecking.Types.PrimitiveTypeKind.Number)]
     [InlineData("let x;", false, false, null)]
     [InlineData("let x = 1;", false, true, null)]
-    [InlineData("let x: bool = false;", false, true, PrimitiveTypeKind.Bool)]
-    public void Parses_VariableDeclaration(string source, bool isMutable, bool hasInitializer, PrimitiveTypeKind? type)
+    [InlineData("let x: bool = false;", false, true, TypeChecking.Types.PrimitiveTypeKind.Bool)]
+    public void Parses_VariableDeclaration(string source, bool isMutable, bool hasInitializer, TypeChecking.Types.PrimitiveTypeKind? type)
     {
         var tree = Utility.GetAST(source);
         Assert.Single(tree.Statements);

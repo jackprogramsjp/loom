@@ -1,9 +1,9 @@
 namespace Loom.TypeChecking.Types;
 
 public sealed class LiteralType(object? value)
-    : PrimitiveType(PrimitiveKindFromLiteralValue(value))
+    : PrimitiveType(GetPrimitiveKind(value))
 {
-    public static PrimitiveTypeKind PrimitiveKindFromLiteralValue(object? value) =>
+    private static PrimitiveTypeKind GetPrimitiveKind(object? value) =>
         value switch
         {
             int or double => PrimitiveTypeKind.Number,
@@ -11,6 +11,9 @@ public sealed class LiteralType(object? value)
             bool => PrimitiveTypeKind.Bool,
             _ => PrimitiveTypeKind.None
         };
+    
+    public PrimitiveTypeKind PrimitiveKind { get; } =
+        GetPrimitiveKind(value);
 
     public object? Value { get; } = value switch
     {

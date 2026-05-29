@@ -31,7 +31,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private VariableDeclaration ParseVariableDeclaration()
     {
         var keyword = Last();
-        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got {(token != null ? $"'{token.Text}'" : "EOF")}");
+        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got {SafeTokenText(token)}");
         ColonTypeClause? colonTypeClause = null;
         EqualsValueClause? equalsValueClause = null;
         if (Match(SyntaxKind.Colon))
@@ -50,7 +50,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
         return new VariableDeclaration(keyword, name, colonTypeClause, equalsValueClause);
     }
-
+    
     private Expression ParseExpression() => ParseAdditive();
 
     private Expression ParseAdditive()
@@ -107,7 +107,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         {
             var leftParen = Last();
             var expression = ParseExpression();
-            var rightParen = Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {(token != null ? $"'{token.Text}'" : "EOF")}");
+            var rightParen = Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(token)}.");
             return new Parenthesized(leftParen, rightParen, expression);
         }
 
@@ -155,7 +155,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         for (var i = 0; i < parens; i++)
         {
             var opening = tokens.ElementAt(start - i);
-            Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{opening.Text}' at character {opening.Span.Start.Character}, got {(token != null ? $"'{token.Text}'" : "EOF")}");
+            Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{opening.Text}' at character {opening.Span.Start.Character}, got {SafeTokenText(token)}.");
         }
 
         return node;
@@ -173,14 +173,8 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private TypeExpression ParsePrimaryType()
     {
-        if (Match(SyntaxKind.Identifier))
-        {
-            var name = Last();
-            return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
-        }
-
-        _diagnostics.Error(Current().Span, InternalCodes.ExpectedType, $"Expected type, got '{Current().Text}'");
-        return new NullTypeExpression(Advance());
+        var name = Expect(SyntaxKind.Identifier, token => $"Expected type here, got '{SafeTokenText(token)}'");
+        return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
     }
 
     private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);
@@ -205,15 +199,16 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     {
         if (IsEof())
         {
-            _diagnostics.Error(Last().Span + 1, InternalCodes.UnexpectedEof, message != null ? message(null) : "Unexpected end of file.");
-            return Last();
+            var last = Last();
+            _diagnostics.Error(last.Span, InternalCodes.UnexpectedEof, message != null ? message(null) : "Unexpected end of file.");
+            return last;
         }
 
         var token = Advance();
         if (token.Kind == kind)
             return token;
 
-        _diagnostics.Error(token.Span, InternalCodes.UnexpectedToken, message != null ? message(token) : $"Unexpected token '{token.Text}'");
+        _diagnostics.Error(token.Span, InternalCodes.UnexpectedToken, message != null ? message(token) : $"Unexpected token '{token.Text}'.");
         return token;
     }
 
@@ -228,4 +223,5 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private Token Last() => Peek(-1);
     private Token Peek(int offset) => tokens.ElementAt(_position + offset);
     private bool IsEof() => _position >= tokens.Count();
+    private static string SafeTokenText(Token? token) => token != null ? $"'{token.Text}'" : "EOF";
 }

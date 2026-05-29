@@ -1,3 +1,4 @@
+using Loom.Parsing.AST;
 using Loom.Syntax;
 
 namespace Loom.Diagnostics;
@@ -11,6 +12,10 @@ public class DiagnosticBag
     public void Info(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Info, code, message);
     public void Warn(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Warn, code, message);
     public void Error(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Error, code, message);
+    public void NotImplemented(Node node) => NotImplemented(node.Span);
+    public void NotImplemented(Token token) => NotImplemented(token.Span);
+    public void NotImplemented(LocationSpan span) => Error(span, InternalCodes.NotImplemented, "This feature is not yet implemented.");
+    public void CompilerError(LocationSpan span, string message) => Error(span, InternalCodes.CompilerError, message);
 
     public Diagnostic? Find(Func<Diagnostic, bool> predicate) => _diagnostics.FirstOrDefault(predicate);
     
