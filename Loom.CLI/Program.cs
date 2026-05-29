@@ -1,4 +1,4 @@
-﻿using Loom.CLI;
+﻿using Loom;
 using Loom.Diagnostics;
 using Loom.Lexing;
 using Loom.Parsing;
