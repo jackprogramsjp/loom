@@ -11,5 +11,5 @@ public class LocationSpan(Location start, Location end)
     public static LocationSpan operator+(LocationSpan span, int n) => new(span.Start + n, span.End + n);
 
     public string GetText() => File.SourceText[Start.Position..End.Position];
-    public override string ToString() => $"{File.RelativePath()} @ {Start.Line}:{Start.Character} - {End.Line}:{End.Character}";
+    public override string ToString() => $"{File.Name} @ {Start.Line}:{Start.Character} - {End.Line}:{End.Character}";
 }
