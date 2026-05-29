@@ -1,8 +1,8 @@
 namespace Loom.Lexing;
 
-public enum LexerRuleKind
+public enum LexerRuleKind : byte
 {
-    SingleCharacter,
+    SingleCharacter = 0xF,
+    RegEx,
     MultiCharacter,
-    RegEx
 }

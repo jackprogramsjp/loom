@@ -14,7 +14,6 @@ public class Lexer
     public Lexer(SourceFile file)
     {
         _file = file;
-        LexerRules.Standard.Sort((a, b) => b.Kind  - a.Kind);
     }
 
     public LexerResult Tokenize()
@@ -49,7 +48,14 @@ public class Lexer
                                 .ConvertAll(r => (r, GetMatch(r)))
                                 .FindAll(pair => pair.Item2.HasValue && pair.Item2.Value.Item2 == _position) // silly
                                 .ConvertAll(pair => (pair.Item1, pair.Item2!.Value))
-                                .OrderByDescending(pair => pair.Item2.Item1.Length)
+                                .OrderByDescending(pair =>
+                                {
+                                    var x = pair.Item2.Item1.Length * (int)pair.Item1.Kind;
+                                    Console.WriteLine(x);
+                                    Console.WriteLine(pair.Item1.Kind);
+                                    Console.WriteLine(pair.Value.Item1);
+                                    return x;
+                                })
                                 .ToList();
 
         if (matches.Count == 0)
@@ -57,7 +63,7 @@ public class Lexer
 
         foreach (var (_, (c, _)) in matches)
         {
-            Console.WriteLine(c);
+            // Console.WriteLine(c);
         }
 
         var (rule, (content, _)) = matches.First();

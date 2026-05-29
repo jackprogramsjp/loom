@@ -11,6 +11,9 @@ public class DiagnosticBag
     public void Info(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Info, code, message);
     public void Warn(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Warn, code, message);
     public void Error(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Error, code, message);
+
+    public Diagnostic? Find(Func<Diagnostic, bool> predicate) => _diagnostics.FirstOrDefault(predicate);
+    
     public override string ToString() => string.Join('\n', Filtered());
 
     private HashSet<Diagnostic> Filtered() =>

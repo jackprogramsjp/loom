@@ -1,6 +1,6 @@
 namespace Loom.Diagnostics;
 
-internal static class InternalCodes
+public static class InternalCodes
 {
     public const string UnexpectedCharacter = "L001";
 
