@@ -7,6 +7,24 @@ namespace Loom.Testing;
 public class ParserTest
 {
     [Fact]
+    public void ThrowsFor_ExpectedIdentifier()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let");
+        var diagnostic = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof);
+        Assert.NotNull(diagnostic);
+        Assert.Equal("Expected identifier, got EOF.", diagnostic.Message);
+    }
+    
+    [Fact]
+    public void ThrowsFor_ExpectedType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x:");
+        var diagnostic = diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof);
+        Assert.NotNull(diagnostic);
+        Assert.Equal("Expected type, got EOF.", diagnostic.Message);
+    }
+    
+    [Fact]
     public void ThrowsFor_UnexpectedToken()
     {
         var diagnostics = Utility.GetParserDiagnostics("!");

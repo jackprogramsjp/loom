@@ -31,7 +31,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private VariableDeclaration ParseVariableDeclaration()
     {
         var keyword = Last();
-        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got {SafeTokenText(token)}");
+        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got {SafeTokenText(token)}.");
         ColonTypeClause? colonTypeClause = null;
         EqualsValueClause? equalsValueClause = null;
         if (Match(SyntaxKind.Colon))
@@ -138,8 +138,8 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
             return new Literal(token, value);
         }
 
-        _diagnostics.Error(Current().Span, InternalCodes.UnexpectedToken, "Unexpected token.");
-        return new NullExpression(Advance());
+        _diagnostics.Error(Last().Span, InternalCodes.UnexpectedToken, "Unexpected token.");
+        return new NullExpression(Last());
     }
 
     private TypeExpression ParseType() => ParseParenthesizable(ParseOptionalType);
@@ -173,7 +173,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private TypeExpression ParsePrimaryType()
     {
-        var name = Expect(SyntaxKind.Identifier, token => $"Expected type here, got '{SafeTokenText(token)}'");
+        var name = Expect(SyntaxKind.Identifier, token => $"Expected type, got {SafeTokenText(token)}.");
         return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
     }
 
