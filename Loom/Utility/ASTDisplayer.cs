@@ -73,7 +73,7 @@ public class ASTDisplayer(Tree ast) : Visitor<string>
     {
         _indent++;
 
-        var type = Indented($"requiredType: {Visit(optionalType.RequiredType)}\n");
+        var type = Indented($"requiredType: {Visit(optionalType.NonNullableType)}\n");
 
         _indent--;
         return "OptionalType(\n" + type + Indented(")");

@@ -27,7 +27,7 @@ public abstract class Visitor<T>
 
     public abstract T VisitTypeName(TypeName typeName);
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
-    public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.RequiredType);
+    public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
 
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
     public virtual T VisitEqualsValueClause(EqualsValueClause equalsValueClause) => Visit(equalsValueClause.Value);

@@ -31,7 +31,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private VariableDeclaration ParseVariableDeclaration()
     {
         var keyword = Last();
-        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got '{token.Text}'");
+        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got {(token != null ? $"'{token.Text}'" : "EOF")}");
         ColonTypeClause? colonTypeClause = null;
         EqualsValueClause? equalsValueClause = null;
         if (Match(SyntaxKind.Colon))
@@ -107,7 +107,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         {
             var leftParen = Last();
             var expression = ParseExpression();
-            var rightParen = Expect(SyntaxKind.RParen, token => $"Expected ')', got '{token.Text}'");
+            var rightParen = Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {(token != null ? $"'{token.Text}'" : "EOF")}");
             return new Parenthesized(leftParen, rightParen, expression);
         }
 
@@ -142,17 +142,28 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         return new NullExpression(Advance());
     }
 
-    private TypeExpression ParseType() => ParseOptionalType();
+    private TypeExpression ParseType() => ParseParenthesizable(ParseOptionalType);
+
+    private T ParseParenthesizable<T>(Func<T> parseInner)
+        where T : Node
+    {
+        var parens = 0;
+        while (Match(SyntaxKind.LParen)) parens++;
+        
+        var start = _position;
+        var node = parseInner();
+        for (var i = 0; i < parens; i++)
+        {
+            var opening = tokens.ElementAt(start - i);
+            Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{opening.Text}' at character {opening.Span.Start.Character}, got {(token != null ? $"'{token.Text}'" : "EOF")}");
+        }
+
+        return node;
+    }
 
     private TypeExpression ParseOptionalType()
     {
         var inner = ParsePrimaryType();
-        if (Current().Kind == SyntaxKind.QuestionQuestion)
-        {
-            _diagnostics.Error(inner.Span, InternalCodes.RedundantOptionalType, "Cannot make already optional type optional.");
-            Advance();
-        }
-
         if (!Match(SyntaxKind.Question))
             return inner;
 
@@ -190,11 +201,11 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private Token Expect(SyntaxKind kind, string message) => Expect(kind, _ => message);
 
-    private Token Expect(SyntaxKind kind, Func<Token, string>? message = null)
+    private Token Expect(SyntaxKind kind, Func<Token?, string>? message = null)
     {
         if (IsEof())
         {
-            _diagnostics.Error(Last().Span, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+            _diagnostics.Error(Last().Span + 1, InternalCodes.UnexpectedEof, message != null ? message(null) : "Unexpected end of file.");
             return Last();
         }
 
