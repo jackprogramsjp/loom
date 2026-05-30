@@ -17,14 +17,14 @@ let x: bool = false;
 ```luau
 const x: boolean = false
 ```
-
+##
 ```
 mut x;
 ```
 ```luau
 local x
 ```
-
+##
 ```
 let x = 1 & 2 & 3
 ```
