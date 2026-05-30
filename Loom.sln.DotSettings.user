@@ -5,6 +5,8 @@
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.TypesTest&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.LuauRenderingTest&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.LuauGeneratorTest.Generates_MappedBitwiseOperators&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.LuauGeneratorTest.Generates_ConcatenatedBitwiseArguments&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Loom.Luau.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
@@ -120,6 +121,44 @@ public class LuauGeneratorTest
         var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
         var identifier = Assert.IsType<Identifier>(expressionStatement.Expression);
         Assert.Equal("abc", identifier.Name);
+    }
+    
+    [Theory]
+    [InlineData("a & b & c & d", true)]
+    [InlineData("a << b << c << d", false)]
+    public void Generates_ConcatenatedBitwiseArguments(string source, bool isConcatenated)
+    {
+        var luauTree = Utility.GetLuauAST(source);
+        Assert.Single(luauTree.Statements);
+        
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
+        var call = Assert.IsType<Call>(expressionStatement.Expression);
+        Assert.IsType<PropertyAccess>(call.Callee);
+
+        Assert.Equal(isConcatenated ? 4 : 2, call.Arguments.Count);
+    }
+    
+    [Theory]
+    [InlineData("a & b", "band")]
+    [InlineData("a | b", "bor")]
+    [InlineData("a ~ b", "bxor")]
+    [InlineData("a << b", "lshift")]
+    [InlineData("a >> b", "arshift")]
+    [InlineData("a >>> b", "rshift")]
+    public void Generates_MappedBitwiseOperators(string source, string expectedMethod)
+    {
+        var luauTree = Utility.GetLuauAST(source);
+        Assert.Single(luauTree.Statements);
+        
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
+        var call = Assert.IsType<Call>(expressionStatement.Expression);
+        var access = Assert.IsType<PropertyAccess>(call.Callee);
+        var bit32Identifier = Assert.IsType<Identifier>(access.Target);
+        Assert.Equal("bit32", bit32Identifier.Name);
+        Assert.Single(access.Names);
+
+        var name = access.Names.First();
+        Assert.Equal(expectedMethod, name);
     }
     
     [Fact]
