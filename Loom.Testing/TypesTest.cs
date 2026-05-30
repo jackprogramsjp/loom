@@ -20,11 +20,36 @@ public class TypesTest
         var union1 = new UnionType([Number, Bool]);
         var union2 = new UnionType([Bool, String]);
         var intersection = new IntersectionType([union1, union2]);
+        Assert.False(None.IsAssignableTo(union1));
+        Assert.False(None.IsAssignableTo(union2));
+        Assert.False(None.IsAssignableTo(intersection));
+        Assert.True(union1.IsAssignableTo(union2));
+        Assert.True(union2.IsAssignableTo(union1));
         Assert.True(intersection.IsAssignableTo(union1));
         Assert.True(intersection.IsAssignableTo(union2));
         Assert.True(intersection.IsAssignableTo(intersection));
         Assert.True(Bool.IsAssignableTo(intersection));
+        Assert.True(Bool.IsAssignableTo(union1));
+        Assert.True(Bool.IsAssignableTo(union2));
         Assert.True(intersection.IsAssignableTo(Bool));
+    }
+    
+    [Fact]
+    public void Intersection_Literal_Assignability()
+    {
+        var union1 = new UnionType([Number, Bool]);
+        var union2 = new UnionType([Bool, String]);
+        var intersection = new IntersectionType([union1, union2]);
+        var literal = new LiteralType(false);
+        Assert.True(literal.IsAssignableTo(union1));
+        Assert.True(literal.IsAssignableTo(union2));
+        Assert.True(union1.IsAssignableTo(union2));
+        Assert.True(union2.IsAssignableTo(union1));
+        Assert.True(literal.IsAssignableTo(intersection));
+        Assert.False(intersection.IsAssignableTo(literal));
+        Assert.True(literal.IsAssignableTo(Bool));
+        Assert.False(literal.IsAssignableTo(String));
+        Assert.False(literal.IsAssignableTo(Number));
     }
     
     [Fact]
@@ -33,9 +58,23 @@ public class TypesTest
         var union1 = new UnionType([Bool, Number]);
         var union2 = new UnionType([Bool, Number, String]);
         Assert.False(union1.IsAssignableTo(Bool));
+        Assert.False(None.IsAssignableTo(union1));
+        Assert.False(None.IsAssignableTo(union2));
         Assert.True(Bool.IsAssignableTo(union1));
+        Assert.True(Bool.IsAssignableTo(union2));
         Assert.True(union2.IsAssignableTo(union1));
         Assert.True(union1.IsAssignableTo(union2));
+    }
+    
+    [Fact]
+    public void Union_Literal_Assignability()
+    {
+        var union = new UnionType([Bool, Number]);
+        var literal = new LiteralType(69.420);
+        Assert.False(union.IsAssignableTo(literal));
+        Assert.True(literal.IsAssignableTo(union));
+        Assert.True(literal.IsAssignableTo(Number));
+        Assert.False(literal.IsAssignableTo(Bool));
     }
     
     [Fact]
@@ -53,6 +92,14 @@ public class TypesTest
         Assert.Equal(PrimitiveTypeKind.Number, widenedInteger.Kind);
         Assert.Equal(PrimitiveTypeKind.Number, widenedNumber.Kind);
         Assert.True(widenedInteger.IsAssignableTo(widenedNumber));
+        Assert.True(integer.IsAssignableTo(widenedInteger));
+        Assert.True(integer.IsAssignableTo(widenedNumber));
+        Assert.True(number.IsAssignableTo(widenedInteger));
+        Assert.True(number.IsAssignableTo(widenedNumber));
+        Assert.False(widenedInteger.IsAssignableTo(integer));
+        Assert.False(widenedInteger.IsAssignableTo(number));
+        Assert.False(widenedNumber.IsAssignableTo(integer));
+        Assert.False(widenedNumber.IsAssignableTo(number));
     }
 
     [Fact]

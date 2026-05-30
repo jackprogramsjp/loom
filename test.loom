@@ -1,1 +1,1 @@
-1 + 2
+let x: number | bool = 69;
