@@ -4,6 +4,7 @@
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=fa254c26_002Dd0dc_002D4be1_002D9014_002Da8b6cf49d78a/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Literal_Assignability" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.TypesTest&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.LuauRenderingTest&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	

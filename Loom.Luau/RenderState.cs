@@ -8,6 +8,8 @@ public class RenderState
     public static char StringDelimiter { get; set; } = '"';
     
     private string _indent = "";
+    
+    public List<string> RenderList<T>(List<T> nodes) where T : LuauNode => nodes.ConvertAll(a => a.Render(this));
 
     public string Line(LuauNode node) => Line(node.Render(this));
     public string Line(string text) => NewLine(Indented(text));

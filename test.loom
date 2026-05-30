@@ -1,1 +1,1 @@
-let x: number | bool = "abc";
+let x: number | bool = 69;

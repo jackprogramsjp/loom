@@ -10,6 +10,42 @@ namespace Loom.Testing;
 public class LuauRenderingTest
 {
     [Fact]
+    public void Renders_Call()
+    {
+        var emptyCall = new Call(new Identifier("abc"), []);
+        var call = new Call(new Identifier("abc"), [new StringLiteral("foo")]);
+        Assert.Equal("abc()", emptyCall.Render());
+        Assert.Equal("abc(\"foo\")", call.Render());
+    }
+    
+    [Fact]
+    public void Renders_PropertyAccess_MethodCall()
+    {
+        var target = new Identifier("abc");
+        var access = new PropertyAccess(target, ["foo", "bar"]);
+        var call = new Call(access, [], true);
+        Assert.Equal("abc.foo:bar()", call.Render());
+    }
+    
+    [Fact]
+    public void Renders_PropertyAccess()
+    {
+        var target = new Identifier("abc");
+        var access = new PropertyAccess(target, ["foo"]);
+        var bigAccess = new PropertyAccess(target, ["foo", "bar"]);
+        Assert.Equal("abc.foo", access.Render());
+        Assert.Equal("abc.foo.bar", bigAccess.Render());
+    }
+    
+    [Fact]
+    public void Renders_ElementAccess()
+    {
+        var target = new Identifier("abc");
+        var access = new ElementAccess(target, new StringLiteral("foo"));
+        Assert.Equal("abc[\"foo\"]", access.Render());
+    }
+    
+    [Fact]
     public void Renders_ConstVariable_Annotated()
     {
         var initializer = new NumberLiteral(1);
@@ -22,7 +58,7 @@ public class LuauRenderingTest
     {
         var initializer = new NumberLiteral(1);
         var variable = new ConstVariable("abc", null, initializer);
-        Assert.Equal("const abc = 1", Utility.Render(variable));
+        Assert.Equal("const abc = 1", variable.Render());
     }
     
     [Fact]
@@ -30,7 +66,7 @@ public class LuauRenderingTest
     {
         var initializer = new NumberLiteral(1);
         var variable = new LocalVariable("abc", PrimitiveType.Number, initializer);
-        Assert.Equal("local abc: number = 1", Utility.Render(variable));
+        Assert.Equal("local abc: number = 1", variable.Render());
     }
     
     [Fact]
@@ -38,7 +74,7 @@ public class LuauRenderingTest
     {
         var type = new OptionalType(PrimitiveType.Number);
         var variable = new LocalVariable("abc", type, null);
-        Assert.Equal("local abc: number?", Utility.Render(variable));
+        Assert.Equal("local abc: number?", variable.Render());
     }
     
     [Fact]
@@ -46,38 +82,38 @@ public class LuauRenderingTest
     {
         var initializer = new NumberLiteral(1);
         var variable = new LocalVariable("abc", null, initializer);
-        Assert.Equal("local abc = 1", Utility.Render(variable));
+        Assert.Equal("local abc = 1", variable.Render());
     }
     
     [Fact]
     public void Renders_LocalVariable_Unannotated_NoInitializer()
     {
         var variable = new LocalVariable("abc", null, null);
-        Assert.Equal("local abc", Utility.Render(variable));
+        Assert.Equal("local abc", variable.Render());
     }
     
     [Fact]
     public void Renders_OptionalType_RequiresParens()
     {
-        Assert.Equal("(string | boolean)?", Utility.Render(new OptionalType(new UnionType([PrimitiveType.String, PrimitiveType.Boolean]))));
+        Assert.Equal("(string | boolean)?", new OptionalType(new UnionType([PrimitiveType.String, PrimitiveType.Boolean])).Render());
     }
     
     [Fact]
     public void Renders_OptionalType()
     {
-        Assert.Equal("number?", Utility.Render(new OptionalType(PrimitiveType.Number)));
+        Assert.Equal("number?", new OptionalType(PrimitiveType.Number).Render());
     }
     
     [Fact]
     public void Renders_UnionType()
     {
-        Assert.Equal("number | string | boolean", Utility.Render(new UnionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean])));
+        Assert.Equal("number | string | boolean", new UnionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean]).Render());
     }
     
     [Fact]
     public void Renders_IntersectionType()
     {
-        Assert.Equal("number & string & boolean", Utility.Render(new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean, ])));
+        Assert.Equal("number & string & boolean", new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean, ]).Render());
     }
     
     [Theory]
@@ -90,25 +126,25 @@ public class LuauRenderingTest
     [InlineData(PrimitiveTypeKind.Nil)]
     public void Renders_PrimitiveType(PrimitiveTypeKind kind)
     {
-        Assert.Equal(kind.ToString().ToLower(), Utility.Render(new PrimitiveType(kind)));
+        Assert.Equal(kind.ToString().ToLower(), new PrimitiveType(kind).Render());
     }
     
     [Fact]
     public void Renders_TypeName()
     {
-        Assert.Equal("Hello", Utility.Render(new TypeName("Hello")));
+        Assert.Equal("Hello", new TypeName("Hello").Render());
     }
     
     [Fact]
     public void Renders_UnitType()
     {
-        Assert.Equal("()", Utility.Render(new UnitType()));
+        Assert.Equal("()", new UnitType().Render());
     }
     
     [Fact]
     public void Renders_Identifier()
     {
-        Assert.Equal("abc", Utility.Render(new Identifier("abc")));
+        Assert.Equal("abc", new Identifier("abc").Render());
     }
     
     [Fact]
@@ -119,26 +155,26 @@ public class LuauRenderingTest
             "+",
             new NumberLiteral(2)
         );
-        Assert.Equal("1 + 2", Utility.Render(expression));
+        Assert.Equal("1 + 2", expression.Render());
     }
     
     [Fact]
     public void Renders_UnaryOperator()
     {
         var expression = new UnaryOperator("-", new NumberLiteral(1));
-        Assert.Equal("-1", Utility.Render(expression));
+        Assert.Equal("-1", expression.Render());
     }
     
     [Fact]
     public void Renders_MultilineStringLiteral()
     {
-        Assert.Equal("[[abc\ndef]]", Utility.Render(new StringLiteral("abc\ndef")));
+        Assert.Equal("[[abc\ndef]]", new StringLiteral("abc\ndef").Render());
     }
     
     [Fact]
     public void Renders_StringLiteral()
     {
-        Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", Utility.Render(new StringLiteral("abc")));
+        Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteral("abc").Render());
     }
     
     [Theory]
@@ -148,7 +184,7 @@ public class LuauRenderingTest
     [InlineData(0xFF, "255")]
     public void Renders_NumberLiteral(double value, string expected)
     {
-        Assert.Equal(expected, Utility.Render(new NumberLiteral(value)));
+        Assert.Equal(expected, new NumberLiteral(value).Render());
     }
     
     [Theory]
@@ -156,13 +192,12 @@ public class LuauRenderingTest
     [InlineData(false, "false")]
     public void Renders_BooleanLiteral(bool value, string expected)
     {
-        Assert.Equal(expected, Utility.Render(new BooleanLiteral(value)));
+        Assert.Equal(expected, new BooleanLiteral(value).Render());
     }
     
     [Fact]
     public void Renders_NilLiteral()
     {
-        var output = Utility.Render(new NilLiteral());
-        Assert.Equal("nil", output);
+        Assert.Equal("nil", new NilLiteral().Render());
     }
 }
