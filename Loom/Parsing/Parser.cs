@@ -23,17 +23,26 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private Statement ParseStatement()
     {
-        if (Match(SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
-            return ParseVariableDeclaration();
+        if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
+            return ParseVariableDeclaration(variableKeyword);
+        if (Match(SyntaxKind.TypeKeyword, out var typeKeyword))
+            return ParseTypeAlias(typeKeyword);
 
         var expression = ParseExpression();
         return new ExpressionStatement(expression);
     }
 
-    private VariableDeclaration ParseVariableDeclaration()
+    private TypeAlias ParseTypeAlias(Token keyword)
     {
-        var keyword = Last();
-        var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got {SafeTokenText(token)}.");
+        var name = ExpectIdentifier();
+        var equals = Expect(SyntaxKind.Equals);
+        var type = ParseType();
+        return new TypeAlias(keyword, name, equals, type);
+    }
+    
+    private VariableDeclaration ParseVariableDeclaration(Token keyword)
+    {
+        var name = ExpectIdentifier();
         ColonTypeClause? colonTypeClause = null;
         EqualsValueClause? equalsValueClause = null;
         if (Match(SyntaxKind.Colon, out var colon))
@@ -127,7 +136,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         return new NullExpression(last);
     }
 
-    private TypeExpression ParseType() => ParseParenthesizable(ParseUnionType);
+    private TypeExpression ParseType() => ParseUnionType();
 
     private TypeExpression ParseUnionType()
     {
@@ -173,7 +182,18 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private TypeExpression ParsePrimaryType()
     {
-        var name = Expect(SyntaxKind.Identifier, token => $"Expected type, got {SafeTokenText(token)}.");
+        if (Match(SyntaxKind.LParen, out var leftParen))
+        {
+            var type = ParseType();
+            var rightParen = Expect(
+                SyntaxKind.RParen,
+                got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
+            );
+
+            return new ParenthesizedType(leftParen, rightParen, type);
+        }
+        
+        var name = ExpectIdentifier("type");
         return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
     }
     
@@ -201,26 +221,6 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         return left;
     }
 
-    private T ParseParenthesizable<T>(Func<T> parseInner)
-        where T : Node
-    {
-        var parens = 0;
-        while (Match(SyntaxKind.LParen)) parens++;
-
-        var start = _position;
-        var node = parseInner();
-        for (var i = 0; i < parens; i++)
-        {
-            var opening = tokens.ElementAt(start - i);
-            Expect(
-                SyntaxKind.RParen,
-                token => $"Expected ')' here to close '{opening.Text}' at character {opening.Span.Start.Character}, got {SafeTokenText(token)}."
-            );
-        }
-
-        return node;
-    }
-
     private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);
     private bool Match([MaybeNullWhen(false)] out Token token, params SyntaxKind[] kinds) => Match(kinds.Contains, out token);
     private bool Match(SyntaxKind kind) => Match(otherKind => otherKind == kind, out var _);
@@ -242,6 +242,8 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
         return match;
     }
+    
+    private Token ExpectIdentifier(string expected = "identifier") => Expect(SyntaxKind.Identifier, token => $"Expected {expected}, got {SafeTokenText(token)}.");
 
     private Token Expect(SyntaxKind kind, string message) => Expect(kind, _ => message);
 

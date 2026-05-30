@@ -3,6 +3,7 @@ namespace Loom.TypeChecking.Types;
 public abstract class Type
 {
     public abstract bool Equals(Type? other);
+    public abstract override string ToString();
     
     public Type Widen() =>
         this switch

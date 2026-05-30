@@ -8,8 +8,11 @@ using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Parsing.AST.Identifier;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
+using Parenthesized = Loom.Parsing.AST.Parenthesized;
+using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
+using TypeAlias = Loom.Parsing.AST.TypeAlias;
 using TypeName = Loom.Parsing.AST.TypeName;
 using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
 using UnionType = Loom.Parsing.AST.UnionType;
@@ -32,6 +35,8 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     public LuauStatement Visit(Statement node) => (LuauStatement)node.Accept(this);
 
     public override LuauTree VisitTree(Tree t) => new(t.Statements.ConvertAll(Visit));
+
+    public override LuauNode VisitTypeAlias(TypeAlias typeAlias) => new Luau.AST.TypeAlias(typeAlias.Name.Text, Visit(typeAlias.Type));
 
     public override LuauNode VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
@@ -87,6 +92,8 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
         var mappedOperator = MapBinaryOperator(op);
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
     }
+    
+    public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));
 
     public override LuauNode VisitLiteral(Literal literal) =>
         literal.Value switch
@@ -107,6 +114,8 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
 
     public override LuauNode VisitTypeName(TypeName typeName) => new Luau.AST.TypeName(typeName.Name.Text);
+    
+    public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
 
     public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapPrimitiveTypeKind(primitiveType.Kind));
 

@@ -42,6 +42,12 @@ public class TypeChecker : Visitor<Type>
         return BindType(expressionStatement, type);
     }
 
+    public override Type VisitTypeAlias(TypeAlias typeAlias)
+    {
+        var type = TypeSimplifier.Simplify(Visit(typeAlias.Type));
+        return BindType(typeAlias, type);
+    }
+
     public override Type VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
         Type? declaredType = null;
@@ -87,7 +93,7 @@ public class TypeChecker : Visitor<Type>
             return BindType(identifier, type);
         }
 
-        _diagnostics.Error(identifier.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of '{identifier.Name.Text}'.");
+        _diagnostics.Error(identifier.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
         return BindType(identifier, Types.PrimitiveType.Never);
     }
 
@@ -99,7 +105,14 @@ public class TypeChecker : Visitor<Type>
 
     public override Type VisitTypeName(TypeName typeName)
     {
-        _diagnostics.NotImplemented(typeName.Span);
+        var symbol = _semanticModel.GetSymbol(typeName);
+        if (symbol != null)
+        {
+            var type = TypeSolver.GetType(symbol.DeclaringNode);
+            return BindType(typeName, type);
+        }
+
+        _diagnostics.Error(typeName.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of type '{typeName.Name.Text}'.");
         return BindType(typeName, Types.PrimitiveType.Never);
     }
 

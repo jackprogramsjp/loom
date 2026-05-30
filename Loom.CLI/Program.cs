@@ -14,11 +14,13 @@ Console.WriteLine("AST:");
 astDisplayer.Display();
 
 Console.WriteLine();
-Console.WriteLine($"Rebuilt program: {compiledFile.Tree}");
+Console.WriteLine("Rebuilt program:");
+Console.WriteLine(compiledFile.Tree.ToString());
 Console.WriteLine();
-Console.WriteLine($"Compiled Luau program: {compiledFile.RenderedLuau}");
+Console.WriteLine("Compiled Luau program:");
+Console.WriteLine(compiledFile.RenderedLuau);
 
-var diagnostics = compiledFile.Diagnostics.NotInfo().ToString();
+var diagnostics = compiledFile.Diagnostics.ToString();
 Console.WriteLine();
 Console.WriteLine("Diagnostics:");
 Console.WriteLine(string.IsNullOrEmpty(diagnostics) ? "(none)" : diagnostics);

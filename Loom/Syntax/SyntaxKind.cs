@@ -64,6 +64,7 @@ public enum SyntaxKind : ushort
 
     LetKeyword,
     MutKeyword,
+    TypeKeyword,
     FnKeyword,
 
     Identifier

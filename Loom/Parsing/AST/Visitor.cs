@@ -4,6 +4,8 @@ public abstract class Visitor<T>
 {
     public abstract T Visit(Node node);
     public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
+    
+    public virtual T VisitTypeAlias(TypeAlias typeAlias) => Visit(typeAlias.Type);
 
     public virtual T VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
@@ -25,6 +27,7 @@ public abstract class Visitor<T>
     public virtual T VisitBinaryOperator(BinaryOperator binaryOperator) => CombineResults([Visit(binaryOperator.Left), Visit(binaryOperator.Right)]);
     public virtual T VisitUnaryOperator(UnaryOperator unaryOperator) => Visit(unaryOperator.Operand);
 
+    public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
     public abstract T VisitTypeName(TypeName typeName);
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);

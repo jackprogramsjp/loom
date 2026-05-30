@@ -38,6 +38,21 @@ public class Resolver(Tree ast) : Visitor<bool>
 
     public override bool Visit(Node node) => node.Accept(this);
 
+    public override bool VisitTypeAlias(TypeAlias typeAlias)
+    {
+        var scope = CurrentScope();
+        var name = typeAlias.Name.Text;
+        if (scope.TypeLookup.ContainsKey(name))
+        {
+            _diagnostics.Error(typeAlias.Span, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
+            return false;
+        }
+
+        var symbol = new Symbol(typeAlias, SymbolKind.Type, name);
+        DeclareSymbol(symbol);
+        return Visit(typeAlias.Type);
+    }
+
     public override bool VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
         var scope = CurrentScope();
