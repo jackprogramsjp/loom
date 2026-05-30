@@ -4,7 +4,9 @@ public sealed class IntersectionType(List<Type> types) : Type
 {
     public List<Type> Types { get; } = types;
 
-    public override bool Equals(Type? other) => other is IntersectionType intersection && intersection.Types.SequenceEqual(Types);
+    public override bool Equals(Type? other) =>
+        other is IntersectionType intersection
+        && intersection.Types.TrueForAll(t => t.Equals(Types.ElementAtOrDefault(intersection.Types.IndexOf(t))));
 
     public override bool IsAssignableTo(Type other) => Types.All(other.IsAssignableTo);
     

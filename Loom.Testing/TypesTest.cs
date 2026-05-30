@@ -6,6 +6,15 @@ using static PrimitiveType;
 public class TypesTest
 {
     [Fact]
+    public void Optional_Assignability()
+    {
+        var required = String;
+        var optional = new OptionalType(required);
+        Assert.False(optional.IsAssignableTo(required));
+        Assert.True(required.IsAssignableTo(optional));
+    }
+        
+    [Fact]
     public void Intersection_Assignability()
     {
         var union1 = new UnionType([Number, Bool]);
@@ -61,5 +70,68 @@ public class TypesTest
         Assert.False(Unknown.IsAssignableTo(Number));
         Assert.True(Number.IsAssignableTo(Unknown));
         Assert.False(Number.IsAssignableTo(Never));
+    }
+    
+    [Fact]
+    public void Optional_Equality()
+    {
+        var a = new OptionalType(String);
+        var b = new OptionalType(new PrimitiveType(PrimitiveTypeKind.String));
+        var c = new OptionalType(Number);
+        var d = Number;
+        Assert.True(a.Equals(a));
+        Assert.True(a.Equals(b));
+        Assert.False(a.Equals(c));
+        Assert.False(b.Equals(c));
+        Assert.False(d.Equals(a));
+        Assert.False(d.Equals(b));
+        Assert.False(d.Equals(c));
+        Assert.False(a.Equals(d));
+        Assert.False(b.Equals(d));
+        Assert.False(c.Equals(d));
+    }
+    
+    [Fact]
+    public void Intersection_Equality()
+    {
+        var a = new IntersectionType([new PrimitiveType(PrimitiveTypeKind.Bool), String]);
+        var b = new IntersectionType([Bool, new PrimitiveType(PrimitiveTypeKind.String)]);
+        var c = new IntersectionType([Number, Bool]);
+        Assert.True(a.Equals(a));
+        Assert.True(a.Equals(b));
+        Assert.False(a.Equals(c));
+        Assert.False(b.Equals(c));
+    }
+    
+    [Fact]
+    public void Union_Equality()
+    {
+        var a = new UnionType([new PrimitiveType(PrimitiveTypeKind.Bool), String]);
+        var b = new UnionType([Bool, new PrimitiveType(PrimitiveTypeKind.String)]);
+        var c = new UnionType([Number, Bool]);
+        Assert.True(a.Equals(a));
+        Assert.True(a.Equals(b));
+        Assert.False(a.Equals(c));
+        Assert.False(b.Equals(c));
+    }
+    
+    [Fact]
+    public void Literal_Equality()
+    {
+        var a = new LiteralType(69);
+        var b = new LiteralType(69);
+        var c = new LiteralType(420);
+        Assert.True(a.Equals(a));
+        Assert.True(a.Equals(b));
+        Assert.False(a.Equals(c));
+        Assert.False(b.Equals(c));
+    }
+    
+    [Fact]
+    public void Primitive_Equality()
+    {
+        Assert.True(Bool.Equals(Bool));
+        Assert.True(Bool.Equals(new PrimitiveType(PrimitiveTypeKind.Bool)));
+        Assert.False(Bool.Equals(String));
     }
 }
