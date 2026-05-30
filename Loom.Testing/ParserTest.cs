@@ -131,14 +131,18 @@ public class ParserTest
         var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
         var addition = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
         Assert.Equal(SyntaxKind.Plus, addition.Operator.Kind);
+        
         var minusA = Assert.IsType<UnaryOperator>(addition.Left);
         Assert.IsType<Identifier>(minusA.Operand);
         Assert.Equal(SyntaxKind.Minus, minusA.Operator.Kind);
+        
         var multiplication = Assert.IsType<BinaryOperator>(addition.Right);
         Assert.Equal(SyntaxKind.Star, multiplication.Operator.Kind);
         Assert.IsType<Identifier>(multiplication.Left);
+        
         var exponentiation = Assert.IsType<BinaryOperator>(multiplication.Right);
         Assert.Equal(SyntaxKind.Carat, exponentiation.Operator.Kind);
+        
         var tildeC = Assert.IsType<UnaryOperator>(exponentiation.Left);
         Assert.IsType<Identifier>(tildeC.Operand);
         Assert.Equal(SyntaxKind.Tilde, tildeC.Operator.Kind);
