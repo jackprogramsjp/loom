@@ -1,6 +1,6 @@
 namespace Loom.TypeChecking.Types;
 
-internal class TypeVariable(int id) : Type
+public class TypeVariable(int id) : Type
 {
     public int Id { get; } = id;
 

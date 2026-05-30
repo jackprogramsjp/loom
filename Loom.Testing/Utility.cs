@@ -9,6 +9,8 @@ namespace Loom.Testing;
 
 internal static class Utility
 {
+    public static readonly LocationSpan Span = LocationSpan.Empty(TestFile(""));
+    
     public static List<Token> GetTokens(string source) => Tokenize(source).Tokens;
     public static Tree GetAST(string source) => Parse(source).Tree;
     public static SemanticModel GetSemanticModel(string source) => new Resolver(GetAST(source)).Resolve();
@@ -22,8 +24,11 @@ internal static class Utility
         Assert.Equal(message, diagnostic.Message);
     }
 
+    public static Token IdentifierToken(string name, LocationSpan? span = null) => Token(SyntaxKind.Identifier, name, span);
+    
     private static LexerResult Tokenize(string source) => new Lexer(TestFile(source)).Tokenize();
     private static ParserResult Parse(string source) => new Parser(TestFile(source), GetTokens(source)).Parse();
     
+    private static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
     private static SourceFile TestFile(string source) => new("test", source);
 }

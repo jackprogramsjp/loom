@@ -17,11 +17,10 @@ var semanticModel = resolver.Resolve();
 var typeChecker = new TypeChecker(semanticModel);
 var typeCheckerResult = typeChecker.Check();
 
-// DiagnosticBag.FilterSeverity = DiagnosticSeverity.Error;
-var lexerDiagnostics = lexerResult.Diagnostics.ToString();
-var parserDiagnostics = parserResult.Diagnostics.ToString();
-var resolverDiagnostics = semanticModel.Diagnostics.ToString();
-var typeCheckerDiagnostics = typeCheckerResult.Diagnostics.ToString();
+var lexerDiagnostics = lexerResult.Diagnostics.NotInfo().ToString();
+var parserDiagnostics = parserResult.Diagnostics.NotInfo().ToString();
+var resolverDiagnostics = semanticModel.Diagnostics.NotInfo().ToString();
+var typeCheckerDiagnostics = typeCheckerResult.Diagnostics.NotInfo().ToString();
 
 Console.WriteLine("Tokens:");
 foreach (var token in lexerResult.Tokens)

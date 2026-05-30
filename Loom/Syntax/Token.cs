@@ -2,11 +2,11 @@ namespace Loom.Syntax;
 
 public class Token
 {
-    public Token(SyntaxKind kind, LocationSpan span)
+    public Token(SyntaxKind kind, LocationSpan span, string? text = null)
     {
         Kind = kind;
         Span = span;
-        Text = Span.GetText();
+        Text = text ?? Span.GetText();
     }
 
     public SyntaxKind Kind { get; }

@@ -11,6 +11,7 @@
     &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.TypeSimplifierTest.Union_Absorption&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.TypeSimplifierTest.Deduplication&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.TypeSimplifierTest.Combined_AbsorptionAndDeduplication&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.TypeSolverTest&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	
