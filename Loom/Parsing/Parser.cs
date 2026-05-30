@@ -51,7 +51,115 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         return new VariableDeclaration(keyword, name, colonTypeClause, equalsValueClause);
     }
 
-    private Expression ParseExpression() => ParseAdditive();
+    private Expression ParseExpression() => ParseNullCoalescing();
+    
+    private Expression ParseNullCoalescing()
+    {
+        var left = ParseBitwiseOr();
+        while (Match(SyntaxKind.PipePipe, out var op))
+        {
+            var right = ParseNullCoalescing();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseLogicalOr()
+    {
+        var left = ParseBitwiseOr();
+        while (Match(SyntaxKind.PipePipe, out var op))
+        {
+            var right = ParseBitwiseOr();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseLogicalAnd()
+    {
+        var left = ParseBitwiseOr();
+        while (Match(SyntaxKind.AmpersandAmpersand, out var op))
+        {
+            var right = ParseBitwiseOr();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseBitwiseOr()
+    {
+        var left = ParseXor();
+        while (Match(SyntaxKind.Pipe, out var op))
+        {
+            var right = ParseXor();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseXor()
+    {
+        var left = ParseBitwiseAnd();
+        while (Match(SyntaxKind.Tilde, out var op))
+        {
+            var right = ParseBitwiseAnd();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseBitwiseAnd()
+    {
+        var left = ParseEquality();
+        while (Match(SyntaxKind.Ampersand, out var op))
+        {
+            var right = ParseEquality();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseEquality()
+    {
+        var left = ParseShift();
+        while (Match(out var op, SyntaxKind.EqualsEquals, SyntaxKind.BangEquals))
+        {
+            var right = ParseShift();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseRelational()
+    {
+        var left = ParseShift();
+        while (Match(out var op, SyntaxKind.LArrow, SyntaxKind.LArrowEquals, SyntaxKind.RArrow, SyntaxKind.RArrowRArrowEquals))
+        {
+            var right = ParseShift();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+    
+    private Expression ParseShift()
+    {
+        var left = ParseAdditive();
+        while (Match(out var op, SyntaxKind.LArrowLArrow, SyntaxKind.RArrowRArrow, SyntaxKind.RArrowRArrowRArrow))
+        {
+            var right = ParseAdditive();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
 
     private Expression ParseAdditive()
     {

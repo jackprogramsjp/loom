@@ -1,4 +1,5 @@
 using Loom.Diagnostics;
+using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.Syntax;
@@ -51,8 +52,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
         var operand = Visit(unaryOperator.Operand);
         if (SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind))
         {
-            _diagnostics.NotImplemented(unaryOperator, "Luau generation for bitwise operators is not yet supported.");
-            return new Luau.AST.UnaryOperator("???", operand);
+            return LuauFactory.Bit32Call("bnot", [operand]);
         }
 
         var mappedOperator = MapUnaryOperator(unaryOperator.Operator.Text);
@@ -63,13 +63,28 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     {
         var left = Visit(binaryOperator.Left);
         var right = Visit(binaryOperator.Right);
+        var op = binaryOperator.Operator.Text;
         if (SyntaxFacts.IsBitwiseOperator(binaryOperator.Operator.Kind))
         {
-            _diagnostics.NotImplemented(binaryOperator, "Luau generation for bitwise operators is not yet supported.");
-            return new Luau.AST.BinaryOperator(left, "???", right);
+            if (op.EndsWith('='))
+            {
+                _diagnostics.NotImplemented(binaryOperator, "Luau generation for bitwise assignment operators is not yet supported.");
+                return new Luau.AST.BinaryOperator(left, "???", right);
+            }
+
+            var name = MapBitwiseOperator(op);
+            var arguments = new List<LuauExpression>();
+            var leftUpdated = AddBit32Arguments(left, name, arguments);
+            var rightUpdated = AddBit32Arguments(right, name, arguments);
+            if (!leftUpdated)
+                arguments.Add(left);
+            if (!rightUpdated)
+                arguments.Add(right);
+
+            return LuauFactory.Bit32Call(name, arguments);
         }
 
-        var mappedOperator = MapBinaryOperator(binaryOperator.Operator.Text);
+        var mappedOperator = MapBinaryOperator(op);
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
     }
 
@@ -86,7 +101,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.AST.Identifier(identifier.Name.Text);
 
     public override LuauNode VisitIntersectionType(IntersectionType intersectionType) => new Luau.AST.IntersectionType(intersectionType.Types.ConvertAll(Visit));
-    
+
     public override LuauNode VisitUnionType(UnionType unionType) => new Luau.AST.UnionType(unionType.Types.ConvertAll(Visit));
 
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
@@ -106,6 +121,18 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
             _ => Luau.AST.PrimitiveTypeKind.Nil,
         };
 
+    private static string MapBitwiseOperator(string op) =>
+        op switch
+        {
+            "&" => "band",
+            "|" => "bor",
+            "~" => "bxor",
+            "<<" => "lshift",
+            ">>>" => "rshift",
+            ">>" => "arshift",
+            _ => op
+        };
+
     private static string MapBinaryOperator(string op) =>
         op switch
         {
@@ -120,4 +147,28 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
             "!" => "not ",
             _ => op
         };
+
+    private static bool AddBit32Arguments(LuauExpression expression, string name, List<LuauExpression> arguments)
+    {
+        if (expression is not Call
+            {
+                Callee: Luau.AST.PropertyAccess { Target: Luau.AST.Identifier { Name: "bit32" }, Names: [{ } fnName] }, Arguments: { } fnArguments
+            }
+            || fnName != name)
+        {
+            return false;
+        }
+        
+        // shift methods dont accept varargs
+        if (fnName.EndsWith("shift"))
+            return false;
+        
+        foreach (var argument in fnArguments)
+        {
+            arguments.Add(argument);
+            AddBit32Arguments(argument, name, arguments);
+        }
+
+        return true;
+    }
 }
