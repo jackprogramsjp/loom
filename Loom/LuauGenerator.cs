@@ -137,7 +137,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
         op switch
         {
             "&&" => "and",
-            "||" => "or",
+            "||" or "??" => "or",
             _ => op
         };
 

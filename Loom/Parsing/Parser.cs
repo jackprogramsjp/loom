@@ -52,150 +52,31 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     }
 
     private Expression ParseExpression() => ParseNullCoalescing();
-    
-    private Expression ParseNullCoalescing()
-    {
-        var left = ParseBitwiseOr();
-        while (Match(SyntaxKind.PipePipe, out var op))
-        {
-            var right = ParseNullCoalescing();
-            left = new BinaryOperator(op, left, right);
-        }
 
-        return left;
-    }
-    
-    private Expression ParseLogicalOr()
-    {
-        var left = ParseBitwiseOr();
-        while (Match(SyntaxKind.PipePipe, out var op))
-        {
-            var right = ParseBitwiseOr();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseNullCoalescing() => ParseBinaryRightAssociative(ParseLogicalOr, ParseNullCoalescing, SyntaxKind.QuestionQuestion);
 
-        return left;
-    }
-    
-    private Expression ParseLogicalAnd()
-    {
-        var left = ParseBitwiseOr();
-        while (Match(SyntaxKind.AmpersandAmpersand, out var op))
-        {
-            var right = ParseBitwiseOr();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseLogicalOr() => ParseBinaryLeftAssociative(ParseLogicalAnd, SyntaxKind.PipePipe);
 
-        return left;
-    }
-    
-    private Expression ParseBitwiseOr()
-    {
-        var left = ParseXor();
-        while (Match(SyntaxKind.Pipe, out var op))
-        {
-            var right = ParseXor();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseLogicalAnd() => ParseBinaryLeftAssociative(ParseBitwiseOr, SyntaxKind.AmpersandAmpersand);
 
-        return left;
-    }
-    
-    private Expression ParseXor()
-    {
-        var left = ParseBitwiseAnd();
-        while (Match(SyntaxKind.Tilde, out var op))
-        {
-            var right = ParseBitwiseAnd();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseBitwiseOr() => ParseBinaryLeftAssociative(ParseXor, SyntaxKind.Pipe);
 
-        return left;
-    }
-    
-    private Expression ParseBitwiseAnd()
-    {
-        var left = ParseEquality();
-        while (Match(SyntaxKind.Ampersand, out var op))
-        {
-            var right = ParseEquality();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseXor() => ParseBinaryLeftAssociative(ParseBitwiseAnd, SyntaxKind.Tilde);
 
-        return left;
-    }
-    
-    private Expression ParseEquality()
-    {
-        var left = ParseShift();
-        while (Match(out var op, SyntaxKind.EqualsEquals, SyntaxKind.BangEquals))
-        {
-            var right = ParseShift();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseBitwiseAnd() => ParseBinaryLeftAssociative(ParseEquality, SyntaxKind.Ampersand);
 
-        return left;
-    }
-    
-    private Expression ParseRelational()
-    {
-        var left = ParseShift();
-        while (Match(out var op, SyntaxKind.LArrow, SyntaxKind.LArrowEquals, SyntaxKind.RArrow, SyntaxKind.RArrowRArrowEquals))
-        {
-            var right = ParseShift();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseEquality() => ParseBinaryLeftAssociative(ParseRelational, SyntaxKind.EqualsEquals, SyntaxKind.BangEquals);
 
-        return left;
-    }
-    
-    private Expression ParseShift()
-    {
-        var left = ParseAdditive();
-        while (Match(out var op, SyntaxKind.LArrowLArrow, SyntaxKind.RArrowRArrow, SyntaxKind.RArrowRArrowRArrow))
-        {
-            var right = ParseAdditive();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseRelational() =>
+        ParseBinaryLeftAssociative(ParseShift, SyntaxKind.LArrow, SyntaxKind.LArrowEquals, SyntaxKind.RArrow, SyntaxKind.RArrowRArrowEquals);
 
-        return left;
-    }
+    private Expression ParseShift() => ParseBinaryLeftAssociative(ParseAdditive, SyntaxKind.LArrowLArrow, SyntaxKind.RArrowRArrow, SyntaxKind.RArrowRArrowRArrow);
 
-    private Expression ParseAdditive()
-    {
-        var left = ParseMultiplicative();
-        while (Match(out var op, SyntaxKind.Plus, SyntaxKind.Minus))
-        {
-            var right = ParseMultiplicative();
-            left = new BinaryOperator(op, left, right);
-        }
+    private Expression ParseAdditive() => ParseBinaryLeftAssociative(ParseMultiplicative, SyntaxKind.Plus, SyntaxKind.Minus);
 
-        return left;
-    }
+    private Expression ParseMultiplicative() => ParseBinaryLeftAssociative(ParseExponential, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.SlashSlash, SyntaxKind.Percent);
 
-    private Expression ParseMultiplicative()
-    {
-        var left = ParseExponential();
-        while (Match(out var op, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.Percent))
-        {
-            var right = ParseExponential();
-            left = new BinaryOperator(op, left, right);
-        }
-
-        return left;
-    }
-
-    private Expression ParseExponential()
-    {
-        var left = ParseUnary();
-        while (Match(SyntaxKind.Carat, out var op))
-        {
-            var right = ParseExponential();
-            left = new BinaryOperator(op, left, right);
-        }
-
-        return left;
-    }
+    private Expression ParseExponential() => ParseBinaryRightAssociative(ParseUnary, ParseExponential, SyntaxKind.Carat);
 
     private Expression ParseUnary() =>
         Match(SyntaxFacts.IsUnaryOperator, out var op)
@@ -241,7 +122,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
             return new Literal(token, value);
         }
 
-        var last = Last();
+        var last = Advance();
         _diagnostics.Error(last.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
         return new NullExpression(last);
     }
@@ -294,6 +175,30 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     {
         var name = Expect(SyntaxKind.Identifier, token => $"Expected type, got {SafeTokenText(token)}.");
         return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
+    }
+    
+    private Expression ParseBinaryRightAssociative(Func<Expression> parseLeft, Func<Expression> parseRight, params SyntaxKind[] operators)
+    {
+        var left = parseLeft();
+        while (Match(out var op, operators))
+        {
+            var right = parseRight();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
+    }
+
+    private Expression ParseBinaryLeftAssociative(Func<Expression> parse, params SyntaxKind[] operators)
+    {
+        var left = parse();
+        while (Match(out var op, operators))
+        {
+            var right = parse();
+            left = new BinaryOperator(op, left, right);
+        }
+
+        return left;
     }
 
     private T ParseParenthesizable<T>(Func<T> parseInner)
