@@ -1,10 +1,12 @@
 using Loom.Diagnostics;
 using Loom.Lexing;
+using Loom.Luau;
 using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking;
+using ExpressionStatement = Loom.Luau.ExpressionStatement;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Testing;
@@ -25,6 +27,8 @@ internal static class Utility
         Assert.True(semanticModel.Tree.Statements.Count > 0);
         return checker.TypeSolver.GetType(semanticModel.Tree.Statements.Last());
     }
+
+    public static string RenderExpression(LuauExpression expression) => new LuauTree([new ExpressionStatement(expression)]).Render();
     
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => new TypeChecker(GetSemanticModel(source)).Check().Diagnostics;
     public static SemanticModel GetSemanticModel(string source) => new Resolver(GetAST(source)).Resolve();
