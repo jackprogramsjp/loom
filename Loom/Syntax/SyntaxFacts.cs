@@ -24,10 +24,26 @@ internal static class SyntaxFacts
         SyntaxKind.PipePipeEquals,
         SyntaxKind.QuestionQuestionEquals
     ];
+    private static readonly HashSet<SyntaxKind> _bitwiseOperators =
+    [
+        SyntaxKind.Ampersand,
+        SyntaxKind.AmpersandEquals,
+        SyntaxKind.Pipe,
+        SyntaxKind.PipeEquals,
+        SyntaxKind.Tilde,
+        SyntaxKind.TildeEquals,
+        SyntaxKind.RArrowRArrow,
+        SyntaxKind.RArrowRArrowEquals,
+        SyntaxKind.RArrowRArrowRArrow,
+        SyntaxKind.RArrowRArrowRArrowEquals,
+        SyntaxKind.LArrowLArrow,
+        SyntaxKind.LArrowLArrowEquals
+    ];
     private static readonly HashSet<SyntaxKind> _unaryOperators = [SyntaxKind.Minus, SyntaxKind.Tilde, SyntaxKind.Bang];
 
     public static bool IsTrivia(SyntaxKind kind) => _triviaSyntaxes.Contains(kind);
     public static bool IsAssignmentOperator(SyntaxKind kind) => _assignmentOperators.Contains(kind);
+    public static bool IsBitwiseOperator(SyntaxKind kind) => _bitwiseOperators.Contains(kind);
     public static bool IsUnaryOperator(SyntaxKind kind) => _unaryOperators.Contains(kind);
     public static bool IsPrimitiveType(string name) => _primitiveTypeNames.Contains(name);
 }

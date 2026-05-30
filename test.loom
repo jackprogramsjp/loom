@@ -1,1 +1,1 @@
-let x: number | string = 1;
+1 + 2

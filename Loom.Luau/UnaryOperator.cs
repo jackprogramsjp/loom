@@ -1,6 +1,6 @@
 namespace Loom.Luau;
 
-public class UnaryExpression(string @operator, LuauExpression operand) : LuauExpression
+public class UnaryOperator(string @operator, LuauExpression operand) : LuauExpression
 {
     public string Operator { get; } = @operator;
     public LuauExpression Operand { get; } = operand;

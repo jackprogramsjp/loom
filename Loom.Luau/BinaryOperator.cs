@@ -1,6 +1,6 @@
 namespace Loom.Luau;
 
-public class BinaryExpression(LuauExpression left, string @operator, LuauExpression right) : LuauExpression
+public class BinaryOperator(LuauExpression left, string @operator, LuauExpression right) : LuauExpression
 {
     public string Operator { get; } = @operator;
     public LuauExpression Left { get; } = left;

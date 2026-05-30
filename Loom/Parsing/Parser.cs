@@ -13,7 +13,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     public ParserResult Parse()
     {
-        var statements = new List<Node>();
+        var statements = new List<Statement>();
         while (!IsEof())
             statements.Add(ParseStatement());
 

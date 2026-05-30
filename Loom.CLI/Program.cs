@@ -14,6 +14,8 @@ Console.WriteLine("AST:");
 astDisplayer.Display();
 Console.WriteLine();
 Console.WriteLine($"Rebuilt program: {compiledFile.Tree}");
+Console.WriteLine();
+Console.WriteLine($"Compiled Luau program: {compiledFile.RenderedLuau}");
 
 var diagnostics = compiledFile.Diagnostics.NotInfo().ToString();
 Console.WriteLine();

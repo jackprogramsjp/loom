@@ -3,7 +3,7 @@ namespace Loom.Parsing.AST;
 public abstract class Visitor<T>
 {
     public abstract T Visit(Node node);
-    public T VisitTree(Tree tree) => VisitList(tree.Statements);
+    public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
 
     public virtual T VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
@@ -40,5 +40,7 @@ public abstract class Visitor<T>
     
     protected virtual T CombineResults(IEnumerable<T> results) => results.LastOrDefault()!;
     private T VisitList(List<Node> nodes) => CombineResults(nodes.ConvertAll(Visit));
+    private T VisitList(List<Expression> nodes) => CombineResults(nodes.ConvertAll(Visit));
+    private T VisitList(List<Statement> nodes) => CombineResults(nodes.ConvertAll(Visit));
     private T VisitList(List<TypeExpression> nodes) => CombineResults(nodes.ConvertAll(Visit));
 }

@@ -7,7 +7,7 @@ public class LuauRenderingTest
     [Fact]
     public void Renders_BinaryExpression()
     {
-        var expression = new BinaryExpression(
+        var expression = new BinaryOperator(
             new NumberLiteral(1),
             "+",
             new NumberLiteral(2)
@@ -18,7 +18,7 @@ public class LuauRenderingTest
     [Fact]
     public void Renders_UnaryExpression()
     {
-        var expression = new UnaryExpression("-", new NumberLiteral(1));
+        var expression = new UnaryOperator("-", new NumberLiteral(1));
         Assert.Equal("-1\n", Utility.RenderExpression(expression));
     }
     

@@ -38,15 +38,20 @@ public class CompilationUnit(List<SourceFile> files)
         var semanticModel = TrackDiagnostics(resolver.Resolve());
         var typeChecker = new TypeChecker(semanticModel);
         var typeCheckerResult = TrackDiagnostics(typeChecker.Check());
+        var generator = new LuauGenerator(semanticModel.Tree);
+        var generatorResult = TrackDiagnostics(generator.Generate());
+        var renderedLuau = generatorResult.LuauTree.Render();
         var diagnostics = GetDiagnostics();
 
         return new CompiledFile
         {
             Diagnostics = diagnostics,
+            RenderedLuau = renderedLuau,
+            LuauTree = generatorResult.LuauTree,
             ReturnType = typeCheckerResult.ReturnType,
             SemanticModel = semanticModel,
             Tree = parserResult.Tree,
-            Tokens = lexerResult.Tokens,
+            Tokens = lexerResult.Tokens
         };
     }
 
