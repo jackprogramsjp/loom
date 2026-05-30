@@ -25,12 +25,12 @@ public class TypeChecker : Visitor<Type>
         _semanticModel = semanticModel;
     }
 
-    public DiagnosedResult Check()
+    public TypeCheckerResult Check()
     {
-        var type = VisitTree(_semanticModel.Tree);
-        BindType(_semanticModel.Tree, type);
+        var tree = _semanticModel.Tree;
+        var type = BindType(tree, VisitTree(tree));
         TypeSolver.SolveConstraints();
-        return new DiagnosedResult(_diagnostics);
+        return new TypeCheckerResult(type, _diagnostics);
     }
 
     public override Type Visit(Node node) => node.Accept(this);

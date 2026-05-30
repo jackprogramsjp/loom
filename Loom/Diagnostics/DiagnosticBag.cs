@@ -7,6 +7,8 @@ public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
 {
     public HashSet<Diagnostic> Set { get; } = diagnostics ?? [];
     
+    public static DiagnosticBag Concat(List<DiagnosticBag> bags) => new(bags.SelectMany(bag => bag.Set).ToHashSet());
+    
     public void Info(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Info, null, message);
     public void Info(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Info, code, message);
     public void Warn(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Warn, code, message);
