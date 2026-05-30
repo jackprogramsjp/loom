@@ -4,6 +4,7 @@ using Loom.Parsing.AST;
 using Loom.Syntax;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
+using Identifier = Loom.Parsing.AST.Identifier;
 using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
 
 namespace Loom;
@@ -64,7 +65,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
             _ => new NilLiteral()
         };
 
-    public override LuauNode VisitIdentifier(Identifier identifier) => throw new NotImplementedException();
+    public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.Identifier(identifier.Name.Text);
 
     public override LuauNode VisitTypeName(TypeName typeName) => throw new NotImplementedException();
 
@@ -81,7 +82,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     private static string MapUnaryOperator(string op) =>
         op switch
         {
-            "!" => "not",
+            "!" => "not ",
             _ => op
         };
 }

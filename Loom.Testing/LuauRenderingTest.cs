@@ -5,7 +5,13 @@ namespace Loom.Testing;
 public class LuauRenderingTest
 {
     [Fact]
-    public void Renders_BinaryExpression()
+    public void Renders_Identifier()
+    {
+        Assert.Equal("abc\n", Utility.RenderExpression(new Identifier("abc")));
+    }
+    
+    [Fact]
+    public void Renders_BinaryOperator()
     {
         var expression = new BinaryOperator(
             new NumberLiteral(1),
@@ -16,7 +22,7 @@ public class LuauRenderingTest
     }
     
     [Fact]
-    public void Renders_UnaryExpression()
+    public void Renders_UnaryOperator()
     {
         var expression = new UnaryOperator("-", new NumberLiteral(1));
         Assert.Equal("-1\n", Utility.RenderExpression(expression));

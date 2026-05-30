@@ -28,6 +28,7 @@ internal static class Utility
         return checker.TypeSolver.GetType(semanticModel.Tree.Statements.Last());
     }
 
+    public static LuauTree GetLuauAST(string source) => new LuauGenerator(Parse(source).Tree).Generate().LuauTree;
     public static string RenderExpression(LuauExpression expression) => new LuauTree([new ExpressionStatement(expression)]).Render();
     
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => new TypeChecker(GetSemanticModel(source)).Check().Diagnostics;
