@@ -1,5 +1,8 @@
 # Loom
 
+[![CI Status](https://github.com/R-unic/loom/actions/workflows/ci.yml/badge.svg)](https://github.com/R-unic/loom/workflows)
+[![Coverage Status](https://coveralls.io/repos/github/R-unic/loom/badge.svg?branch=master)](https://coveralls.io/github/R-unic/loom)
+
 Domain-specific-language for Roblox that transpiles to Luau.
 
 ## Notes
