@@ -30,7 +30,7 @@ internal static class Utility
     }
 
     public static LuauTree GetLuauAST(string source) => new LuauGenerator(Parse(source).Tree).Generate().LuauTree;
-    public static string RenderExpression(LuauExpression expression) => new LuauTree([new ExpressionStatement(expression)]).Render();
+    public static string Render(LuauNode node) => node.Render(new RenderState());
     
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => new TypeChecker(GetSemanticModel(source)).Check().Diagnostics;
     public static SemanticModel GetSemanticModel(string source) => new Resolver(GetAST(source)).Resolve();
