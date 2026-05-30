@@ -1,13 +1,17 @@
 using Loom.Diagnostics;
-using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Parsing.AST.Identifier;
+using IntersectionType = Loom.Parsing.AST.IntersectionType;
+using OptionalType = Loom.Parsing.AST.OptionalType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
+using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
+using TypeName = Loom.Parsing.AST.TypeName;
 using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
+using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom;
 
@@ -22,10 +26,22 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     }
 
     public override LuauNode Visit(Node node) => node.Accept(this);
+    public LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
     public LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);
     public LuauStatement Visit(Statement node) => (LuauStatement)node.Accept(this);
 
     public override LuauTree VisitTree(Tree t) => new(t.Statements.ConvertAll(Visit));
+
+    public override LuauNode VisitVariableDeclaration(VariableDeclaration variableDeclaration)
+    {
+        var isConst = variableDeclaration.Keyword is { Kind: SyntaxKind.LetKeyword };
+        var name = variableDeclaration.Name.Text;
+        var type = variableDeclaration.ColonTypeClause != null ? Visit(variableDeclaration.ColonTypeClause.Type) : null;
+        var initializer = variableDeclaration.EqualsValueClause != null ? Visit(variableDeclaration.EqualsValueClause.Value) : null;
+        return isConst
+            ? new ConstVariable(name, type, initializer!)
+            : new LocalVariable(name, type, initializer);
+    }
 
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) =>
         new Luau.AST.ExpressionStatement(Visit(expressionStatement.Expression));
@@ -69,9 +85,26 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
 
     public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.AST.Identifier(identifier.Name.Text);
 
-    public override LuauNode VisitTypeName(TypeName typeName) => throw new NotImplementedException();
+    public override LuauNode VisitIntersectionType(IntersectionType intersectionType) => new Luau.AST.IntersectionType(intersectionType.Types.ConvertAll(Visit));
+    
+    public override LuauNode VisitUnionType(UnionType unionType) => new Luau.AST.UnionType(unionType.Types.ConvertAll(Visit));
 
-    public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => throw new NotImplementedException();
+    public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
+
+    public override LuauNode VisitTypeName(TypeName typeName) => new Luau.AST.TypeName(typeName.Name.Text);
+
+    public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapPrimitiveTypeKind(primitiveType.Kind));
+
+    private static Luau.AST.PrimitiveTypeKind MapPrimitiveTypeKind(PrimitiveTypeKind kind) =>
+        kind switch
+        {
+            PrimitiveTypeKind.Number => Luau.AST.PrimitiveTypeKind.Number,
+            PrimitiveTypeKind.String => Luau.AST.PrimitiveTypeKind.String,
+            PrimitiveTypeKind.Bool => Luau.AST.PrimitiveTypeKind.Boolean,
+            PrimitiveTypeKind.Unknown => Luau.AST.PrimitiveTypeKind.Unknown,
+            PrimitiveTypeKind.Never => Luau.AST.PrimitiveTypeKind.Never,
+            _ => Luau.AST.PrimitiveTypeKind.Nil,
+        };
 
     private static string MapBinaryOperator(string op) =>
         op switch
