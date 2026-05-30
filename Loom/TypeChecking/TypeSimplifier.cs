@@ -49,12 +49,12 @@ public static class TypeSimplifier
             {
                 if (isUnion)
                 {
-                    if (!IsSubsetOf(t2, t1)) continue;
+                    if (!IsSubsetOf(t1, t2)) continue;
                     isAbsorbed = true;
                     break;
                 }
 
-                if (!IsSubsetOf(t1, t2)) continue;
+                if (!IsSubsetOf(t2, t1)) continue;
                 isAbsorbed = true;
                 break;
             }
@@ -70,7 +70,7 @@ public static class TypeSimplifier
         (a, b) switch
         {
             (UnionType ua, UnionType ub) => ua.Types.All(t => IsSubsetOf(t, ub)),
-            (UnionType ua, _) => ua.Types.Any(t => IsSubsetOf(t, b)),
+            (UnionType ua, _) => ua.Types.All(t => IsSubsetOf(t, b)),
             (_, UnionType ub) => ub.Types.Any(t => IsSubsetOf(a, t)),
             (IntersectionType ia, _) => ia.Types.All(t => IsSubsetOf(t, b)),
             (_, IntersectionType ib) => ib.Types.Any(t => IsSubsetOf(a, t)),
@@ -79,11 +79,18 @@ public static class TypeSimplifier
 
     private static List<Type> RemoveDuplicates(List<Type> types) =>
         types
-            .Distinct()
+            .Aggregate(new List<Type>(), (unique, item) =>
+            {
+                if (!unique.Any(item.Equals))
+                    unique.Add(item);
+                
+                return unique;
+            })
             .Where(t => t is not PrimitiveType { Kind: PrimitiveTypeKind.Never })
             .ToList();
 
-    private static List<Type> FlattenNestedUnions(List<Type> types) => types.SelectMany(t => t is UnionType union ? union.Types : [t]).ToList();
+    private static List<Type> FlattenNestedUnions(List<Type> types) =>
+        types.SelectMany(t => t is UnionType union ? union.Types : [t]).ToList();
 
     private static List<Type> FlattenNestedIntersections(List<Type> types) =>
         types.SelectMany(t => t is IntersectionType intersection ? intersection.Types : [t]).ToList();

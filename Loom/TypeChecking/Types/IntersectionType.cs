@@ -6,7 +6,8 @@ public sealed class IntersectionType(List<Type> types) : Type
 
     public override bool Equals(Type? other) =>
         other is IntersectionType intersection
-        && intersection.Types.TrueForAll(t => t.Equals(Types.ElementAtOrDefault(intersection.Types.IndexOf(t))));
+        && Types.Count == intersection.Types.Count
+        && Types.All(t => intersection.Types.Any(u => u.Equals(t)));
 
     public override bool IsAssignableTo(Type other) => Types.All(other.IsAssignableTo);
     
