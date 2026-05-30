@@ -11,6 +11,8 @@ public class PrimitiveType(Token name)
         "number" => PrimitiveTypeKind.Number,
         "string" => PrimitiveTypeKind.String,
         "bool" => PrimitiveTypeKind.Bool,
+        "never" => PrimitiveTypeKind.Never,
+        "unknown" => PrimitiveTypeKind.Unknown,
         "void" => PrimitiveTypeKind.Void,
         "none" => PrimitiveTypeKind.None,
         _ => PrimitiveTypeKind.Unknown

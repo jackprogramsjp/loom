@@ -2,7 +2,7 @@ namespace Loom.Syntax;
 
 internal static class SyntaxFacts
 {
-    private static readonly HashSet<string> _primitiveTypeNames = ["number", "string", "bool", "none", "void"];
+    private static readonly HashSet<string> _primitiveTypeNames = ["number", "string", "bool", "never", "unknown", "none", "void"];
     private static readonly HashSet<SyntaxKind> _triviaSyntaxes = [SyntaxKind.Whitespace, SyntaxKind.Semicolon, SyntaxKind.Comment];
     private static readonly HashSet<SyntaxKind> _assignmentOperators =
     [

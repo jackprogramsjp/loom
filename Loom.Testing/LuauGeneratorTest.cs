@@ -1,12 +1,116 @@
-using Loom.Luau;
 using Loom.Luau.AST;
+using BinaryOperator = Loom.Luau.AST.BinaryOperator;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
+using Identifier = Loom.Luau.AST.Identifier;
+using IntersectionType = Loom.Luau.AST.IntersectionType;
+using OptionalType = Loom.Luau.AST.OptionalType;
+using PrimitiveType = Loom.Luau.AST.PrimitiveType;
 using UnaryOperator = Loom.Luau.AST.UnaryOperator;
+using UnionType = Loom.Luau.AST.UnionType;
 
 namespace Loom.Testing;
 
 public class LuauGeneratorTest
 {
+    [Fact]
+    public void Generates_IntersectionTypes()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: number & bool");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var intersection = Assert.IsType<IntersectionType>(variable.DeclaredType);
+        Assert.Equal(2, intersection.Types.Count);
+        
+        var left = Assert.IsType<PrimitiveType>(intersection.Types.First());
+        var right = Assert.IsType<PrimitiveType>(intersection.Types.Last());
+        Assert.Equal(PrimitiveTypeKind.Number, left.Kind);
+        Assert.Equal(PrimitiveTypeKind.Boolean, right.Kind);
+    }
+    
+    [Fact]
+    public void Generates_UnionTypes()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: number | bool");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var union = Assert.IsType<UnionType>(variable.DeclaredType);
+        Assert.Equal(2, union.Types.Count);
+        
+        var left = Assert.IsType<PrimitiveType>(union.Types.First());
+        var right = Assert.IsType<PrimitiveType>(union.Types.Last());
+        Assert.Equal(PrimitiveTypeKind.Number, left.Kind);
+        Assert.Equal(PrimitiveTypeKind.Boolean, right.Kind);
+    }
+    
+    [Fact]
+    public void Generates_OptionalTypes()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: number?;");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var optional = Assert.IsType<OptionalType>(variable.DeclaredType);
+        var inner = Assert.IsType<PrimitiveType>(optional.Inner);
+        Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
+    }
+    
+    [Theory]
+    [InlineData("number")]
+    [InlineData("string")]
+    [InlineData("bool", "boolean")]
+    [InlineData("never")]
+    [InlineData("unknown")]
+    [InlineData("none", "nil")]
+    [InlineData("void", "nil")]
+    public void Generates_PrimitiveTypes(string name, string? expected = null)
+    {
+        var luauTree = Utility.GetLuauAST($"mut x: {name};");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var primitive = Assert.IsType<PrimitiveType>(variable.DeclaredType);
+        Assert.Equal(expected ?? name, primitive.Render());
+    }
+    
+    [Fact]
+    public void Generates_ConstVariables()
+    {
+        var luauTree = Utility.GetLuauAST("let x = 1;");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        Assert.Null(variable.DeclaredType);
+        Assert.Equal("x", variable.Name);
+        
+        var literal = Assert.IsType<NumberLiteral>(variable.Initializer);
+        Assert.Equal(1, literal.Value);
+    }
+    
+    [Fact]
+    public void Generates_LocalVariables()
+    {
+        var luauTree = Utility.GetLuauAST("mut x = 1;");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.Null(variable.DeclaredType);
+        Assert.NotNull(variable.Initializer);
+        Assert.Equal("x", variable.Name);
+        
+        var literal = Assert.IsType<NumberLiteral>(variable.Initializer);
+        Assert.Equal(1, literal.Value);
+    }
+    
     [Fact]
     public void Generates_Identifiers()
     {
