@@ -6,6 +6,7 @@ using Loom.Syntax;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Parsing.AST.Identifier;
+using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
 
 namespace Loom;
