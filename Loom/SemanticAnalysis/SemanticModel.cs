@@ -1,12 +1,13 @@
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
+using Loom.TypeChecking;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.SemanticAnalysis;
 
 public class SemanticModel(Tree tree, DiagnosticBag diagnostics, Dictionary<NodeId, Symbol> declarations, Dictionary<NodeId, Symbol> references, ScopeNode rootScope)
 {
-    public TypeStore Types { get; } = new(diagnostics);
+    public TypeSolver Types { get; } = new(diagnostics);
     public Tree Tree { get; } = tree;
     public DiagnosticBag Diagnostics { get; } = diagnostics;
 
