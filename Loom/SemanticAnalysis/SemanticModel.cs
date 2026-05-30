@@ -7,7 +7,6 @@ namespace Loom.SemanticAnalysis;
 
 public class SemanticModel(Tree tree, DiagnosticBag diagnostics, Dictionary<NodeId, Symbol> declarations, Dictionary<NodeId, Symbol> references, ScopeNode rootScope)
 {
-    public TypeSolver Types { get; } = new(diagnostics);
     public Tree Tree { get; } = tree;
     public DiagnosticBag Diagnostics { get; } = diagnostics;
 

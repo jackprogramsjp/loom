@@ -4,6 +4,8 @@ using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
+using Loom.TypeChecking;
+using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Testing;
 
@@ -13,6 +15,18 @@ internal static class Utility
     
     public static List<Token> GetTokens(string source) => Tokenize(source).Tokens;
     public static Tree GetAST(string source) => Parse(source).Tree;
+
+    public static Type GetLastStatementType(string source)
+    {
+        var semanticModel = GetSemanticModel(source);
+        var checker = new TypeChecker(semanticModel);
+        checker.Check();
+
+        Assert.True(semanticModel.Tree.Statements.Count > 0);
+        return checker.TypeSolver.GetType(semanticModel.Tree.Statements.Last());
+    }
+    
+    public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => new TypeChecker(GetSemanticModel(source)).Check().Diagnostics;
     public static SemanticModel GetSemanticModel(string source) => new Resolver(GetAST(source)).Resolve();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
     public static DiagnosticBag GetLexerDiagnostics(string source) => Tokenize(source).Diagnostics;

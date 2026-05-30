@@ -11,7 +11,7 @@ public sealed class LiteralType(object? value)
             bool => PrimitiveTypeKind.Bool,
             _ => PrimitiveTypeKind.None
         };
-    
+
     public object? Value { get; } = value switch
     {
         int or double => value,
@@ -25,5 +25,11 @@ public sealed class LiteralType(object? value)
 
     public override bool IsAssignableTo(Type other) => base.IsAssignableTo(other) || other is LiteralType otherLiteral && otherLiteral.Value == Value;
 
-    public override string ToString() => Value == null ? "none" : Value.ToString()!;
+    public override string ToString() =>
+        Value switch
+        {
+            null => "none",
+            string s => '"' + s + '"',
+            _ => Value.ToString()!
+        };
 }

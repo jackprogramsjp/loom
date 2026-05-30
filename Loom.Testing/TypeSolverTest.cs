@@ -39,8 +39,7 @@ public class TypeSolverTest
 
         var success = solver.SolveConstraints();
         Assert.True(success);
-        Assert.True(solver.GetType(node).Equals(PrimitiveType.Number),
-            $"Expected Number, got {solver.GetType(node)}");
+        Assert.True(solver.GetType(node).Equals(PrimitiveType.Number), $"Expected 'number', got '{solver.GetType(node)}'");
     }
 
     [Fact]
@@ -55,8 +54,7 @@ public class TypeSolverTest
 
         var success = solver.SolveConstraints();
         Assert.True(success);
-        Assert.True(solver.GetType(node).Equals(PrimitiveType.String),
-            $"Expected String, got {solver.GetType(node)}");
+        Assert.True(solver.GetType(node).Equals(PrimitiveType.String), $"Expected 'string', got '{solver.GetType(node)}'");
     }
 
     [Fact]
@@ -64,8 +62,6 @@ public class TypeSolverTest
     {
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
-
-        // Number is assignable to Number (same type)
         solver.AddConstraint(PrimitiveType.Number, PrimitiveType.Number, Utility.Span);
 
         var success = solver.SolveConstraints();
@@ -77,7 +73,6 @@ public class TypeSolverTest
     {
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
-
         solver.AddConstraint(PrimitiveType.Number, PrimitiveType.String, Utility.Span);
 
         var success = solver.SolveConstraints();
@@ -102,10 +97,8 @@ public class TypeSolverTest
 
         var success = solver.SolveConstraints();
         Assert.True(success);
-        Assert.True(solver.GetType(nodeX).Equals(PrimitiveType.Number),
-            $"Expected Number, got {solver.GetType(nodeX)}");
-        Assert.True(solver.GetType(nodeZ).Equals(PrimitiveType.Number),
-            $"Expected Number, got {solver.GetType(nodeZ)}");
+        Assert.True(solver.GetType(nodeX).Equals(PrimitiveType.Number),$"Expected 'number', got '{solver.GetType(nodeX)}'");
+        Assert.True(solver.GetType(nodeZ).Equals(PrimitiveType.Number),$"Expected 'number', got '{solver.GetType(nodeZ)}'");
     }
 
     [Fact]
@@ -212,8 +205,7 @@ public class TypeSolverTest
         Assert.True(success);
 
         foreach (var node in nodes)
-            Assert.True(solver.GetType(node).Equals(PrimitiveType.Bool),
-                $"Expected all variables to resolve to Bool, got {solver.GetType(node)}");
+            Assert.True(solver.GetType(node).Equals(PrimitiveType.Bool), $"Expected all variables to resolve to 'bool', got '{solver.GetType(node)}'");
     }
 
     [Fact]

@@ -9,15 +9,25 @@ using TypeName = Loom.Parsing.AST.TypeName;
 
 namespace Loom.TypeChecking;
 
-public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
+public class TypeChecker : Visitor<Type>
 {
+    public TypeSolver TypeSolver { get; }
+
     private readonly DiagnosticBag _diagnostics = new();
+    private readonly SemanticModel _semanticModel;
     private Type? _expectedType;
+
+    public TypeChecker(SemanticModel semanticModel)
+    {
+        TypeSolver = new TypeSolver(_diagnostics);
+        _semanticModel = semanticModel;
+    }
 
     public DiagnosedResult Check()
     {
-        VisitTree(semanticModel.Tree);
-        semanticModel.Types.SolveConstraints();
+        var type = VisitTree(_semanticModel.Tree);
+        BindType(_semanticModel.Tree, type);
+        TypeSolver.SolveConstraints();
         return new DiagnosedResult(_diagnostics);
     }
     
@@ -27,7 +37,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         var type = base.VisitExpressionStatement(expressionStatement);
         _diagnostics.Info(expressionStatement.Span,$"Solved type '{TypeSimplifier.Simplify(type)}' for expression: {expressionStatement.Expression}");
-        return type;
+        return BindType(expressionStatement, type);
     }
     
     public override Type VisitVariableDeclaration(VariableDeclaration variableDeclaration)
@@ -49,7 +59,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (declaredType != null)
         {
             if (variableDeclaration.EqualsValueClause != null)
-                semanticModel.Types.AddConstraint(initializerType, declaredType, variableDeclaration.EqualsValueClause.Value.Span);
+                TypeSolver.AddConstraint(initializerType, declaredType, variableDeclaration.EqualsValueClause.Value.Span);
             
             finalType = declaredType;
         }
@@ -62,34 +72,42 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             finalType = finalType.Widen();
         
         AssertAssignability(finalType, initializerType, variableDeclaration.EqualsValueClause?.Value.Span ?? variableDeclaration.Span);
-        semanticModel.Types.SetType(variableDeclaration, finalType);
-        return finalType;
+        return BindType(variableDeclaration, finalType);
     }
 
-    public override Type VisitLiteral(Literal literal) => new LiteralType(literal.Value);
+    public override Type VisitLiteral(Literal literal) => BindType(literal, new LiteralType(literal.Value));
 
     public override Type VisitIdentifier(Identifier identifier)
     {
-        var symbol = semanticModel.GetSymbol(identifier);
+        var symbol = _semanticModel.GetSymbol(identifier);
         if (symbol != null)
-            return semanticModel.Types.GetType(symbol.DeclaringNode);
+        {
+            var type = TypeSolver.GetType(symbol.DeclaringNode);
+            return BindType(identifier, type);
+        }
 
-        _diagnostics.Error(identifier.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of '{identifier.Name.Text}'");
-        return Types.PrimitiveType.Never;
+        _diagnostics.Error(identifier.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of '{identifier.Name.Text}'.");
+        return BindType(identifier, Types.PrimitiveType.Never);
     }
 
     public override Type VisitTypeName(TypeName typeName)
     {
         _diagnostics.NotImplemented(typeName.Span);
-        return Types.PrimitiveType.Never;
+        return BindType(typeName, Types.PrimitiveType.Never);
     }
 
-    public override Type VisitPrimitiveType(PrimitiveType primitiveType) => new Types.PrimitiveType(primitiveType.Kind);
+    public override Type VisitPrimitiveType(PrimitiveType primitiveType) => BindType(primitiveType, new Types.PrimitiveType(primitiveType.Kind));
 
     private void AssertAssignability(Type a, Type b, LocationSpan span)
     {
         if (a.IsAssignableTo(b)) return;
 
         _diagnostics.Error(span, InternalCodes.TypeMismatch, $"Type '{b}' is not assignable to type '{a}'.");
+    }
+    
+    private Type BindType(Node node, Type type)
+    {
+        TypeSolver.SetType(node, type);
+        return type;
     }
 }

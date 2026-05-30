@@ -67,9 +67,9 @@ public class TypesTest
         Assert.True(Void.IsAssignableTo(None));
         Assert.True(None.IsAssignableTo(Void));
         Assert.True(Never.IsAssignableTo(Number));
+        Assert.False(Number.IsAssignableTo(Never));
         Assert.False(Unknown.IsAssignableTo(Number));
         Assert.True(Number.IsAssignableTo(Unknown));
-        Assert.False(Number.IsAssignableTo(Never));
     }
     
     [Fact]
