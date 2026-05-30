@@ -1,4 +1,4 @@
-namespace Loom.Luau;
+namespace Loom.Luau.AST;
 
 public class UnaryOperator(string @operator, LuauExpression operand) : LuauExpression
 {

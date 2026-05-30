@@ -1,5 +1,6 @@
 using Loom.Diagnostics;
 using Loom.Luau;
+using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
@@ -26,7 +27,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     public override LuauTree VisitTree(Tree t) => new(t.Statements.ConvertAll(Visit));
 
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) =>
-        new Luau.ExpressionStatement(Visit(expressionStatement.Expression));
+        new Luau.AST.ExpressionStatement(Visit(expressionStatement.Expression));
 
     public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
     {
@@ -34,11 +35,11 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
         if (SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind))
         {
             _diagnostics.NotImplemented(unaryOperator, "Luau generation for bitwise operators is not yet supported.");
-            return new Luau.UnaryOperator("???", operand);
+            return new Luau.AST.UnaryOperator("???", operand);
         }
 
         var mappedOperator = MapUnaryOperator(unaryOperator.Operator.Text);
-        return new Luau.UnaryOperator(mappedOperator, operand);
+        return new Luau.AST.UnaryOperator(mappedOperator, operand);
     }
 
     public override LuauNode VisitBinaryOperator(BinaryOperator binaryOperator)
@@ -48,11 +49,11 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
         if (SyntaxFacts.IsBitwiseOperator(binaryOperator.Operator.Kind))
         {
             _diagnostics.NotImplemented(binaryOperator, "Luau generation for bitwise operators is not yet supported.");
-            return new Luau.BinaryOperator(left, "???", right);
+            return new Luau.AST.BinaryOperator(left, "???", right);
         }
 
         var mappedOperator = MapBinaryOperator(binaryOperator.Operator.Text);
-        return new Luau.BinaryOperator(left, mappedOperator, right);
+        return new Luau.AST.BinaryOperator(left, mappedOperator, right);
     }
 
     public override LuauNode VisitLiteral(Literal literal) =>
@@ -65,7 +66,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
             _ => new NilLiteral()
         };
 
-    public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.Identifier(identifier.Name.Text);
+    public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.AST.Identifier(identifier.Name.Text);
 
     public override LuauNode VisitTypeName(TypeName typeName) => throw new NotImplementedException();
 

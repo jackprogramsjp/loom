@@ -1,6 +1,7 @@
 using Loom.Luau;
-using ExpressionStatement = Loom.Luau.ExpressionStatement;
-using UnaryOperator = Loom.Luau.UnaryOperator;
+using Loom.Luau.AST;
+using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
+using UnaryOperator = Loom.Luau.AST.UnaryOperator;
 
 namespace Loom.Testing;
 

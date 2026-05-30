@@ -1,5 +1,6 @@
 using Loom.Diagnostics;
 using Loom.Luau;
+using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;

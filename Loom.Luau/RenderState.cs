@@ -1,3 +1,5 @@
+using Loom.Luau.AST;
+
 namespace Loom.Luau;
 
 public class RenderState

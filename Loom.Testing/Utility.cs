@@ -1,12 +1,13 @@
 using Loom.Diagnostics;
 using Loom.Lexing;
 using Loom.Luau;
+using Loom.Luau.AST;
 using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking;
-using ExpressionStatement = Loom.Luau.ExpressionStatement;
+using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Testing;

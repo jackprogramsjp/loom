@@ -1,4 +1,5 @@
 using Loom.Luau;
+using Loom.Luau.AST;
 
 namespace Loom.Testing;
 

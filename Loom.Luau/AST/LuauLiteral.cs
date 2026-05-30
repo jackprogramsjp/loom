@@ -1,4 +1,4 @@
-namespace Loom.Luau;
+namespace Loom.Luau.AST;
 
 public abstract class LuauLiteral<T>(T value) : LuauExpression where T : notnull
 {

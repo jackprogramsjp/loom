@@ -1,4 +1,4 @@
-namespace Loom.Luau;
+namespace Loom.Luau.AST;
 
 public class StringLiteral(string value) : LuauLiteral<string>(value)
 {
