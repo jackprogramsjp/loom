@@ -73,7 +73,6 @@ public class TypeChecker : Visitor<Type>
         if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
             finalType = finalType.Widen();
 
-        AssertAssignability(finalType, initializerType, variableDeclaration.EqualsValueClause?.Value.Span ?? variableDeclaration.Span);
         return BindType(variableDeclaration, finalType);
     }
 
@@ -104,12 +103,12 @@ public class TypeChecker : Visitor<Type>
         return BindType(typeName, Types.PrimitiveType.Never);
     }
 
-    private void AssertAssignability(Type a, Type b, LocationSpan span)
-    {
-        if (a.IsAssignableTo(b)) return;
-
-        _diagnostics.Error(span, InternalCodes.TypeMismatch, $"Type '{b}' is not assignable to type '{a}'.");
-    }
+    // private void AssertAssignability(Type a, Type b, LocationSpan span)
+    // {
+    //     if (a.IsAssignableTo(b)) return;
+    //
+    //     _diagnostics.Error(span, InternalCodes.TypeMismatch, $"Type '{a}' is not assignable to type '{b}'.");
+    // }
 
     private Type BindType(Node node, Type type)
     {

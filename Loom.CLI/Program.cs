@@ -12,6 +12,7 @@ foreach (var token in compiledFile.Tokens)
 Console.WriteLine();
 Console.WriteLine("AST:");
 astDisplayer.Display();
+
 Console.WriteLine();
 Console.WriteLine($"Rebuilt program: {compiledFile.Tree}");
 Console.WriteLine();
