@@ -9,7 +9,30 @@ Domain-specific-language for Roblox that transpiles to Luau.
 
 This project is a work-in-progress. Nothing is final.
 
-## Features
+## Working Examples
+
+```
+let x: bool = false;
+```
+```luau
+const x: boolean = false
+```
+
+```
+mut x;
+```
+```luau
+local x
+```
+
+```
+let x = 1 & 2 & 3
+```
+```luau
+local x = bit32.band(1, 2, 3)
+```
+
+## Planned Features
 
 * Immutability by default
 * Structural type system

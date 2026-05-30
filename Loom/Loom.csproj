@@ -9,6 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="..\README.md">
+          <Link>README.md</Link>
+        </Content>
         <Content Include="..\test.loom">
             <Link>test.loom</Link>
         </Content>
