@@ -2,7 +2,9 @@ using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
+using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
 using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
+using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.Testing;
 
