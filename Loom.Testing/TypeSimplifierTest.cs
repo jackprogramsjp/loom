@@ -88,12 +88,17 @@ public class TypeSimplifierTest
         var duplicateUnion = new UnionType([boolOrString, stringOrBool]);
         var simplifiedDuplicateUnion = TypeSimplifier.Simplify(duplicateUnion);
         Assert.True(simplifiedDuplicateUnion.Equals(boolOrString), $"Expected '{boolOrString}', got '{simplifiedDuplicateUnion}'");
+        
+        var numberOrBool = new UnionType([PrimitiveType.Number, PrimitiveType.Bool]);
+        var combinedIntersection = new IntersectionType([boolOrString, numberOrBool]);
+        var simplifiedCombinedIntersection = TypeSimplifier.Simplify(combinedIntersection);
+        Assert.True(simplifiedCombinedIntersection.Equals(PrimitiveType.Bool), $"Expected 'bool', got '{simplifiedCombinedIntersection}'");
 
         var boolAndString = new IntersectionType([PrimitiveType.Bool, PrimitiveType.String]);
         var stringAndBool = new IntersectionType([PrimitiveType.String, PrimitiveType.Bool]);
         var duplicateIntersection = new IntersectionType([boolAndString, stringAndBool]);
         var simplifiedDuplicateIntersection = TypeSimplifier.Simplify(duplicateIntersection);
-        Assert.True(simplifiedDuplicateIntersection.Equals(boolAndString), $"Expected {boolAndString}, got {simplifiedDuplicateIntersection}");
+        Assert.True(Type.IsNever(simplifiedDuplicateIntersection), $"Expected 'never', got '{simplifiedDuplicateIntersection}'");
     }
 
     [Fact]
@@ -104,7 +109,6 @@ public class TypeSimplifierTest
         var boolOrString = new UnionType([PrimitiveType.Bool, PrimitiveType.String]);
         var type = new IntersectionType([boolOrNever, boolOrString, boolOrString]);
         var simplified = TypeSimplifier.Simplify(type);
-        var expected = new UnionType([PrimitiveType.Bool, PrimitiveType.String]);
-        Assert.True(simplified.Equals(expected), $"Expected '{expected}', got '{simplified}'");
+        Assert.True(simplified.Equals(PrimitiveType.Bool), $"Expected 'bool', got '{simplified}'");
     }
 }

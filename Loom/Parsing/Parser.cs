@@ -77,7 +77,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private Expression ParseEquality() => ParseBinaryLeftAssociative(ParseRelational, SyntaxKind.EqualsEquals, SyntaxKind.BangEquals);
 
     private Expression ParseRelational() =>
-        ParseBinaryLeftAssociative(ParseShift, SyntaxKind.LArrow, SyntaxKind.LArrowEquals, SyntaxKind.RArrow, SyntaxKind.RArrowRArrowEquals);
+        ParseBinaryLeftAssociative(ParseShift, SyntaxKind.LArrow, SyntaxKind.LArrowEquals, SyntaxKind.RArrow, SyntaxKind.RArrowEquals);
 
     private Expression ParseShift() => ParseBinaryLeftAssociative(ParseAdditive, SyntaxKind.LArrowLArrow, SyntaxKind.RArrowRArrow, SyntaxKind.RArrowRArrowRArrow);
 
@@ -131,8 +131,9 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
             return new Literal(token, value);
         }
 
-        var last = Advance();
+        var last = Last();
         _diagnostics.Error(last.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
+        _position++;
         return new NullExpression(last);
     }
 

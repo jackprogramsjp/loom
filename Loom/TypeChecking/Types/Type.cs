@@ -4,6 +4,9 @@ public abstract class Type
 {
     public abstract bool Equals(Type? other);
     public abstract override string ToString();
+
+    public static bool IsNotNever(Type type) => !IsNever(type);
+    public static bool IsNever(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Never };
     
     public Type Widen() =>
         this switch

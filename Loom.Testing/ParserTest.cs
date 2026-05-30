@@ -134,6 +134,21 @@ public class ParserTest
         var typeName = Assert.IsType<TypeName>(variableDeclaration.ColonTypeClause.Type);
         Assert.Equal("Abc", typeName.Name.Text);
     }
+    
+    [Fact]
+    public void Parses_TypeAlias()
+    {
+        var tree = Utility.GetAST("type A = number");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var alias = Assert.IsType<TypeAlias>(statement);
+        Assert.Equal("A", alias.Name.Text);
+        Assert.Equal(SyntaxKind.TypeKeyword, alias.Keyword.Kind);
+
+        var primitive = Assert.IsType<PrimitiveType>(alias.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
 
     [Theory]
     [InlineData("mut x;", true, false, null)]

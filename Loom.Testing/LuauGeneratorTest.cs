@@ -84,6 +84,19 @@ public class LuauGeneratorTest
     }
     
     [Fact]
+    public void Generates_TypeAliases()
+    {
+        var luauTree = Utility.GetLuauAST("type A = bool");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("A", variable.Name);
+        
+        var primitive = Assert.IsType<PrimitiveType>(variable.Type);
+        Assert.Equal(PrimitiveTypeKind.Boolean, primitive.Kind);
+    }
+    
+    [Fact]
     public void Generates_ConstVariables()
     {
         var luauTree = Utility.GetLuauAST("let x = 1;");

@@ -10,6 +10,12 @@ namespace Loom.Testing;
 public class LuauRenderingTest
 {
     [Fact]
+    public void Renders_TypeAlias()
+    {
+        Assert.Equal("type A = boolean", new TypeAlias("A", PrimitiveType.Boolean).Render());
+    }
+    
+    [Fact]
     public void Renders_Call()
     {
         var emptyCall = new Call(new Identifier("abc"), []);

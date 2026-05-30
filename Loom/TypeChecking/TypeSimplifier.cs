@@ -15,28 +15,26 @@ public static class TypeSimplifier
 
     private static Type SimplifyUnion(UnionType union)
     {
-        var simplifiedMembers = union.Types.ConvertAll(Simplify);
-        var absorbed = ApplyAbsorption(simplifiedMembers, isUnion: true);
-        var distinct = RemoveDuplicates(absorbed);
-        var flattened = FlattenNestedUnions(distinct);
-        return flattened.Count switch
+        var flattened = FlattenNestedUnions(union.Types.ConvertAll(Simplify));
+        var distinct = RemoveDuplicates(flattened, isUnion: true);
+        var absorbed = ApplyAbsorption(distinct, isUnion: true);
+        return absorbed.Count switch
         {
             0 => PrimitiveType.Never,
-            1 => flattened.First(),
-            _ => new UnionType(flattened)
+            1 => absorbed.First(),
+            _ => new UnionType(absorbed)
         };
     }
 
     private static Type SimplifyIntersection(IntersectionType intersection)
     {
-        var simplifiedMembers = intersection.Types.ConvertAll(Simplify);
-        var absorbed = ApplyAbsorption(simplifiedMembers, isUnion: false);
-        var distinct = RemoveDuplicates(absorbed);
-        var flattened = FlattenNestedIntersections(distinct);
-        if (flattened.Count == 0 || flattened.Contains(PrimitiveType.Never))
+        var flattened = FlattenNestedIntersections(intersection.Types.ConvertAll(Simplify));
+        var distinct = RemoveDuplicates(flattened, isUnion: false);
+        if (distinct.Count == 0 || distinct.Any(Type.IsNever))
             return PrimitiveType.Never;
 
-        return flattened.Count == 1 ? flattened.First() : new IntersectionType(flattened);
+        var absorbed = ApplyAbsorption(distinct, isUnion: false);
+        return absorbed.Count == 1 ? absorbed.First() : new IntersectionType(absorbed);
     }
 
     private static List<Type> ApplyAbsorption(List<Type> types, bool isUnion)
@@ -69,6 +67,9 @@ public static class TypeSimplifier
     private static bool IsSubsetOf(Type a, Type b) =>
         (a, b) switch
         {
+            _ when Type.IsNever(a) => true,
+            _ when Type.IsNever(b) => false,
+            
             (UnionType ua, UnionType ub) => ua.Types.All(t => IsSubsetOf(t, ub)),
             (UnionType ua, _) => ua.Types.All(t => IsSubsetOf(t, b)),
             (_, UnionType ub) => ub.Types.Any(t => IsSubsetOf(a, t)),
@@ -77,7 +78,7 @@ public static class TypeSimplifier
             _ => a.Equals(b) || a.IsAssignableTo(b)
         };
 
-    private static List<Type> RemoveDuplicates(List<Type> types) =>
+    private static List<Type> RemoveDuplicates(List<Type> types, bool isUnion) =>
         types
             .Aggregate(new List<Type>(), (unique, item) =>
             {
@@ -86,7 +87,7 @@ public static class TypeSimplifier
                 
                 return unique;
             })
-            .Where(t => t is not PrimitiveType { Kind: PrimitiveTypeKind.Never })
+            .Where(t => !isUnion || Type.IsNotNever(t))
             .ToList();
 
     private static List<Type> FlattenNestedUnions(List<Type> types) =>

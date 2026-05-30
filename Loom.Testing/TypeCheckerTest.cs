@@ -17,7 +17,28 @@ public class TypeCheckerTest
     public void ThrowsFor_UndefinedIdentifier()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("x");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindSymbol, "Cannot find symbol for declaration of 'x'.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindSymbol, "Cannot find symbol for declaration of variable 'x'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_UndefinedType()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: A = 1");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindSymbol, "Cannot find symbol for declaration of type 'A'.");
+    }
+    
+    [Fact]
+    public void Checks_TypeAlias()
+    {
+        var type = Utility.GetLastStatementType("type A = number");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_Identifier_ResolvesToTypeAlias()
+    {
+        var type = Utility.GetLastStatementType("type A = number; let x: A = 1");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
     
     [Fact]
