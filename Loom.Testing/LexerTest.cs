@@ -189,4 +189,45 @@ public class LexerTest
         var token = tokens.First();
         Assert.Equal(expected, token.Kind);
     }
+    
+    [Fact]
+    public void Tokenizes_ProperSpan_WithWhitespace()
+    {
+        var tokens = Utility.GetTokens("true false");
+        Assert.Equal(2, tokens.Count);
+        
+        var first = tokens.First();
+        var second = tokens.Last();
+        var firstStart = first.Span.Start;
+        var firstEnd = first.Span.End;
+        var secondStart = second.Span.Start;
+        var secondEnd = second.Span.End;
+        Assert.Equal(firstStart.Line, firstEnd.Line);
+        Assert.Equal(firstStart.Character, firstStart.Position);
+        Assert.Equal(firstEnd.Character, firstEnd.Position);
+        Assert.Equal(0, firstStart.Position);
+        Assert.Equal(4, firstEnd.Position);
+        
+        Assert.Equal(secondStart.Line, secondEnd.Line);
+        Assert.Equal(secondStart.Character, secondStart.Position);
+        Assert.Equal(secondEnd.Character, secondEnd.Position);
+        Assert.Equal(5, secondStart.Position);
+        Assert.Equal(10, secondEnd.Position);
+    }
+    
+    [Fact]
+    public void Tokenizes_ProperSpan()
+    {
+        var tokens = Utility.GetTokens("true");
+        Assert.Single(tokens);
+        
+        var token = tokens.First();
+        var start = token.Span.Start;
+        var end = token.Span.End;
+        Assert.Equal(start.Line, end.Line);
+        Assert.Equal(start.Character, start.Position);
+        Assert.Equal(end.Character, end.Position);
+        Assert.Equal(0, start.Position);
+        Assert.Equal(4, end.Position);
+    }
 }
