@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Syntax;
@@ -34,31 +36,28 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         var name = Expect(SyntaxKind.Identifier, token => $"Expected identifier, got {SafeTokenText(token)}.");
         ColonTypeClause? colonTypeClause = null;
         EqualsValueClause? equalsValueClause = null;
-        if (Match(SyntaxKind.Colon))
+        if (Match(SyntaxKind.Colon, out var colon))
         {
-            var colon = Last();
             var type = ParseType();
             colonTypeClause = new ColonTypeClause(colon, type);
         }
 
-        if (Match(SyntaxKind.Equals))
+        if (Match(SyntaxKind.Equals, out var equals))
         {
-            var equals = Last();
             var initializer = ParseExpression();
             equalsValueClause = new EqualsValueClause(equals, initializer);
         }
 
         return new VariableDeclaration(keyword, name, colonTypeClause, equalsValueClause);
     }
-    
+
     private Expression ParseExpression() => ParseAdditive();
 
     private Expression ParseAdditive()
     {
         var left = ParseMultiplicative();
-        while (Match(SyntaxKind.Plus, SyntaxKind.Minus))
+        while (Match(out var op, SyntaxKind.Plus, SyntaxKind.Minus))
         {
-            var op = Last();
             var right = ParseMultiplicative();
             left = new BinaryOperator(op, left, right);
         }
@@ -69,9 +68,8 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private Expression ParseMultiplicative()
     {
         var left = ParseExponential();
-        while (Match(SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.Percent))
+        while (Match(out var op, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.Percent))
         {
-            var op = Last();
             var right = ParseExponential();
             left = new BinaryOperator(op, left, right);
         }
@@ -82,9 +80,8 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private Expression ParseExponential()
     {
         var left = ParseUnary();
-        while (Match(SyntaxKind.Carat))
+        while (Match(SyntaxKind.Carat, out var op))
         {
-            var op = Last();
             var right = ParseExponential();
             left = new BinaryOperator(op, left, right);
         }
@@ -92,39 +89,37 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         return left;
     }
 
-    private Expression ParseUnary()
-    {
-        if (!Match(SyntaxFacts.IsUnaryOperator))
-            return ParsePrimary();
-
-        var op = Last();
-        return new UnaryOperator(op, ParseUnary());
-    }
+    private Expression ParseUnary() =>
+        Match(SyntaxFacts.IsUnaryOperator, out var op)
+            ? new UnaryOperator(op, ParseUnary())
+            : ParsePrimary();
 
     private Expression ParsePrimary()
     {
-        if (Match(SyntaxKind.LParen))
+        if (Match(SyntaxKind.LParen, out var leftParen))
         {
-            var leftParen = Last();
             var expression = ParseExpression();
-            var rightParen = Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(token)}.");
+            var rightParen = Expect(
+                SyntaxKind.RParen,
+                got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
+            );
+
             return new Parenthesized(leftParen, rightParen, expression);
         }
 
-        if (Match(SyntaxKind.Identifier))
-        {
-            var name = Last();
+        if (Match(SyntaxKind.Identifier, out var name))
             return new Identifier(name);
-        }
 
-        if (Match(SyntaxKind.IntegerLiteral,
-                  SyntaxKind.FloatLiteral,
-                  SyntaxKind.StringLiteral,
-                  SyntaxKind.TrueLiteral,
-                  SyntaxKind.FalseLiteral,
-                  SyntaxKind.NoneLiteral))
+        if (Match(
+                out var token,
+                SyntaxKind.IntegerLiteral,
+                SyntaxKind.FloatLiteral,
+                SyntaxKind.StringLiteral,
+                SyntaxKind.TrueLiteral,
+                SyntaxKind.FalseLiteral,
+                SyntaxKind.NoneLiteral
+            ))
         {
-            var token = Last();
             object? value = token.Kind switch
             {
                 SyntaxKind.IntegerLiteral => int.Parse(token.Text),
@@ -134,31 +129,47 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
                 SyntaxKind.FalseLiteral => false,
                 _ => null
             };
-            
+
             return new Literal(token, value);
         }
 
-        _diagnostics.Error(Last().Span, InternalCodes.UnexpectedToken, "Unexpected token.");
-        return new NullExpression(Last());
+        var last = Last();
+        _diagnostics.Error(last.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
+        return new NullExpression(last);
     }
 
-    private TypeExpression ParseType() => ParseParenthesizable(ParseOptionalType);
+    private TypeExpression ParseType() => ParseParenthesizable(ParseUnionType);
 
-    private T ParseParenthesizable<T>(Func<T> parseInner)
-        where T : Node
+    private TypeExpression ParseUnionType()
     {
-        var parens = 0;
-        while (Match(SyntaxKind.LParen)) parens++;
-        
-        var start = _position;
-        var node = parseInner();
-        for (var i = 0; i < parens; i++)
+        var types = new List<TypeExpression>();
+        var pipes = new List<Token>();
+        var left = ParseIntersectionType();
+        types.Add(left);
+
+        while (Match(SyntaxKind.Pipe))
         {
-            var opening = tokens.ElementAt(start - i);
-            Expect(SyntaxKind.RParen, token => $"Expected ')' here to close '{opening.Text}' at character {opening.Span.Start.Character}, got {SafeTokenText(token)}.");
+            pipes.Add(Last());
+            types.Add(ParseIntersectionType());
         }
 
-        return node;
+        return pipes.Count > 0 ? new UnionType(pipes, types) : left;
+    }
+
+    private TypeExpression ParseIntersectionType()
+    {
+        var types = new List<TypeExpression>();
+        var ampersands = new List<Token>();
+        var left = ParseOptionalType();
+        types.Add(left);
+
+        while (Match(SyntaxKind.Ampersand))
+        {
+            ampersands.Add(Last());
+            types.Add(ParseOptionalType());
+        }
+
+        return ampersands.Count > 0 ? new IntersectionType(ampersands, types) : left;
     }
 
     private TypeExpression ParseOptionalType()
@@ -177,15 +188,41 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
     }
 
-    private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);
-    private bool Match(SyntaxKind kind) => Match(otherKind => otherKind == kind);
+    private T ParseParenthesizable<T>(Func<T> parseInner)
+        where T : Node
+    {
+        var parens = 0;
+        while (Match(SyntaxKind.LParen)) parens++;
 
-    private bool Match(Predicate<SyntaxKind> predicate)
+        var start = _position;
+        var node = parseInner();
+        for (var i = 0; i < parens; i++)
+        {
+            var opening = tokens.ElementAt(start - i);
+            Expect(
+                SyntaxKind.RParen,
+                token => $"Expected ')' here to close '{opening.Text}' at character {opening.Span.Start.Character}, got {SafeTokenText(token)}."
+            );
+        }
+
+        return node;
+    }
+
+    private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);
+    private bool Match([MaybeNullWhen(false)] out Token token, params SyntaxKind[] kinds) => Match(kinds.Contains, out token);
+    private bool Match(SyntaxKind kind) => Match(otherKind => otherKind == kind, out var _);
+    private bool Match(Predicate<SyntaxKind> predicate) => Match(predicate, out var _);
+    private bool Match(SyntaxKind kind, [MaybeNullWhen(false)] out Token token) => Match(otherKind => otherKind == kind, out token);
+
+    private bool Match(Predicate<SyntaxKind> predicate, [MaybeNullWhen(false)] out Token token)
     {
         if (IsEof())
+        {
+            token = null;
             return false;
+        }
 
-        var token = Current();
+        token = Current();
         var match = predicate(token.Kind);
         if (match)
             Advance();

@@ -19,7 +19,7 @@ public abstract class Node
         NodeId.Map.Add(Id, this);
 
         Children = children.Where(node => node != null).Cast<Node>().ToList();
-        Tokens = theseTokens.Where(token => token != null).Cast<Token>().ToList();
+        Tokens = theseTokens.Where(token => token != null).Cast<Token>().OrderBy(token => token.Span.Start.Position).ToList();
         Span = span ?? new LocationSpan(Tokens.First().Span.Start, Tokens.Last().Span.End);
         foreach (var child in Children)
             child.Parent = this;

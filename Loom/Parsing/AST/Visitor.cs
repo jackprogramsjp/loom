@@ -28,6 +28,8 @@ public abstract class Visitor<T>
     public abstract T VisitTypeName(TypeName typeName);
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
+    public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
+    public virtual T VisitIntersectionType(IntersectionType intersectionType) => VisitList(intersectionType.Types);
 
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
     public virtual T VisitEqualsValueClause(EqualsValueClause equalsValueClause) => Visit(equalsValueClause.Value);
@@ -38,4 +40,5 @@ public abstract class Visitor<T>
     
     protected virtual T CombineResults(IEnumerable<T> results) => results.LastOrDefault()!;
     private T VisitList(List<Node> nodes) => CombineResults(nodes.ConvertAll(Visit));
+    private T VisitList(List<TypeExpression> nodes) => CombineResults(nodes.ConvertAll(Visit));
 }
