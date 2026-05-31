@@ -50,7 +50,11 @@ public class Resolver(Tree ast) : Visitor<bool>
 
         var symbol = new Symbol(typeAlias, SymbolKind.Type, name);
         DeclareSymbol(symbol);
-        return Visit(typeAlias.Type);
+        
+        PushScope();
+        base.VisitTypeAlias(typeAlias);
+        PopScope();
+        return true;
     }
 
     public override bool VisitVariableDeclaration(VariableDeclaration variableDeclaration)
@@ -66,12 +70,9 @@ public class Resolver(Tree ast) : Visitor<bool>
         var symbol = new Symbol(variableDeclaration, SymbolKind.Variable, name);
         DeclareSymbol(symbol);
 
-        if (variableDeclaration.ColonTypeClause != null)
-            Visit(variableDeclaration.ColonTypeClause);
-
+        base.VisitVariableDeclaration(variableDeclaration);
         if (variableDeclaration.EqualsValueClause != null)
         {
-            Visit(variableDeclaration.EqualsValueClause);
             scope.InitializationState[name] = true;
         }
         else if (variableDeclaration.Keyword.Kind == SyntaxKind.LetKeyword)
@@ -104,9 +105,7 @@ public class Resolver(Tree ast) : Visitor<bool>
         _allReferences[identifier.Id] = symbol;
         return true;
     }
-
-    public override bool VisitBinaryOperator(BinaryOperator binaryOperator) => Visit(binaryOperator.Left) && Visit(binaryOperator.Right);
-
+    
     public override bool VisitTypeName(TypeName typeName)
     {
         var name = typeName.Name.Text;
@@ -122,6 +121,23 @@ public class Resolver(Tree ast) : Visitor<bool>
     }
 
     public override bool VisitPrimitiveType(PrimitiveType primitiveType) => true;
+
+    public override bool VisitTypeParameter(TypeParameter typeParameter)
+    {
+        var scope = CurrentScope();
+        var name = typeParameter.Name.Text;
+        if (scope.TypeLookup.ContainsKey(name))
+        {
+            _diagnostics.Error(typeParameter.Span, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
+            return false;
+        }
+
+        var symbol = new Symbol(typeParameter, SymbolKind.Type, name);
+        DeclareSymbol(symbol);
+        return typeParameter.EqualsTypeClause == null || Visit(typeParameter.EqualsTypeClause);
+    }
+
+    protected override bool CombineResults(IEnumerable<bool> results) => results.All(t => t);
 
     private void DeclareSymbol(Symbol symbol)
     {

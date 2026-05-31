@@ -54,6 +54,9 @@ public enum SyntaxKind : ushort
     RBracket,
     LBrace,
     RBrace,
+    Comma,
+    Dot,
+    DotDot,
 
     IntegerLiteral,
     FloatLiteral,
@@ -65,7 +68,17 @@ public enum SyntaxKind : ushort
     LetKeyword,
     MutKeyword,
     TypeKeyword,
+    InterfaceKeyword,
     FnKeyword,
+    EventKeyword,
+    EnumKeyword,
+    EveryKeyword,
+    AfterKeyword,
+    IfKeyword,
+    ElseKeyword,
+    WhileKeyword,
+    MatchKeyword,
+    NameofKeyword,
 
     Identifier
 }

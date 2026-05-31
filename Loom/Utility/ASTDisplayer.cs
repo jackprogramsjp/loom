@@ -7,7 +7,7 @@ namespace Loom.Utility;
 public class ASTDisplayer(Tree ast) : Visitor<string>
 {
     private int _indent;
-    private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id"];
+    private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id", "Keyword"];
 
     public void Display()
     {

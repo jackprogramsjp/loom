@@ -4,8 +4,16 @@ public abstract class Visitor<T>
 {
     public abstract T Visit(Node node);
     public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
-    
-    public virtual T VisitTypeAlias(TypeAlias typeAlias) => Visit(typeAlias.Type);
+
+    public virtual T VisitTypeAlias(TypeAlias typeAlias)
+    {
+        var results = new List<T>();
+        if (typeAlias.TypeParameters != null)
+            results.Add(Visit(typeAlias.TypeParameters));
+
+        results.Add(Visit(typeAlias.EqualsTypeClause.Type));
+        return CombineResults(results);
+    }
 
     public virtual T VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
@@ -34,7 +42,11 @@ public abstract class Visitor<T>
     public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
     public virtual T VisitIntersectionType(IntersectionType intersectionType) => VisitList(intersectionType.Types);
 
+    public virtual T VisitTypeParameter(TypeParameter typeParameter) => typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : default!;
+    public virtual T VisitTypeParameters(TypeParameters typeParameters) => VisitList(typeParameters.Parameters);
+    public virtual T VisitTypeArguments(TypeArguments typeArguments) => VisitList(typeArguments.Arguments);
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
+    public virtual T VisitEqualsTypeClause(EqualsTypeClause equalsTypeClause) => Visit(equalsTypeClause.Type);
     public virtual T VisitEqualsValueClause(EqualsValueClause equalsValueClause) => Visit(equalsValueClause.Value);
 
     public virtual T VisitNullExpression(NullExpression nullExpression) => default!;
@@ -42,8 +54,7 @@ public abstract class Visitor<T>
     public virtual T VisitNullTypeExpression(NullTypeExpression nullTypeExpression) => default!;
     
     protected virtual T CombineResults(IEnumerable<T> results) => results.LastOrDefault()!;
-    private T VisitList(List<Node> nodes) => CombineResults(nodes.ConvertAll(Visit));
-    private T VisitList(List<Expression> nodes) => CombineResults(nodes.ConvertAll(Visit));
-    private T VisitList(List<Statement> nodes) => CombineResults(nodes.ConvertAll(Visit));
-    private T VisitList(List<TypeExpression> nodes) => CombineResults(nodes.ConvertAll(Visit));
+
+    protected T? MaybeVisit<TNode>(TNode? node) where TNode : Node => node is null ? default : Visit(node);
+    private T VisitList<TNode>(List<TNode> nodes) where TNode : Node => CombineResults(nodes.ConvertAll(Visit));
 }

@@ -2,12 +2,10 @@ using Loom.Syntax;
 
 namespace Loom.Parsing.AST;
 
-public class TypeAlias(Token keyword, Token name, Token equals, TypeExpression type)
-    : Statement([keyword, name, equals, ..type.Tokens], [type])
+public class TypeAlias(Token keyword, Token name, TypeParameters? typeParameters, EqualsTypeClause equalsTypeClause)
+    : TypeDeclaration(keyword, name, typeParameters, equalsTypeClause)
 {
-    public Token Keyword { get; } = keyword;
-    public Token Name { get; } = name;
-    public TypeExpression Type { get; } = type;
+    public EqualsTypeClause EqualsTypeClause { get; } = equalsTypeClause;
 
     public override T Accept<T>(Visitor<T> visitor) => visitor.VisitTypeAlias(this);
 }

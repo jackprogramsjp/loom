@@ -10,6 +10,7 @@ public static class TypeSimplifier
         {
             UnionType union => SimplifyUnion(union),
             IntersectionType intersection => SimplifyIntersection(intersection),
+            InstantiatedType instantiated => Simplify(instantiated.Expand()),
             _ => type
         };
 
@@ -18,6 +19,17 @@ public static class TypeSimplifier
         var flattened = FlattenNestedUnions(union.Types.ConvertAll(Simplify));
         var distinct = RemoveDuplicates(flattened, isUnion: true);
         var absorbed = ApplyAbsorption(distinct, isUnion: true);
+        if (absorbed.Any(Type.IsNone))
+        {
+            var nonNullable = absorbed.FindAll(Type.IsDefined);
+            return nonNullable.Count switch
+            {
+                0 => PrimitiveType.None,
+                1 => new OptionalType(nonNullable.First()),
+                _ => new OptionalType(SimplifyUnion(new UnionType(nonNullable)))
+            };
+        }
+        
         return absorbed.Count switch
         {
             0 => PrimitiveType.Never,

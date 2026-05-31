@@ -10,9 +10,23 @@ namespace Loom.Testing;
 public class LuauRenderingTest
 {
     [Fact]
+    public void Renders_TypeAlias_GenericWithDefault()
+    {
+        var typeParameters = new TypeParameters([new TypeParameter("T", PrimitiveType.Number)]);
+        Assert.Equal("type Id<T = number> = T", new TypeAlias("Id", typeParameters, new TypeName("T")).Render());
+    }
+    
+    [Fact]
+    public void Renders_TypeAlias_Generic()
+    {
+        var typeParameters = new TypeParameters([new TypeParameter("T", null)]);
+        Assert.Equal("type Id<T> = T", new TypeAlias("Id", typeParameters, new TypeName("T")).Render());
+    }
+    
+    [Fact]
     public void Renders_TypeAlias()
     {
-        Assert.Equal("type A = boolean", new TypeAlias("A", PrimitiveType.Boolean).Render());
+        Assert.Equal("type A = boolean", new TypeAlias("A", new TypeParameters(), PrimitiveType.Boolean).Render());
     }
     
     [Fact]
@@ -133,6 +147,12 @@ public class LuauRenderingTest
     public void Renders_PrimitiveType(PrimitiveTypeKind kind)
     {
         Assert.Equal(kind.ToString().ToLower(), new PrimitiveType(kind).Render());
+    }
+    
+    [Fact]
+    public void Renders_TypeName_Generic()
+    {
+        Assert.Equal("Id<number, boolean>", new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean, ]).Render());
     }
     
     [Fact]

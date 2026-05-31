@@ -30,6 +30,7 @@ public sealed class LiteralType(object? value)
         {
             null => "none",
             string s => '"' + s + '"',
+            bool b => b.ToString().ToLower(),
             _ => Value.ToString()!
         };
 }

@@ -14,6 +14,8 @@ using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
 using TypeAlias = Loom.Parsing.AST.TypeAlias;
 using TypeName = Loom.Parsing.AST.TypeName;
+using TypeParameter = Loom.Parsing.AST.TypeParameter;
+using TypeParameters = Loom.Parsing.AST.TypeParameters;
 using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
 using UnionType = Loom.Parsing.AST.UnionType;
 
@@ -30,13 +32,18 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
     }
 
     public override LuauNode Visit(Node node) => node.Accept(this);
-    public LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
-    public LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);
-    public LuauStatement Visit(Statement node) => (LuauStatement)node.Accept(this);
 
     public override LuauTree VisitTree(Tree t) => new(t.Statements.ConvertAll(Visit));
 
-    public override LuauNode VisitTypeAlias(TypeAlias typeAlias) => new Luau.AST.TypeAlias(typeAlias.Name.Text, Visit(typeAlias.Type));
+    public override LuauNode VisitTypeAlias(TypeAlias typeAlias)
+    {
+        var typeParameters = typeAlias.TypeParameters != null 
+            ? Visit<Luau.AST.TypeParameters>(typeAlias.TypeParameters) 
+            : new Luau.AST.TypeParameters();
+
+        var type = Visit(typeAlias.EqualsTypeClause.Type);
+        return new Luau.AST.TypeAlias(typeAlias.Name.Text, typeParameters, type);
+    }
 
     public override LuauNode VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
@@ -83,6 +90,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
             var rightUpdated = AddBit32Arguments(right, name, arguments);
             if (!leftUpdated)
                 arguments.Add(left);
+
             if (!rightUpdated)
                 arguments.Add(right);
 
@@ -92,7 +100,7 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
         var mappedOperator = MapBinaryOperator(op);
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
     }
-    
+
     public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));
 
     public override LuauNode VisitLiteral(Literal literal) =>
@@ -113,8 +121,18 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
 
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
 
-    public override LuauNode VisitTypeName(TypeName typeName) => new Luau.AST.TypeName(typeName.Name.Text);
-    
+    public override LuauNode VisitTypeName(TypeName typeName)
+    {
+        var typeArguments = typeName.TypeArguments?.Arguments.ConvertAll(Visit);
+        return new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
+    }
+
+    public override LuauNode VisitTypeParameters(TypeParameters typeParameters) =>
+        new Luau.AST.TypeParameters(typeParameters.Parameters.ConvertAll(Visit).Cast<Luau.AST.TypeParameter>().ToList());
+
+    public override LuauNode VisitTypeParameter(TypeParameter typeParameter) =>
+        new Luau.AST.TypeParameter(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
+
     public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
 
     public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapPrimitiveTypeKind(primitiveType.Kind));
@@ -167,11 +185,11 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
         {
             return false;
         }
-        
+
         // shift methods dont accept varargs
         if (fnName.EndsWith("shift"))
             return false;
-        
+
         foreach (var argument in fnArguments)
         {
             arguments.Add(argument);
@@ -180,4 +198,9 @@ public class LuauGenerator(Tree tree) : Visitor<LuauNode>
 
         return true;
     }
+    
+    private T Visit<T>(Node node) where T : LuauNode => (T)Visit(node);
+    private LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
+    private LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);
+    private LuauStatement Visit(Statement node) => (LuauStatement)node.Accept(this);
 }

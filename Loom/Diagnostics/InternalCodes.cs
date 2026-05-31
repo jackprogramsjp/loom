@@ -17,4 +17,6 @@ public static class InternalCodes
     public const string InfiniteType = "L305";
     public const string TypeMismatch = "L306";
     public const string CannotFindSymbol = "L307";
+    public const string NotGeneric = "L308";
+    public const string GenericArity = "L309";
 }

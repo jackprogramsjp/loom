@@ -51,7 +51,10 @@ public class LexerTest
         ("[", SyntaxKind.LBracket),
         ("]", SyntaxKind.RBracket),
         ("{", SyntaxKind.LBrace),
-        ("}", SyntaxKind.RBrace)
+        ("}", SyntaxKind.RBrace),
+        (",", SyntaxKind.Comma),
+        (".", SyntaxKind.Dot),
+        ("..", SyntaxKind.DotDot),
     ]).ConvertAll<object[]>(t => [t.Item1, t.Item2]);
     
     [Theory]
@@ -59,7 +62,6 @@ public class LexerTest
     [InlineData("$")]
     [InlineData("\\")]
     [InlineData("`")]
-    [InlineData("123.")]
     [InlineData("'abc\"")]
     [InlineData("\"abc'")]
     public void ThrowsFor_UnexpectedCharacters(string source)
@@ -181,6 +183,16 @@ public class LexerTest
     [InlineData("let", SyntaxKind.LetKeyword)]
     [InlineData("mut", SyntaxKind.MutKeyword)]
     [InlineData("fn", SyntaxKind.FnKeyword)]
+    [InlineData("type", SyntaxKind.TypeKeyword)]
+    [InlineData("event", SyntaxKind.EventKeyword)]
+    [InlineData("enum", SyntaxKind.EnumKeyword)]
+    [InlineData("every", SyntaxKind.EveryKeyword)]
+    [InlineData("after", SyntaxKind.AfterKeyword)]
+    [InlineData("if", SyntaxKind.IfKeyword)]
+    [InlineData("else", SyntaxKind.ElseKeyword)]
+    [InlineData("while", SyntaxKind.WhileKeyword)]
+    [InlineData("match", SyntaxKind.MatchKeyword)]
+    [InlineData("nameof", SyntaxKind.NameofKeyword)]
     public void Tokenizes_Keywords(string source, SyntaxKind expected)
     {
         var tokens = Utility.GetTokens(source);

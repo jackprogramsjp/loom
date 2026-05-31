@@ -136,6 +136,54 @@ public class ParserTest
     }
     
     [Fact]
+    public void Parses_TypeAlias_GenericWithDefault()
+    {
+        var tree = Utility.GetAST("type Id<T = number> = T");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var alias = Assert.IsType<TypeAlias>(statement);
+        Assert.Equal("Id", alias.Name.Text);
+        Assert.Equal(SyntaxKind.TypeKeyword, alias.Keyword.Kind);
+        Assert.Equal(SyntaxKind.Equals, alias.EqualsTypeClause.EqualsToken.Kind);
+        Assert.NotNull(alias.TypeParameters);
+        Assert.Single(alias.TypeParameters.Parameters);
+
+        var param = alias.TypeParameters.Parameters.First();
+        Assert.Equal("T", param.Name.Text);
+        Assert.NotNull(param.EqualsTypeClause);
+        
+        var primitive = Assert.IsType<PrimitiveType>(param.EqualsTypeClause.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+
+        var typeName = Assert.IsType<TypeName>(alias.EqualsTypeClause.Type);
+        Assert.Equal("T", typeName.Name.Text);
+    }
+    
+    [Fact]
+    public void Parses_TypeAlias_Generic()
+    {
+        var tree = Utility.GetAST("type Intersect<A, B> = A & B");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var alias = Assert.IsType<TypeAlias>(statement);
+        Assert.Equal("Intersect", alias.Name.Text);
+        Assert.Equal(SyntaxKind.TypeKeyword, alias.Keyword.Kind);
+        Assert.Equal(SyntaxKind.Equals, alias.EqualsTypeClause.EqualsToken.Kind);
+        Assert.NotNull(alias.TypeParameters);
+        Assert.Equal(2, alias.TypeParameters.Parameters.Count);
+
+        var a = alias.TypeParameters.Parameters.First();
+        var b = alias.TypeParameters.Parameters.Last();
+        Assert.Equal("A", a.Name.Text);
+        Assert.Null(a.EqualsTypeClause);
+        Assert.Equal("B", b.Name.Text);
+        Assert.Null(b.EqualsTypeClause);
+        Assert.IsType<IntersectionType>(alias.EqualsTypeClause.Type);
+    }
+    
+    [Fact]
     public void Parses_TypeAlias()
     {
         var tree = Utility.GetAST("type A = number");
@@ -145,8 +193,10 @@ public class ParserTest
         var alias = Assert.IsType<TypeAlias>(statement);
         Assert.Equal("A", alias.Name.Text);
         Assert.Equal(SyntaxKind.TypeKeyword, alias.Keyword.Kind);
+        Assert.Equal(SyntaxKind.Equals, alias.EqualsTypeClause.EqualsToken.Kind);
+        Assert.Null(alias.TypeParameters);
 
-        var primitive = Assert.IsType<PrimitiveType>(alias.Type);
+        var primitive = Assert.IsType<PrimitiveType>(alias.EqualsTypeClause.Type);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
 

@@ -2,7 +2,10 @@ using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
+using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
 using Type = Loom.TypeChecking.Types.Type;
+using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
+using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.TypeChecking;
 
@@ -12,6 +15,8 @@ public class TypeSolver(DiagnosticBag diagnostics)
 
     private readonly List<TypeConstraint> _constraints = [];
     private readonly Dictionary<NodeId, Type> _nodeTypes = [];
+    private readonly Dictionary<int, Type> _substitutions = [];
+    private readonly Dictionary<TypeParameter, TypeVariable> _parameterVariables = [];
     private int _nextVariableId;
 
     public void SetType(Node node, Type type) => _nodeTypes[node.Id] = type;
@@ -25,21 +30,20 @@ public class TypeSolver(DiagnosticBag diagnostics)
         _nodeTypes.Add(node.Id, variable);
         return variable;
     }
-    
+
     public void AddConstraint(Type a, Type b, LocationSpan span) => _constraints.Add(new TypeConstraint(a, b, span));
 
     public bool SolveConstraints()
     {
-        var substitutions = new Dictionary<int, Type>();
         var changed = true;
         while (changed)
         {
             changed = false;
             foreach (var (a, b, span) in _constraints)
             {
-                var resolvedA = Substitute(a, substitutions);
-                var resolvedB = Substitute(b, substitutions);
-                if (!TryUnify(resolvedA, resolvedB, span, substitutions, out var updated))
+                var resolvedA = Substitute(a);
+                var resolvedB = Substitute(b);
+                if (!TryUnify(resolvedA, resolvedB, span, out var updated))
                     return false;
 
                 if (updated)
@@ -47,75 +51,158 @@ public class TypeSolver(DiagnosticBag diagnostics)
             }
         }
 
-        ApplySubstitutions(substitutions);
+        ApplySubstitutions();
         return true;
     }
 
-    private bool TryUnify(Type a, Type b, LocationSpan span, Dictionary<int, Type> substitutions, out bool updated)
+    private bool TryUnify(Type a, Type b, LocationSpan span, out bool updated)
     {
         updated = false;
-        if (a is TypeVariable varA && b is TypeVariable varB)
+        return (a, b) switch
         {
-            if (varA.Id == varB.Id)
-                return true;
+            (TypeVariable va, TypeVariable vb) => UnifyBothVariables(va, vb, out updated),
+            (TypeVariable v, _) => BindVariable(v, b, span, out updated),
+            (_, TypeVariable v) => BindVariable(v, a, span, out updated),
+            (InstantiatedType i1, InstantiatedType i2) => UnifyInstantiatedPair(i1, i2, span, out updated),
+            (InstantiatedType i, GenericType g) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
+            (GenericType g, InstantiatedType i) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
 
-            substitutions[varA.Id] = varB;
-            updated = true;
-            return true;
-        }
-
-        if (a is TypeVariable var)
-            return BindVariable(var, b, span, substitutions, out updated);
-
-        if (b is TypeVariable var2)
-            return BindVariable(var2, a, span, substitutions, out updated);
-
-        if (a.IsAssignableTo(b))
-            return true;
-
-        diagnostics.Error(span, InternalCodes.TypeMismatch, $"Type '{a}' is not assignable to type '{b}'.");
-        return false;
+            _ when a.IsAssignableTo(b) => true,
+            _ => ReportTypeMismatch(a, b, span)
+        };
     }
 
-    private bool BindVariable(TypeVariable variable,
-        Type type,
-        LocationSpan span,
-        Dictionary<int, Type> substitutions,
-        out bool updated)
+    private bool UnifyBothVariables(TypeVariable va, TypeVariable vb, out bool updated)
     {
-        updated = false;
-        if (type is TypeVariable tv && tv.Id == variable.Id)
+        if (va.Id == vb.Id)
         {
-            diagnostics.Error(span, InternalCodes.InfiniteType, "Type is infinitely recursive.");
-            return false;
+            updated = false;
+            return true;
         }
 
-        substitutions[variable.Id] = type;
+        _substitutions[va.Id] = vb;
         updated = true;
         return true;
     }
 
-    private void ApplySubstitutions(Dictionary<int, Type> substitutions)
+    private bool BindVariable(TypeVariable variable, Type type, LocationSpan span, out bool updated)
     {
-        if (substitutions.Count == 0) return;
+        updated = false;
+        if (OccursIn(variable, type))
+            return ReportInfiniteType(span);
 
-        var nodeIds = _nodeTypes.Keys.ToList();
-        foreach (var nodeId in nodeIds)
-            _nodeTypes[nodeId] = Substitute(_nodeTypes[nodeId], substitutions);
+        _substitutions[variable.Id] = type;
+        updated = true;
+        return true;
     }
-    
-    private static Type Substitute(Type type, Dictionary<int, Type> substitutions)
+
+    private bool UnifyInstantiatedPair(InstantiatedType a, InstantiatedType b, LocationSpan span, out bool updated)
+    {
+        updated = false;
+        if (!a.Generic.Equals(b.Generic) || a.Arguments.Count != b.Arguments.Count)
+            return ReportTypeMismatch(a, b, span);
+
+        var success = true;
+        for (var i = 0; i < a.Arguments.Count; i++)
+        {
+            if (!TryUnify(a.Arguments[i], b.Arguments[i], span, out var argUpdated))
+                success = false;
+            else if (argUpdated)
+                updated = true;
+        }
+
+        return success;
+    }
+
+    private bool UnifyInstantiatedWithGeneric(InstantiatedType instantiated,
+        GenericType generic,
+        LocationSpan span,
+        out bool updated)
+    {
+        updated = false;
+        if (!instantiated.Generic.Equals(generic) || instantiated.Arguments.Count != generic.Parameters.Count)
+            return ReportTypeMismatch(instantiated, generic, span);
+
+        var success = true;
+        for (var i = 0; i < instantiated.Arguments.Count; i++)
+        {
+            var paramVar = GetOrCreateParameterVariable(generic.Parameters[i]);
+            if (!TryUnify(instantiated.Arguments[i], paramVar, span, out var argUpdated))
+                success = false;
+            else if (argUpdated)
+                updated = true;
+        }
+
+        return success;
+    }
+
+    private static bool OccursIn(TypeVariable variable, Type type) =>
+        type switch
+        {
+            TypeVariable tv => tv.Id == variable.Id,
+            InstantiatedType inst => inst.Arguments.Any(a => OccursIn(variable, a)),
+            IntersectionType inter => inter.Types.Any(t => OccursIn(variable, t)),
+            UnionType union => union.Types.Any(t => OccursIn(variable, t)),
+            _ => false
+        };
+
+    private TypeVariable GetOrCreateParameterVariable(TypeParameter param)
+    {
+        if (_parameterVariables.TryGetValue(param, out var variable))
+            return variable;
+
+        variable = CreateTypeVariable();
+        _parameterVariables[param] = variable;
+        return variable;
+    }
+
+    private void ApplySubstitutions()
+    {
+        if (_substitutions.Count == 0) return;
+
+        foreach (var nodeId in _nodeTypes.Keys.ToList())
+            _nodeTypes[nodeId] = Substitute(_nodeTypes[nodeId]);
+    }
+
+    private Type Substitute(Type type)
     {
         var visited = new HashSet<int>();
-        while (type is TypeVariable tv && substitutions.TryGetValue(tv.Id, out var replacement))
+        while (type is TypeVariable tv && _substitutions.TryGetValue(tv.Id, out var replacement))
         {
-            if (!visited.Add(tv.Id))
-                break;
+            if (!visited.Add(tv.Id)) break;
             type = replacement;
         }
 
+        type = type switch
+        {
+            InstantiatedType inst => new InstantiatedType(inst.Generic, inst.Arguments.ConvertAll(Substitute)),
+            IntersectionType inter => new IntersectionType(inter.Types.ConvertAll(Substitute)),
+            UnionType union => new UnionType(union.Types.ConvertAll(Substitute)),
+            _ => type
+        };
+        
+        if (type is InstantiatedType instantiated && instantiated.Arguments.All(a => a is not TypeVariable))
+            type = instantiated.Expand();
+
         return type;
     }
-    
+
+    private bool ReportTypeMismatch(Type a, Type b, LocationSpan span)
+    {
+        diagnostics.Error(
+            span,
+            InternalCodes.TypeMismatch,
+            $"Type '{a}' is not assignable to type '{b}'."
+        );
+
+        return false;
+    }
+
+    private bool ReportInfiniteType(LocationSpan span)
+    {
+        diagnostics.Error(span, InternalCodes.InfiniteType, "Type is infinitely recursive.");
+        return false;
+    }
+
     private TypeVariable CreateTypeVariable() => new(Interlocked.Increment(ref _nextVariableId));
 }

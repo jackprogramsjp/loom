@@ -7,6 +7,7 @@ using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 using TypeName = Loom.Parsing.AST.TypeName;
+using TypeParameter = Loom.Parsing.AST.TypeParameter;
 using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom.TypeChecking;
@@ -44,8 +45,16 @@ public class TypeChecker : Visitor<Type>
 
     public override Type VisitTypeAlias(TypeAlias typeAlias)
     {
-        var type = TypeSimplifier.Simplify(Visit(typeAlias.Type));
-        return BindType(typeAlias, type);
+        if (typeAlias.TypeParameters == null)
+        {
+            var type = Visit(typeAlias.EqualsTypeClause);
+            return BindType(typeAlias, TypeSimplifier.Simplify(type));
+        }
+        
+        var parameters = typeAlias.TypeParameters.Parameters.ConvertAll(Visit<Types.TypeParameter>);
+        var underlyingType = Visit(typeAlias.EqualsTypeClause);
+        var genericType = new GenericType(typeAlias, parameters, underlyingType);
+        return BindType(typeAlias, genericType);
     }
 
     public override Type VisitVariableDeclaration(VariableDeclaration variableDeclaration)
@@ -108,24 +117,46 @@ public class TypeChecker : Visitor<Type>
         var symbol = _semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
-            var type = TypeSolver.GetType(symbol.DeclaringNode);
-            return BindType(typeName, type);
+            var declaredType = TypeSolver.GetType(symbol.DeclaringNode);
+            if (typeName.TypeArguments == null)
+                return BindType(typeName, declaredType);
+
+            if (declaredType is GenericType genericType)
+            {
+                var arguments = typeName.TypeArguments.Arguments.ConvertAll(Visit);
+                if (arguments.Count != genericType.Parameters.Count)
+                {
+                    _diagnostics.Error(typeName.Span, InternalCodes.GenericArity,
+                        $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type arguments, but {arguments.Count} were provided.");
+                    
+                    return BindType(typeName, Types.PrimitiveType.Never);
+                }
+                
+                var instantiated = new InstantiatedType(genericType, arguments);
+                return BindType(typeName, instantiated);
+            }
+            
+            _diagnostics.Error(typeName.Span, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot take type arguments.");
+            return BindType(typeName, Types.PrimitiveType.Never);
         }
 
         _diagnostics.Error(typeName.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of type '{typeName.Name.Text}'.");
         return BindType(typeName, Types.PrimitiveType.Never);
     }
 
-    // private void AssertAssignability(Type a, Type b, LocationSpan span)
-    // {
-    //     if (a.IsAssignableTo(b)) return;
-    //
-    //     _diagnostics.Error(span, InternalCodes.TypeMismatch, $"Type '{a}' is not assignable to type '{b}'.");
-    // }
-
+    public override Type VisitTypeParameter(TypeParameter typeParameter)
+    {
+        var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
+        // var constraint = MaybeVisit(typeParameter.TypeConstraintClause);
+        var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, null);
+        return BindType(typeParameter, parameter);
+    }
+    
     private Type BindType(Node node, Type type)
     {
         TypeSolver.SetType(node, type);
         return type;
     }
+    
+    private T Visit<T>(Node node) where T : Type => (T)Visit(node);
 }

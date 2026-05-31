@@ -2,11 +2,11 @@ using Loom.Syntax;
 
 namespace Loom.Parsing.AST;
 
-public class ColonTypeClause(Token colonToken, TypeExpression type)
-    : Node([colonToken, ..type.Tokens], [type])
+public class EqualsTypeClause(Token equalsToken, TypeExpression type)
+    : Node([equalsToken, ..type.Tokens], [type])
 {
-    public Token ColonToken { get; } = colonToken;
+    public Token EqualsToken { get; } = equalsToken;
     public TypeExpression Type { get; } = type;
 
-    public override T Accept<T>(Visitor<T> visitor) => visitor.VisitColonTypeClause(this);
+    public override T Accept<T>(Visitor<T> visitor) => visitor.VisitEqualsTypeClause(this);
 }

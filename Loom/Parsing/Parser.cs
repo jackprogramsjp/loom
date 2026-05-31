@@ -35,9 +35,38 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     private TypeAlias ParseTypeAlias(Token keyword)
     {
         var name = ExpectIdentifier();
-        var equals = Expect(SyntaxKind.Equals);
+        var typeParameters = ParseTypeParameters();
+        var equalsTypeClause = ParseEqualsTypeClause(true)!;
+        return new TypeAlias(keyword, name, typeParameters, equalsTypeClause);
+    }
+
+    private TypeParameters? ParseTypeParameters()
+    {
+        if (!Match(SyntaxKind.LArrow, out var leftArrow))
+            return null;
+
+        var parameters = ParseDelimited(ParseTypeParameter);
+        var rightArrow = Expect(SyntaxKind.RArrow);
+        return new TypeParameters(leftArrow, rightArrow, parameters);
+    }
+    
+    private TypeParameter ParseTypeParameter()
+    {
+        var name = ExpectIdentifier("type parameter name");
+        var equalsTypeClause = ParseEqualsTypeClause(false);
+        return new TypeParameter(name, equalsTypeClause);
+    }
+    
+    private EqualsTypeClause? ParseEqualsTypeClause(bool required)
+    {
+        if (required)
+            Expect(SyntaxKind.Equals);
+        else if (!Match(SyntaxKind.Equals))
+            return null;
+        
+        var equals = Last();
         var type = ParseType();
-        return new TypeAlias(keyword, name, equals, type);
+        return new EqualsTypeClause(equals, type);
     }
     
     private VariableDeclaration ParseVariableDeclaration(Token keyword)
@@ -195,7 +224,16 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         }
         
         var name = ExpectIdentifier("type");
-        return SyntaxFacts.IsPrimitiveType(name.Text) ? new PrimitiveType(name) : new TypeName(name);
+        if (SyntaxFacts.IsPrimitiveType(name.Text))
+            return new PrimitiveType(name);
+
+        if (!Match(SyntaxKind.LArrow, out var leftArrow))
+            return new TypeName(name);
+
+        var arguments = ParseDelimited(ParseType);
+        var rightArrow = Expect(SyntaxKind.RArrow);
+        var typeArguments = new TypeArguments(leftArrow, rightArrow, arguments);
+        return new TypeName(name, typeArguments);
     }
     
     private Expression ParseBinaryRightAssociative(Func<Expression> parseLeft, Func<Expression> parseRight, params SyntaxKind[] operators)
@@ -220,6 +258,16 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         }
 
         return left;
+    }
+    
+    private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
+        where T : Node
+    {
+        var nodes = new List<T>([parse()]);
+        while (Match(delimiter))
+            nodes.Add(parse());
+
+        return nodes;
     }
 
     private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);
