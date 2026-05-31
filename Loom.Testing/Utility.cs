@@ -45,10 +45,10 @@ internal static class Utility
     }
 
     public static Token IdentifierToken(string name, LocationSpan? span = null) => Token(SyntaxKind.Identifier, name, span);
+    public static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
     
     private static LexerResult Tokenize(string source) => new Lexer(TestFile(source)).Tokenize();
     private static ParserResult Parse(string source) => new Parser(TestFile(source), GetTokens(source)).Parse();
     
-    private static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
     private static SourceFile TestFile(string source) => new("test", source);
 }

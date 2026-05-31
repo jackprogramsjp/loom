@@ -127,7 +127,7 @@ public class TypeChecker : Visitor<Type>
                 if (arguments.Count != genericType.Parameters.Count)
                 {
                     _diagnostics.Error(typeName.Span, InternalCodes.GenericArity,
-                        $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type arguments, but {arguments.Count} were provided.");
+                        $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type argument(s), but {arguments.Count} were provided.");
                     
                     return BindType(typeName, Types.PrimitiveType.Never);
                 }
@@ -136,7 +136,7 @@ public class TypeChecker : Visitor<Type>
                 return BindType(typeName, instantiated);
             }
             
-            _diagnostics.Error(typeName.Span, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot take type arguments.");
+            _diagnostics.Error(typeName.Span, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
             return BindType(typeName, Types.PrimitiveType.Never);
         }
 

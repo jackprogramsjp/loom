@@ -12,65 +12,86 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number = 'hello'");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type 'number'.");
     }
-    
+
+    [Fact]
+    public void ThrowsFor_GenericTypeMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type Id<T> = T; let x: Id<number> = 'hello'");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type 'number'.");
+    }
+
     [Fact]
     public void ThrowsFor_UndefinedIdentifier()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("x");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindSymbol, "Cannot find symbol for declaration of variable 'x'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_UndefinedType()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: A = 1");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindSymbol, "Cannot find symbol for declaration of type 'A'.");
     }
-    
+
     [Fact]
-    public void Checks_TypeAlias()
+    public void ThrowsFor_NonGeneric()
     {
-        var type = Utility.GetLastStatementType("type A = number");
-        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type A = number; let x: A<number> = 1");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.NotGeneric, "Type 'A' is not generic and cannot receive type arguments.");
     }
-    
+
     [Fact]
-    public void Checks_Identifier_ResolvesToTypeAlias()
+    public void ThrowsFor_IncorrectGenericArity()
     {
-        var type = Utility.GetLastStatementType("type A = number; let x: A = 1");
-        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type A<T> = T; let x: A<number, bool> = 1");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, $"Type 'A' expects 1 type argument(s), but 2 were provided.");
     }
-    
-    [Fact]
-    public void Checks_Identifier_ResolvesToDeclaredType()
+
+    [Theory]
+    [InlineData("type A = number")]
+    [InlineData("type A = number; let x: A = 1")]
+    [InlineData("type Id<T> = T; let x: Id<number> = 1")]
+    [InlineData("type Id<T> = T; type X = Id<number>; let x: X = 1")]
+    [InlineData("type Id<T> = T; let x: Id<number> = 1; x")]
+    [InlineData("type Id<T> = T; let x = 1; let y: Id<number> = x; y")]
+    [InlineData("type Const<A, B> = A; let x: Const<number, string> = 1")]
+    [InlineData("type Id<T> = T; type NumId = Id<number>; type X = NumId; let x: X = 1")]
+    public void Checks_TypeAlias_Resolution(string source)
     {
-        var type = Utility.GetLastStatementType("let x = 42; x");
+        var narrowType = Utility.GetLastStatementType(source);
+        var type = narrowType is InstantiatedType instantiated ? instantiated.Expand() : narrowType;
+        Assert.True(
+            type.Equals(PrimitiveType.Number),
+            $"Expected 'number', got '{type}'"
+        );
+    }
+
+    [Theory]
+    [InlineData("let x = 42; x")]
+    [InlineData("let x = 42; let y = x; y")]
+    [InlineData("let x = 42; let y = x; let z = y; z;")]
+    public void Checks_Identifier_Resolution(string source)
+    {
+        var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(42, literal.Value);
     }
-    
-    [Fact]
-    public void Checks_Identifier_ResolvesThroughChain()
-    {
-        var type = Utility.GetLastStatementType("let x = 42; let y = x; y");
-        var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal(42, literal.Value);
-    }
-    
+
     [Fact]
     public void Checks_Identifier_ResolvesAnnotatedType()
     {
         var type = Utility.GetLastStatementType("let x: number = 42; x");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_VariableDeclaration_WidenedInference()
     {
         var type = Utility.GetLastStatementType("mut x = 42");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_VariableDeclaration_Inference()
     {
@@ -78,14 +99,14 @@ public class TypeCheckerTest
         var literal = Assert.IsType<LiteralType>(constType);
         Assert.Equal(42, literal.Value);
     }
-    
+
     [Fact]
     public void Checks_VariableDeclaration_WithTypeAnnotation()
     {
         var type = Utility.GetLastStatementType("let x: number = 42");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_NumberLiterals()
     {

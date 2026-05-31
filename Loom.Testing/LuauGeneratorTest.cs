@@ -84,15 +84,53 @@ public class LuauGeneratorTest
     }
     
     [Fact]
+    public void Generates_TypeAliases_GenericWithDefault()
+    {
+        var luauTree = Utility.GetLuauAST("type Id<T = number> = T");
+        Assert.Single(luauTree.Statements);
+        
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Id", alias.Name);
+        Assert.Single(alias.TypeParameters.Parameters);
+        
+        var parameter = alias.TypeParameters.Parameters.First();
+        Assert.Equal("T", parameter.Name);
+        
+        var primitive = Assert.IsType<PrimitiveType>(parameter.DefaultType);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+        
+        var typeName = Assert.IsType<TypeName>(alias.Type);
+        Assert.Equal("T", typeName.Name);
+    }
+    
+    [Fact]
+    public void Generates_TypeAliases_Generic()
+    {
+        var luauTree = Utility.GetLuauAST("type Id<T> = T");
+        Assert.Single(luauTree.Statements);
+        
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Id", alias.Name);
+        Assert.Single(alias.TypeParameters.Parameters);
+        
+        var parameter = alias.TypeParameters.Parameters.First();
+        Assert.Equal("T", parameter.Name);
+        Assert.Null(parameter.DefaultType);
+        
+        var typeName = Assert.IsType<TypeName>(alias.Type);
+        Assert.Equal("T", typeName.Name);
+    }
+    
+    [Fact]
     public void Generates_TypeAliases()
     {
         var luauTree = Utility.GetLuauAST("type A = bool");
         Assert.Single(luauTree.Statements);
         
-        var variable = Assert.IsType<TypeAlias>(luauTree.Statements.First());
-        Assert.Equal("A", variable.Name);
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("A", alias.Name);
         
-        var primitive = Assert.IsType<PrimitiveType>(variable.Type);
+        var primitive = Assert.IsType<PrimitiveType>(alias.Type);
         Assert.Equal(PrimitiveTypeKind.Boolean, primitive.Kind);
     }
     
