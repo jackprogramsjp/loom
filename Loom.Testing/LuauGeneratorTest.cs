@@ -63,6 +63,20 @@ public class LuauGeneratorTest
         Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
     }
     
+    [Fact]
+    public void Generates_ParenthesizedType()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: (number);");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var parenthesized = Assert.IsType<ParenthesizedType>(variable.DeclaredType);
+        var primitive = Assert.IsType<PrimitiveType>(parenthesized.Type);
+        Assert.Equal("number", primitive.Render());
+    }
+    
     [Theory]
     [InlineData("number")]
     [InlineData("string")]
@@ -161,6 +175,18 @@ public class LuauGeneratorTest
         
         var literal = Assert.IsType<NumberLiteral>(variable.Initializer);
         Assert.Equal(1, literal.Value);
+    }
+    
+    [Fact]
+    public void Generates_Parenthesized()
+    {
+        var luauTree = Utility.GetLuauAST("(abc)");
+        Assert.Single(luauTree.Statements);
+        
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
+        var parenthesized = Assert.IsType<Parenthesized>(expressionStatement.Expression);
+        var identifier = Assert.IsType<Identifier>(parenthesized.Expression);
+        Assert.Equal("abc", identifier.Name);
     }
     
     [Fact]
