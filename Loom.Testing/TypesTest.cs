@@ -3,6 +3,7 @@ using Loom.TypeChecking.Types;
 namespace Loom.Testing;
 using static PrimitiveType;
 
+[Collection("Assembly")]
 public class TypesTest
 {
     [Fact]

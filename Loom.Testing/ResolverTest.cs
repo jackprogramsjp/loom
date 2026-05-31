@@ -4,6 +4,7 @@ using Loom.SemanticAnalysis;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class ResolverTest
 {
     [Fact]

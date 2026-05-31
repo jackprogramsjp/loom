@@ -1,5 +1,6 @@
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class FileLoaderTest
 {
     [Fact]

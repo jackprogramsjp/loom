@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Loom.Luau.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
@@ -11,6 +10,7 @@ using UnionType = Loom.Luau.AST.UnionType;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class LuauGeneratorTest
 {
     [Fact]

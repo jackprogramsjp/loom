@@ -12,6 +12,7 @@ using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class ParserTest
 {
     [Fact]

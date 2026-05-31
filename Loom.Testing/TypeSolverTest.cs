@@ -8,6 +8,7 @@ using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class TypeSolverTest
 {
     private static DiagnosticBag CreateDiagnostics() => new();

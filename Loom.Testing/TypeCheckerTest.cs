@@ -4,6 +4,7 @@ using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class TypeCheckerTest
 {
     [Fact]

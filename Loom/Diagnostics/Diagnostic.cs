@@ -73,11 +73,8 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
                 lines.Add($"{Colors.Dim}{lineNumber} │{Colors.Reset} {lineContent}");
                 lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
             }
-
-            // lines.Add(gutter);
         }
 
-        // lines = lines.SkipLast(1).ToList();
         if (hasHint && startLine == endLine)
         {
             lines.Add(

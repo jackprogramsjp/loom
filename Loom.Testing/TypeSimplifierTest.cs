@@ -4,6 +4,7 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class TypeSimplifierTest
 {
     public static readonly List<object[]> NoChangeTypes = new List<Type>(

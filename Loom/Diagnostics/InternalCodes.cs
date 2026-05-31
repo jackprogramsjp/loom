@@ -2,7 +2,7 @@ namespace Loom.Diagnostics;
 
 public static class InternalCodes
 {
-    public const string Unknown = "???";
+    public const string Unknown = "L???";
     public const string NotImplemented = "L000";
     public const string CompilerError = "L001";
     

@@ -3,6 +3,7 @@ using Loom.Syntax;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class LexerTest
 {
     public static readonly List<object[]> Operators = SyntaxFacts.OperatorMap.Where(pair => SyntaxFacts.IsNotTrivia(pair.Value))

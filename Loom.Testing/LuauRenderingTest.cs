@@ -7,6 +7,7 @@ using UnaryOperator = Loom.Luau.AST.UnaryOperator;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class LuauRenderingTest
 {
     [Fact]
