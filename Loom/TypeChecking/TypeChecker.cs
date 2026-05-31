@@ -50,7 +50,7 @@ public class TypeChecker : Visitor<Type>
             var type = Visit(typeAlias.EqualsTypeClause);
             return BindType(typeAlias, TypeSimplifier.Simplify(type));
         }
-        
+
         var parameters = typeAlias.TypeParameters.Parameters.ConvertAll(Visit<Types.TypeParameter>);
         var underlyingType = Visit(typeAlias.EqualsTypeClause);
         var genericType = new GenericType(typeAlias, parameters, underlyingType);
@@ -91,6 +91,33 @@ public class TypeChecker : Visitor<Type>
         return BindType(variableDeclaration, finalType);
     }
 
+    public override Type VisitBinaryOperator(BinaryOperator binaryOperator)
+    {
+        var leftType = Visit(binaryOperator.Left);
+        var rightType = Visit(binaryOperator.Right);
+        var rule = BinaryOperatorBinder.GetRule(binaryOperator, leftType, rightType);
+        if (rule != null)
+            return rule.ReturnType;
+
+        var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
+        var hint = FormatBinaryHint(binaryOperator, leftType, rightType, suggestion);
+        _diagnostics.Error(binaryOperator, InternalCodes.InvalidUnaryOp, $"No binary operation for '{leftType} {binaryOperator.Operator.Text} {rightType}'", hint);
+        return Types.PrimitiveType.Never;
+    }
+
+    public override Type VisitUnaryOperator(UnaryOperator unaryOperator)
+    {
+        var operandType = Visit(unaryOperator.Operand);
+        var rule = UnaryOperatorBinder.GetRule(unaryOperator, operandType);
+        if (rule != null)
+            return rule.ReturnType;
+
+        var suggestion = UnaryOperatorBinder.GetSuggestion(unaryOperator, operandType);
+        var hint = FormatUnaryHint(unaryOperator, operandType, suggestion);
+        _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for '{unaryOperator.Operator.Text}{operandType}'", hint);
+        return Types.PrimitiveType.Never;
+    }
+
     public override Type VisitLiteral(Literal literal) => BindType(literal, new LiteralType(literal.Value));
 
     public override Type VisitIdentifier(Identifier identifier)
@@ -126,16 +153,19 @@ public class TypeChecker : Visitor<Type>
                 var arguments = typeName.TypeArguments.Arguments.ConvertAll(Visit);
                 if (arguments.Count != genericType.Parameters.Count)
                 {
-                    _diagnostics.Error(typeName.Span, InternalCodes.GenericArity,
-                        $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type argument(s), but {arguments.Count} were provided.");
-                    
+                    _diagnostics.Error(
+                        typeName.Span,
+                        InternalCodes.GenericArity,
+                        $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type argument(s), but {arguments.Count} were provided."
+                    );
+
                     return BindType(typeName, Types.PrimitiveType.Never);
                 }
-                
+
                 var instantiated = new InstantiatedType(genericType, arguments);
                 return BindType(typeName, instantiated);
             }
-            
+
             _diagnostics.Error(typeName.Span, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
             return BindType(typeName, Types.PrimitiveType.Never);
         }
@@ -151,12 +181,45 @@ public class TypeChecker : Visitor<Type>
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, null);
         return BindType(typeParameter, parameter);
     }
-    
+
     private Type BindType(Node node, Type type)
     {
         TypeSolver.SetType(node, type);
         return type;
     }
     
-    private T Visit<T>(Node node) where T : Type => (T)Visit(node);
+    private static string? FormatBinaryHint(
+        BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
+    {
+        if (suggestion == null)
+            return null;
+
+        var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
+        if (suggestion.OperatorKind != op.Operator.Kind)
+            return $"did you mean '{op.Left} {suggestedOp} {op.Right}'?";
+
+        if (!left.IsAssignableTo(suggestion.LeftType) && right.IsAssignableTo(suggestion.RightType))
+            return $"left should be '{suggestion.LeftType}', not '{left}'";
+
+        if (left.IsAssignableTo(suggestion.LeftType) && !right.IsAssignableTo(suggestion.RightType))
+            return $"right should be '{suggestion.RightType}', not '{right}'";
+
+        return $"left should be '{suggestion.LeftType}' and right should be '{suggestion.RightType}'";
+    }
+
+    private static string? FormatUnaryHint(
+        UnaryOperator op, Type operand, UnaryOperatorRule? suggestion)
+    {
+        if (suggestion == null)
+            return null;
+
+        var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
+        return suggestion.OperatorKind != op.Operator.Kind 
+            ? $"did you mean '{suggestedOp}{op.Operand}'?" 
+            : $"operand should be '{suggestion.OperandType}', not '{operand}'";
+    }
+
+    private T Visit<T>(Node node)
+        where T : Type =>
+        (T)Visit(node);
 }

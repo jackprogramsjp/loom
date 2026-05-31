@@ -5,57 +5,8 @@ namespace Loom.Testing;
 
 public class LexerTest
 {
-    public static readonly List<object[]> Operators = new List<(string, SyntaxKind)>([
-        ("+", SyntaxKind.Plus),
-        ("+=", SyntaxKind.PlusEquals),
-        ("-", SyntaxKind.Minus),
-        ("-=", SyntaxKind.MinusEquals),
-        ("*", SyntaxKind.Star),
-        ("*=", SyntaxKind.StarEquals),
-        ("/", SyntaxKind.Slash),
-        ("/=", SyntaxKind.SlashEquals),
-        ("//", SyntaxKind.SlashSlash),
-        ("//=", SyntaxKind.SlashSlashEquals),
-        ("^", SyntaxKind.Carat),
-        ("^=", SyntaxKind.CaratEquals),
-        ("%", SyntaxKind.Percent),
-        ("%=", SyntaxKind.PercentEquals),
-        ("&", SyntaxKind.Ampersand),
-        ("&=", SyntaxKind.AmpersandEquals),
-        ("|", SyntaxKind.Pipe),
-        ("|=", SyntaxKind.PipeEquals),
-        ("~", SyntaxKind.Tilde),
-        ("~=", SyntaxKind.TildeEquals),
-        (">>", SyntaxKind.RArrowRArrow),
-        (">>=", SyntaxKind.RArrowRArrowEquals),
-        (">>>", SyntaxKind.RArrowRArrowRArrow),
-        (">>>=", SyntaxKind.RArrowRArrowRArrowEquals),
-        ("<<", SyntaxKind.LArrowLArrow),
-        ("<<=", SyntaxKind.LArrowLArrowEquals),
-        ("&&", SyntaxKind.AmpersandAmpersand),
-        ("&&=", SyntaxKind.AmpersandAmpersandEquals),
-        ("||", SyntaxKind.PipePipe),
-        ("||=", SyntaxKind.PipePipeEquals),
-        ("=", SyntaxKind.Equals),
-        ("==", SyntaxKind.EqualsEquals),
-        ("!", SyntaxKind.Bang),
-        ("!=", SyntaxKind.BangEquals),
-        (">", SyntaxKind.RArrow),
-        (">=", SyntaxKind.RArrowEquals),
-        ("<", SyntaxKind.LArrow),
-        ("<=", SyntaxKind.LArrowEquals),
-        ("??", SyntaxKind.QuestionQuestion),
-        ("??=", SyntaxKind.QuestionQuestionEquals),
-        ("(", SyntaxKind.LParen),
-        (")", SyntaxKind.RParen),
-        ("[", SyntaxKind.LBracket),
-        ("]", SyntaxKind.RBracket),
-        ("{", SyntaxKind.LBrace),
-        ("}", SyntaxKind.RBrace),
-        (",", SyntaxKind.Comma),
-        (".", SyntaxKind.Dot),
-        ("..", SyntaxKind.DotDot),
-    ]).ConvertAll<object[]>(t => [t.Item1, t.Item2]);
+    public static readonly List<object[]> Operators = SyntaxFacts.OperatorMap.Select(t => new object[] { t.Key, t.Value }).ToList();
+    public static readonly List<object[]> Keywords = SyntaxFacts.KeywordMap.Select(t => new object[] { t.Key, t.Value }).ToList();
     
     [Theory]
     [InlineData("@")]
@@ -135,36 +86,6 @@ public class LexerTest
         Assert.Equal(SyntaxKind.StringLiteral, token.Kind);
     }
     
-    [Fact]
-    public void Tokenizes_True()
-    {
-        var tokens = Utility.GetTokens("true");
-        Assert.Single(tokens);
-        
-        var token = tokens.First();
-        Assert.Equal(SyntaxKind.TrueLiteral, token.Kind);
-    }
-    
-    [Fact]
-    public void Tokenizes_False()
-    {
-        var tokens = Utility.GetTokens("false");
-        Assert.Single(tokens);
-        
-        var token = tokens.First();
-        Assert.Equal(SyntaxKind.FalseLiteral, token.Kind);
-    }
-    
-    [Fact]
-    public void Tokenizes_None()
-    {
-        var tokens = Utility.GetTokens("none");
-        Assert.Single(tokens);
-        
-        var token = tokens.First();
-        Assert.Equal(SyntaxKind.NoneLiteral, token.Kind);
-    }
-    
     [Theory]
     [InlineData("_abc_")]
     [InlineData("abc123")]
@@ -180,19 +101,7 @@ public class LexerTest
     }
     
     [Theory]
-    [InlineData("let", SyntaxKind.LetKeyword)]
-    [InlineData("mut", SyntaxKind.MutKeyword)]
-    [InlineData("fn", SyntaxKind.FnKeyword)]
-    [InlineData("type", SyntaxKind.TypeKeyword)]
-    [InlineData("event", SyntaxKind.EventKeyword)]
-    [InlineData("enum", SyntaxKind.EnumKeyword)]
-    [InlineData("every", SyntaxKind.EveryKeyword)]
-    [InlineData("after", SyntaxKind.AfterKeyword)]
-    [InlineData("if", SyntaxKind.IfKeyword)]
-    [InlineData("else", SyntaxKind.ElseKeyword)]
-    [InlineData("while", SyntaxKind.WhileKeyword)]
-    [InlineData("match", SyntaxKind.MatchKeyword)]
-    [InlineData("nameof", SyntaxKind.NameofKeyword)]
+    [MemberData(nameof(Keywords))]
     public void Tokenizes_Keywords(string source, SyntaxKind expected)
     {
         var tokens = Utility.GetTokens(source);

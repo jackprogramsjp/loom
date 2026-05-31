@@ -1,3 +1,0 @@
-type Union<A, B> = A | B;
-let x: Union<number, string> = false;
-x;

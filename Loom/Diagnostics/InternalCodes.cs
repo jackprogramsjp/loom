@@ -19,4 +19,6 @@ public static class InternalCodes
     public const string CannotFindSymbol = "L307";
     public const string NotGeneric = "L308";
     public const string GenericArity = "L309";
+    public const string InvalidUnaryOp = "L310";
+    public const string InvalidBinaryOp = "L311";
 }

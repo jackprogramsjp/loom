@@ -25,6 +25,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
     {
         if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
             return ParseVariableDeclaration(variableKeyword);
+
         if (Match(SyntaxKind.TypeKeyword, out var typeKeyword))
             return ParseTypeAlias(typeKeyword);
 
@@ -49,26 +50,26 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         var rightArrow = Expect(SyntaxKind.RArrow);
         return new TypeParameters(leftArrow, rightArrow, parameters);
     }
-    
+
     private TypeParameter ParseTypeParameter()
     {
         var name = ExpectIdentifier("type parameter name");
         var equalsTypeClause = ParseEqualsTypeClause(false);
         return new TypeParameter(name, equalsTypeClause);
     }
-    
+
     private EqualsTypeClause? ParseEqualsTypeClause(bool required)
     {
         if (required)
             Expect(SyntaxKind.Equals);
         else if (!Match(SyntaxKind.Equals))
             return null;
-        
+
         var equals = Last();
         var type = ParseType();
         return new EqualsTypeClause(equals, type);
     }
-    
+
     private VariableDeclaration ParseVariableDeclaration(Token keyword)
     {
         var name = ExpectIdentifier();
@@ -112,7 +113,8 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private Expression ParseAdditive() => ParseBinaryLeftAssociative(ParseMultiplicative, SyntaxKind.Plus, SyntaxKind.Minus);
 
-    private Expression ParseMultiplicative() => ParseBinaryLeftAssociative(ParseExponential, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.SlashSlash, SyntaxKind.Percent);
+    private Expression ParseMultiplicative() =>
+        ParseBinaryLeftAssociative(ParseExponential, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.SlashSlash, SyntaxKind.Percent);
 
     private Expression ParseExponential() => ParseBinaryRightAssociative(ParseUnary, ParseExponential, SyntaxKind.Carat);
 
@@ -222,7 +224,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
             return new ParenthesizedType(leftParen, rightParen, type);
         }
-        
+
         var name = ExpectIdentifier("type");
         if (SyntaxFacts.IsPrimitiveType(name.Text))
             return new PrimitiveType(name);
@@ -235,7 +237,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         var typeArguments = new TypeArguments(leftArrow, rightArrow, arguments);
         return new TypeName(name, typeArguments);
     }
-    
+
     private Expression ParseBinaryRightAssociative(Func<Expression> parseLeft, Func<Expression> parseRight, params SyntaxKind[] operators)
     {
         var left = parseLeft();
@@ -259,7 +261,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
         return left;
     }
-    
+
     private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
         where T : Node
     {
@@ -291,7 +293,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
         return match;
     }
-    
+
     private Token ExpectIdentifier(string expected = "identifier") => Expect(SyntaxKind.Identifier, token => $"Expected {expected}, got {SafeTokenText(token)}.");
 
     private Token Expect(SyntaxKind kind, string message) => Expect(kind, _ => message);
@@ -301,7 +303,8 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         if (IsEof())
         {
             var last = Last();
-            _diagnostics.Error(last.Span, InternalCodes.UnexpectedEof, message != null ? message(null) : "Unexpected end of file.");
+            var text = SyntaxFacts.GetText(kind) ?? kind.ToString();
+            _diagnostics.Error(last.Span, InternalCodes.UnexpectedEof, message != null ? message(null) : $"Expected '{text}', got end of file.");
             return last;
         }
 
@@ -309,7 +312,12 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         if (token.Kind == kind)
             return token;
 
-        _diagnostics.Error(token.Span, InternalCodes.UnexpectedToken, message != null ? message(token) : $"Unexpected token '{token.Text}'.");
+        var expected = SyntaxFacts.GetText(kind) ?? kind.ToString();
+        _diagnostics.Error(
+            token.Span,
+            InternalCodes.UnexpectedToken,
+            message != null ? message(token) : $"Expected '{expected}', got '{token.Text}'."
+        );
         return token;
     }
 

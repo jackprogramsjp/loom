@@ -3,12 +3,13 @@ using Loom.Utility;
 
 namespace Loom.Diagnostics;
 
-public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? code, string message)
+public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? code, string message, string? hint)
 {
     public LocationSpan Span { get; } = span;
     public DiagnosticSeverity Severity { get; } = severity;
     public string? Code { get; } = code;
     public string Message { get; } = message;
+    public string? Hint { get; } = hint;
 
     public override string ToString()
     {
@@ -51,6 +52,12 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
             $"{gutter}   {underline}",
             $"{gutter}   {belowLine}"
         ];
+        
+        if (!string.IsNullOrEmpty(Hint))
+        {
+            var hintLine = $"{Colors.Dim}{indent}└─{Colors.Reset} {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Hint}";
+            lines.Add(hintLine);
+        }
 
         return string.Join(Environment.NewLine, lines);
     }
