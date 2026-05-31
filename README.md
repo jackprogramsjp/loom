@@ -31,6 +31,15 @@ let x = 1 & 2 & 3
 ```luau
 local x = bit32.band(1, 2, 3)
 ```
+##
+```
+type Id<T> = T
+let x: Id<bool> = false;
+```
+```luau
+type Id<T> = T
+const x: Id<boolean> = false
+```
 
 ## Planned Features
 
