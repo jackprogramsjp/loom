@@ -136,6 +136,21 @@ public class ParserTest
     }
     
     [Fact]
+    public void Parses_ParenthesizedType()
+    {
+        var tree = Utility.GetAST("let x: (number)");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var variableDeclaration = Assert.IsType<VariableDeclaration>(statement);
+        Assert.NotNull(variableDeclaration.ColonTypeClause);
+        
+        var parenthesized = Assert.IsType<ParenthesizedType>(variableDeclaration.ColonTypeClause.Type);
+        var primitive = Assert.IsType<PrimitiveType>(parenthesized.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+    
+    [Fact]
     public void Parses_TypeAlias_GenericWithDefault()
     {
         var tree = Utility.GetAST("type Id<T = number> = T");
