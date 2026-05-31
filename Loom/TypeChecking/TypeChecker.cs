@@ -104,7 +104,7 @@ public class TypeChecker : Visitor<Type>
         _diagnostics.Error(
             binaryOperator,
             InternalCodes.InvalidBinaryOp,
-            $"No binary operation for '{leftType.Widen()}   {binaryOperator.Operator.Text} {rightType.Widen()}'",
+            $"No binary operation for {leftType.Widen()} {binaryOperator.Operator.Text} {rightType.Widen()}",
             hint
         );
 

@@ -22,6 +22,7 @@ public class CompilationUnit(List<SourceFile> files)
     
     public CompilationResult Compile()
     {
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
         var compiledFiles = files.ConvertAll(Compile);
         var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
         return new CompilationResult(compiledFiles, diagnostics);

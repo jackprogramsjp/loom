@@ -1,3 +1,4 @@
+using System.Text;
 using Loom.Syntax;
 using Loom.Utility;
 
@@ -13,52 +14,91 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
 
     public override string ToString()
     {
-        var (severityColor, severityLabel) = Severity switch
+        var (severityColor, underlineColor, severityLabel) = Severity switch
         {
-            DiagnosticSeverity.Error => (Colors.Red, "error"),
-            DiagnosticSeverity.Warn => (Colors.Yellow, "warning"),
-            DiagnosticSeverity.Info => (Colors.Cyan, "info"),
-            _ => (Colors.White, "unknown")
+            DiagnosticSeverity.Error => (Colors.Red, Colors.Magenta, "error"),
+            DiagnosticSeverity.Warn => (Colors.Yellow, Colors.Yellow, "warning"),
+            DiagnosticSeverity.Info => (Colors.Blue, Colors.Cyan, "info"),
+            _ => (Colors.White, Colors.Gray, "unknown")
         };
 
         var codePart = string.IsNullOrEmpty(Code) ? "" : $" {Colors.Dim}({Code}){Colors.Reset}{severityColor}";
-        var header = $"{severityColor}{Colors.Bold}{severityLabel}{Colors.Reset}{severityColor}{codePart}:{Colors.Reset}{Colors.Dim} {Message}{Colors.Reset}";
-        var location = $"{Colors.Dim}  ┌─{Colors.Reset} {Span.Start}";
+        var header = $"{severityColor}{Colors.Bold}{severityLabel}{Colors.Reset}{severityColor}{codePart}:{Colors.Reset} {Message}{Colors.Reset}";
+        var location = $"{Colors.Dim}  ╭─{Colors.Reset} {Colors.Orange}{Span}{Colors.Reset}";
         var sourceLines = Span.File.SourceText.Split(Environment.NewLine);
-        var lineNumber = Span.Start.Line;
-        var lineIndex = lineNumber - 1;
-        var lineDigits = lineNumber.ToString().Length;
-        var indent = new string(' ', lineDigits + 1);
-        var gutter = $"{Colors.Dim}{indent}│{Colors.Reset}";
-        var aboveLine = lineIndex > 0
-            ? $"{Colors.Dim}{sourceLines[lineIndex - 1]}{Colors.Reset}"
-            : "";
-
-        var errorLine = sourceLines[lineIndex];
-        var arrowLength = Math.Max(Span.End.Character - Span.Start.Character, 1);
-        var padding = new string(' ', Span.Start.Character);
-        var arrows = new string('^', arrowLength);
-        var underline = $"{severityColor}{padding}{arrows}{Colors.Reset}";
-        var belowLine = lineIndex + 1 < sourceLines.Length
-            ? $"{Colors.Dim}{sourceLines[lineIndex + 1]}{Colors.Reset}"
-            : "";
-
-        List<string> lines =
-        [
-            header,
-            location,
-            $"{gutter}   {aboveLine}",
-            $"{Colors.Bold}{lineNumber} │{Colors.Reset}   {errorLine}",
-            $"{gutter}   {underline}",
-            $"{gutter}   {belowLine}"
-        ];
-        
-        if (!string.IsNullOrEmpty(Hint))
+        var startLine = Span.Start.Line;
+        var endLine = Span.End.Line;
+        var startChar = Span.Start.Character;
+        var endChar = Span.End.Character;
+        var lineDigits = endLine.ToString().Length;
+        var indent = new string(' ', lineDigits);
+        var gutter = $"{Colors.Dim}{indent} │{Colors.Reset}";
+        var lines = new List<string>([header, location, gutter]);
+        if (startLine - 1 < sourceLines.Length && startLine - 1 > 0)
         {
-            var hintLine = $"{Colors.Dim}{indent}└─{Colors.Reset} {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Hint}";
-            lines.Add(hintLine);
+            lines.Add($"{gutter} {Colors.Dim}{sourceLines[startLine - 2]}{Colors.Reset}");
+            lines.Add(gutter);
         }
 
+        const char underlineChar = '\u2500';
+        var hasHint = !string.IsNullOrEmpty(Hint);
+        for (var line = startLine; line <= endLine; line++)
+        {
+            var lineIndex = line - 1;
+            var lineContent = sourceLines[lineIndex];
+            var lineNumber = line.ToString().PadLeft(lineDigits);
+            var lineSubtraction = hasHint ? 2 : 0;
+            var linePrepend = hasHint ? line == startLine && startLine != endLine ? "──" : "─┬" : "";
+            if (line == startLine && line == endLine)
+            {
+                var underline = $"{new string(' ', startChar)}{underlineColor}{linePrepend}{new string(underlineChar, endChar - startChar - lineSubtraction)}{Colors.Reset}";
+                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
+                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
+            }
+            else if (line == startLine)
+            {
+                var underline = $"{new string(' ', startChar)}{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - startChar - lineSubtraction)}{Colors.Reset}";
+                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
+                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
+            }
+            else if (line == endLine)
+            {
+                var underline = $"{underlineColor}{linePrepend}{new string(underlineChar, endChar - lineSubtraction)}{Colors.Reset}";
+                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
+                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
+            }
+            else
+            {
+                var underline = $"{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - lineSubtraction)}{Colors.Reset}";
+                lines.Add($"{Colors.Dim}{lineNumber} │{Colors.Reset} {lineContent}");
+                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
+            }
+
+            // lines.Add(gutter);
+        }
+
+        // lines = lines.SkipLast(1).ToList();
+        if (hasHint && startLine == endLine)
+        {
+            lines.Add(
+                $"{gutter}{new string(' ', startChar)}  {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
+            );
+            lines.Add(gutter);
+        }
+
+        if (hasHint && startLine != endLine)
+        {
+            lines.Add(
+                $"{gutter}{new string(' ', startChar)}  {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
+            );
+
+            lines.Add(gutter);
+        }
+        
+        if (endLine < sourceLines.Length)
+            lines.Add($"{gutter} {Colors.Dim}{sourceLines[endLine]}{Colors.Reset}");
+        
+        lines.Add(gutter);
         return string.Join(Environment.NewLine, lines);
     }
 }
