@@ -1,113 +1,78 @@
+using System.Reflection;
 using Loom.Parsing.AST;
+using Loom.Syntax;
 
 namespace Loom.Utility;
 
 public class ASTDisplayer(Tree ast) : Visitor<string>
 {
     private int _indent;
-    
+    private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id"];
+
     public void Display()
     {
-        var content = VisitTree(ast);
+        var content = DisplayNode(ast);
         Console.WriteLine(content);
     }
     
     public override string Visit(Node node) => node.Accept(this);
-
-    public new string VisitTree(Tree tree) => string.Join('\n', tree.Statements.Select(Visit));
-
-    public override string VisitVariableDeclaration(VariableDeclaration variableDeclaration)
-    {
-        _indent++;
-
-        var name = Indented($"name: \"{variableDeclaration.Name.Text}\"\n");
-        var type = Indented($"type: {(variableDeclaration.ColonTypeClause != null ? Visit(variableDeclaration.ColonTypeClause) : "none")}\n");
-        var initializer = Indented($"initializer: {(variableDeclaration.EqualsValueClause != null ? Visit(variableDeclaration.EqualsValueClause) : "none")}\n");
-
-        _indent--;
-        return "VariableDeclaration(\n" + name + type + initializer + Indented(")");
-    }
-
     public override string VisitLiteral(Literal literal) => $"Literal({literal})";
-
     public override string VisitIdentifier(Identifier identifier) => $"Identifier({identifier})";
-
-    public override string VisitParenthesized(Parenthesized parenthesized)
-    {
-        _indent++;
-
-        var expression = Indented($"expression: {Visit(parenthesized.Expression)}\n");
-
-        _indent--;
-        return "Parenthesized(\n" + expression + Indented(")");
-    }
-
-    public override string VisitBinaryOperator(BinaryOperator binaryOperator)
-    {
-        _indent++;
-
-        var op = Indented($"operator: {binaryOperator.Operator.Text}\n");
-        var left = Indented($"left: {Visit(binaryOperator.Left)}\n");
-        var right = Indented($"right: {Visit(binaryOperator.Right)}\n");
-
-        _indent--;
-        return "BinaryOperator(\n" + op + left + right + Indented(")");
-    }
-
-    public override string VisitUnaryOperator(UnaryOperator unaryOperator)
-    {
-        _indent++;
-
-        var op = Indented($"operator: {unaryOperator.Operator.Text}\n");
-        var operand = Indented($"operand: {Visit(unaryOperator.Operand)}\n");
-
-        _indent--;
-        return "UnaryOperator(\n" + op + operand + Indented(")");
-    }
-
     public override string VisitTypeName(TypeName typeName) => $"TypeName({typeName})";
-
     public override string VisitPrimitiveType(PrimitiveType primitiveType) => $"PrimitiveType({primitiveType})";
 
-    public override string VisitOptionalType(OptionalType optionalType)
+    private string DisplayNode(object node)
     {
-        _indent++;
+        var type = node.GetType();
+        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => !_ignoredProperties.Contains(p.Name) && p.GetIndexParameters().Length == 0);
 
-        var type = Indented($"requiredType: {Visit(optionalType.NonNullableType)}\n");
+        var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance)
+            .Where(f => !_ignoredProperties.Contains(f.Name));
+
+        _indent++;
+        var members = (from prop in properties 
+            let value = prop.GetValue(node) 
+            let display = FormatValue(value) 
+            select Indented(display.Split('(').First() == prop.Name ? display : $"{prop.Name}: {display}")).ToList();
 
         _indent--;
-        return "OptionalType(\n" + type + Indented(")");
+
+        members.AddRange(from field in fields 
+            let value = field.GetValue(node) 
+            let display = FormatValue(value) 
+            select Indented(display.Split('(').First() == field.Name ? display : $"{field.Name}: {display}"));
+
+        return type.Name + "(\n" + string.Join('\n', members) + "\n" + Indented(")");
     }
 
-    public override string VisitColonTypeClause(ColonTypeClause colonTypeClause)
+    private string FormatValue(object? value)
     {
-        _indent++;
-
-        var type = Indented($"type: {Visit(colonTypeClause.Type)}\n");
-
-        _indent--;
-        return "ColonTypeClause(\n" + type + Indented(")");
+        switch (value)
+        {
+            case null:
+                return "null";
+            case string s:
+                return $"\"{s}\"";
+            case Token token:
+                return $"Token({token.Kind}, \"{token.Text}\")";
+            case Node node:
+            {
+                return DisplayNode(node);
+            }
+            case IEnumerable<object> nodes:
+            {
+                _indent++;
+                var items = nodes.Select(n => Indented(DisplayNode(n))).ToList();
+                _indent--;
+                return items.Count == 0 
+                    ? "[]" 
+                    : "[\n" + string.Join('\n', items) + "\n" + Indented("]");
+            }
+            default:
+                return value.ToString() ?? "???";
+        }
     }
-
-    public override string VisitEqualsValueClause(EqualsValueClause equalsValueClause)
-    {
-        _indent++;
-
-        var value = Indented($"value: {Visit(equalsValueClause.Value)}\n");
-
-        _indent--;
-        return "EqualsValueClause(\n" + value + Indented(")");
-    }
-
-    public override string VisitExpressionStatement(ExpressionStatement expressionStatement)
-    {
-        _indent++;
-
-        var expression = Indented($"expression: {Visit(expressionStatement.Expression)}\n");
-
-        _indent--;
-        return "ExpressionStatement(\n" + expression + Indented(")");
-    }
-
+    
     private string Indented(string content) => new string(' ', 2 * _indent) + content;
 }
