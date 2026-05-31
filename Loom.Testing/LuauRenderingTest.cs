@@ -162,9 +162,21 @@ public class LuauRenderingTest
     }
     
     [Fact]
+    public void Renders_ParenthesizedType()
+    {
+        Assert.Equal("(number)", new ParenthesizedType(new PrimitiveType(PrimitiveTypeKind.Number)).Render());
+    }
+    
+    [Fact]
     public void Renders_UnitType()
     {
         Assert.Equal("()", new UnitType().Render());
+    }
+    
+    [Fact]
+    public void Renders_Parenthesized()
+    {
+        Assert.Equal("(69)", new Parenthesized(new NumberLiteral(69)).Render());
     }
     
     [Fact]
