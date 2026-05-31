@@ -103,7 +103,7 @@ public class TypeChecker : Visitor<Type>
         var hint = FormatBinaryHint(binaryOperator, leftType, rightType, suggestion);
         _diagnostics.Error(
             binaryOperator,
-            InternalCodes.InvalidUnaryOp,
+            InternalCodes.InvalidBinaryOp,
             $"No binary operation for '{leftType.Widen()}   {binaryOperator.Operator.Text} {rightType.Widen()}'",
             hint
         );

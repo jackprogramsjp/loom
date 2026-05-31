@@ -49,6 +49,80 @@ public class TypeCheckerTest
     }
 
     [Theory]
+    [InlineData("1 + true")]
+    [InlineData("true + 1")]
+    [InlineData("'abc' + 69")]
+    [InlineData("'hello' - 'world'")]
+    [InlineData("1 - 'hello'")]
+    [InlineData("true * false")]
+    [InlineData("1 / true")]
+    [InlineData("1 // '2'")]
+    [InlineData("5 % '3'")]
+    [InlineData("1 ^ true")]
+    [InlineData("1 & '2'")]
+    [InlineData("1 | true")]
+    [InlineData("1 << '2'")]
+    [InlineData("1 >> true")]
+    [InlineData("1 >>> '2'")]
+    [InlineData("true && 5")]
+    [InlineData("'hello' && false")]
+    [InlineData("5 || 'world'")]
+    [InlineData("true || 42")]
+    public void ThrowsFor_BinaryOperator_InvalidOperandTypes(string source)
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Assert.Contains(diagnostics.Set, d => d.Code is InternalCodes.TypeMismatch or InternalCodes.InvalidBinaryOp);
+    }
+
+    [Theory]
+    [InlineData("1 == '1'", "bool")]
+    [InlineData("1 != '1'", "bool")]
+    public void Checks_BinaryOperator_WithMixedTypes_ReturnsExpectedType(string source, string expectedTypeName)
+    {
+        var type = Utility.GetLastStatementType(source);
+        var expectedType = expectedTypeName switch
+        {
+            "string" => PrimitiveType.String,
+            "bool" => PrimitiveType.Bool,
+            _ => PrimitiveType.Never
+        };
+
+        Assert.True(
+            type.Equals(expectedType),
+            $"Expected '{expectedTypeName}', got '{type}' for expression '{source}'"
+        );
+    }
+
+    [Theory]
+    [InlineData("!5")]
+    [InlineData("!'hello'")]
+    [InlineData("!42")]
+    [InlineData("~true")]
+    [InlineData("~'hello'")]
+    [InlineData("-true")]
+    [InlineData("-'hello'")]
+    [InlineData("-false")]
+    public void ThrowsFor_UnaryOperator_InvalidOperandType(string source)
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Assert.Contains(diagnostics.Set, d => d.Code is InternalCodes.TypeMismatch or InternalCodes.InvalidUnaryOp);
+    }
+
+    [Theory]
+    [InlineData("!true", "bool")]  // logical not on bool -> bool
+    [InlineData("~5", "number")]   // bitwise not on number -> number
+    [InlineData("~0", "number")]   // bitwise not on number -> number
+    [InlineData("-5", "number")]   // unary minus on number -> number
+    [InlineData("-0", "number")]   // unary minus on number -> number
+    [InlineData("-(5)", "number")] // unary minus on parenthesized number -> number
+    public void Checks_UnaryOperator_ValidOperand_ReturnsExpectedType(string source, string expectedTypeName)
+    {
+        var type = Utility.GetLastStatementType(source);
+        var expectedType = expectedTypeName == "bool" ? PrimitiveType.Bool : PrimitiveType.Number;
+        Assert.True(type.Equals(expectedType), $"Expected '{expectedTypeName}', got '{type}' for expression '{source}'");
+    }
+
+    [Theory]
     [InlineData("type A = number")]
     [InlineData("type A = number; let x: A = 1")]
     [InlineData("type Id<T> = T; let x: Id<number> = 1")]
@@ -81,7 +155,7 @@ public class TypeCheckerTest
     [Fact]
     public void Checks_Identifier_ResolvesAnnotatedType()
     {
-        var type = Utility.GetLastStatementType("let x: number = 42; x");
+        var type = Utility.GetLastStatementType("let x: number = 42; x;");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
 

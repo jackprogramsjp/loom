@@ -63,6 +63,7 @@ public static class SyntaxFacts
             new(">=", SyntaxKind.RArrowEquals),
             new("<", SyntaxKind.LArrow),
             new("<=", SyntaxKind.LArrowEquals),
+            new("?", SyntaxKind.Question),
             new("??", SyntaxKind.QuestionQuestion),
             new("??=", SyntaxKind.QuestionQuestionEquals),
             new("(", SyntaxKind.LParen),
@@ -71,6 +72,7 @@ public static class SyntaxFacts
             new("]", SyntaxKind.RBracket),
             new("{", SyntaxKind.LBrace),
             new("}", SyntaxKind.RBrace),
+            new(":", SyntaxKind.Colon),
             new(",", SyntaxKind.Comma),
             new(".", SyntaxKind.Dot),
             new("..", SyntaxKind.DotDot),
@@ -126,6 +128,7 @@ public static class SyntaxFacts
     ];
     private static readonly HashSet<SyntaxKind> _unaryOperators = [SyntaxKind.Minus, SyntaxKind.Tilde, SyntaxKind.Bang];
 
+    public static bool IsNotTrivia(SyntaxKind kind) => !IsTrivia(kind);
     public static bool IsTrivia(SyntaxKind kind) => _triviaSyntaxes.Contains(kind);
     public static SyntaxKind? GetOperatorSyntax(string op) => OperatorMap.TryGetValue(op, out var syntax) ? syntax : null;
     public static string? GetOperatorText(SyntaxKind syntax) => OperatorMap.Keys.ElementAtOrDefault(OperatorMap.Values.ToList().IndexOf(syntax));
