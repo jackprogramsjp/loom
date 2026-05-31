@@ -101,7 +101,13 @@ public class TypeChecker : Visitor<Type>
 
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
         var hint = FormatBinaryHint(binaryOperator, leftType, rightType, suggestion);
-        _diagnostics.Error(binaryOperator, InternalCodes.InvalidUnaryOp, $"No binary operation for '{leftType} {binaryOperator.Operator.Text} {rightType}'", hint);
+        _diagnostics.Error(
+            binaryOperator,
+            InternalCodes.InvalidUnaryOp,
+            $"No binary operation for '{leftType.Widen()}   {binaryOperator.Operator.Text} {rightType.Widen()}'",
+            hint
+        );
+
         return Types.PrimitiveType.Never;
     }
 
@@ -114,7 +120,7 @@ public class TypeChecker : Visitor<Type>
 
         var suggestion = UnaryOperatorBinder.GetSuggestion(unaryOperator, operandType);
         var hint = FormatUnaryHint(unaryOperator, operandType, suggestion);
-        _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for '{unaryOperator.Operator.Text}{operandType}'", hint);
+        _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for '{unaryOperator.Operator.Text}{operandType.Widen()}'", hint);
         return Types.PrimitiveType.Never;
     }
 
@@ -177,6 +183,7 @@ public class TypeChecker : Visitor<Type>
     public override Type VisitTypeParameter(TypeParameter typeParameter)
     {
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
+
         // var constraint = MaybeVisit(typeParameter.TypeConstraintClause);
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, null);
         return BindType(typeParameter, parameter);
@@ -187,9 +194,8 @@ public class TypeChecker : Visitor<Type>
         TypeSolver.SetType(node, type);
         return type;
     }
-    
-    private static string? FormatBinaryHint(
-        BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
+
+    private static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {
         if (suggestion == null)
             return null;
@@ -207,15 +213,14 @@ public class TypeChecker : Visitor<Type>
         return $"left should be '{suggestion.LeftType}' and right should be '{suggestion.RightType}'";
     }
 
-    private static string? FormatUnaryHint(
-        UnaryOperator op, Type operand, UnaryOperatorRule? suggestion)
+    private static string? FormatUnaryHint(UnaryOperator op, Type operand, UnaryOperatorRule? suggestion)
     {
         if (suggestion == null)
             return null;
 
         var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
-        return suggestion.OperatorKind != op.Operator.Kind 
-            ? $"did you mean '{suggestedOp}{op.Operand}'?" 
+        return suggestion.OperatorKind != op.Operator.Kind
+            ? $"did you mean '{suggestedOp}{op.Operand}'?"
             : $"operand should be '{suggestion.OperandType}', not '{operand}'";
     }
 
