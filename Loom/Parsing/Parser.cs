@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Loom.Diagnostics;
 using Loom.Lexing;
@@ -151,7 +152,14 @@ public class Parser(LexerResult lexerResult)
         {
             if (token.Kind == SyntaxKind.NumberLiteral)
             {
-                var floatingPoint = double.Parse(token.Text);
+                var floatingPoint = token.Text switch
+                {
+                    _ when token.Text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) => int.Parse(token.Text[2..], NumberStyles.HexNumber),
+                    _ when token.Text.StartsWith("0b", StringComparison.OrdinalIgnoreCase) => int.Parse(token.Text[2..], NumberStyles.BinaryNumber),
+                    _ when token.Text.StartsWith("0o", StringComparison.OrdinalIgnoreCase) => Convert.ToInt32(token.Text[2..], 8),
+                    _ => double.Parse(token.Text),
+                };
+                
                 var isInteger = Math.Abs(Math.Floor(floatingPoint) - floatingPoint) < 1e-6;
                 return isInteger 
                     ? new Literal(token, (int)floatingPoint) 
