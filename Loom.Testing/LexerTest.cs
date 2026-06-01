@@ -53,28 +53,20 @@ public class LexerTest
     }
 
     [Theory]
+    [InlineData("69")]
+    [InlineData("123456")]
+    [InlineData("1e5")]
     [InlineData("420.69")]
     [InlineData(".420")]
     [InlineData("0.234")]
-    public void Tokenizes_Floats(string source)
+    [InlineData("1.24335e5")]
+    public void Tokenizes_Numbers(string source)
     {
         var tokens = Utility.GetTokens(source);
         Assert.Single(tokens);
 
         var token = tokens.First();
-        Assert.Equal(SyntaxKind.FloatLiteral, token.Kind);
-    }
-
-    [Theory]
-    [InlineData("69")]
-    [InlineData("123456")]
-    public void Tokenizes_Integers(string source)
-    {
-        var tokens = Utility.GetTokens(source);
-        Assert.Single(tokens);
-
-        var token = tokens.First();
-        Assert.Equal(SyntaxKind.IntegerLiteral, token.Kind);
+        Assert.Equal(SyntaxKind.NumberLiteral, token.Kind);
     }
 
     [Theory]

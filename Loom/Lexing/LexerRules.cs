@@ -15,8 +15,7 @@ public static class LexerRules
                 : MultiCharacter(pair.Value, pair.Key)
         ),
         ..SyntaxFacts.KeywordMap.Select(pair => MultiCharacter(pair.Value, pair.Key)),
-        RegEx(IntegerLiteral, @"\d+"),
-        RegEx(FloatLiteral, @"(\d+\.\d+|\.\d+|\d+\.\d+)"),
+        RegEx(NumberLiteral, @"((\d+\.\d+|\.\d+|\d+\.\d+)e\d+)|(\d+e\d+)|(\d+\.\d+|\.\d+|\d+\.\d+)|(\d+)"),
         RegEx(StringLiteral, "\"([^\"]*)\"|'([^']*)'"),
         RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
         RegEx(Whitespace, @"\s+")

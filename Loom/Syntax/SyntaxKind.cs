@@ -58,8 +58,7 @@ public enum SyntaxKind : ushort
     Dot,
     DotDot,
 
-    IntegerLiteral,
-    FloatLiteral,
+    NumberLiteral,
     StringLiteral,
     TrueLiteral,
     FalseLiteral,

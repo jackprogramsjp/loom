@@ -1,7 +1,9 @@
 ﻿using Loom;
+using Loom.Diagnostics;
 using Loom.Utility;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
+DiagnosticBag.ImmediatelyTerminateOnError = false;
 
 var file = FileLoader.LoadSingle("test.loom");
 var compiledFile = CompilationUnit.Compile(file);

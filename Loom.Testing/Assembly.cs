@@ -7,7 +7,7 @@ public class AssemblyFixture : IDisposable
 {
     public AssemblyFixture()
     {
-        DiagnosticBag.ImmediatelyReportErrors = false;
+        DiagnosticBag.ImmediatelyTerminateOnError = false;
     }
     
     public void Dispose() => GC.SuppressFinalize(this);

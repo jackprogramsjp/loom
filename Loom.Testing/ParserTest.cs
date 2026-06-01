@@ -351,7 +351,10 @@ public class ParserTest
 
     [Theory]
     [InlineData("123", typeof(int))]
+    [InlineData("1e3", typeof(int))]
     [InlineData("420.69", typeof(double))]
+    [InlineData("1.23e3", typeof(int))]
+    [InlineData("1.2345e3", typeof(double))]
     [InlineData("'hello'", typeof(string))]
     [InlineData("\"abc\"", typeof(string))]
     [InlineData("true", typeof(bool))]

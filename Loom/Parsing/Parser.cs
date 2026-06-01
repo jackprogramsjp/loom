@@ -142,18 +142,24 @@ public class Parser(LexerResult lexerResult)
 
         if (Match(
                 out var token,
-                SyntaxKind.IntegerLiteral,
-                SyntaxKind.FloatLiteral,
+                SyntaxKind.NumberLiteral,
                 SyntaxKind.StringLiteral,
                 SyntaxKind.TrueLiteral,
                 SyntaxKind.FalseLiteral,
                 SyntaxKind.NoneLiteral
             ))
         {
+            if (token.Kind == SyntaxKind.NumberLiteral)
+            {
+                var floatingPoint = double.Parse(token.Text);
+                var isInteger = Math.Abs(Math.Floor(floatingPoint) - floatingPoint) < 1e-6;
+                return isInteger 
+                    ? new Literal(token, (int)floatingPoint) 
+                    : new Literal(token, floatingPoint);
+            }
+            
             object? value = token.Kind switch
             {
-                SyntaxKind.IntegerLiteral => int.Parse(token.Text),
-                SyntaxKind.FloatLiteral => double.Parse(token.Text),
                 SyntaxKind.StringLiteral => token.Text.Substring(1, token.Text.Length - 2),
                 SyntaxKind.TrueLiteral => true,
                 SyntaxKind.FalseLiteral => false,
