@@ -3,8 +3,9 @@ using Loom.Syntax;
 
 namespace Loom.Lexing;
 
-public class LexerResult(List<Token> tokens, DiagnosticBag diagnostics)
+public class LexerResult(SourceFile file, List<Token> tokens, DiagnosticBag diagnostics)
     : DiagnosedResult(diagnostics)
 {
+    public SourceFile File { get; } = file;
     public List<Token> Tokens { get; } = tokens;
 }

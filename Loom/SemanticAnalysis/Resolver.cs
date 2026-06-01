@@ -1,4 +1,5 @@
 using Loom.Diagnostics;
+using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 
@@ -13,7 +14,7 @@ public class ResolverScope
     public Dictionary<string, bool> InitializationState { get; } = new();
 }
 
-public class Resolver(Tree ast) : Visitor<bool>
+public class Resolver(ParserResult parserResult) : Visitor<bool>
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<NodeId, Symbol> _allDeclarations = new();
@@ -25,15 +26,17 @@ public class Resolver(Tree ast) : Visitor<bool>
     {
         var rootScope = new ScopeNode();
         _scopeNodes.Push(rootScope);
-        
+
         PushScope();
-        VisitTree(ast);
+        VisitTree(parserResult.Tree);
         PopScope();
-        return new SemanticModel(ast,
-                                 _diagnostics,
-                                 _allDeclarations,
-                                 _allReferences,
-                                 rootScope);
+        return new SemanticModel(
+            parserResult.Tree,
+            _diagnostics,
+            _allDeclarations,
+            _allReferences,
+            rootScope
+        );
     }
 
     public override bool Visit(Node node) => node.Accept(this);
@@ -50,7 +53,7 @@ public class Resolver(Tree ast) : Visitor<bool>
 
         var symbol = new Symbol(typeAlias, SymbolKind.Type, name);
         DeclareSymbol(symbol);
-        
+
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();
@@ -105,7 +108,7 @@ public class Resolver(Tree ast) : Visitor<bool>
         _allReferences[identifier.Id] = symbol;
         return true;
     }
-    
+
     public override bool VisitTypeName(TypeName typeName)
     {
         var name = typeName.Name.Text;
@@ -154,9 +157,8 @@ public class Resolver(Tree ast) : Visitor<bool>
 
     private Symbol? LookupSymbol(string name, SymbolKind kind)
     {
-        foreach (var lookup in _scopes.Select(scope => kind == SymbolKind.Type
-                                                  ? scope.TypeLookup
-                                                  : scope.VariableLookup))
+        var lookups = _scopes.Select(scope => kind == SymbolKind.Type ? scope.TypeLookup : scope.VariableLookup);
+        foreach (var lookup in lookups)
         {
             if (!lookup.TryGetValue(name, out var symbol)) continue;
             return symbol;
@@ -169,11 +171,11 @@ public class Resolver(Tree ast) : Visitor<bool>
     (
         from scope in _scopes
         where scope.Declarations.ContainsKey(symbol.DeclaringNode.Id)
-        select scope.InitializationState.TryGetValue(symbol.Name, out var initialized)
-            && initialized).FirstOrDefault();
+        select scope.InitializationState.TryGetValue(symbol.Name, out var initialized) && initialized
+    ).FirstOrDefault();
 
     private ResolverScope CurrentScope() => _scopes.Peek();
-    private ResolverScope PopScope() => _scopes.Pop();
+    private void PopScope() => _scopes.Pop();
 
     private ResolverScope PushScope()
     {

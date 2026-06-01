@@ -71,7 +71,7 @@ public class LuauRenderingTest
     {
         var initializer = new NumberLiteral(1);
         var variable = new ConstVariable("abc", PrimitiveType.Number, initializer);
-        Assert.Equal("const abc: number = 1", Utility.Render(variable));
+        Assert.Equal("const abc: number = 1", variable.Render());
     }
     
     [Fact]

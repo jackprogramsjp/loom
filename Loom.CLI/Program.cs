@@ -1,8 +1,10 @@
 ﻿using Loom;
 using Loom.Utility;
 
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 var file = FileLoader.LoadSingle("test.loom");
-var compiledFile = CompilationUnit.CompileFile(file);
+var compiledFile = CompilationUnit.Compile(file);
 var astDisplayer = new ASTDisplayer(compiledFile.Tree);
 
 Console.WriteLine("Tokens:");

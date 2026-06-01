@@ -2,6 +2,7 @@ using Loom.Diagnostics;
 using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
+using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
@@ -21,13 +22,13 @@ using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom;
 
-public class LuauGenerator(Tree tree) : Visitor<LuauNode>
+public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 {
     private readonly DiagnosticBag _diagnostics = new();
 
     public LuauGeneratorResult Generate()
     {
-        var luauTree = VisitTree(tree);
+        var luauTree = VisitTree(semanticModel.Tree);
         return new LuauGeneratorResult(luauTree, _diagnostics);
     }
 

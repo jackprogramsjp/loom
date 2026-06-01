@@ -4,27 +4,21 @@ using Loom.Syntax;
 
 namespace Loom.Lexing;
 
-public class Lexer
+public class Lexer(SourceFile file)
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly SourceFile _file;
     private int _character, _position;
     private int _line = 1;
-
-    public Lexer(SourceFile file)
-    {
-        _file = file;
-    }
 
     public LexerResult Tokenize()
     {
         var tokens = GetTokens();
-        return new LexerResult(tokens.ToList(), _diagnostics);
+        return new LexerResult(file, tokens.ToList(), _diagnostics);
     }
 
     private IEnumerable<Token> GetTokens()
     {
-        var sourceLength = _file.SourceText.Length;
+        var sourceLength = file.SourceText.Length;
         while (_position < sourceLength)
         {
             var start = GetLocation();
@@ -76,7 +70,7 @@ public class Lexer
         if (rule.Kind == LexerRuleKind.RegEx)
         {
             var regEx = new Regex(rule.Pattern, RegexOptions.Compiled);
-            var match = regEx.Match(_file.SourceText, _position);
+            var match = regEx.Match(file.SourceText, _position);
             return match.Success ? (match.Value, match.Index) : null;
         }
 
@@ -90,9 +84,9 @@ public class Lexer
         return isMatch ? (rule.Pattern, _position) : null;
     }
 
-    private string PeekNext(int characters) => _file.SourceText[_position..(_position + characters)];
-    private char Current() => _file.SourceText[_position];
-    private bool IsEof(int offset = 0) => _position + offset >= _file.SourceText.Length;
+    private string PeekNext(int characters) => file.SourceText[_position..(_position + characters)];
+    private char Current() => file.SourceText[_position];
+    private bool IsEof(int offset = 0) => _position + offset >= file.SourceText.Length;
     private LocationSpan GetSpan(Location start) => new(start, GetLocation());
-    private Location GetLocation() => new(_file, _character, _line, _position);
+    private Location GetLocation() => new(file, _character, _line, _position);
 }

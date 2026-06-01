@@ -9,40 +9,21 @@ namespace Loom;
 
 public class CompilationUnit(List<SourceFile> files)
 {
-    private readonly List<DiagnosticBag> _pipelineDiagnostics = [];
-
-    public static CompiledFile CompileFile(SourceFile file)
+    public static CompiledFile Compile(SourceFile file)
     {
-        var compiler = new CompilationUnit([file]);
-        var compilation = compiler.Compile();
-        return compilation.Files.First();
-    }
-
-    public DiagnosticBag GetDiagnostics() => DiagnosticBag.Concat(_pipelineDiagnostics);
-    
-    public CompilationResult Compile()
-    {
-        Console.OutputEncoding = System.Text.Encoding.UTF8;
-        var compiledFiles = files.ConvertAll(Compile);
-        var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
-        return new CompilationResult(compiledFiles, diagnostics);
-    }
-
-    private CompiledFile Compile(SourceFile file)
-    {
-        _pipelineDiagnostics.Clear();
+        var pipelineDiagnostics = new List<DiagnosticBag>();
         var lexer = new Lexer(file);
-        var lexerResult = TrackDiagnostics(lexer.Tokenize());
-        var parser = new Parser(file, lexerResult.Tokens);
-        var parserResult = TrackDiagnostics(parser.Parse());
-        var resolver = new Resolver(parserResult.Tree);
-        var semanticModel = TrackDiagnostics(resolver.Resolve());
+        var lexerResult = trackDiagnostics(lexer.Tokenize());
+        var parser = new Parser(lexerResult);
+        var parserResult = trackDiagnostics(parser.Parse());
+        var resolver = new Resolver(parserResult);
+        var semanticModel = trackDiagnostics(resolver.Resolve());
         var typeChecker = new TypeChecker(semanticModel);
-        var typeCheckerResult = TrackDiagnostics(typeChecker.Check());
-        var generator = new LuauGenerator(semanticModel.Tree);
-        var generatorResult = TrackDiagnostics(generator.Generate());
+        var typeCheckerResult = trackDiagnostics(typeChecker.Check());
+        var generator = new LuauGenerator(semanticModel);
+        var generatorResult = trackDiagnostics(generator.Generate());
         var renderedLuau = generatorResult.LuauTree.Render();
-        var diagnostics = GetDiagnostics();
+        var diagnostics = DiagnosticBag.Concat(pipelineDiagnostics);
 
         return new CompiledFile
         {
@@ -54,12 +35,19 @@ public class CompilationUnit(List<SourceFile> files)
             Tree = parserResult.Tree,
             Tokens = lexerResult.Tokens
         };
+        
+        T trackDiagnostics<T>(T result)
+            where T : DiagnosedResult
+        {
+            pipelineDiagnostics.Add(result.Diagnostics);
+            return result;
+        }
     }
-
-    private T TrackDiagnostics<T>(T result)
-        where T : DiagnosedResult
+    
+    public CompilationResult Compile()
     {
-        _pipelineDiagnostics.Add(result.Diagnostics);
-        return result;
+        var compiledFiles = files.ConvertAll(Compile);
+        var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
+        return new CompilationResult(compiledFiles, diagnostics);
     }
 }

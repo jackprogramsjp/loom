@@ -29,11 +29,10 @@ internal static class Utility
         return checker.TypeSolver.GetType(semanticModel.Tree.Statements.Last());
     }
 
-    public static LuauTree GetLuauAST(string source) => new LuauGenerator(Parse(source).Tree).Generate().LuauTree;
-    public static string Render(LuauNode node) => node.Render(new RenderState());
+    public static LuauTree GetLuauAST(string source) => new LuauGenerator(GetSemanticModel(source)).Generate().LuauTree;
     
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => new TypeChecker(GetSemanticModel(source)).Check().Diagnostics;
-    public static SemanticModel GetSemanticModel(string source) => new Resolver(GetAST(source)).Resolve();
+    public static SemanticModel GetSemanticModel(string source) => new Resolver(Parse(source)).Resolve();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
     public static DiagnosticBag GetLexerDiagnostics(string source) => Tokenize(source).Diagnostics;
 
@@ -48,7 +47,7 @@ internal static class Utility
     public static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
     
     private static LexerResult Tokenize(string source) => new Lexer(TestFile(source)).Tokenize();
-    private static ParserResult Parse(string source) => new Parser(TestFile(source), GetTokens(source)).Parse();
+    private static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
     
     private static SourceFile TestFile(string source) => new("test", source);
 }

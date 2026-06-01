@@ -1,12 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Loom.Diagnostics;
+using Loom.Lexing;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 
 namespace Loom.Parsing;
 
-public class Parser(SourceFile file, IEnumerable<Token> tokens)
+public class Parser(LexerResult lexerResult)
 {
     private readonly DiagnosticBag _diagnostics = new();
     private int _position;
@@ -17,7 +18,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
         while (!IsEof())
             statements.Add(ParseStatement());
 
-        var tree = new Tree(file, statements);
+        var tree = new Tree(lexerResult.File, statements);
         return new ParserResult(tree, _diagnostics);
     }
 
@@ -330,7 +331,7 @@ public class Parser(SourceFile file, IEnumerable<Token> tokens)
 
     private Token Current() => Peek(0);
     private Token Last() => Peek(-1);
-    private Token Peek(int offset) => tokens.ElementAt(_position + offset);
-    private bool IsEof() => _position >= tokens.Count();
+    private Token Peek(int offset) => lexerResult.Tokens.ElementAt(_position + offset);
+    private bool IsEof() => _position >= lexerResult.Tokens.Count;
     private static string SafeTokenText(Token? token) => token != null ? $"'{token.Text}'" : "EOF";
 }
