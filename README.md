@@ -40,6 +40,27 @@ let x: Id<bool> = false;
 type Id<T> = T
 const x: Id<boolean> = false
 ```
+##
+```
+let a = 10s
+let b = 100ms
+let c = 10m
+let d = 1h
+let e = 16hz
+let hex = 0xF00D
+let binary = 0b11001
+let octal = 0o400
+```
+```luau
+const a = 10
+const b = 0.1
+const c = 600
+const d = 3600
+const e = 0.0625
+const hex = 61453
+const binary = 25
+const octal = 256
+```
 
 ## Planned Features
 
@@ -47,7 +68,7 @@ const x: Id<boolean> = false
 * Structural type system
 * Enums
 * Events
-* Extended number literals
+* Extended number literals for time
 * Compile-time reflection
 * Async support
 * Timing blocks (`after`/`every`)
