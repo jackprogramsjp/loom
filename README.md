@@ -19,10 +19,17 @@ const x: boolean = false
 ```
 ##
 ```rs
-mut x;
+mut x = 1;
 ```
 ```luau
-local x
+local x = 1
+```
+##
+```rs
+let s = "abc" + "def"
+```
+```luau
+local s = "abc" .. "def"
 ```
 ##
 ```rs
@@ -33,12 +40,12 @@ local x = bit32.band(1, 2, 3)
 ```
 ##
 ```rs
-type Id<T> = T
-let x: Id<bool> = false;
+type Union<A, B> = A | B;
+let x: Id<bool, string> = false;
 ```
 ```luau
-type Id<T> = T
-const x: Id<boolean> = false
+type Union<A, B> = A | B
+const x: Id<boolean, string> = false
 ```
 ##
 ```rs
