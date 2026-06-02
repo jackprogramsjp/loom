@@ -131,7 +131,11 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             return LuauFactory.Bit32Call(name, arguments);
         }
 
-        var mappedOperator = MapLuau.BinaryOperator(op);
+        var leftType = semanticModel.GetType(binaryOperator.Left);
+        var rightType = semanticModel.GetType(binaryOperator.Right);
+        var @string = TypeChecking.Types.PrimitiveType.String;
+        var isConcatenation = op.StartsWith('+') && leftType.IsAssignableTo(@string) && rightType.IsAssignableTo(@string);
+        var mappedOperator = isConcatenation ? op.Replace("+", "..") : MapLuau.BinaryOperator(op);
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
     }
 
