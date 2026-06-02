@@ -286,6 +286,21 @@ public class LuauGeneratorTest
     }
     
     [Fact]
+    public void Generates_StringConcatenation()
+    {
+        var luauTree = Utility.GetLuauAST("'abc' + 'def'");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var binary = Assert.IsType<BinaryOperator>(variable.Initializer);
+        var left = Assert.IsType<StringLiteral>(binary.Left);
+        var right = Assert.IsType<StringLiteral>(binary.Right);
+        Assert.Equal("abc", left.Value);
+        Assert.Equal("def", right.Value);
+        Assert.Equal("..", binary.Operator);
+    }
+    
+    [Fact]
     public void Generates_BinaryOperators()
     {
         var luauTree = Utility.GetLuauAST("1 + 2");
