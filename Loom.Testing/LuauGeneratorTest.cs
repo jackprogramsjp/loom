@@ -288,7 +288,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_StringConcatenation()
     {
-        var luauTree = Utility.GetLuauAST("'abc' + 'def'");
+        var luauTree = Utility.GetLuauAST("'abc' + 'def'", typeCheck: true);
         Assert.Single(luauTree.Statements);
         
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
