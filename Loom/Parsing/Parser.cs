@@ -173,10 +173,13 @@ public class Parser(LexerResult lexerResult)
     private TypeExpression ParseIntersectionType() =>
         ParseChainedType(ParseOptionalType, SyntaxKind.Ampersand, (separators, types) => new IntersectionType(separators, types));
 
-    private TypeExpression ParseOptionalType() =>
-        Match(out var question, SyntaxKind.Question)
-            ? new OptionalType(question, ParsePrimaryType())
-            : ParsePrimaryType();
+    private TypeExpression ParseOptionalType()
+    {
+        var type = ParsePrimaryType();
+        return Match(out var question, SyntaxKind.Question)
+            ? new OptionalType(question, type)
+            : type;
+    }
 
     private TypeExpression ParsePrimaryType()
     {
