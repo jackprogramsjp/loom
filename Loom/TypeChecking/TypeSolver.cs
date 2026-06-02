@@ -10,6 +10,7 @@ using UnionType = Loom.TypeChecking.Types.UnionType;
 namespace Loom.TypeChecking;
 
 public class TypeSolver(DiagnosticBag diagnostics)
+    : DiagnosedResult(diagnostics)
 {
     private record TypeConstraint(Type A, Type B, LocationSpan Span);
 
@@ -31,7 +32,8 @@ public class TypeSolver(DiagnosticBag diagnostics)
         return variable;
     }
 
-    public void AddConstraint(Type a, Type b, LocationSpan span) => _constraints.Add(new TypeConstraint(a, b, span));
+    public void AddConstraint(Type actual, Type expected, Node node) => AddConstraint(actual, expected, node.Span);
+    public void AddConstraint(Type actual, Type expected, LocationSpan span) => _constraints.Add(new TypeConstraint(actual, expected, span));
 
     public bool SolveConstraints()
     {
@@ -180,7 +182,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
             UnionType union => new UnionType(union.Types.ConvertAll(Substitute)),
             _ => type
         };
-        
+
         if (type is InstantiatedType instantiated && instantiated.Arguments.All(a => a is not TypeVariable))
             type = instantiated.Expand();
 
@@ -189,7 +191,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
 
     private bool ReportTypeMismatch(Type a, Type b, LocationSpan span)
     {
-        diagnostics.Error(
+        Diagnostics.Error(
             span,
             InternalCodes.TypeMismatch,
             $"Type '{a}' is not assignable to type '{b}'."
@@ -200,7 +202,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
 
     private bool ReportInfiniteType(LocationSpan span)
     {
-        diagnostics.Error(span, InternalCodes.InfiniteType, "Type is infinitely recursive.");
+        Diagnostics.Error(span, InternalCodes.InfiniteType, "Type is infinitely recursive.");
         return false;
     }
 

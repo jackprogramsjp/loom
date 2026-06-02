@@ -12,7 +12,6 @@ using OptionalType = Loom.Parsing.AST.OptionalType;
 using Parenthesized = Loom.Parsing.AST.Parenthesized;
 using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
-using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
 using TypeAlias = Loom.Parsing.AST.TypeAlias;
 using TypeName = Loom.Parsing.AST.TypeName;
 using TypeParameter = Loom.Parsing.AST.TypeParameter;
@@ -20,11 +19,32 @@ using TypeParameters = Loom.Parsing.AST.TypeParameters;
 using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
 using UnionType = Loom.Parsing.AST.UnionType;
 
-namespace Loom;
+namespace Loom.Generation;
+
+internal class LuauScope(LuauScope? parent = null)
+{
+    private readonly Dictionary<string, int> _temporaryIds = [];
+
+    public LuauScope? Parent { get; } = parent;
+    public List<LuauStatement> PrereqStatements { get; } = [];
+
+    public string AddIdentifier(string name)
+    {
+        if (TryGetId(name, out var temporaryId))
+            return name + "_" + (_temporaryIds[name] = temporaryId + 1);
+
+        _temporaryIds.Add(name, 0);
+        return name;
+    }
+
+    private bool TryGetId(string name, out int temporaryId) =>
+        _temporaryIds.TryGetValue(name, out temporaryId) || Parent != null && Parent.TryGetId(name, out temporaryId);
+}
 
 public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 {
     private readonly DiagnosticBag _diagnostics = new();
+    private LuauScope _scope = new();
 
     public LuauGeneratorResult Generate()
     {
@@ -34,12 +54,12 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode Visit(Node node) => node.Accept(this);
 
-    public override LuauTree VisitTree(Tree t) => new(t.Statements.ConvertAll(Visit));
+    public override LuauTree VisitTree(Tree tree) => new(GenerateStatements(tree.Statements));
 
     public override LuauNode VisitTypeAlias(TypeAlias typeAlias)
     {
-        var typeParameters = typeAlias.TypeParameters != null 
-            ? Visit<Luau.AST.TypeParameters>(typeAlias.TypeParameters) 
+        var typeParameters = typeAlias.TypeParameters != null
+            ? Visit<Luau.AST.TypeParameters>(typeAlias.TypeParameters)
             : new Luau.AST.TypeParameters();
 
         var type = Visit(typeAlias.EqualsTypeClause.Type);
@@ -60,16 +80,24 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) =>
         new Luau.AST.ExpressionStatement(Visit(expressionStatement.Expression));
 
+    public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
+    {
+        if (assignmentOperator.Parent is ExpressionStatement)
+            return VisitBinaryOperator(assignmentOperator);
+
+        var binary = (Luau.AST.BinaryOperator)VisitBinaryOperator(assignmentOperator);
+        var assignmentStatement = new Luau.AST.ExpressionStatement(binary);
+        Prereq(assignmentStatement);
+
+        return binary.Left;
+    }
+
     public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
     {
         var operand = Visit(unaryOperator.Operand);
-        if (SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind))
-        {
-            return LuauFactory.Bit32Call("bnot", [operand]);
-        }
-
-        var mappedOperator = MapUnaryOperator(unaryOperator.Operator.Text);
-        return new Luau.AST.UnaryOperator(mappedOperator, operand);
+        return SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind)
+            ? LuauFactory.Bit32Call("bnot", [operand])
+            : new Luau.AST.UnaryOperator(MapLuau.UnaryOperator(unaryOperator.Operator.Text), operand);
     }
 
     public override LuauNode VisitBinaryOperator(BinaryOperator binaryOperator)
@@ -85,7 +113,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
                 return new Luau.AST.BinaryOperator(left, "???", right);
             }
 
-            var name = MapBitwiseOperator(op);
+            var name = MapLuau.BitwiseOperator(op);
             var arguments = new List<LuauExpression>();
             var leftUpdated = AddBit32Arguments(left, name, arguments);
             var rightUpdated = AddBit32Arguments(right, name, arguments);
@@ -98,7 +126,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             return LuauFactory.Bit32Call(name, arguments);
         }
 
-        var mappedOperator = MapBinaryOperator(op);
+        var mappedOperator = MapLuau.BinaryOperator(op);
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
     }
 
@@ -116,11 +144,8 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         };
 
     public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.AST.Identifier(identifier.Name.Text);
-
     public override LuauNode VisitIntersectionType(IntersectionType intersectionType) => new Luau.AST.IntersectionType(intersectionType.Types.ConvertAll(Visit));
-
     public override LuauNode VisitUnionType(UnionType unionType) => new Luau.AST.UnionType(unionType.Types.ConvertAll(Visit));
-
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
 
     public override LuauNode VisitTypeName(TypeName typeName)
@@ -137,45 +162,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
 
-    public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapPrimitiveTypeKind(primitiveType.Kind));
-
-    private static Luau.AST.PrimitiveTypeKind MapPrimitiveTypeKind(PrimitiveTypeKind kind) =>
-        kind switch
-        {
-            PrimitiveTypeKind.Number => Luau.AST.PrimitiveTypeKind.Number,
-            PrimitiveTypeKind.String => Luau.AST.PrimitiveTypeKind.String,
-            PrimitiveTypeKind.Bool => Luau.AST.PrimitiveTypeKind.Boolean,
-            PrimitiveTypeKind.Unknown => Luau.AST.PrimitiveTypeKind.Unknown,
-            PrimitiveTypeKind.Never => Luau.AST.PrimitiveTypeKind.Never,
-            _ => Luau.AST.PrimitiveTypeKind.Nil,
-        };
-
-    private static string MapBitwiseOperator(string op) =>
-        op switch
-        {
-            "&" => "band",
-            "|" => "bor",
-            "~" => "bxor",
-            "<<" => "lshift",
-            ">>>" => "rshift",
-            ">>" => "arshift",
-            _ => op
-        };
-
-    private static string MapBinaryOperator(string op) =>
-        op switch
-        {
-            "&&" => "and",
-            "||" or "??" => "or",
-            _ => op
-        };
-
-    private static string MapUnaryOperator(string op) =>
-        op switch
-        {
-            "!" => "not ",
-            _ => op
-        };
+    public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapLuau.PrimitiveTypeKind(primitiveType.Kind));
 
     private static bool AddBit32Arguments(LuauExpression expression, string name, List<LuauExpression> arguments)
     {
@@ -200,8 +187,53 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
         return true;
     }
-    
-    private T Visit<T>(Node node) where T : LuauNode => (T)Visit(node);
+
+    private List<LuauStatement> GenerateStatements(List<Statement> statements)
+    {
+        var result = new List<LuauStatement>();
+        foreach (var statement in statements)
+        {
+            var (luauStatement, scope) = Capture(() => Visit(statement));
+            result.AddRange(scope.PrereqStatements);
+            result.Add(luauStatement);
+        }
+
+        return result;
+    }
+
+    private (T, LuauScope) Capture<T>(Func<T> callback)
+    {
+        T value = default!;
+        var scope = CaptureScope(() => value = callback());
+        return (value, scope);
+    }
+
+    private LuauScope CaptureScope(Action callback)
+    {
+        var captured = new LuauScope(_scope);
+        _scope = captured;
+        callback();
+        _scope = _scope.Parent!;
+
+        return captured;
+    }
+
+    private Luau.AST.Identifier PushToVariable(LuauExpression expression, string name)
+    {
+        if (expression is Luau.AST.Identifier identifier)
+            return identifier;
+
+        var id = _scope.AddIdentifier(name);
+        Prereq(new LocalVariable(id, null, expression));
+        return new Luau.AST.Identifier(id);
+    }
+
+    private void Prereq(params LuauStatement[] statements) => _scope.PrereqStatements.AddRange(statements);
+
+    private T Visit<T>(Node node)
+        where T : LuauNode =>
+        (T)Visit(node);
+
     private LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
     private LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);
     private LuauStatement Visit(Statement node) => (LuauStatement)node.Accept(this);

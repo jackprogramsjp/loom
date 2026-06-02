@@ -8,10 +8,17 @@ namespace Loom.Testing;
 public class TypeCheckerTest
 {
     [Fact]
-    public void ThrowsFor_TypeMismatch()
+    public void ThrowsFor_Variable_DeclaredType_Mismatch()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number = 'hello'");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type 'number'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_Assignment_DeclaredType_Mismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("mut x = 69; x = false");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'false' is not assignable to type 'number'.");
     }
 
     [Fact]
@@ -141,6 +148,14 @@ public class TypeCheckerTest
             $"Expected 'number', got '{type}'"
         );
     }
+    
+    [Fact]
+    public void Checks_Assignment_Resolution()
+    {
+        var type = Utility.GetLastStatementType("mut x = 42; x = 69");
+        var literal = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, literal.Kind);
+    }
 
     [Theory]
     [InlineData("let x = 42; x")]
@@ -150,7 +165,7 @@ public class TypeCheckerTest
     {
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal(42, literal.Value);
+        Assert.Equal(42L, literal.Value);
     }
 
     [Fact]
@@ -172,7 +187,7 @@ public class TypeCheckerTest
     {
         var constType = Utility.GetLastStatementType("let x = 42");
         var literal = Assert.IsType<LiteralType>(constType);
-        Assert.Equal(42, literal.Value);
+        Assert.Equal(42L, literal.Value);
     }
 
     [Fact]
@@ -187,7 +202,7 @@ public class TypeCheckerTest
     {
         var type = Utility.GetLastStatementType("69");
         var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal(69, literal.Value);
+        Assert.Equal(69L, literal.Value);
     }
 
     [Fact]

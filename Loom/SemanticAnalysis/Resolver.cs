@@ -70,7 +70,8 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return false;
         }
 
-        var symbol = new Symbol(variableDeclaration, SymbolKind.Variable, name);
+        var mutable = variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword;
+        var symbol = new Symbol(variableDeclaration, SymbolKind.Variable, name, mutable);
         DeclareSymbol(symbol);
 
         base.VisitVariableDeclaration(variableDeclaration);
@@ -78,7 +79,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         {
             scope.InitializationState[name] = true;
         }
-        else if (variableDeclaration.Keyword.Kind == SyntaxKind.LetKeyword)
+        else if (!mutable)
         {
             _diagnostics.Error(variableDeclaration.Span, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
             return false;
@@ -89,19 +90,48 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitLiteral(Literal literal) => true;
 
+    public override bool VisitAssignmentOperator(AssignmentOperator assignmentOperator)
+    {
+        if (assignmentOperator.Left is AssignmentTarget target)
+        {
+            if (target is not Identifier identifier || LookupVariableSymbol(identifier.Name.Text) is not { Mutable: false } symbol)
+                return base.VisitAssignmentOperator(assignmentOperator);
+
+            var declarationPart = symbol.Declaration is VariableDeclaration v ? v.ColonTypeClause + " " + v.EqualsValueClause : "";
+            var initializers = declarationPart.Length >= 72 ? " = ..." : declarationPart;
+            _diagnostics.Error(
+                assignmentOperator,
+                InternalCodes.InvalidAssignmentTarget,
+                "Cannot assign to an immutable variable.",
+                $"did you mean to write 'mut {symbol.Name}{initializers}'?"
+            );
+
+            return false;
+        }
+
+        _diagnostics.Error(
+            assignmentOperator.Left,
+            InternalCodes.InvalidAssignmentTarget,
+            "Invalid assignment target.",
+            $"did you mean '{assignmentOperator.Left} == {assignmentOperator.Right}'?"
+        );
+
+        return false;
+    }
+
     public override bool VisitIdentifier(Identifier identifier)
     {
         var name = identifier.Name.Text;
-        var symbol = LookupSymbol(name, SymbolKind.Variable);
+        var symbol = LookupVariableSymbol(name);
         if (symbol == null)
         {
-            _diagnostics.Error(identifier.Span, InternalCodes.CannotFindName, $"Cannot find name '{name}'.");
+            _diagnostics.Error(identifier, InternalCodes.CannotFindName, $"Cannot find name '{name}'.");
             return false;
         }
 
         if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter && !IsSymbolInitialized(symbol))
         {
-            _diagnostics.Error(identifier.Span, InternalCodes.UseOfUnassigned, $"Use of unassigned variable '{name}'.");
+            _diagnostics.Error(identifier, InternalCodes.UseOfUnassigned, $"Use of unassigned variable '{name}'.");
             return false;
         }
 
@@ -109,13 +139,15 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return true;
     }
 
+    private Symbol? LookupVariableSymbol(string name) => LookupSymbol(name, SymbolKind.Variable) ?? LookupSymbol(name, SymbolKind.Parameter);
+
     public override bool VisitTypeName(TypeName typeName)
     {
         var name = typeName.Name.Text;
         var symbol = LookupSymbol(name, SymbolKind.Type);
         if (symbol == null)
         {
-            _diagnostics.Error(typeName.Span, InternalCodes.CannotFindName, $"Cannot find type '{name}'.");
+            _diagnostics.Error(typeName, InternalCodes.CannotFindName, $"Cannot find type '{name}'.");
             return false;
         }
 
@@ -131,7 +163,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         var name = typeParameter.Name.Text;
         if (scope.TypeLookup.ContainsKey(name))
         {
-            _diagnostics.Error(typeParameter.Span, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
+            _diagnostics.Error(typeParameter, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
             return false;
         }
 
@@ -144,15 +176,15 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     private void DeclareSymbol(Symbol symbol)
     {
-        _diagnostics.Info(symbol.DeclaringNode.Span, $"Declared symbol: {symbol}");
         var scope = CurrentScope();
         var lookup = symbol.Kind == SymbolKind.Type ? scope.TypeLookup : scope.VariableLookup;
-        var nodeId = symbol.DeclaringNode.Id;
+        var nodeId = symbol.Declaration.Id;
         lookup.Add(symbol.Name, symbol);
         scope.Declarations.Add(nodeId, symbol);
         scope.InitializationState.Add(symbol.Name, false);
         _allDeclarations.Add(nodeId, symbol);
         _scopeNodes.Peek().Symbols.Add(symbol);
+        _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
     }
 
     private Symbol? LookupSymbol(string name, SymbolKind kind)
@@ -170,7 +202,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     private bool IsSymbolInitialized(Symbol symbol) =>
     (
         from scope in _scopes
-        where scope.Declarations.ContainsKey(symbol.DeclaringNode.Id)
+        where scope.Declarations.ContainsKey(symbol.Declaration.Id)
         select scope.InitializationState.TryGetValue(symbol.Name, out var initialized) && initialized
     ).FirstOrDefault();
 

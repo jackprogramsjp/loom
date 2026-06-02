@@ -12,29 +12,29 @@ using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom.TypeChecking;
 
-public class TypeChecker : Visitor<Type>
+public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 {
-    public TypeSolver TypeSolver { get; }
-
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly SemanticModel _semanticModel;
     private Type? _expectedType;
-
-    public TypeChecker(SemanticModel semanticModel)
-    {
-        TypeSolver = new TypeSolver(_diagnostics);
-        _semanticModel = semanticModel;
-    }
 
     public TypeCheckerResult Check()
     {
-        var tree = _semanticModel.Tree;
+        var tree = semanticModel.Tree;
         var type = BindType(tree, VisitTree(tree));
-        TypeSolver.SolveConstraints();
+        semanticModel.TypeSolver.SolveConstraints();
+
         return new TypeCheckerResult(type, _diagnostics);
     }
 
     public override Type Visit(Node node) => node.Accept(this);
+
+    public override Type VisitTree(Tree tree)
+    {
+        base.VisitTree(tree);
+        return tree.Statements.Count > 0
+            ? semanticModel.GetType(tree.Statements.Last())
+            : Types.PrimitiveType.Never;
+    }
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
@@ -76,7 +76,7 @@ public class TypeChecker : Visitor<Type>
         if (declaredType != null)
         {
             if (variableDeclaration.EqualsValueClause != null)
-                TypeSolver.AddConstraint(initializerType, declaredType, variableDeclaration.EqualsValueClause.Value.Span);
+                semanticModel.TypeSolver.AddConstraint(initializerType, declaredType, variableDeclaration.EqualsValueClause.Value);
 
             finalType = declaredType;
         }
@@ -88,7 +88,16 @@ public class TypeChecker : Visitor<Type>
         if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
             finalType = finalType.Widen();
 
-        return BindType(variableDeclaration, finalType);
+        return BindType(variableDeclaration, TypeSimplifier.Simplify(finalType));
+    }
+
+    public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
+    {
+        var targetType = Visit(assignmentOperator.Left);
+        var valueType = Visit(assignmentOperator.Right);
+        semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
+
+        return BindType(assignmentOperator, targetType);
     }
 
     public override Type VisitBinaryOperator(BinaryOperator binaryOperator)
@@ -97,7 +106,11 @@ public class TypeChecker : Visitor<Type>
         var rightType = Visit(binaryOperator.Right);
         var rule = BinaryOperatorBinder.GetRule(binaryOperator, leftType, rightType);
         if (rule != null)
+        {
+            semanticModel.TypeSolver.AddConstraint(leftType, rule.LeftType, binaryOperator.Left);
+            semanticModel.TypeSolver.AddConstraint(rightType, rule.RightType, binaryOperator.Right);
             return rule.ReturnType;
+        }
 
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
         var hint = FormatBinaryHint(binaryOperator, leftType, rightType, suggestion);
@@ -128,10 +141,10 @@ public class TypeChecker : Visitor<Type>
 
     public override Type VisitIdentifier(Identifier identifier)
     {
-        var symbol = _semanticModel.GetSymbol(identifier);
+        var symbol = semanticModel.GetSymbol(identifier);
         if (symbol != null)
         {
-            var type = TypeSolver.GetType(symbol.DeclaringNode);
+            var type = semanticModel.GetType(symbol.Declaration);
             return BindType(identifier, type);
         }
 
@@ -147,10 +160,10 @@ public class TypeChecker : Visitor<Type>
 
     public override Type VisitTypeName(TypeName typeName)
     {
-        var symbol = _semanticModel.GetSymbol(typeName);
+        var symbol = semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
-            var declaredType = TypeSolver.GetType(symbol.DeclaringNode);
+            var declaredType = semanticModel.GetType(symbol.Declaration);
             if (typeName.TypeArguments == null)
                 return BindType(typeName, declaredType);
 
@@ -183,7 +196,6 @@ public class TypeChecker : Visitor<Type>
     public override Type VisitTypeParameter(TypeParameter typeParameter)
     {
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
-
         // var constraint = MaybeVisit(typeParameter.TypeConstraintClause);
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, null);
         return BindType(typeParameter, parameter);
@@ -191,7 +203,7 @@ public class TypeChecker : Visitor<Type>
 
     private Type BindType(Node node, Type type)
     {
-        TypeSolver.SetType(node, type);
+        semanticModel.TypeSolver.SetType(node, type);
         return type;
     }
 

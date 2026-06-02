@@ -1,8 +1,7 @@
 using Loom.Diagnostics;
-using Loom.Luau;
 using Loom.Luau.AST;
 
-namespace Loom;
+namespace Loom.Generation;
 
 public class LuauGeneratorResult(LuauTree luauTree, DiagnosticBag diagnostics)
     : DiagnosedResult(diagnostics)

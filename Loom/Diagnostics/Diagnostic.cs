@@ -23,7 +23,7 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
         };
 
         var codePart = string.IsNullOrEmpty(Code) ? "" : $" {Colors.Dim}({Code}){Colors.Reset}{severityColor}";
-        var header = $"{severityColor}{Colors.Bold}{severityLabel}{Colors.Reset}{severityColor}{codePart}:{Colors.Reset} {Message}{Colors.Reset}";
+        var header = $"{severityColor}{Colors.Bold}{severityLabel}{Colors.Reset}{severityColor}{codePart}:{Colors.Reset} {Colors.Gray}{Message}{Colors.Reset}";
         var location = $"{Colors.Dim}  ╭─{Colors.Reset} {Colors.Orange}{Span}{Colors.Reset}";
         var sourceLines = Span.File.SourceText.Split(Environment.NewLine);
         var startLine = Span.Start.Line;
@@ -47,8 +47,8 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
             var lineIndex = line - 1;
             var lineContent = sourceLines[lineIndex];
             var lineNumber = line.ToString().PadLeft(lineDigits);
-            var lineSubtraction = hasHint ? 2 : 0;
-            var linePrepend = hasHint ? line == startLine && startLine != endLine ? "──" : "─┬" : "";
+            var lineSubtraction = hasHint ? Math.Min(endChar - startChar, 1) : 0;
+            var linePrepend = hasHint ? line == startLine && startLine != endLine ? "─" : "┬" : "";
             if (line == startLine && line == endLine)
             {
                 var underline = $"{new string(' ', startChar)}{underlineColor}{linePrepend}{new string(underlineChar, endChar - startChar - lineSubtraction)}{Colors.Reset}";
@@ -78,7 +78,7 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
         if (hasHint && startLine == endLine)
         {
             lines.Add(
-                $"{gutter}{new string(' ', startChar)}  {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
+                $"{gutter}{new string(' ', startChar)} {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
             );
             lines.Add(gutter);
         }

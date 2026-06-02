@@ -11,7 +11,9 @@ public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     public HashSet<Diagnostic> Set { get; } = diagnostics ?? [];
 
 
+    public void Info(Node node, string message) => Info(node.Span, message);
     public void Info(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Info, null, message, null);
+    public void Info(Node node, string code, string message) => Info(node.Span, code, message);
     public void Info(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Info, code, message, null);
     public void Warn(LocationSpan span, string code, string message, string? hint = null) => Report(span, DiagnosticSeverity.Warn, code, message, hint);
     public void Error(Node node, string code, string message, string? hint = null) => Error(node.Span, code, message, hint);

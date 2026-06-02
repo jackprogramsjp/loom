@@ -1,4 +1,5 @@
 using Loom.Diagnostics;
+using Loom.Generation;
 using Loom.Lexing;
 using Loom.Luau;
 using Loom.Luau.AST;
@@ -18,23 +19,13 @@ internal static class Utility
     
     public static List<Token> GetTokens(string source) => Tokenize(source).Tokens;
     public static Tree GetAST(string source) => Parse(source).Tree;
-
-    public static Type GetLastStatementType(string source)
-    {
-        var semanticModel = GetSemanticModel(source);
-        var checker = new TypeChecker(semanticModel);
-        checker.Check();
-
-        Assert.True(semanticModel.Tree.Statements.Count > 0);
-        return checker.TypeSolver.GetType(semanticModel.Tree.Statements.Last());
-    }
-
+    public static Type GetLastStatementType(string source) => TypeCheck(source).ReturnType;
     public static LuauTree GetLuauAST(string source) => new LuauGenerator(GetSemanticModel(source)).Generate().LuauTree;
     
-    public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => new TypeChecker(GetSemanticModel(source)).Check().Diagnostics;
-    public static SemanticModel GetSemanticModel(string source) => new Resolver(Parse(source)).Resolve();
-    public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
     public static DiagnosticBag GetLexerDiagnostics(string source) => Tokenize(source).Diagnostics;
+    public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
+    public static SemanticModel GetSemanticModel(string source) => new Resolver(Parse(source)).Resolve();
+    public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;
 
     public static void AssertDiagnostic(DiagnosticBag diagnostics, string code, string message)
     {
@@ -48,6 +39,7 @@ internal static class Utility
     
     private static LexerResult Tokenize(string source) => new Lexer(TestFile(source)).Tokenize();
     private static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
+    private static TypeCheckerResult TypeCheck(string source) => new TypeChecker(GetSemanticModel(source)).Check();
     
     private static SourceFile TestFile(string source) => new("test", source);
 }

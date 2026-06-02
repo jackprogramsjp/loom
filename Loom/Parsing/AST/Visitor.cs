@@ -32,6 +32,7 @@ public abstract class Visitor<T>
     public abstract T VisitLiteral(Literal literal);
     public abstract T VisitIdentifier(Identifier identifier);
     public virtual T VisitParenthesized(Parenthesized parenthesized) => Visit(parenthesized.Expression);
+    public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) => CombineResults([Visit(assignmentOperator.Left), Visit(assignmentOperator.Right)]);
     public virtual T VisitBinaryOperator(BinaryOperator binaryOperator) => CombineResults([Visit(binaryOperator.Left), Visit(binaryOperator.Right)]);
     public virtual T VisitUnaryOperator(UnaryOperator unaryOperator) => Visit(unaryOperator.Operand);
 

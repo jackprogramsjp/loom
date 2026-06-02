@@ -1,4 +1,5 @@
 using Loom.Diagnostics;
+using Loom.Generation;
 using Loom.Lexing;
 using Loom.Parsing;
 using Loom.SemanticAnalysis;
@@ -20,6 +21,7 @@ public class CompilationUnit(List<SourceFile> files)
         var semanticModel = trackDiagnostics(resolver.Resolve());
         var typeChecker = new TypeChecker(semanticModel);
         var typeCheckerResult = trackDiagnostics(typeChecker.Check());
+        trackDiagnostics(semanticModel.TypeSolver);
         var generator = new LuauGenerator(semanticModel);
         var generatorResult = trackDiagnostics(generator.Generate());
         var renderedLuau = generatorResult.LuauTree.Render();

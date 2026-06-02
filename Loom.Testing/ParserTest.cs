@@ -247,7 +247,7 @@ public class ParserTest
     [InlineData("a / b", SyntaxKind.Slash)]
     [InlineData("a // b", SyntaxKind.SlashSlash)]
     [InlineData("a % b", SyntaxKind.Percent)]
-    [InlineData("a ^ b", SyntaxKind.Carat)]
+    [InlineData("a ^ b", SyntaxKind.Caret)]
     [InlineData("a & b", SyntaxKind.Ampersand)]
     [InlineData("a | b", SyntaxKind.Pipe)]
     [InlineData("a ~ b", SyntaxKind.Tilde)]
@@ -263,14 +263,37 @@ public class ParserTest
     [InlineData("a >= b", SyntaxKind.RArrowEquals)]
     [InlineData("a == b", SyntaxKind.EqualsEquals)]
     [InlineData("a != b", SyntaxKind.BangEquals)]
-    public void Parses_BinaryOperator(string source, SyntaxKind expectedOperator)
+    [InlineData("a = b", SyntaxKind.Equals, true)]
+    [InlineData("a += b", SyntaxKind.PlusEquals, true)]
+    [InlineData("a -= b", SyntaxKind.MinusEquals, true)]
+    [InlineData("a *= b", SyntaxKind.StarEquals, true)]
+    [InlineData("a /= b", SyntaxKind.SlashEquals, true)]
+    [InlineData("a //= b", SyntaxKind.SlashSlashEquals, true)]
+    [InlineData("a %= b", SyntaxKind.PercentEquals, true)]
+    [InlineData("a ^= b", SyntaxKind.CaretEquals, true)]
+    [InlineData("a &= b", SyntaxKind.AmpersandEquals, true)]
+    [InlineData("a |= b", SyntaxKind.PipeEquals, true)]
+    [InlineData("a ~= b", SyntaxKind.TildeEquals, true)]
+    [InlineData("a >>= b", SyntaxKind.RArrowRArrowEquals, true)]
+    [InlineData("a >>>= b", SyntaxKind.RArrowRArrowRArrowEquals, true)]
+    [InlineData("a <<= b", SyntaxKind.LArrowLArrowEquals, true)]
+    [InlineData("a &&= b", SyntaxKind.AmpersandAmpersandEquals, true)]
+    [InlineData("a ||= b", SyntaxKind.PipePipeEquals, true)]
+    [InlineData("a ??= b", SyntaxKind.QuestionQuestionEquals, true)]
+    public void Parses_BinaryOperator(string source, SyntaxKind expectedOperator, bool isAssignment = false)
     {
         var tree = Utility.GetAST(source);
         Assert.Single(tree.Statements);
 
         var statement = tree.Statements.First();
         var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
-        var binaryOperator = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        var binaryOperator = Assert.IsAssignableFrom<BinaryOperator>(expressionStatement.Expression);
+        if (isAssignment)
+        {
+            Assert.IsType<AssignmentOperator>(binaryOperator);
+            Assert.IsAssignableFrom<AssignmentTarget>(binaryOperator.Left);
+        }
+        
         Assert.IsType<Identifier>(binaryOperator.Left);
         Assert.IsType<Identifier>(binaryOperator.Right);
         Assert.Equal(expectedOperator, binaryOperator.Operator.Kind);
@@ -313,7 +336,7 @@ public class ParserTest
         Assert.IsType<Identifier>(multiplication.Left);
 
         var exponentiation = Assert.IsType<BinaryOperator>(multiplication.Right);
-        Assert.Equal(SyntaxKind.Carat, exponentiation.Operator.Kind);
+        Assert.Equal(SyntaxKind.Caret, exponentiation.Operator.Kind);
 
         var tildeC = Assert.IsType<UnaryOperator>(exponentiation.Left);
         Assert.IsType<Identifier>(tildeC.Operand);
@@ -331,7 +354,7 @@ public class ParserTest
         var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
         var parenthesized = Assert.IsType<Parenthesized>(expressionStatement.Expression);
         var literal = Assert.IsType<Literal>(parenthesized.Expression);
-        Assert.Equal(69, literal.Value);
+        Assert.Equal(69L, literal.Value);
     }
 
     [Theory]
@@ -350,25 +373,27 @@ public class ParserTest
     }
 
     [Theory]
-    [InlineData("123", 123)]
-    [InlineData("1e3", 100)]
-    [InlineData("0x100", 256)]
-    [InlineData("0Xf0D", 3853)]
-    [InlineData("0b011100110", 230)]
-    [InlineData("0B11001", 25)]
-    [InlineData("0o400", 256)]
-    [InlineData("0O2340", 1248)]
-    [InlineData("1.23e3", 1230)]
+    [InlineData("123", 123L)]
+    [InlineData("1e3", 100L)]
+    [InlineData("0x100", 256L)]
+    [InlineData("0xFF_FF", 65535L)]
+    [InlineData("0Xf0D", 3853L)]
+    [InlineData("0b011100110", 230L)]
+    [InlineData("0b01110_0110", 230L)]
+    [InlineData("0B11001", 25L)]
+    [InlineData("0o400", 256L)]
+    [InlineData("0O2340", 1248L)]
+    [InlineData("1.23e3", 1230L)]
     [InlineData("420.69", 420.69d)]
     [InlineData("1.2345e3", 1234.5)]
-    [InlineData("1_0_0________.6_9e5_1", (double)long.MaxValue)]
-    [InlineData("5s", 5)]
+    [InlineData("1_0_0________.6_9e5_1", long.MaxValue)]
+    [InlineData("5s", 5L)]
     [InlineData("500ms", 0.5)]
     [InlineData("20hz", 0.05)]
     [InlineData("2_0.4_5ms", 0.02045)]
-    [InlineData("0.5m", 30)]
-    [InlineData("20m", 1800)]
-    [InlineData("2h", 7200)]
+    [InlineData("0.5m", 30L)]
+    [InlineData("20m", 1800L)]
+    [InlineData("2h", 7200L)]
     [InlineData("'hello'", "hello")]
     [InlineData("\"abc\"", "abc")]
     [InlineData("true", true)]

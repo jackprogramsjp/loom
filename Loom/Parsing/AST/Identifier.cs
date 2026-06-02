@@ -3,7 +3,7 @@ using Loom.Syntax;
 namespace Loom.Parsing.AST;
 
 public class Identifier(Token name)
-    : Expression([name], [])
+    : AssignmentTarget([name], [])
 {
     public Token Name { get; } = name;
 

@@ -43,6 +43,20 @@ public class ResolverTest
     }
     
     [Fact]
+    public void ThrowsFor_InvalidAssignmentTarget()
+    {
+        var diagnostics = Utility.GetSemanticModel("1 = 1").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Invalid assignment target.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_AssignToImmutable()
+    {
+        var diagnostics = Utility.GetSemanticModel("let x = 1; x = 69").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Cannot assign to an immutable variable.");
+    }
+    
+    [Fact]
     public void Declares_VariableSymbol()
     {
         var model = Utility.GetSemanticModel("let x = 1; x;");
@@ -57,7 +71,7 @@ public class ResolverTest
         Assert.NotNull(symbol);
         Assert.Equal("x", symbol.Name);
         Assert.Equal(SymbolKind.Variable, symbol.Kind);
-        Assert.Equal(variableDeclaration, symbol.DeclaringNode);
+        Assert.Equal(variableDeclaration, symbol.Declaration);
         
         var declaringSymbol = model.GetDeclaringSymbol(identifier);
         var declarationSymbol = model.GetDeclarationSymbol(variableDeclaration);
@@ -66,6 +80,6 @@ public class ResolverTest
         Assert.Equal(declaringSymbol, declarationSymbol);
         Assert.Equal("x", declarationSymbol.Name);
         Assert.Equal(SymbolKind.Variable, declarationSymbol.Kind);
-        Assert.Equal(variableDeclaration, declarationSymbol.DeclaringNode);
+        Assert.Equal(variableDeclaration, declarationSymbol.Declaration);
     }
 }

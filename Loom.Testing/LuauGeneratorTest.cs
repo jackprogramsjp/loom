@@ -149,6 +149,53 @@ public class LuauGeneratorTest
     }
     
     [Fact]
+    public void Generates_ComputedAssignment()
+    {
+        var luauTree = Utility.GetLuauAST("mut x = 1; mut y = 2; let z = x = y = 69");
+        Assert.Equal(5, luauTree.Statements.Count);
+
+        {
+            var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[2]);
+            var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+            var target = Assert.IsType<Identifier>(assignment.Left);
+            var value = Assert.IsType<NumberLiteral>(assignment.Right);
+            Assert.Equal("=", assignment.Operator);
+            Assert.Equal("y", target.Name);
+            Assert.Equal(69, value.Value);
+        }
+        {
+            var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[3]);
+            var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+            var target = Assert.IsType<Identifier>(assignment.Left);
+            var value = Assert.IsType<Identifier>(assignment.Right);
+            Assert.Equal("=", assignment.Operator);
+            Assert.Equal("x", target.Name);
+            Assert.Equal("y", value.Name);
+        }
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        Assert.Null(variable.DeclaredType);
+        
+        var finalValue = Assert.IsType<Identifier>(variable.Initializer);
+        Assert.Equal("x", finalValue.Name);
+    }
+    
+    [Fact]
+    public void Generates_BasicAssignment()
+    {
+        var luauTree = Utility.GetLuauAST("mut x = 1; x = 69");
+        Assert.Equal(2, luauTree.Statements.Count);
+        
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        var target = Assert.IsType<Identifier>(assignment.Left);
+        var value = Assert.IsType<NumberLiteral>(assignment.Right);
+        Assert.Equal("=", assignment.Operator);
+        Assert.Equal("x", target.Name);
+        Assert.Equal(69, value.Value);
+    }
+    
+    [Fact]
     public void Generates_ConstVariables()
     {
         var luauTree = Utility.GetLuauAST("let x = 1;");

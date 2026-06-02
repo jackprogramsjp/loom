@@ -26,8 +26,7 @@ public class Lexer(SourceFile file)
             var span = GetSpan(start);
             if (rule == null)
             {
-                _position++;
-                _diagnostics.Error(span, InternalCodes.UnexpectedCharacter, "Unexpected character."); // TODO: more detailed lexer errors
+                _diagnostics.Error(new LocationSpan(start, start + 1), InternalCodes.UnexpectedCharacter, "Unexpected character."); // TODO: more detailed lexer errors
                 break;
             }
 
@@ -45,7 +44,7 @@ public class Lexer(SourceFile file)
                                 .OrderByDescending(pair => pair.Item2.Item1.Length * (int)pair.Item1.Kind)
                                 .ToList();
 
-        if (matches.Count == 0)
+        if (matches.Count == 0 || matches.All(pair => pair.Value.Item1.Length == 0))
             return null;
 
         var (rule, (content, _)) = matches.First();

@@ -28,7 +28,7 @@ public class Parser(LexerResult lexerResult)
         if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
             return ParseVariableDeclaration(variableKeyword);
 
-        if (Match(SyntaxKind.TypeKeyword, out var typeKeyword))
+        if (Match(out var typeKeyword, SyntaxKind.TypeKeyword))
             return ParseTypeAlias(typeKeyword);
 
         var expression = ParseExpression();
@@ -45,7 +45,7 @@ public class Parser(LexerResult lexerResult)
 
     private TypeParameters? ParseTypeParameters()
     {
-        if (!Match(SyntaxKind.LArrow, out var leftArrow))
+        if (!Match(out var leftArrow, SyntaxKind.LArrow))
             return null;
 
         var parameters = ParseDelimited(ParseTypeParameter);
@@ -77,13 +77,13 @@ public class Parser(LexerResult lexerResult)
         var name = ExpectIdentifier();
         ColonTypeClause? colonTypeClause = null;
         EqualsValueClause? equalsValueClause = null;
-        if (Match(SyntaxKind.Colon, out var colon))
+        if (Match(out var colon, SyntaxKind.Colon))
         {
             var type = ParseType();
             colonTypeClause = new ColonTypeClause(colon, type);
         }
 
-        if (Match(SyntaxKind.Equals, out var equals))
+        if (Match(out var equals, SyntaxKind.Equals))
         {
             var initializer = ParseExpression();
             equalsValueClause = new EqualsValueClause(equals, initializer);
@@ -92,42 +92,35 @@ public class Parser(LexerResult lexerResult)
         return new VariableDeclaration(keyword, name, colonTypeClause, equalsValueClause);
     }
 
-    private Expression ParseExpression() => ParseNullCoalescing();
-
+    private Expression ParseExpression() => ParseAssignment();
+    private Expression ParseAssignment() => ParseBinaryRightAssociative<AssignmentOperator>(ParseNullCoalescing, ParseAssignment, SyntaxFacts.IsAssignmentOperator);
     private Expression ParseNullCoalescing() => ParseBinaryRightAssociative(ParseLogicalOr, ParseNullCoalescing, SyntaxKind.QuestionQuestion);
-
     private Expression ParseLogicalOr() => ParseBinaryLeftAssociative(ParseLogicalAnd, SyntaxKind.PipePipe);
-
     private Expression ParseLogicalAnd() => ParseBinaryLeftAssociative(ParseBitwiseOr, SyntaxKind.AmpersandAmpersand);
-
     private Expression ParseBitwiseOr() => ParseBinaryLeftAssociative(ParseXor, SyntaxKind.Pipe);
-
     private Expression ParseXor() => ParseBinaryLeftAssociative(ParseBitwiseAnd, SyntaxKind.Tilde);
-
     private Expression ParseBitwiseAnd() => ParseBinaryLeftAssociative(ParseEquality, SyntaxKind.Ampersand);
-
     private Expression ParseEquality() => ParseBinaryLeftAssociative(ParseRelational, SyntaxKind.EqualsEquals, SyntaxKind.BangEquals);
 
     private Expression ParseRelational() =>
         ParseBinaryLeftAssociative(ParseShift, SyntaxKind.LArrow, SyntaxKind.LArrowEquals, SyntaxKind.RArrow, SyntaxKind.RArrowEquals);
 
     private Expression ParseShift() => ParseBinaryLeftAssociative(ParseAdditive, SyntaxKind.LArrowLArrow, SyntaxKind.RArrowRArrow, SyntaxKind.RArrowRArrowRArrow);
-
     private Expression ParseAdditive() => ParseBinaryLeftAssociative(ParseMultiplicative, SyntaxKind.Plus, SyntaxKind.Minus);
 
     private Expression ParseMultiplicative() =>
         ParseBinaryLeftAssociative(ParseExponential, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.SlashSlash, SyntaxKind.Percent);
 
-    private Expression ParseExponential() => ParseBinaryRightAssociative(ParseUnary, ParseExponential, SyntaxKind.Carat);
+    private Expression ParseExponential() => ParseBinaryRightAssociative(ParseUnary, ParseExponential, SyntaxKind.Caret);
 
     private Expression ParseUnary() =>
-        Match(SyntaxFacts.IsUnaryOperator, out var op)
+        Match(out var op, SyntaxFacts.IsUnaryOperator)
             ? new UnaryOperator(op, ParseUnary())
             : ParsePrimary();
 
     private Expression ParsePrimary()
     {
-        if (Match(SyntaxKind.LParen, out var leftParen))
+        if (Match(out var leftParen, SyntaxKind.LParen))
         {
             var expression = ParseExpression();
             var rightParen = Expect(
@@ -138,7 +131,7 @@ public class Parser(LexerResult lexerResult)
             return new Parenthesized(leftParen, rightParen, expression);
         }
 
-        if (Match(SyntaxKind.Identifier, out var name))
+        if (Match(out var name, SyntaxKind.Identifier))
             return new Identifier(name);
 
         if (Match(
@@ -154,11 +147,11 @@ public class Parser(LexerResult lexerResult)
             {
                 var floatingPoint = ParseNumberValue(token);
                 var isInteger = Math.Abs(Math.Floor(floatingPoint) - floatingPoint) < 1e-7;
-                return isInteger 
-                    ? new Literal(token, (long)floatingPoint) 
+                return isInteger
+                    ? new Literal(token, (long)floatingPoint)
                     : new Literal(token, floatingPoint);
             }
-            
+
             object? value = token.Kind switch
             {
                 SyntaxKind.StringLiteral => token.Text.Substring(1, token.Text.Length - 2),
@@ -174,6 +167,117 @@ public class Parser(LexerResult lexerResult)
         _diagnostics.Error(last.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
         _position++;
         return new NullExpression(last);
+    }
+
+    private TypeExpression ParseType() => ParseUnionType();
+
+    private TypeExpression ParseUnionType() =>
+        ParseChainedType(ParseIntersectionType, SyntaxKind.Pipe, (separators, types) => new UnionType(separators, types));
+
+    private TypeExpression ParseIntersectionType() =>
+        ParseChainedType(ParseOptionalType, SyntaxKind.Ampersand, (seps, types) => new IntersectionType(seps, types));
+
+    private TypeExpression ParseOptionalType()
+    {
+        var inner = ParsePrimaryType();
+        if (!Match(SyntaxKind.Question))
+            return inner;
+
+        var question = Last();
+        return new OptionalType(question, inner);
+    }
+
+    private TypeExpression ParsePrimaryType()
+    {
+        if (Match(out var leftParen, SyntaxKind.LParen))
+        {
+            var type = ParseType();
+            var rightParen = Expect(
+                SyntaxKind.RParen,
+                got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
+            );
+
+            return new ParenthesizedType(leftParen, rightParen, type);
+        }
+
+        var name = ExpectIdentifier("type");
+        if (SyntaxFacts.IsPrimitiveType(name.Text))
+            return new PrimitiveType(name);
+
+        if (!Match(out var leftArrow, SyntaxKind.LArrow))
+            return new TypeName(name);
+
+        var arguments = ParseDelimited(ParseType);
+        var rightArrow = Expect(SyntaxKind.RArrow);
+        var typeArguments = new TypeArguments(leftArrow, rightArrow, arguments);
+        return new TypeName(name, typeArguments);
+    }
+
+    private TypeExpression ParseChainedType(Func<TypeExpression> parseInner,
+        SyntaxKind separator,
+        Func<List<Token>, List<TypeExpression>, TypeExpression> create)
+    {
+        var types = new List<TypeExpression> { parseInner() };
+        var seps = new List<Token>();
+
+        while (Match(separator))
+        {
+            seps.Add(Last());
+            types.Add(parseInner());
+        }
+
+        return seps.Count > 0 ? create(seps, types) : types[0];
+    }
+
+    private Expression ParseBinaryRightAssociative(Func<Expression> parseLeft, Func<Expression> parseRight, params SyntaxKind[] kinds) =>
+        ParseBinaryRightAssociative(parseLeft, parseRight, kinds.Contains);
+
+    private Expression ParseBinaryRightAssociative(Func<Expression> parseLeft, Func<Expression> parseRight, Predicate<SyntaxKind> predicate) =>
+        ParseBinaryRightAssociative<BinaryOperator>(parseLeft, parseRight, predicate);
+
+    private Expression ParseBinaryRightAssociative<T>(Func<Expression> parseLeft, Func<Expression> parseRight, params SyntaxKind[] kinds)
+        where T : BinaryOperator, new() =>
+        ParseBinaryRightAssociative<T>(parseLeft, parseRight, kinds.Contains);
+
+    private Expression ParseBinaryRightAssociative<T>(Func<Expression> parseLeft, Func<Expression> parseRight, Predicate<SyntaxKind> predicate)
+        where T : BinaryOperator, new()
+    {
+        var left = parseLeft();
+        while (Match(out var op, predicate))
+        {
+            var right = parseRight();
+            var binary = new T { Operator = op, Left = left, Right = right };
+            binary.Setup();
+            left = binary;
+        }
+
+        return left;
+    }
+
+    private Expression ParseBinaryLeftAssociative(Func<Expression> parse, params SyntaxKind[] kinds) => ParseBinaryLeftAssociative(parse, kinds.Contains);
+
+    private Expression ParseBinaryLeftAssociative(Func<Expression> parse, Predicate<SyntaxKind> predicate)
+    {
+        var left = parse();
+        while (Match(out var op, predicate))
+        {
+            var right = parse();
+            var binary = new BinaryOperator { Operator = op, Left = left, Right = right };
+            binary.Setup();
+            left = binary;
+        }
+
+        return left;
+    }
+
+    private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
+        where T : Node
+    {
+        var nodes = new List<T>([parse()]);
+        while (Match(delimiter))
+            nodes.Add(parse());
+
+        return nodes;
     }
 
     private static double ParseNumberValue(Token token)
@@ -192,119 +296,13 @@ public class Parser(LexerResult lexerResult)
             _ => double.Parse(text),
         };
     }
-         
 
-    private TypeExpression ParseType() => ParseUnionType();
+    private bool Match([MaybeNullWhen(false)] out Token token, params SyntaxKind[] kinds) => Match(out token, kinds.Contains);
+    private bool Match(SyntaxKind kind) => Match(otherKind => otherKind == kind);
+    private bool Match(Predicate<SyntaxKind> predicate) => Match(out var _, predicate);
+    private bool Match([MaybeNullWhen(false)] out Token token, SyntaxKind kind) => Match(out token, otherKind => otherKind == kind);
 
-    private TypeExpression ParseUnionType()
-    {
-        var types = new List<TypeExpression>();
-        var pipes = new List<Token>();
-        var left = ParseIntersectionType();
-        types.Add(left);
-
-        while (Match(SyntaxKind.Pipe))
-        {
-            pipes.Add(Last());
-            types.Add(ParseIntersectionType());
-        }
-
-        return pipes.Count > 0 ? new UnionType(pipes, types) : left;
-    }
-
-    private TypeExpression ParseIntersectionType()
-    {
-        var types = new List<TypeExpression>();
-        var ampersands = new List<Token>();
-        var left = ParseOptionalType();
-        types.Add(left);
-
-        while (Match(SyntaxKind.Ampersand))
-        {
-            ampersands.Add(Last());
-            types.Add(ParseOptionalType());
-        }
-
-        return ampersands.Count > 0 ? new IntersectionType(ampersands, types) : left;
-    }
-
-    private TypeExpression ParseOptionalType()
-    {
-        var inner = ParsePrimaryType();
-        if (!Match(SyntaxKind.Question))
-            return inner;
-
-        var question = Last();
-        return new OptionalType(question, inner);
-    }
-
-    private TypeExpression ParsePrimaryType()
-    {
-        if (Match(SyntaxKind.LParen, out var leftParen))
-        {
-            var type = ParseType();
-            var rightParen = Expect(
-                SyntaxKind.RParen,
-                got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
-            );
-
-            return new ParenthesizedType(leftParen, rightParen, type);
-        }
-
-        var name = ExpectIdentifier("type");
-        if (SyntaxFacts.IsPrimitiveType(name.Text))
-            return new PrimitiveType(name);
-
-        if (!Match(SyntaxKind.LArrow, out var leftArrow))
-            return new TypeName(name);
-
-        var arguments = ParseDelimited(ParseType);
-        var rightArrow = Expect(SyntaxKind.RArrow);
-        var typeArguments = new TypeArguments(leftArrow, rightArrow, arguments);
-        return new TypeName(name, typeArguments);
-    }
-
-    private Expression ParseBinaryRightAssociative(Func<Expression> parseLeft, Func<Expression> parseRight, params SyntaxKind[] operators)
-    {
-        var left = parseLeft();
-        while (Match(out var op, operators))
-        {
-            var right = parseRight();
-            left = new BinaryOperator(op, left, right);
-        }
-
-        return left;
-    }
-
-    private Expression ParseBinaryLeftAssociative(Func<Expression> parse, params SyntaxKind[] operators)
-    {
-        var left = parse();
-        while (Match(out var op, operators))
-        {
-            var right = parse();
-            left = new BinaryOperator(op, left, right);
-        }
-
-        return left;
-    }
-
-    private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
-        where T : Node
-    {
-        var nodes = new List<T>([parse()]);
-        while (Match(delimiter))
-            nodes.Add(parse());
-
-        return nodes;
-    }
-
-    private bool Match(params SyntaxKind[] kinds) => Match(kinds.Contains);
-    private bool Match([MaybeNullWhen(false)] out Token token, params SyntaxKind[] kinds) => Match(kinds.Contains, out token);
-    private bool Match(SyntaxKind kind) => Match(otherKind => otherKind == kind, out var _);
-    private bool Match(Predicate<SyntaxKind> predicate) => Match(predicate, out var _);
-    private bool Match(SyntaxKind kind, [MaybeNullWhen(false)] out Token token) => Match(otherKind => otherKind == kind, out token);
-
-    private bool Match(Predicate<SyntaxKind> predicate, [MaybeNullWhen(false)] out Token token)
+    private bool Match([MaybeNullWhen(false)] out Token token, Predicate<SyntaxKind> predicate)
     {
         if (IsEof())
         {
@@ -344,6 +342,7 @@ public class Parser(LexerResult lexerResult)
             InternalCodes.UnexpectedToken,
             message != null ? message(token) : $"Expected '{expected}', got '{token.Text}'."
         );
+
         return token;
     }
 
