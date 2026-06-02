@@ -23,7 +23,8 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = BindType(tree, VisitTree(tree));
         semanticModel.TypeSolver.SolveConstraints();
 
-        return new TypeCheckerResult(type, _diagnostics);
+        var diagnostics = DiagnosticBag.Concat([semanticModel.TypeSolver.Diagnostics, _diagnostics]);
+        return new TypeCheckerResult(type, diagnostics);
     }
 
     public override Type Visit(Node node) => node.Accept(this);
