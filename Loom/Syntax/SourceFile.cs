@@ -2,7 +2,7 @@ namespace Loom.Syntax;
 
 public class SourceFile(string absolutePath, string? sourceText = null)
 {
-    public static readonly SourceFile Empty = new("<anonymous>", "");
+    public static readonly SourceFile Empty = new("<anonymous>", string.Empty);
     
     public string AbsolutePath { get; } = absolutePath;
     public string Name { get; } = Path.GetFileName(absolutePath);

@@ -2,7 +2,8 @@ using Loom.Syntax;
 
 namespace Loom.Parsing.AST;
 
-public class BinaryOperator(Token @operator, Expression left, Expression right) : Expression
+public class BinaryOperator(Token @operator, Expression left, Expression right)
+    : Expression([..left.Tokens, @operator, ..right.Tokens], [left, right])
 {
     public Token Operator { get; } = @operator;
     public Expression Left { get; } = left;

@@ -22,7 +22,7 @@ public class RenderState
         return result;
     }
 
-    private string NewLine(string text) => text + '\n';
+    private static string NewLine(string text) => text + '\n';
     private string Indented(string text) => _indent + text;
     private void PushIndent() => _indent += Indent;
     private void PopIndent() => _indent = _indent[..^1];
