@@ -17,7 +17,7 @@ internal static class Utility
 {
     public static readonly LocationSpan Span = LocationSpan.Empty(TestFile(""));
     
-    public static List<Token> GetTokens(string source) => Tokenize(source).Tokens;
+    public static IReadOnlyList<Token> GetTokens(string source) => Tokenize(source).Tokens;
     public static Tree GetAST(string source) => Parse(source).Tree;
     public static Type GetLastStatementType(string source) => TypeCheck(source).ReturnType;
     public static LuauTree GetLuauAST(string source) => new LuauGenerator(GetSemanticModel(source)).Generate().LuauTree;

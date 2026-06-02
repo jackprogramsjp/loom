@@ -46,6 +46,13 @@ public class ParserTest
     }
     
     [Fact]
+    public void ThrowsFor_InvalidAssignmentTarget()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("1 = 1");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Invalid assignment target.");
+    }
+    
+    [Fact]
     public void Parses_Type_Precedence()
     {
         var tree = Utility.GetAST("let x: number? | bool & string");

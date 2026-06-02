@@ -43,17 +43,10 @@ public class ResolverTest
     }
     
     [Fact]
-    public void ThrowsFor_InvalidAssignmentTarget()
-    {
-        var diagnostics = Utility.GetSemanticModel("1 = 1").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Invalid assignment target.");
-    }
-    
-    [Fact]
     public void ThrowsFor_AssignToImmutable()
     {
         var diagnostics = Utility.GetSemanticModel("let x = 1; x = 69").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Cannot assign to an immutable variable.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to an immutable variable.");
     }
     
     [Fact]

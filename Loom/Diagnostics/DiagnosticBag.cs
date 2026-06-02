@@ -5,7 +5,7 @@ namespace Loom.Diagnostics;
 
 public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
 {
-    public static bool ImmediatelyTerminateOnError { get; set; } = true;
+    public static bool FailFast { get; set; } = true;
     public static DiagnosticBag Concat(List<DiagnosticBag> bags) => new(bags.SelectMany(bag => bag.Set).ToHashSet());
     
     public HashSet<Diagnostic> Set { get; } = diagnostics ?? [];
@@ -38,7 +38,7 @@ public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     private void Report(Diagnostic diagnostic)
     {
         Set.Add(diagnostic);
-        if (!ImmediatelyTerminateOnError || diagnostic.Severity != DiagnosticSeverity.Error) return;
+        if (!FailFast || diagnostic.Severity != DiagnosticSeverity.Error) return;
 
         var code = (diagnostic.Code ?? InternalCodes.Unknown).GetHashCode();
         Console.WriteLine(diagnostic.ToString());

@@ -91,6 +91,10 @@ public static class SyntaxFacts
         "void"
     ];
     private static readonly HashSet<SyntaxKind> _triviaSyntaxes = [SyntaxKind.Whitespace, SyntaxKind.Semicolon, SyntaxKind.Comment];
+    private static readonly HashSet<SyntaxKind> _literalSyntaxes =
+    [
+        SyntaxKind.NumberLiteral, SyntaxKind.StringLiteral, SyntaxKind.TrueLiteral, SyntaxKind.FalseLiteral, SyntaxKind.NoneLiteral
+    ];
     private static readonly HashSet<SyntaxKind> _assignmentOperators =
     [
         SyntaxKind.Equals,
@@ -130,6 +134,7 @@ public static class SyntaxFacts
 
     public static bool IsNotTrivia(SyntaxKind kind) => !IsTrivia(kind);
     public static bool IsTrivia(SyntaxKind kind) => _triviaSyntaxes.Contains(kind);
+    public static bool IsLiteral(SyntaxKind kind) => _literalSyntaxes.Contains(kind);
     public static SyntaxKind? GetOperatorSyntax(string op) => OperatorMap.TryGetValue(op, out var syntax) ? syntax : null;
     public static string? GetOperatorText(SyntaxKind syntax) => OperatorMap.Keys.ElementAtOrDefault(OperatorMap.Values.ToList().IndexOf(syntax));
     public static SyntaxKind? GetKeywordSyntax(string text) => KeywordMap.TryGetValue(text, out var syntax) ? syntax : null;

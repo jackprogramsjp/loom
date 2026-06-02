@@ -16,5 +16,5 @@ public class CompiledFile
     public required Type ReturnType { get; init; }
     public required SemanticModel SemanticModel { get; init; }
     public required Tree Tree { get; init; }
-    public required List<Token> Tokens { get; init; }
+    public required IReadOnlyList<Token> Tokens { get; init; }
 }

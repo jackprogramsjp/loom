@@ -92,28 +92,16 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
-        if (assignmentOperator.Left is AssignmentTarget target)
-        {
-            if (target is not Identifier identifier || LookupVariableSymbol(identifier.Name.Text) is not { Mutable: false } symbol)
-                return base.VisitAssignmentOperator(assignmentOperator);
+        if (assignmentOperator.Left is not Identifier identifier || LookupVariableSymbol(identifier.Name.Text) is not { Mutable: false } symbol)
+            return base.VisitAssignmentOperator(assignmentOperator);
 
-            var declarationPart = symbol.Declaration is VariableDeclaration v ? v.ColonTypeClause + " " + v.EqualsValueClause : "";
-            var initializers = declarationPart.Length >= 72 ? " = ..." : declarationPart;
-            _diagnostics.Error(
-                assignmentOperator,
-                InternalCodes.InvalidAssignmentTarget,
-                "Cannot assign to an immutable variable.",
-                $"did you mean to write 'mut {symbol.Name}{initializers}'?"
-            );
-
-            return false;
-        }
-
+        var declarationPart = symbol.Declaration is VariableDeclaration v ? v.ColonTypeClause + " " + v.EqualsValueClause : "";
+        var initializers = declarationPart.Length >= 72 ? " = ..." : declarationPart;
         _diagnostics.Error(
-            assignmentOperator.Left,
-            InternalCodes.InvalidAssignmentTarget,
-            "Invalid assignment target.",
-            $"did you mean '{assignmentOperator.Left} == {assignmentOperator.Right}'?"
+            assignmentOperator,
+            InternalCodes.AssignToImmutable,
+            "Cannot assign to an immutable variable.",
+            $"did you mean to write 'mut {symbol.Name}{initializers}'?"
         );
 
         return false;
