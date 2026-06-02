@@ -230,8 +230,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("(abc)");
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var parenthesized = Assert.IsType<Parenthesized>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var parenthesized = Assert.IsType<Parenthesized>(variable.Initializer);
         var identifier = Assert.IsType<Identifier>(parenthesized.Expression);
         Assert.Equal("abc", identifier.Name);
     }
@@ -242,8 +242,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("abc");
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var identifier = Assert.IsType<Identifier>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var identifier = Assert.IsType<Identifier>(variable.Initializer);
         Assert.Equal("abc", identifier.Name);
     }
     
@@ -291,8 +291,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("1 + 2");
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var binary = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var binary = Assert.IsType<BinaryOperator>(variable.Initializer);
         var left = Assert.IsType<NumberLiteral>(binary.Left);
         var right = Assert.IsType<NumberLiteral>(binary.Right);
         Assert.Equal(1, left.Value);
@@ -306,8 +306,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("!false");
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var unary = Assert.IsType<UnaryOperator>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var unary = Assert.IsType<UnaryOperator>(variable.Initializer);
         Assert.IsType<BooleanLiteral>(unary.Operand);
         Assert.Equal("not ", unary.Operator);
     }
@@ -321,8 +321,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST(source);
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var literal = Assert.IsType<NumberLiteral>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var literal = Assert.IsType<NumberLiteral>(variable.Initializer);
         Assert.Equal(expected, literal.Value);
     }
     
@@ -334,8 +334,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST(source);
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var literal = Assert.IsType<StringLiteral>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var literal = Assert.IsType<StringLiteral>(variable.Initializer);
         Assert.Equal(expected, literal.Value);
     }
     
@@ -345,8 +345,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("true");
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var literal = Assert.IsType<BooleanLiteral>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var literal = Assert.IsType<BooleanLiteral>(variable.Initializer);
         Assert.True(literal.Value);
     }
     
@@ -356,7 +356,7 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("none");
         Assert.Single(luauTree.Statements);
         
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        Assert.IsType<NilLiteral>(expressionStatement.Expression);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        Assert.IsType<NilLiteral>(variable.Initializer);
     }
 }
