@@ -26,14 +26,14 @@ local x = 1
 ```
 ##
 ```rs
-let s = "abc" + "def"
+let s = "abc" + "def";
 ```
 ```luau
 local s = "abc" .. "def"
 ```
 ##
 ```rs
-let x = 1 & 2 & 3
+let x = 1 & 2 & 3;
 ```
 ```luau
 local x = bit32.band(1, 2, 3)
@@ -49,14 +49,14 @@ const x: Id<boolean, string> = false
 ```
 ##
 ```rs
-let a = 10s
-let b = 100ms
-let c = 10m
-let d = 1h
-let e = 16hz
-let hex = 0xF00D
-let binary = 0b11001
-let octal = 0o400
+let a = 10s;
+let b = 100ms;
+let c = 10m;
+let d = 1h;
+let e = 16hz;
+let hex = 0xF00D;
+let binary = 0b11001;
+let octal = 0o400;
 ```
 ```luau
 const a = 10
@@ -71,7 +71,7 @@ const octal = 256
 ##
 ```rs
 mut x = 69;
-x = 420
+x = 420;
 ```
 ```luau
 local x = 69
