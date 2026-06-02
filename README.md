@@ -11,28 +11,28 @@ This project is a work-in-progress. Nothing is final.
 
 ## Working Examples
 
-```
+```rs
 let x: bool = false;
 ```
 ```luau
 const x: boolean = false
 ```
 ##
-```
+```rs
 mut x;
 ```
 ```luau
 local x
 ```
 ##
-```
+```rs
 let x = 1 & 2 & 3
 ```
 ```luau
 local x = bit32.band(1, 2, 3)
 ```
 ##
-```
+```rs
 type Id<T> = T
 let x: Id<bool> = false;
 ```
@@ -41,7 +41,7 @@ type Id<T> = T
 const x: Id<boolean> = false
 ```
 ##
-```
+```rs
 let a = 10s
 let b = 100ms
 let c = 10m
@@ -60,6 +60,28 @@ const e = 0.0625
 const hex = 61453
 const binary = 25
 const octal = 256
+```
+##
+```rs
+mut x = 69;
+x = 420
+```
+```luau
+local x = 69
+x = 420
+```
+##
+```rs
+mut x = 69;
+mut y = 420;
+let z = x = y = 1;
+```
+```luau
+local x = 69
+local y = 420
+y = 1
+x = y
+const z = x
 ```
 
 ## Planned Features
