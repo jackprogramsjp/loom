@@ -7,13 +7,20 @@ using static SyntaxKind;
 
 public static class LexerRules
 {
-    private const string FloatScientific = @"((\d+\.\d+|\.\d+|\d+\.\d+)e\d+)";
-    private const string Float = @"(\d+\.\d+|\.\d+|\d+\.\d+)";
-    private const string IntScientific = @"(\d+e\d+)";
-    private const string HexInt = "(0[xX][a-fA-F0-9]+)";
+    private const string Int = @"(\d+_+)*\d*_*";
+    private const string FloatScientific = $"({Float}[eE]{Int})";
+    private const string Float = @$"({Int}\.{Int}|\.{Int}|{Int}\.{Int})";
+    private const string IntScientific = $"({Int}[eE]{Int})";
+    private const string HexInt = $"(0[xX][a-fA-F{Int}]+)";
     private const string BinaryInt = "(0[bB][01]+)";
     private const string OctalInt = "(0[oO][0-7]+)";
-        
+    private const string Number = $"({FloatScientific}|{IntScientific}|{Float}|{HexInt}|{BinaryInt}|{OctalInt}|{Int})";
+    private const string HzNumber = $"({Number}[hH][zZ])";
+    private const string MsNumber = $"({Number}[mM][sS])";
+    private const string SecondsNumber = $"({Number}[sS])";
+    private const string MinutesNumber = $"({Number}[mM])";
+    private const string HoursNumber = $"({Number}[hH])";
+
     public static readonly List<LexerRule> Standard =
     [
         ..SyntaxFacts.OperatorMap.Select(
@@ -22,7 +29,7 @@ public static class LexerRules
                 : MultiCharacter(pair.Value, pair.Key)
         ),
         ..SyntaxFacts.KeywordMap.Select(pair => MultiCharacter(pair.Value, pair.Key)),
-        RegEx(NumberLiteral, @$"{FloatScientific}|{IntScientific}|{Float}|{HexInt}|{BinaryInt}|{OctalInt}|\d+"),
+        RegEx(NumberLiteral, $"{HzNumber}|{MsNumber}|{SecondsNumber}|{MinutesNumber}|{HoursNumber}|{Number}"),
         RegEx(StringLiteral, "\"([^\"]*)\"|'([^']*)'"),
         RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
         RegEx(Whitespace, @"\s+")

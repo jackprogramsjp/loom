@@ -26,12 +26,12 @@ public class Lexer(SourceFile file)
             var span = GetSpan(start);
             if (rule == null)
             {
+                _position++;
                 _diagnostics.Error(span, InternalCodes.UnexpectedCharacter, "Unexpected character."); // TODO: more detailed lexer errors
                 break;
             }
 
             if (SyntaxFacts.IsTrivia(rule.Syntax)) continue;
-
             yield return new Token(rule.Syntax, span);
         }
     }

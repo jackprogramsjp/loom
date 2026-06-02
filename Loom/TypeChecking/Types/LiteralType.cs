@@ -6,7 +6,7 @@ public sealed class LiteralType(object? value)
     private static PrimitiveTypeKind GetPrimitiveKind(object? value) =>
         value switch
         {
-            int or double => PrimitiveTypeKind.Number,
+            long or int or double => PrimitiveTypeKind.Number,
             string => PrimitiveTypeKind.String,
             bool => PrimitiveTypeKind.Bool,
             _ => PrimitiveTypeKind.None
@@ -14,7 +14,7 @@ public sealed class LiteralType(object? value)
 
     public object? Value { get; } = value switch
     {
-        int or double => value,
+        long or int or double => value,
         string => value,
         bool => value,
         null => value,

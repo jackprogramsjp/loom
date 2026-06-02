@@ -107,6 +107,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitLiteral(Literal literal) =>
         literal.Value switch
         {
+            long l => new NumberLiteral(l),
             int i => new NumberLiteral(i),
             double d => new NumberLiteral(d),
             string s => new StringLiteral(s),

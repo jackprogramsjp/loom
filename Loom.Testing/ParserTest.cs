@@ -350,23 +350,31 @@ public class ParserTest
     }
 
     [Theory]
-    [InlineData("123", typeof(int))]
-    [InlineData("1e3", typeof(int))]
-    [InlineData("0x100", typeof(int))]
-    [InlineData("0Xf0D", typeof(int))]
-    [InlineData("0b011100110", typeof(int))]
-    [InlineData("0B11001", typeof(int))]
-    [InlineData("0o400", typeof(int))]
-    [InlineData("0O2340", typeof(int))]
-    [InlineData("1.23e3", typeof(int))]
-    [InlineData("420.69", typeof(double))]
-    [InlineData("1.2345e3", typeof(double))]
-    [InlineData("'hello'", typeof(string))]
-    [InlineData("\"abc\"", typeof(string))]
-    [InlineData("true", typeof(bool))]
-    [InlineData("false", typeof(bool))]
+    [InlineData("123", 123)]
+    [InlineData("1e3", 100)]
+    [InlineData("0x100", 256)]
+    [InlineData("0Xf0D", 3853)]
+    [InlineData("0b011100110", 230)]
+    [InlineData("0B11001", 25)]
+    [InlineData("0o400", 256)]
+    [InlineData("0O2340", 1248)]
+    [InlineData("1.23e3", 1230)]
+    [InlineData("420.69", 420.69d)]
+    [InlineData("1.2345e3", 1234.5)]
+    [InlineData("1_0_0________.6_9e5_1", (double)long.MaxValue)]
+    [InlineData("5s", 5)]
+    [InlineData("500ms", 0.5)]
+    [InlineData("20hz", 0.05)]
+    [InlineData("2_0.4_5ms", 0.02045)]
+    [InlineData("0.5m", 30)]
+    [InlineData("20m", 1800)]
+    [InlineData("2h", 7200)]
+    [InlineData("'hello'", "hello")]
+    [InlineData("\"abc\"", "abc")]
+    [InlineData("true", true)]
+    [InlineData("false", false)]
     [InlineData("none", null)]
-    public void Parses_Literals(string source, Type? expectedType)
+    public void Parses_Literals(string source, object? expectedValue)
     {
         var tree = Utility.GetAST(source);
         Assert.Single(tree.Statements);
@@ -375,8 +383,8 @@ public class ParserTest
         var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
         var literal = Assert.IsType<Literal>(expressionStatement.Expression);
         Assert.Equal(source, literal.Token.Text);
-        if (expectedType != null)
-            Assert.IsType(expectedType, literal.Value);
+        if (expectedValue != null)
+            Assert.IsType(expectedValue.GetType(), literal.Value);
         else
             Assert.Null(literal.Value);
     }

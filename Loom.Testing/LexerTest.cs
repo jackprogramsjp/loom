@@ -54,12 +54,24 @@ public class LexerTest
 
     [Theory]
     [InlineData("69")]
+    [InlineData("69_420")]
     [InlineData("123456")]
     [InlineData("1e5")]
+    [InlineData("420_69.69_420")]
     [InlineData("420.69")]
     [InlineData(".420")]
     [InlineData("0.234")]
     [InlineData("1.24335e5")]
+    [InlineData("1_2.24_3_35e1_1")]
+    [InlineData("5s")]
+    [InlineData("5ms")]
+    [InlineData("5hz")]
+    [InlineData("2_0.2_3Hz")]
+    [InlineData("0.5s")]
+    [InlineData("10m")]
+    [InlineData("1M")]
+    [InlineData("3H")]
+    [InlineData("4h")]
     public void Tokenizes_Numbers(string source)
     {
         var tokens = Utility.GetTokens(source);
