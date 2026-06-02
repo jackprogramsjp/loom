@@ -77,8 +77,13 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             : new LocalVariable(name, type, initializer);
     }
 
-    public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) =>
-        new Luau.AST.ExpressionStatement(Visit(expressionStatement.Expression));
+    public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
+    {
+        var expression = Visit(expressionStatement.Expression);
+        return IsUnorphanableExpression(expression)
+            ? new Luau.AST.ExpressionStatement(expression)
+            : new ConstVariable("_", null, expression);
+    }
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
@@ -229,6 +234,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     private void Prereq(params LuauStatement[] statements) => _scope.PrereqStatements.AddRange(statements);
+    
+    private static bool IsUnorphanableExpression(LuauExpression expression) =>
+        expression is Call
+        || expression is Luau.AST.BinaryOperator binaryOperator && binaryOperator.Operator.EndsWith('=');
 
     private T Visit<T>(Node node)
         where T : LuauNode =>
