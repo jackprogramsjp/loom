@@ -4,6 +4,7 @@ using Loom.Syntax;
 using Loom.TypeChecking.Types;
 using Microsoft.VisualBasic.CompilerServices;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
+using LiteralType = Loom.Parsing.AST.LiteralType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using Type = System.Type;
@@ -141,6 +142,28 @@ public class ParserTest
         Assert.NotNull(variableDeclaration.ColonTypeClause);
         var typeName = Assert.IsType<TypeName>(variableDeclaration.ColonTypeClause.Type);
         Assert.Equal("Abc", typeName.Name.Text);
+    }
+    
+    [Theory]
+    [InlineData("69")]
+    [InlineData("10hz")]
+    [InlineData("0x69")]
+    [InlineData("0b1011")]
+    [InlineData("'abc'")]
+    [InlineData("\"abc\"")]
+    [InlineData("true")]
+    [InlineData("false")]
+    public void Parses_LiteralType(string type)
+    {
+        var tree = Utility.GetAST($"let x: {type}");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var variableDeclaration = Assert.IsType<VariableDeclaration>(statement);
+        Assert.NotNull(variableDeclaration.ColonTypeClause);
+        
+        var literalType = Assert.IsType<LiteralType>(variableDeclaration.ColonTypeClause.Type);
+        Assert.Equal(type, literalType.Token.Text);
     }
     
     [Fact]

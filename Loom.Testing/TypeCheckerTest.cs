@@ -81,6 +81,21 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Assert.Contains(diagnostics.Set, d => d.Code is InternalCodes.TypeMismatch or InternalCodes.InvalidBinaryOp);
     }
+    
+    [Theory]
+    [InlineData("!5")]
+    [InlineData("!'hello'")]
+    [InlineData("!42")]
+    [InlineData("~true")]
+    [InlineData("~'hello'")]
+    [InlineData("-true")]
+    [InlineData("-'hello'")]
+    [InlineData("-false")]
+    public void ThrowsFor_UnaryOperator_InvalidOperandType(string source)
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Assert.Contains(diagnostics.Set, d => d.Code is InternalCodes.TypeMismatch or InternalCodes.InvalidUnaryOp);
+    }
 
     [Theory]
     [InlineData("1 == '1'", "bool")]
@@ -99,21 +114,6 @@ public class TypeCheckerTest
             type.Equals(expectedType),
             $"Expected '{expectedTypeName}', got '{type}' for expression '{source}'"
         );
-    }
-
-    [Theory]
-    [InlineData("!5")]
-    [InlineData("!'hello'")]
-    [InlineData("!42")]
-    [InlineData("~true")]
-    [InlineData("~'hello'")]
-    [InlineData("-true")]
-    [InlineData("-'hello'")]
-    [InlineData("-false")]
-    public void ThrowsFor_UnaryOperator_InvalidOperandType(string source)
-    {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Assert.Contains(diagnostics.Set, d => d.Code is InternalCodes.TypeMismatch or InternalCodes.InvalidUnaryOp);
     }
 
     [Theory]
@@ -195,6 +195,14 @@ public class TypeCheckerTest
     {
         var type = Utility.GetLastStatementType("let x: number = 42");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_LiteralTypes()
+    {
+        var type = Utility.GetLastStatementType("let x: 69 = 69; x;");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(69L, literal.Value);
     }
 
     [Fact]

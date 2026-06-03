@@ -161,6 +161,20 @@ public class LuauRenderingTest
     {
         Assert.Equal("Hello", new TypeName("Hello").Render());
     }
+    
+    [Fact]
+    public void Renders_StringLiteralType()
+    {
+        Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteralType("abc").Render());
+    }
+
+    [Theory]
+    [InlineData(true, "true")]
+    [InlineData(false, "false")]
+    public void Renders_BooleanLiteralType(bool value, string expected)
+    {
+        Assert.Equal(expected, new BooleanLiteralType(value).Render());
+    }
 
     [Fact]
     public void Renders_ParenthesizedType()

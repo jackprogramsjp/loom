@@ -64,6 +64,48 @@ public class LuauGeneratorTest
     }
     
     [Fact]
+    public void Generates_BooleanLiteralType()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: true;");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var parenthesized = Assert.IsType<ParenthesizedType>(variable.DeclaredType);
+        var literalType = Assert.IsType<BooleanLiteralType>(parenthesized.Type);
+        Assert.Equal("true", literalType.Render());
+    }
+    
+    [Fact]
+    public void Generates_StringLiteralType()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: 'abc';");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var parenthesized = Assert.IsType<ParenthesizedType>(variable.DeclaredType);
+        var literalType = Assert.IsType<StringLiteralType>(parenthesized.Type);
+        Assert.Equal("\"abc\"", literalType.Render());
+    }
+    
+    [Fact]
+    public void Generates_Unusable_LiteralType()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: 42069;");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+        
+        var parenthesized = Assert.IsType<ParenthesizedType>(variable.DeclaredType);
+        var primitive = Assert.IsType<PrimitiveType>(parenthesized.Type);
+        Assert.Equal("number", primitive.Render());
+    }
+    
+    [Fact]
     public void Generates_ParenthesizedType()
     {
         var luauTree = Utility.GetLuauAST("mut x: (number);");
