@@ -72,8 +72,7 @@ public class LuauGeneratorTest
         var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
         Assert.NotNull(variable.DeclaredType);
         
-        var parenthesized = Assert.IsType<ParenthesizedType>(variable.DeclaredType);
-        var literalType = Assert.IsType<BooleanLiteralType>(parenthesized.Type);
+        var literalType = Assert.IsType<BooleanLiteralType>(variable.DeclaredType);
         Assert.Equal("true", literalType.Render());
     }
     
@@ -86,8 +85,7 @@ public class LuauGeneratorTest
         var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
         Assert.NotNull(variable.DeclaredType);
         
-        var parenthesized = Assert.IsType<ParenthesizedType>(variable.DeclaredType);
-        var literalType = Assert.IsType<StringLiteralType>(parenthesized.Type);
+        var literalType = Assert.IsType<StringLiteralType>(variable.DeclaredType);
         Assert.Equal("\"abc\"", literalType.Render());
     }
     
@@ -100,8 +98,7 @@ public class LuauGeneratorTest
         var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
         Assert.NotNull(variable.DeclaredType);
         
-        var parenthesized = Assert.IsType<ParenthesizedType>(variable.DeclaredType);
-        var primitive = Assert.IsType<PrimitiveType>(parenthesized.Type);
+        var primitive = Assert.IsType<PrimitiveType>(variable.DeclaredType);
         Assert.Equal("number", primitive.Render());
     }
     

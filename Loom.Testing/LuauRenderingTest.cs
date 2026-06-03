@@ -153,7 +153,7 @@ public class LuauRenderingTest
     [Fact]
     public void Renders_TypeName_Generic()
     {
-        Assert.Equal("Id<number, boolean>", new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean,]).Render());
+        Assert.Equal("Id<number, boolean>", new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean]).Render());
     }
 
     [Fact]
@@ -161,7 +161,7 @@ public class LuauRenderingTest
     {
         Assert.Equal("Hello", new TypeName("Hello").Render());
     }
-    
+
     [Fact]
     public void Renders_StringLiteralType()
     {
