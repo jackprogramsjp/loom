@@ -4,6 +4,7 @@ using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
+using LiteralType = Loom.Parsing.AST.LiteralType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 using TypeName = Loom.Parsing.AST.TypeName;
@@ -138,7 +139,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return Types.PrimitiveType.Never;
     }
 
-    public override Type VisitLiteral(Literal literal) => BindType(literal, new LiteralType(literal.Value));
+    public override Type VisitLiteral(Literal literal) => BindType(literal, new Types.LiteralType(literal.Value));
 
     public override Type VisitIdentifier(Identifier identifier)
     {
@@ -158,6 +159,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitUnionType(UnionType unionType) => BindType(unionType, new Types.UnionType(unionType.Types.ConvertAll(Visit)));
     public override Type VisitPrimitiveType(PrimitiveType primitiveType) => BindType(primitiveType, new Types.PrimitiveType(primitiveType.Kind));
+    public override Type VisitLiteralType(LiteralType literalType) => BindType(literalType, new Types.LiteralType(literalType.Value));
 
     public override Type VisitTypeName(TypeName typeName)
     {
@@ -169,22 +171,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 return BindType(typeName, declaredType);
 
             if (declaredType is GenericType genericType)
-            {
-                var arguments = typeName.TypeArguments.Arguments.ConvertAll(Visit);
-                if (arguments.Count != genericType.Parameters.Count)
-                {
-                    _diagnostics.Error(
-                        typeName.Span,
-                        InternalCodes.GenericArity,
-                        $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type argument(s), but {arguments.Count} were provided."
-                    );
-
-                    return BindType(typeName, Types.PrimitiveType.Never);
-                }
-
-                var instantiated = new InstantiatedType(genericType, arguments);
-                return BindType(typeName, instantiated);
-            }
+                return InstantiateGenericType(typeName, genericType);
 
             _diagnostics.Error(typeName.Span, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
             return BindType(typeName, Types.PrimitiveType.Never);
@@ -197,9 +184,28 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     public override Type VisitTypeParameter(TypeParameter typeParameter)
     {
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
+
         // var constraint = MaybeVisit(typeParameter.TypeConstraintClause);
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, null);
         return BindType(typeParameter, parameter);
+    }
+
+    private Type InstantiateGenericType(TypeName typeName, GenericType genericType)
+    {
+        var arguments = typeName.TypeArguments!.Arguments.ConvertAll(Visit);
+        if (arguments.Count != genericType.Parameters.Count)
+        {
+            _diagnostics.Error(
+                typeName.Span,
+                InternalCodes.GenericArity,
+                $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type argument(s), but {arguments.Count} were provided."
+            );
+
+            return BindType(typeName, Types.PrimitiveType.Never);
+        }
+
+        var instantiated = new InstantiatedType(genericType, arguments);
+        return BindType(typeName, instantiated);
     }
 
     private Type BindType(Node node, Type type)

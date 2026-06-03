@@ -6,7 +6,7 @@ public class StringLiteral(string value) : LuauLiteral<string>(value)
     {
         var isMultiline = Value.Contains('\n');
         if (!isMultiline)
-            return RenderState.StringDelimiter + Value + RenderState.StringDelimiter;
+            return RenderState.StringDelimiter + RenderState.Escape(Value) + RenderState.StringDelimiter;
 
         var equals = GetSafeBracketEquals();
         return $"[{equals}[{Value}]{equals}]";

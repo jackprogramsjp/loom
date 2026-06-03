@@ -158,7 +158,7 @@ public class Parser(LexerResult lexerResult)
             return new Identifier(name);
 
         if (Match(out var token, SyntaxFacts.IsLiteral))
-            return new Literal(token, Literal.ResolveValue(token));
+            return new Literal(token, LiteralUtility.ResolveValue(token));
 
         var last = Last();
         _diagnostics.Error(last.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
@@ -193,6 +193,9 @@ public class Parser(LexerResult lexerResult)
 
             return new ParenthesizedType(leftParen, rightParen, type);
         }
+        
+        if (Match(out var token, SyntaxFacts.IsLiteral))
+            return new LiteralType(token, LiteralUtility.ResolveValue(token));
 
         var name = ExpectIdentifier("type");
         if (SyntaxFacts.IsPrimitiveType(name.Text))

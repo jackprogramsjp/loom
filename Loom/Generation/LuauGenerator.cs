@@ -156,6 +156,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitIntersectionType(IntersectionType intersectionType) => new Luau.AST.IntersectionType(intersectionType.Types.ConvertAll(Visit));
     public override LuauNode VisitUnionType(UnionType unionType) => new Luau.AST.UnionType(unionType.Types.ConvertAll(Visit));
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
+    public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
 
     public override LuauNode VisitTypeName(TypeName typeName)
     {
@@ -169,9 +170,17 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitTypeParameter(TypeParameter typeParameter) =>
         new Luau.AST.TypeParameter(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
 
-    public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
 
     public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapLuau.PrimitiveTypeKind(primitiveType.Kind));
+
+    public override LuauNode VisitLiteralType(LiteralType literalType) =>
+        literalType.Value switch
+        {
+            long or int or double => Luau.AST.PrimitiveType.Number,
+            bool b => new BooleanLiteralType(b),
+            string s => new StringLiteralType(s),
+            _ => Luau.AST.PrimitiveType.Nil
+        };
 
     private static bool AddBit32Arguments(LuauExpression expression, string name, List<LuauExpression> arguments)
     {

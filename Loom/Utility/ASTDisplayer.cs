@@ -14,11 +14,13 @@ public class ASTDisplayer(Tree ast) : Visitor<string>
         var content = DisplayNode(ast);
         Console.WriteLine(content);
     }
-    
+
     public override string Visit(Node node) => node.Accept(this);
     public override string VisitLiteral(Literal literal) => $"Literal({literal})";
     public override string VisitIdentifier(Identifier identifier) => $"Identifier({identifier})";
     public override string VisitTypeName(TypeName typeName) => $"TypeName({typeName})";
+    public override string VisitLiteralType(LiteralType literalType) => $"LiteralType({literalType})";
+
     public override string VisitPrimitiveType(PrimitiveType primitiveType) => $"PrimitiveType({primitiveType})";
 
     private string DisplayNode(object node)
@@ -31,17 +33,20 @@ public class ASTDisplayer(Tree ast) : Visitor<string>
             .Where(f => !_ignoredProperties.Contains(f.Name));
 
         _indent++;
-        var members = (from prop in properties 
-            let value = prop.GetValue(node) 
-            let display = FormatValue(value) 
+        var members = (
+            from prop in properties
+            let value = prop.GetValue(node)
+            let display = FormatValue(value)
             select Indented(display.Split('(').First() == prop.Name ? display : $"{prop.Name}: {display}")).ToList();
 
         _indent--;
 
-        members.AddRange(from field in fields 
-            let value = field.GetValue(node) 
-            let display = FormatValue(value) 
-            select Indented(display.Split('(').First() == field.Name ? display : $"{field.Name}: {display}"));
+        members.AddRange(
+            from field in fields
+            let value = field.GetValue(node)
+            let display = FormatValue(value)
+            select Indented(display.Split('(').First() == field.Name ? display : $"{field.Name}: {display}")
+        );
 
         return type.Name + "(\n" + string.Join('\n', members) + "\n" + Indented(")");
     }
@@ -65,14 +70,15 @@ public class ASTDisplayer(Tree ast) : Visitor<string>
                 _indent++;
                 var items = nodes.Select(n => Indented(DisplayNode(n))).ToList();
                 _indent--;
-                return items.Count == 0 
-                    ? "[]" 
+                return items.Count == 0
+                    ? "[]"
                     : "[\n" + string.Join('\n', items) + "\n" + Indented("]");
             }
+            
             default:
                 return value.ToString() ?? "???";
         }
     }
-    
+
     private string Indented(string content) => new string(' ', 2 * _indent) + content;
 }

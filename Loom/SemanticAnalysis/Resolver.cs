@@ -92,7 +92,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
-        if (assignmentOperator.Left is not Identifier identifier || LookupVariableSymbol(identifier.Name.Text) is not { Mutable: false } symbol)
+        if (assignmentOperator.Left is not Identifier identifier || LookupRuntimeId(identifier.Name.Text) is not { Mutable: false } symbol)
             return base.VisitAssignmentOperator(assignmentOperator);
 
         var declarationPart = symbol.Declaration is VariableDeclaration v ? v.ColonTypeClause + " " + v.EqualsValueClause : "";
@@ -110,7 +110,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     public override bool VisitIdentifier(Identifier identifier)
     {
         var name = identifier.Name.Text;
-        var symbol = LookupVariableSymbol(name);
+        var symbol = LookupRuntimeId(name);
         if (symbol == null)
         {
             _diagnostics.Error(identifier, InternalCodes.CannotFindName, $"Cannot find name '{name}'.");
@@ -127,8 +127,6 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return true;
     }
 
-    private Symbol? LookupVariableSymbol(string name) => LookupSymbol(name, SymbolKind.Variable) ?? LookupSymbol(name, SymbolKind.Parameter);
-
     public override bool VisitTypeName(TypeName typeName)
     {
         var name = typeName.Name.Text;
@@ -143,6 +141,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return true;
     }
 
+    public override bool VisitLiteralType(LiteralType literalType) => true;
     public override bool VisitPrimitiveType(PrimitiveType primitiveType) => true;
 
     public override bool VisitTypeParameter(TypeParameter typeParameter)
@@ -160,7 +159,6 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return typeParameter.EqualsTypeClause == null || Visit(typeParameter.EqualsTypeClause);
     }
 
-    protected override bool CombineResults(IEnumerable<bool> results) => results.All(t => t);
 
     private void DeclareSymbol(Symbol symbol)
     {
@@ -174,6 +172,11 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         _scopeNodes.Peek().Symbols.Add(symbol);
         _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
     }
+
+    private Symbol? LookupRuntimeId(string name) =>
+        LookupSymbol(name, SymbolKind.Variable)
+        ?? LookupSymbol(name, SymbolKind.Function)
+        ?? LookupSymbol(name, SymbolKind.Parameter);
 
     private Symbol? LookupSymbol(string name, SymbolKind kind)
     {
@@ -203,4 +206,6 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         _scopes.Push(scope);
         return scope;
     }
+    
+    protected override bool CombineResults(IEnumerable<bool> results) => results.All(t => t);
 }
