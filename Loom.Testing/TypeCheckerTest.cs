@@ -24,7 +24,7 @@ public class TypeCheckerTest
     [Fact]
     public void ThrowsFor_GenericTypeMismatch()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("type Id<T> = T; let x: Id<number> = 'hello'");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type Id<T> = T; let x: Id::<number> = 'hello'");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type 'number'.");
     }
 
@@ -45,15 +45,15 @@ public class TypeCheckerTest
     [Fact]
     public void ThrowsFor_NonGeneric()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("type A = number; let x: A<number> = 1");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type A = number; let x: A::<number> = 1");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.NotGeneric, "Type 'A' is not generic and cannot receive type arguments.");
     }
 
     [Fact]
     public void ThrowsFor_IncorrectGenericArity()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("type A<T> = T; let x: A<number, bool> = 1");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, $"Type 'A' expects 1 type argument(s), but 2 were provided.");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type A<T> = T; let x: A::<number, bool> = 1");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, "Type 'A<T>' expects 1 type argument, but 2 were provided.");
     }
 
     [Theory]
@@ -133,12 +133,12 @@ public class TypeCheckerTest
     [Theory]
     [InlineData("type A = number")]
     [InlineData("type A = number; let x: A = 1")]
-    [InlineData("type Id<T> = T; let x: Id<number> = 1")]
-    [InlineData("type Id<T> = T; type X = Id<number>; let x: X = 1")]
-    [InlineData("type Id<T> = T; let x: Id<number> = 1; x")]
-    [InlineData("type Id<T> = T; let x = 1; let y: Id<number> = x; y")]
-    [InlineData("type Const<A, B> = A; let x: Const<number, string> = 1")]
-    [InlineData("type Id<T> = T; type NumId = Id<number>; type X = NumId; let x: X = 1")]
+    [InlineData("type Id<T> = T; let x: Id::<number> = 1")]
+    [InlineData("type Id<T> = T; type X = Id::<number>; let x: X = 1")]
+    [InlineData("type Id<T> = T; let x: Id::<number> = 1; x")]
+    [InlineData("type Id<T> = T; let x = 1; let y: Id::<number> = x; y")]
+    [InlineData("type Const<A, B> = A; let x: Const::<number, string> = 1")]
+    [InlineData("type Id<T> = T; type NumId = Id::<number>; type X = NumId; let x: X = 1")]
     public void Checks_TypeAlias_Resolution(string source)
     {
         var narrowType = Utility.GetLastStatementType(source);

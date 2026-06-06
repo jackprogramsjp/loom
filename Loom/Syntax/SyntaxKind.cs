@@ -57,6 +57,8 @@ public enum SyntaxKind : ushort
     Comma,
     Dot,
     DotDot,
+    ColonColonLArrow,
+    Arrow,
 
     NumberLiteral,
     StringLiteral,
@@ -69,6 +71,9 @@ public enum SyntaxKind : ushort
     TypeKeyword,
     InterfaceKeyword,
     FnKeyword,
+    ReturnKeyword,
+    ContinueKeyword,
+    BreakKeyword,
     EventKeyword,
     EnumKeyword,
     EveryKeyword,

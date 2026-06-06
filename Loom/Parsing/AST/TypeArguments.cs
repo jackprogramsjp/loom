@@ -2,12 +2,12 @@ using Loom.Syntax;
 
 namespace Loom.Parsing.AST;
 
-public class TypeArguments(Token leftArrow, Token rightArrow, List<TypeExpression> arguments)
-    : Node([leftArrow, ..arguments.SelectMany(p => p.Tokens), rightArrow], arguments)
+public class TypeArguments(Token colonColonLeftArrow, Token rightArrow, List<TypeExpression> argumentsList)
+    : Node([colonColonLeftArrow, ..argumentsList.SelectMany(p => p.Tokens), rightArrow], argumentsList)
 {
-    public Token LeftArrow { get; } = leftArrow;
+    public Token ColonColonLeftArrow { get; } = colonColonLeftArrow;
     public Token RightArrow { get; } = rightArrow;
-    public List<TypeExpression> Arguments { get; } = arguments;
+    public List<TypeExpression> ArgumentsList { get; } = argumentsList;
     
     public override T Accept<T>(Visitor<T> visitor) => visitor.VisitTypeArguments(this);
 }

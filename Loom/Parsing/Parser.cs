@@ -50,14 +50,49 @@ public class Parser(LexerResult lexerResult)
 
     private Statement ParseStatement()
     {
+        if (Match(out var fnKeyword, SyntaxKind.FnKeyword))
+            return ParseFunctionDeclaration(fnKeyword);
+
         if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
             return ParseVariableDeclaration(variableKeyword);
 
         if (Match(out var typeKeyword, SyntaxKind.TypeKeyword))
             return ParseTypeAlias(typeKeyword);
 
+        if (Match(out var returnKeyword, SyntaxKind.ReturnKeyword))
+            return new Return(returnKeyword, ParseExpression());
+
         var expression = ParseExpression();
         return new ExpressionStatement(expression);
+    }
+
+    private Statement ParseFunctionDeclaration(Token keyword)
+    {
+        var name = ExpectIdentifier();
+        var typeParameters = ParseTypeParameters();
+        var parameters = ParseParameters();
+        var returnType = ParseColonTypeClause();
+
+        Statement body;
+        if (Match(out var leftBrace, SyntaxKind.LBrace))
+            body = ParseBlock(leftBrace);
+        else if (Match(out var arrow, SyntaxKind.Arrow))
+            body = new ExpressionBody(arrow, ParseExpression());
+        else
+            body = new NullStatement(CurrentOrLast());
+        
+        if (body is not NullStatement { Token: { } token })
+            return new FunctionDeclaration(
+                keyword,
+                name,
+                typeParameters,
+                parameters,
+                returnType,
+                body
+            );
+
+        _diagnostics.Error(token, InternalCodes.ExpectedFunctionBody, $"Expected function body, got {SafeTokenText(token)}.");
+        return new NullStatement(token);
     }
 
     private TypeAlias ParseTypeAlias(Token keyword)
@@ -70,45 +105,50 @@ public class Parser(LexerResult lexerResult)
         return new TypeAlias(keyword, name, typeParameters, equalsTypeClause);
     }
 
-    private TypeParameters? ParseTypeParameters()
-    {
-        if (!Match(out var leftArrow, SyntaxKind.LArrow))
-            return null;
-
-        var parameters = ParseDelimited(ParseTypeParameter);
-        var rightArrow = Expect(SyntaxKind.RArrow);
-        return new TypeParameters(leftArrow, rightArrow, parameters);
-    }
-
-    private TypeParameter ParseTypeParameter()
-    {
-        var name = ExpectIdentifier("type parameter name");
-        var equalsTypeClause = ParseEqualsTypeClause();
-        return new TypeParameter(name, equalsTypeClause);
-    }
-
-    private EqualsTypeClause? ParseEqualsTypeClause() => Match(out var equals, SyntaxKind.Equals) ? new EqualsTypeClause(equals, ParseType()) : null;
-
     private VariableDeclaration ParseVariableDeclaration(Token keyword)
     {
         var name = ExpectIdentifier();
-        ColonTypeClause? colonTypeClause = null;
-        EqualsValueClause? equalsValueClause = null;
-        if (Match(out var colon, SyntaxKind.Colon))
-        {
-            var type = ParseType();
-            colonTypeClause = new ColonTypeClause(colon, type);
-        }
-
-        if (Match(out var equals, SyntaxKind.Equals))
-        {
-            var initializer = ParseExpression();
-            equalsValueClause = new EqualsValueClause(equals, initializer);
-        }
-
+        var colonTypeClause = ParseColonTypeClause();
+        var equalsValueClause = ParseEqualsValueClause();
         return new VariableDeclaration(keyword, name, colonTypeClause, equalsValueClause);
     }
 
+    private Parameters? ParseParameters()
+    {
+        if (!Match(out var leftParen, SyntaxKind.LParen))
+            return null;
+
+        List<Parameter> parameters = [];
+        if (!Match(SyntaxKind.RParen))
+        {
+            parameters = ParseDelimited(ParseParameter);
+            Expect(SyntaxKind.RParen);
+        }
+        
+        return new Parameters(leftParen, Last(), parameters);
+    }
+
+    private Parameter ParseParameter()
+    {
+        var name = ExpectIdentifier("parameter name");
+        var colonTypeClause = ParseColonTypeClause();
+        var equalsValueClause = ParseEqualsValueClause();
+        return new Parameter(name, colonTypeClause, equalsValueClause);
+    }
+
+    private Block ParseBlock(Token leftBrace)
+    {
+        var statements = new List<Statement>();
+        while (!Match(SyntaxKind.RBrace))
+            statements.Add(ParseStatement());
+
+        var rightBrace = Last();
+        return new Block(leftBrace, rightBrace, statements);
+    }
+
+    private EqualsValueClause? ParseEqualsValueClause() => Match(out var equals, SyntaxKind.Equals) ? new EqualsValueClause(equals, ParseExpression()) : null;
+    private ColonTypeClause? ParseColonTypeClause() => Match(out var colon, SyntaxKind.Colon) ? new ColonTypeClause(colon, ParseType()) : null;
+    private EqualsTypeClause? ParseEqualsTypeClause() => Match(out var equals, SyntaxKind.Equals) ? new EqualsTypeClause(equals, ParseType()) : null;
     private Expression ParseExpression() => ParseBinaryLevel(0);
 
     private Expression ParseBinaryLevel(int level)
@@ -139,7 +179,29 @@ public class Parser(LexerResult lexerResult)
     private Expression ParseUnary() =>
         Match(out var op, SyntaxFacts.IsUnaryOperator)
             ? new UnaryOperator(op, ParseUnary())
-            : ParsePrimary();
+            : ParseInvocation();
+
+    private Expression ParseInvocation()
+    {
+        var expression = ParsePrimary();
+        if (IsEof() || Current() is not { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
+            return expression;
+
+        var typeArguments = ParseTypeArguments();
+        var leftParen = Expect(SyntaxKind.LParen);
+        var arguments = ParseArguments(leftParen);
+        return new Invocation(expression, typeArguments, arguments);
+    }
+
+    private Arguments ParseArguments(Token leftParen)
+    {
+        if (Match(out var matchedRightParen, SyntaxKind.RParen))
+            return new Arguments(leftParen, matchedRightParen, []);
+
+        var argumentList = ParseDelimited(ParseExpression);
+        var rightParen = Expect(SyntaxKind.RParen);
+        return new Arguments(leftParen, rightParen, argumentList);
+    }
 
     private Expression ParsePrimary()
     {
@@ -160,10 +222,10 @@ public class Parser(LexerResult lexerResult)
         if (Match(out var token, SyntaxFacts.IsLiteral))
             return new Literal(token, LiteralUtility.ResolveValue(token));
 
-        var last = Last();
-        _diagnostics.Error(last.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
+        var currentOrLast = CurrentOrLast();
+        _diagnostics.Error(currentOrLast.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
         _position++;
-        return new NullExpression(last);
+        return new NullExpression(currentOrLast);
     }
 
     private TypeExpression ParseType() => ParseUnionType();
@@ -193,7 +255,7 @@ public class Parser(LexerResult lexerResult)
 
             return new ParenthesizedType(leftParen, rightParen, type);
         }
-        
+
         if (Match(out var token, SyntaxFacts.IsLiteral))
             return new LiteralType(token, LiteralUtility.ResolveValue(token));
 
@@ -221,9 +283,26 @@ public class Parser(LexerResult lexerResult)
         return separators.Count > 0 ? create(separators, types) : types[0];
     }
 
-    private TypeArguments? ParseTypeArguments()
+    private TypeParameters? ParseTypeParameters()
     {
         if (!Match(out var leftArrow, SyntaxKind.LArrow))
+            return null;
+
+        var parameters = ParseDelimited(ParseTypeParameter);
+        var rightArrow = Expect(SyntaxKind.RArrow);
+        return new TypeParameters(leftArrow, rightArrow, parameters);
+    }
+
+    private TypeParameter ParseTypeParameter()
+    {
+        var name = ExpectIdentifier("type parameter name");
+        var equalsTypeClause = ParseEqualsTypeClause();
+        return new TypeParameter(name, equalsTypeClause);
+    }
+
+    private TypeArguments? ParseTypeArguments()
+    {
+        if (!Match(out var leftArrow, SyntaxKind.ColonColonLArrow))
             return null;
 
         var arguments = ParseDelimited(ParseType);
@@ -243,6 +322,7 @@ public class Parser(LexerResult lexerResult)
 
     private bool Match([MaybeNullWhen(false)] out Token token, params SyntaxKind[] kinds) => Match(out token, kinds.Contains);
     private bool Match(SyntaxKind kind) => Match(out _, kind);
+    private bool Match(params SyntaxKind[] kinds) => Match(out _, kinds);
     private bool Match([MaybeNullWhen(false)] out Token token, SyntaxKind kind) => Match(out token, otherKind => otherKind == kind);
 
     private bool Match([MaybeNullWhen(false)] out Token token, Predicate<SyntaxKind> predicate)
@@ -295,6 +375,7 @@ public class Parser(LexerResult lexerResult)
     }
 
     private Token Current() => Peek(0);
+    private Token CurrentOrLast() => !IsEof() ? Current() : Last();
     private Token Last() => Peek(-1);
     private Token Peek(int offset) => lexerResult.Tokens[_position + offset];
     private bool IsEof() => _position >= lexerResult.Tokens.Count;

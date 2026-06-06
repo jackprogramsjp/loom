@@ -3,6 +3,7 @@ using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
 using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
+using OptionalType = Loom.TypeChecking.Types.OptionalType;
 using Type = Loom.TypeChecking.Types.Type;
 using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
 using UnionType = Loom.TypeChecking.Types.UnionType;
@@ -19,6 +20,23 @@ public class TypeSolver(DiagnosticBag diagnostics)
     private readonly Dictionary<int, Type> _substitutions = [];
     private readonly Dictionary<TypeParameter, TypeVariable> _parameterVariables = [];
     private int _nextVariableId;
+
+    public static Type Transform(Type type, Converter<Type, Type> fn, Type? defaultValue = null) =>
+        TypeSimplifier.Simplify(type switch
+        {
+            InstantiatedType instantiatedType => new InstantiatedType(
+                instantiatedType.Generic,
+                instantiatedType.Arguments.ConvertAll(fn)
+            ),
+            IntersectionType intersectionType => new IntersectionType(intersectionType.Types.ConvertAll(fn)),
+            UnionType unionType => new UnionType(unionType.Types.ConvertAll(fn)),
+            FunctionType functionType => new FunctionType(
+                functionType.TypeParameters,
+                functionType.ParameterTypes.ConvertAll(fn),
+                fn(functionType.ReturnType)
+            ),
+            _ => defaultValue ?? type
+        });
 
     public void SetType(Node node, Type type) => _nodeTypes[node.Id] = type;
 
@@ -68,6 +86,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
             (InstantiatedType i1, InstantiatedType i2) => UnifyInstantiatedPair(i1, i2, span, out updated),
             (InstantiatedType i, GenericType g) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
             (GenericType g, InstantiatedType i) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
+            (FunctionType f1, FunctionType f2) => UnifyFunctionTypes(f1, f2, span, out updated),
 
             _ when a.IsAssignableTo(b) => true,
             _ => ReportTypeMismatch(a, b, span)
@@ -116,7 +135,8 @@ public class TypeSolver(DiagnosticBag diagnostics)
         return success;
     }
 
-    private bool UnifyInstantiatedWithGeneric(InstantiatedType instantiated,
+    private bool UnifyInstantiatedWithGeneric(
+        InstantiatedType instantiated,
         GenericType generic,
         LocationSpan span,
         out bool updated)
@@ -138,6 +158,36 @@ public class TypeSolver(DiagnosticBag diagnostics)
         return success;
     }
 
+    private bool UnifyFunctionTypes(FunctionType a, FunctionType b, LocationSpan span, out bool updated)
+    {
+        updated = false;
+        if (a.TypeParameters.Count != b.TypeParameters.Count || a.ParameterTypes.Count != b.ParameterTypes.Count)
+            return ReportTypeMismatch(a, b, span);
+
+        var freshVars = a.TypeParameters.Select(_ => CreateTypeVariable()).ToList();
+        var aMapping = a.TypeParameters.Zip(freshVars).ToDictionary(p => p.First, p => p.Second);
+        var bMapping = b.TypeParameters.Zip(freshVars).ToDictionary(p => p.First, p => p.Second);
+        var aParamTypes = a.ParameterTypes.ConvertAll(t => SubstituteTypeParameters(aMapping, t));
+        var bParamTypes = b.ParameterTypes.ConvertAll(t => SubstituteTypeParameters(bMapping, t));
+        var aReturnType = SubstituteTypeParameters(aMapping, a.ReturnType);
+        var bReturnType = SubstituteTypeParameters(bMapping, b.ReturnType);
+        var success = true;
+        for (var i = 0; i < aParamTypes.Count; i++)
+        {
+            if (!TryUnify(aParamTypes[i], bParamTypes[i], span, out var paramUpdated))
+                success = false;
+            else if (paramUpdated)
+                updated = true;
+        }
+
+        if (!TryUnify(aReturnType, bReturnType, span, out var returnUpdated))
+            success = false;
+        else if (returnUpdated)
+            updated = true;
+
+        return success;
+    }
+
     private static bool OccursIn(TypeVariable variable, Type type) =>
         type switch
         {
@@ -145,6 +195,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
             InstantiatedType inst => inst.Arguments.Any(a => OccursIn(variable, a)),
             IntersectionType inter => inter.Types.Any(t => OccursIn(variable, t)),
             UnionType union => union.Types.Any(t => OccursIn(variable, t)),
+            FunctionType fn => fn.ParameterTypes.Any(t => OccursIn(variable, t)) || OccursIn(variable, fn.ReturnType),
             _ => false
         };
 
@@ -166,6 +217,13 @@ public class TypeSolver(DiagnosticBag diagnostics)
             _nodeTypes[nodeId] = Substitute(_nodeTypes[nodeId]);
     }
 
+    private static Type SubstituteTypeParameters(Dictionary<TypeParameter, TypeVariable> mapping, Type type) =>
+        type switch
+        {
+            TypeParameter typeParameter => mapping.TryGetValue(typeParameter, out var tv) ? tv : type,
+            _ => Transform(type, t => SubstituteTypeParameters(mapping, t))
+        };
+
     private Type Substitute(Type type)
     {
         var visited = new HashSet<int>();
@@ -180,6 +238,10 @@ public class TypeSolver(DiagnosticBag diagnostics)
             InstantiatedType inst => new InstantiatedType(inst.Generic, inst.Arguments.ConvertAll(Substitute)),
             IntersectionType inter => new IntersectionType(inter.Types.ConvertAll(Substitute)),
             UnionType union => new UnionType(union.Types.ConvertAll(Substitute)),
+            FunctionType fn => new FunctionType(
+                fn.TypeParameters,
+                fn.ParameterTypes.ConvertAll(Substitute),
+                Substitute(fn.ReturnType)),
             _ => type
         };
 

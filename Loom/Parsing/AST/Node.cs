@@ -18,7 +18,7 @@ public abstract class Node
         Id = new NodeId(Interlocked.Increment(ref _nextId));
         NodeId.Map.Add(Id, this);
 
-        Children = FilterChildren(children);
+        Children = SortChildren(children);
         Tokens = SortTokens(theseTokens);
         Span = span ?? DeriveSpan();
         foreach (var child in Children)
@@ -29,12 +29,13 @@ public abstract class Node
     public List<Node> Children { get; }
     public List<Token> Tokens { get; }
     public LocationSpan Span { get; }
-    public Node Parent { get; protected set; } = null!;
+    public Node Parent { get; private set; } = null!;
 
     public abstract T Accept<T>(Visitor<T> visitor);
     public override string ToString() => Span.GetText();
+    public List<Node> GetDescendants() => Children.SelectMany(c => c.Children).ToList();
 
-    private static List<Node> FilterChildren(IEnumerable<Node?> children) => children.Where(node => node != null).Cast<Node>().ToList();
+    private static List<Node> SortChildren(IEnumerable<Node?> children) => children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();
     private static List<Token> SortTokens(IEnumerable<Token?> tokens) =>
         tokens.Where(token => token != null).Cast<Token>().OrderBy(token => token.Span.Start.Position).ToList();
     

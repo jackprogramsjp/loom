@@ -41,11 +41,11 @@ local x = bit32.band(1, 2, 3)
 ##
 ```rs
 type Union<A, B> = A | B;
-let x: Id<bool, string> = false;
+let x: Union::<bool, string> = false;
 ```
 ```luau
 type Union<A, B> = A | B
-const x: Id<boolean, string> = false
+const x: Union<boolean, string> = false
 ```
 ##
 ```rs

@@ -11,6 +11,7 @@ public static class TypeSimplifier
             UnionType union => SimplifyUnion(union),
             IntersectionType intersection => SimplifyIntersection(intersection),
             InstantiatedType instantiated => Simplify(instantiated.Expand()),
+            GenericType generic => Simplify(generic.Underlying),
             _ => type
         };
 

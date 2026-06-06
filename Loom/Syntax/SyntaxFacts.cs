@@ -12,6 +12,9 @@ public static class SyntaxFacts
             new("type", SyntaxKind.TypeKeyword),
             new("interface", SyntaxKind.InterfaceKeyword),
             new("fn", SyntaxKind.FnKeyword),
+            new("return", SyntaxKind.ReturnKeyword),
+            new("continue", SyntaxKind.ContinueKeyword),
+            new("break", SyntaxKind.BreakKeyword),
             new("event", SyntaxKind.EventKeyword),
             new("enum", SyntaxKind.EnumKeyword),
             new("every", SyntaxKind.EveryKeyword),
@@ -76,6 +79,8 @@ public static class SyntaxFacts
             new(",", SyntaxKind.Comma),
             new(".", SyntaxKind.Dot),
             new("..", SyntaxKind.DotDot),
+            new("->", SyntaxKind.Arrow),
+            new("::<", SyntaxKind.ColonColonLArrow),
             new(";", SyntaxKind.Semicolon)
         ]
     );

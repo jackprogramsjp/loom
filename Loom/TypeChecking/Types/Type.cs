@@ -9,7 +9,7 @@ public abstract class Type
     public static bool IsNever(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Never };
     public static bool IsDefined(Type type) => !IsNone(type);
     public static bool IsNone(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None };
-    
+
     public Type Widen() =>
         this switch
         {
@@ -26,4 +26,8 @@ public abstract class Type
             _ => false
         };
     }
+
+    protected static bool ListEquals<T>(List<T> list, List<T> otherList) where T : Type =>
+        list.Count == otherList.Count
+        && list.All(t => otherList.Any(u => u.Equals(t)));
 }

@@ -9,9 +9,11 @@ using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Parsing.AST.Identifier;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
+using Parameter = Loom.Parsing.AST.Parameter;
 using Parenthesized = Loom.Parsing.AST.Parenthesized;
 using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
+using Return = Loom.Parsing.AST.Return;
 using TypeAlias = Loom.Parsing.AST.TypeAlias;
 using TypeName = Loom.Parsing.AST.TypeName;
 using TypeParameter = Loom.Parsing.AST.TypeParameter;
@@ -53,8 +55,23 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     public override LuauNode Visit(Node node) => node.Accept(this);
-
     public override LuauTree VisitTree(Tree tree) => new(GenerateStatements(tree.Statements));
+    public override LuauNode VisitReturn(Return @return) => new Luau.AST.Return(Visit(@return.Expression));
+
+    public override LuauNode VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
+    {
+        var typeParameters = MaybeVisit<Luau.AST.TypeParameters>(functionDeclaration.TypeParameters);
+        var parameters = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit<Luau.AST.Parameter>) ?? [];
+        var returnType = MaybeVisit<LuauType>(functionDeclaration.ReturnType);
+        var statements = functionDeclaration.Body switch
+        {
+            ExpressionBody body => [new Luau.AST.Return(Visit(body.Expression))],
+            Block block => GenerateStatements(block.Statements),
+            _ => []
+        };
+
+        return new Function(functionDeclaration.Name.Text, typeParameters, parameters, returnType, statements);
+    }
 
     public override LuauNode VisitTypeAlias(TypeAlias typeAlias)
     {
@@ -77,6 +94,8 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             : new LocalVariable(name, type, initializer);
     }
 
+    public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
+
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var expression = Visit(expressionStatement.Expression);
@@ -84,6 +103,8 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             ? new Luau.AST.ExpressionStatement(expression)
             : new ConstVariable("_", null, expression);
     }
+
+    public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
@@ -160,16 +181,15 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitTypeName(TypeName typeName)
     {
-        var typeArguments = typeName.TypeArguments?.Arguments.ConvertAll(Visit);
+        var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
         return new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
     }
 
     public override LuauNode VisitTypeParameters(TypeParameters typeParameters) =>
-        new Luau.AST.TypeParameters(typeParameters.Parameters.ConvertAll(Visit).Cast<Luau.AST.TypeParameter>().ToList());
+        new Luau.AST.TypeParameters(typeParameters.ParameterList.ConvertAll(Visit).Cast<Luau.AST.TypeParameter>().ToList());
 
     public override LuauNode VisitTypeParameter(TypeParameter typeParameter) =>
         new Luau.AST.TypeParameter(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
-
 
     public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapLuau.PrimitiveTypeKind(primitiveType.Kind));
 
@@ -247,14 +267,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     private void Prereq(params LuauStatement[] statements) => _scope.PrereqStatements.AddRange(statements);
-    
+
     private static bool IsUnorphanableExpression(LuauExpression expression) =>
         expression is Call
         || expression is Luau.AST.BinaryOperator binaryOperator && binaryOperator.Operator.EndsWith('=');
-
-    private T Visit<T>(Node node)
-        where T : LuauNode =>
-        (T)Visit(node);
 
     private LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
     private LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);

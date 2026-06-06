@@ -1,1 +1,3 @@
-'abc' + 'def'
+mut x: number? = 69;
+let y = x ?? "abc";
+y

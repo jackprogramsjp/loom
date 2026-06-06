@@ -5,12 +5,13 @@ public static class InternalCodes
     public const string Unknown = "L???";
     public const string NotImplemented = "L000";
     public const string CompilerError = "L001";
-    
+
     public const string UnexpectedCharacter = "L101";
 
     public const string UnexpectedToken = "L201";
     public const string UnexpectedEof = "L202";
     public const string InvalidAssignmentTarget = "L203";
+    public const string ExpectedFunctionBody = "L204";
 
     public const string CannotFindName = "L301";
     public const string DuplicateName = "L302";
@@ -24,4 +25,8 @@ public static class InternalCodes
     public const string InvalidUnaryOp = "L310";
     public const string InvalidBinaryOp = "L311";
     public const string AssignToImmutable = "L312";
+    public const string MustHaveDefaultOrType = "L313";
+    public const string InvalidInvocation = "L314";
+    public const string TypeConstraintViolation = "L315";
+    public const string InvocationArity = "L316";
 }

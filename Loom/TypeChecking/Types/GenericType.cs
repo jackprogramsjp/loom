@@ -2,9 +2,9 @@ using Loom.Parsing.AST;
 
 namespace Loom.TypeChecking.Types;
 
-public class GenericType(TypeDeclaration declaration, List<TypeParameter> parameters, Type underlying) : Type
+public class GenericType(GenericNamedDeclaration declaration, List<TypeParameter> parameters, Type underlying) : Type
 {
-    public TypeDeclaration Declaration { get; } = declaration;
+    public GenericNamedDeclaration Declaration { get; } = declaration;
     public List<TypeParameter> Parameters { get; } = parameters;
     public Type Underlying { get; } = underlying;
 

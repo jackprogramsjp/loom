@@ -41,6 +41,43 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool Visit(Node node) => node.Accept(this);
 
+    public override bool VisitBlock(Block block)
+    {
+        PushScope();
+        var result = base.VisitBlock(block);
+        PopScope();
+        return result;
+    }
+
+    public override bool VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
+    {
+        var scope = CurrentScope();
+        var name = functionDeclaration.Name.Text;
+        if (scope.VariableLookup.ContainsKey(name))
+        {
+            _diagnostics.Error(functionDeclaration.Span, InternalCodes.DuplicateName, $"Function '{name}' is already declared in this scope.");
+            return false;
+        }
+
+        var symbol = new Symbol(functionDeclaration, SymbolKind.Function, name);
+        DeclareSymbol(symbol);
+        scope.InitializationState[name] = true;
+        
+        PushScope();
+        if (functionDeclaration.TypeParameters != null)
+            Visit(functionDeclaration.TypeParameters);
+
+        if (functionDeclaration.Parameters != null)
+            Visit(functionDeclaration.Parameters);
+
+        if (functionDeclaration.ReturnType != null)
+            Visit(functionDeclaration.ReturnType);
+        
+        Visit(functionDeclaration.Body);
+        PopScope();
+        return true;
+    }
+
     public override bool VisitTypeAlias(TypeAlias typeAlias)
     {
         var scope = CurrentScope();
@@ -53,7 +90,6 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         var symbol = new Symbol(typeAlias, SymbolKind.Type, name);
         DeclareSymbol(symbol);
-
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();
@@ -81,11 +117,28 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         }
         else if (!mutable)
         {
-            _diagnostics.Error(variableDeclaration.Span, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
+            _diagnostics.Error(variableDeclaration, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
             return false;
         }
 
         return true;
+    }
+
+    public override bool VisitParameters(Parameters parameters) => parameters.ParameterList.All(Visit);
+
+    public override bool VisitParameter(Parameter parameter)
+    {
+        var scope = CurrentScope();
+        var name = parameter.Name.Text;
+        var symbol = new Symbol(parameter, SymbolKind.Parameter, name);
+        DeclareSymbol(symbol);
+        scope.InitializationState[name] = true;
+
+        if (parameter.EqualsValueClause != null || parameter.ColonTypeClause != null)
+            return base.VisitParameter(parameter);
+
+        _diagnostics.Error(parameter, InternalCodes.MustHaveDefaultOrType, "Parameter must have a declared type or default value to infer from.");
+        return false;
     }
 
     public override bool VisitLiteral(Literal literal) => true;
@@ -117,7 +170,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return false;
         }
 
-        if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter && !IsSymbolInitialized(symbol))
+        if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter or SymbolKind.Function && !IsSymbolInitialized(symbol))
         {
             _diagnostics.Error(identifier, InternalCodes.UseOfUnassigned, $"Use of unassigned variable '{name}'.");
             return false;
@@ -159,16 +212,15 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return typeParameter.EqualsTypeClause == null || Visit(typeParameter.EqualsTypeClause);
     }
 
-
     private void DeclareSymbol(Symbol symbol)
     {
         var scope = CurrentScope();
         var lookup = symbol.Kind == SymbolKind.Type ? scope.TypeLookup : scope.VariableLookup;
         var nodeId = symbol.Declaration.Id;
-        lookup.Add(symbol.Name, symbol);
-        scope.Declarations.Add(nodeId, symbol);
-        scope.InitializationState.Add(symbol.Name, false);
-        _allDeclarations.Add(nodeId, symbol);
+        lookup[symbol.Name] = symbol;
+        scope.Declarations[nodeId] = symbol;
+        scope.InitializationState[symbol.Name] = false;
+        _allDeclarations[nodeId] = symbol;
         _scopeNodes.Peek().Symbols.Add(symbol);
         _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
     }
@@ -206,6 +258,6 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         _scopes.Push(scope);
         return scope;
     }
-    
+
     protected override bool CombineResults(IEnumerable<bool> results) => results.All(t => t);
 }

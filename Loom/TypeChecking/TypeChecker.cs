@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
@@ -41,8 +42,19 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var type = base.VisitExpressionStatement(expressionStatement);
-        _diagnostics.Info(expressionStatement.Span, $"Solved type '{TypeSimplifier.Simplify(type)}' for expression: {expressionStatement.Expression}");
+        _diagnostics.Info(expressionStatement, $"Solved type '{TypeSimplifier.Simplify(type)}' for expression");
         return BindType(expressionStatement, type);
+    }
+
+    public override Type VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
+    {
+        var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(Visit<Types.TypeParameter>) ?? [];
+        var parameterTypes = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit) ?? [];
+        var returnType = GetReturnType(functionDeclaration);
+        var functionType = new FunctionType(typeParameters, parameterTypes, returnType);
+
+        _diagnostics.Info(functionDeclaration, $"Solved type '{TypeSimplifier.Simplify(functionType)}' for function");
+        return BindType(functionDeclaration, functionType);
     }
 
     public override Type VisitTypeAlias(TypeAlias typeAlias)
@@ -53,7 +65,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return BindType(typeAlias, TypeSimplifier.Simplify(type));
         }
 
-        var parameters = typeAlias.TypeParameters.Parameters.ConvertAll(Visit<Types.TypeParameter>);
+        var parameters = typeAlias.TypeParameters.ParameterList.ConvertAll(Visit<Types.TypeParameter>);
         var underlyingType = Visit(typeAlias.EqualsTypeClause);
         var genericType = new GenericType(typeAlias, parameters, underlyingType);
         return BindType(typeAlias, genericType);
@@ -93,6 +105,116 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(variableDeclaration, TypeSimplifier.Simplify(finalType));
     }
 
+    public override Type VisitParameter(Parameter parameter)
+    {
+        var declaredType = MaybeVisit(parameter.ColonTypeClause);
+        var initializerType = MaybeVisit(parameter.EqualsValueClause);
+        if (initializerType != null && parameter.EqualsValueClause != null)
+            semanticModel.TypeSolver.AddConstraint(initializerType, declaredType!, parameter.EqualsValueClause.Value);
+
+        return BindType(parameter, declaredType ?? initializerType!);
+    }
+
+    public override Type VisitInvocation(Invocation invocation)
+    {
+        var type = Visit(invocation.Expression);
+        if (type is not FunctionType functionType)
+        {
+            _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, $"Cannot call value of type '{type}'");
+            return BindType(invocation, Types.PrimitiveType.Never);
+        }
+
+        if (functionType.TypeParameters.Count == 0)
+            return functionType.ReturnType;
+
+        var argumentTypes = invocation.Arguments.ArgumentList.ConvertAll(Visit);
+        var substitution = new Dictionary<Types.TypeParameter, Type>();
+        if (invocation.TypeArguments != null)
+        {
+            var explicitArgs = invocation.TypeArguments.ArgumentsList.ConvertAll(Visit);
+            if (explicitArgs.Count != functionType.TypeParameters.Count)
+            {
+                _diagnostics.Error(
+                    invocation,
+                    InternalCodes.GenericArity,
+                    $"Function expects {functionType.TypeParameters.Count} type argument(s), but {explicitArgs.Count} were provided."
+                );
+
+                return BindType(invocation, Types.PrimitiveType.Never);
+            }
+
+            for (var i = 0; i < explicitArgs.Count; i++)
+                substitution[functionType.TypeParameters[i]] = explicitArgs[i];
+        }
+        else
+        {
+            for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
+            {
+                var paramType = functionType.ParameterTypes[i];
+                var argType = argumentTypes[i];
+                if (paramType is not Types.TypeParameter tp) continue;
+
+                if (substitution.TryGetValue(tp, out var existing))
+                {
+                    if (!existing.Equals(argType))
+                    {
+                        _diagnostics.Warn(
+                            invocation,
+                            InternalCodes.TypeMismatch,
+                            $"Inferred type '{argType}' for parameter '{tp.Name}' conflicts with previous '{existing}'."
+                        );
+                    }
+                }
+                else
+                {
+                    substitution[tp] = argType;
+                }
+
+                // TODO: nested type parameters, recursive inference pass
+            }
+
+            foreach (var tp in functionType.TypeParameters.Where(tp => !substitution.ContainsKey(tp)))
+            {
+                substitution[tp] = Types.PrimitiveType.Never;
+            }
+        }
+
+        var substitutedParameterTypes = functionType.ParameterTypes
+            .Select(solveTypeParameters)
+            .ToList();
+
+        var substitutedReturnType = solveTypeParameters(functionType.ReturnType);
+        var instantiated = new FunctionType(
+            typeParameters: [],
+            parameterTypes: substitutedParameterTypes,
+            returnType: substitutedReturnType
+        );
+
+        for (var i = 0; i < Math.Min(argumentTypes.Count, substitutedParameterTypes.Count); i++)
+        {
+            semanticModel.TypeSolver.AddConstraint(
+                argumentTypes[i],
+                substitutedParameterTypes[i],
+                invocation.Arguments.ArgumentList[i]
+            );
+        }
+
+        return BindType(invocation, instantiated.ReturnType);
+
+        Type solveTypeParameters(Type forType) =>
+            canSubstitute(forType, out var subst)
+                ? subst
+                : TypeSolver.Transform(forType, substituteTypeParameter);
+
+        Type substituteTypeParameter(Type t) => canSubstitute(t, out var subst) ? subst : t;
+
+        bool canSubstitute(Type t, [MaybeNullWhen(false)] out Type subst)
+        {
+            subst = null;
+            return t is Types.TypeParameter tp && substitution.TryGetValue(tp, out subst);
+        }
+    }
+
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
         var targetType = Visit(assignmentOperator.Left);
@@ -123,7 +245,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             hint
         );
 
-        return Types.PrimitiveType.Never;
+        return BindType(binaryOperator, Types.PrimitiveType.Never);
     }
 
     public override Type VisitUnaryOperator(UnaryOperator unaryOperator)
@@ -136,7 +258,8 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var suggestion = UnaryOperatorBinder.GetSuggestion(unaryOperator, operandType);
         var hint = FormatUnaryHint(unaryOperator, operandType, suggestion);
         _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for '{unaryOperator.Operator.Text}{operandType.Widen()}'", hint);
-        return Types.PrimitiveType.Never;
+
+        return BindType(unaryOperator, Types.PrimitiveType.Never);
     }
 
     public override Type VisitLiteral(Literal literal) => BindType(literal, new Types.LiteralType(literal.Value));
@@ -150,7 +273,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return BindType(identifier, type);
         }
 
-        _diagnostics.Error(identifier.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
+        _diagnostics.Error(identifier, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
         return BindType(identifier, Types.PrimitiveType.Never);
     }
 
@@ -171,13 +294,13 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 return BindType(typeName, declaredType);
 
             if (declaredType is GenericType genericType)
-                return InstantiateGenericType(typeName, genericType);
+                return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);
 
-            _diagnostics.Error(typeName.Span, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
+            _diagnostics.Error(typeName, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
             return BindType(typeName, Types.PrimitiveType.Never);
         }
 
-        _diagnostics.Error(typeName.Span, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of type '{typeName.Name.Text}'.");
+        _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of type '{typeName.Name.Text}'.");
         return BindType(typeName, Types.PrimitiveType.Never);
     }
 
@@ -190,25 +313,47 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(typeParameter, parameter);
     }
 
-    private Type InstantiateGenericType(TypeName typeName, GenericType genericType)
+    private Type GetReturnType(FunctionDeclaration functionDeclaration)
     {
-        var arguments = typeName.TypeArguments!.Arguments.ConvertAll(Visit);
-        if (arguments.Count != genericType.Parameters.Count)
+        if (functionDeclaration.ReturnType != null)
+            return Visit(functionDeclaration.ReturnType);
+
+        // TODO: flow analysis
+        var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
+            ? [Visit(body)]
+            : functionDeclaration.Body.Children.FindAll(n => n is not FunctionDeclaration)
+                .SelectMany(n => n.Children)
+                .Where(n => n is Return)
+                .Cast<Return>()
+                .Select(Visit)
+                .ToList();
+
+        return TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
+    }
+
+    private Type InstantiateGenericType(Node node, TypeArguments typeArguments, GenericType genericType)
+    {
+        var arguments = typeArguments.ArgumentsList.ConvertAll(Visit);
+        var minimumParameterCount = genericType.Parameters.Count(p => p.DefaultType == null);
+        var maximumParameterCount = genericType.Parameters.Count;
+        var arityDisplay = minimumParameterCount == maximumParameterCount ? minimumParameterCount.ToString() : $"{minimumParameterCount}-{maximumParameterCount}";
+        if (arguments.Count != minimumParameterCount)
         {
             _diagnostics.Error(
-                typeName.Span,
+                node,
                 InternalCodes.GenericArity,
-                $"Type '{typeName.Name.Text}' expects {genericType.Parameters.Count} type argument(s), but {arguments.Count} were provided."
+                $"Type '{(node is FunctionDeclaration ? genericType.Underlying : genericType)}' expects {arityDisplay} type argument{(maximumParameterCount > 1 ? "s" : "")}, but {arguments.Count} were provided."
             );
 
-            return BindType(typeName, Types.PrimitiveType.Never);
+            return BindType(node, Types.PrimitiveType.Never);
         }
 
         var instantiated = new InstantiatedType(genericType, arguments);
-        return BindType(typeName, instantiated);
+        return BindType(node, instantiated);
     }
 
-    private Type BindType(Node node, Type type)
+    private T BindType<T>(Node node, T type)
+        where T : Type
     {
         semanticModel.TypeSolver.SetType(node, type);
         return type;
@@ -242,8 +387,4 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             ? $"did you mean '{suggestedOp}{op.Operand}'?"
             : $"operand should be '{suggestion.OperandType}', not '{operand}'";
     }
-
-    private T Visit<T>(Node node)
-        where T : Type =>
-        (T)Visit(node);
 }

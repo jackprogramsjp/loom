@@ -1,0 +1,8 @@
+namespace Loom.Luau.AST;
+
+public class Return(LuauExpression expression) : LuauStatement
+{
+    public LuauExpression Expression { get; } = expression;
+    
+    public override string Render(RenderState state) => $"return {Expression.Render(state)}";
+}

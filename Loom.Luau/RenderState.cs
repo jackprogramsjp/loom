@@ -4,7 +4,7 @@ namespace Loom.Luau;
 
 public class RenderState
 {
-    public static char Indent { get; set; } = '\t';
+    public static string Indent { get; set; } = "  ";
     public static char StringDelimiter { get; set; } = '"';
 
     private string _indent = "";
@@ -27,16 +27,17 @@ public class RenderState
             .Replace("\f", "\\f")
             .Replace("\v", "\\v");
 
-    public T Block<T>(Func<T> callback)
+    public string Block(Func<string> callback)
     {
         PushIndent();
         var result = callback();
         PopIndent();
+        
         return result;
     }
 
     private static string NewLine(string text) => text + '\n';
-    private string Indented(string text) => _indent + text;
+    private string Indented(string text) => string.Join('\n', text.Split('\n').Select(line => _indent + line));
     private void PushIndent() => _indent += Indent;
     private void PopIndent() => _indent = _indent[..^1];
 }

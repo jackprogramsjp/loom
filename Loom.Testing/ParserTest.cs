@@ -193,9 +193,9 @@ public class ParserTest
         Assert.Equal(SyntaxKind.TypeKeyword, alias.Keyword.Kind);
         Assert.Equal(SyntaxKind.Equals, alias.EqualsTypeClause.EqualsToken.Kind);
         Assert.NotNull(alias.TypeParameters);
-        Assert.Single(alias.TypeParameters.Parameters);
+        Assert.Single(alias.TypeParameters.ParameterList);
 
-        var param = alias.TypeParameters.Parameters.First();
+        var param = alias.TypeParameters.ParameterList.First();
         Assert.Equal("T", param.Name.Text);
         Assert.NotNull(param.EqualsTypeClause);
         
@@ -218,10 +218,10 @@ public class ParserTest
         Assert.Equal(SyntaxKind.TypeKeyword, alias.Keyword.Kind);
         Assert.Equal(SyntaxKind.Equals, alias.EqualsTypeClause.EqualsToken.Kind);
         Assert.NotNull(alias.TypeParameters);
-        Assert.Equal(2, alias.TypeParameters.Parameters.Count);
+        Assert.Equal(2, alias.TypeParameters.ParameterList.Count);
 
-        var a = alias.TypeParameters.Parameters.First();
-        var b = alias.TypeParameters.Parameters.Last();
+        var a = alias.TypeParameters.ParameterList.First();
+        var b = alias.TypeParameters.ParameterList.Last();
         Assert.Equal("A", a.Name.Text);
         Assert.Null(a.EqualsTypeClause);
         Assert.Equal("B", b.Name.Text);
