@@ -16,6 +16,7 @@ public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     public void Info(Node node, string code, string message) => Info(node.Span, code, message);
     public void Info(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Info, code, message, null);
     public void Warn(Node node, string code, string message, string? hint = null) => Warn(node.Span, code, message, hint);
+    public void Warn(Token token, string code, string message, string? hint = null) => Warn(token.Span, code, message, hint);
     public void Warn(LocationSpan span, string code, string message, string? hint = null) => Report(span, DiagnosticSeverity.Warn, code, message, hint);
     public void Error(Node node, string code, string message, string? hint = null) => Error(node.Span, code, message, hint);
     public void Error(Token token, string code, string message, string? hint = null) => Error(token.Span, code, message, hint);

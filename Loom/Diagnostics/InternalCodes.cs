@@ -27,6 +27,6 @@ public static class InternalCodes
     public const string AssignToImmutable = "L312";
     public const string MustHaveDefaultOrType = "L313";
     public const string InvalidInvocation = "L314";
-    public const string TypeConstraintViolation = "L315";
-    public const string InvocationArity = "L316";
+    public const string InvocationArity = "L315";
+    public const string RedundantCode = "L316";
 }

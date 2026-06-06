@@ -6,6 +6,7 @@ using Loom.Syntax;
 using Loom.TypeChecking.Types;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
+using OptionalType = Loom.Parsing.AST.OptionalType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 using TypeName = Loom.Parsing.AST.TypeName;
@@ -219,8 +220,10 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         var targetType = Visit(assignmentOperator.Left);
         var valueType = Visit(assignmentOperator.Right);
-        semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
+        if (assignmentOperator.Operator.Kind != SyntaxKind.Equals)
+            return base.VisitBinaryOperator(assignmentOperator);
 
+        semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
         return BindType(assignmentOperator, targetType);
     }
 
@@ -234,6 +237,20 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             semanticModel.TypeSolver.AddConstraint(leftType, rule.LeftType, binaryOperator.Left);
             semanticModel.TypeSolver.AddConstraint(rightType, rule.RightType, binaryOperator.Right);
             return rule.ReturnType;
+        }
+
+        if (binaryOperator.Operator.Kind is SyntaxKind.QuestionQuestion or SyntaxKind.QuestionQuestionEquals)
+        {
+            if (!Type.IsOptional(leftType))
+            {
+                _diagnostics.Warn(
+                    binaryOperator,
+                    InternalCodes.RedundantCode,
+                    $"Null coalescing has no effect since '{leftType}' is not optional."
+                );
+            }
+
+            return TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]));
         }
 
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
@@ -280,7 +297,9 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     public override Type VisitIntersectionType(IntersectionType intersectionType) =>
         BindType(intersectionType, new Types.IntersectionType(intersectionType.Types.ConvertAll(Visit)));
 
+
     public override Type VisitUnionType(UnionType unionType) => BindType(unionType, new Types.UnionType(unionType.Types.ConvertAll(Visit)));
+    public override Type VisitOptionalType(OptionalType optionalType) => new Types.OptionalType(Visit(optionalType.NonNullableType));
     public override Type VisitPrimitiveType(PrimitiveType primitiveType) => BindType(primitiveType, new Types.PrimitiveType(primitiveType.Kind));
     public override Type VisitLiteralType(LiteralType literalType) => BindType(literalType, new Types.LiteralType(literalType.Value));
 

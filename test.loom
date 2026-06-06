@@ -1,3 +1,4 @@
 mut x: number? = 69;
-let y = x ?? "abc";
+let foo = "foo";
+let y = foo ?? "abc";
 y
