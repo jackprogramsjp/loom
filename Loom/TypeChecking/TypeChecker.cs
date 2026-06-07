@@ -29,7 +29,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var diagnostics = DiagnosticBag.Concat([semanticModel.TypeSolver.Diagnostics, _diagnostics]);
         return new TypeCheckerResult(type, diagnostics);
     }
-    
+
     public void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
         _diagnostics.Error(
             node,
@@ -109,7 +109,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
             finalType = finalType.Widen();
-        
+
         return BindType(variableDeclaration, TypeSimplifier.Simplify(finalType));
     }
 
@@ -134,100 +134,19 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         var argumentTypes = invocation.Arguments.ArgumentList.ConvertAll(Visit);
         if (functionType.TypeParameters.Count == 0)
-        {
-            CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
-            AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
-            return BindType(invocation, functionType.ReturnType);
-        }
+            return BindNonGenericInvocation(invocation, argumentTypes, functionType);
 
-        var substitution = new Dictionary<Types.TypeParameter, Type>();
-        var inferredTypes = new Dictionary<Types.TypeParameter, Type>();
-        if (invocation.TypeArguments != null)
-        {
-            var explicitArguments = invocation.TypeArguments.ArgumentsList.ConvertAll(Visit);
-            if (!CheckGenericArity(invocation.Arguments, functionType.TypeParameters, explicitArguments, "Function"))
-                return BindType(invocation, Types.PrimitiveType.Never);
+        var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes);
+        if (substitution == null)
+            return BindType(invocation, Types.PrimitiveType.Never);
 
-            for (var i = 0; i < explicitArguments.Count; i++)
-                substitution[functionType.TypeParameters[i]] = explicitArguments[i];
-        }
-        else
-        {
-            for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
-            {
-                var paramType = functionType.ParameterTypes[i];
-                var argType = argumentTypes[i];
-                if (paramType is not Types.TypeParameter tp) continue;
-                if (inferredTypes.TryGetValue(tp, out var existing))
-                {
-                    if (!existing.Equals(argType))
-                    {
-                        _diagnostics.Error(
-                            invocation,
-                            InternalCodes.InferredGenericConflict,
-                            $"Inferred type '{argType}' for parameter '{tp.Name}' conflicts with previous '{existing}'."
-                        );
-                    }
-                }
-                else
-                {
-                    inferredTypes[tp] = argType;
-                }
-            }
-
-            foreach (var tp in functionType.TypeParameters)
-            {
-                if (inferredTypes.TryGetValue(tp, out var inferred))
-                {
-                    substitution[tp] = inferred;
-                }
-                else if (tp.DefaultType != null)
-                {
-                    substitution[tp] = tp.DefaultType;
-                }
-                else
-                {
-                    ReportCannotInfer(invocation, tp);
-                    substitution[tp] = Types.PrimitiveType.Never;
-                }
-            }
-        }
-
-        foreach (var tp in functionType.TypeParameters)
-        {
-            if (!substitution.TryGetValue(tp, out var substitutedType) || tp.Constraint == null)
-                continue;
-
-            CheckTypeParameterConstraints(invocation, substitutedType, tp);
-        }
-
-        var substitutedParameterTypes = functionType.ParameterTypes
-            .Select(solveTypeParameters)
-            .ToList();
-
-        var substitutedReturnType = solveTypeParameters(functionType.ReturnType);
-        var instantiated = new FunctionType(
-            typeParameters: [],
-            parameterTypes: substitutedParameterTypes,
-            returnType: substitutedReturnType
-        );
+        var substitutedParameterTypes = SubsituteTypeParameters(functionType.ParameterTypes, substitution);
+        var substitutedReturnType = SubsituteTypeParameters(functionType.ReturnType, substitution);
+        var instantiated = new FunctionType([], substitutedParameterTypes, substitutedReturnType);
 
         CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes);
         AddArgumentConstraints(invocation.Arguments, argumentTypes, substitutedParameterTypes);
         return BindType(invocation, instantiated.ReturnType);
-
-        Type solveTypeParameters(Type forType) =>
-            canSubstitute(forType, out var subst)
-                ? subst
-                : TypeSolver.Transform(forType, substituteTypeParameter);
-
-        Type substituteTypeParameter(Type t) => canSubstitute(t, out var subst) ? subst : t;
-
-        bool canSubstitute(Type t, [MaybeNullWhen(false)] out Type subst)
-        {
-            subst = null;
-            return t is Types.TypeParameter tp && substitution.TryGetValue(tp, out subst);
-        }
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -394,7 +313,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var arguments = typeArguments?.ArgumentsList.ConvertAll(Visit) ?? [];
         if (!CheckGenericArity(typeArguments ?? node, genericType.Parameters, arguments, $"Type '{genericType}'"))
             return BindType(node, Types.PrimitiveType.Never);
-        
+
         var fullArguments = new List<Type>();
         for (var i = 0; i < genericType.Parameters.Count; i++)
         {
@@ -413,7 +332,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 return BindType(node, Types.PrimitiveType.Never);
             }
         }
-    
+
         for (var i = 0; i < genericType.Parameters.Count; i++)
         {
             var parameter = genericType.Parameters[i];
@@ -425,7 +344,106 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var instantiated = new InstantiatedType(genericType, arguments, this, node);
         return BindType(node, instantiated);
     }
-    
+
+    private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, FunctionType functionType)
+    {
+        CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
+        AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
+        return BindType(invocation, functionType.ReturnType);
+    }
+
+    private Dictionary<Types.TypeParameter, Type>? ResolveTypeArguments(
+        Invocation invocation,
+        FunctionType functionType,
+        List<Type> argumentTypes)
+    {
+        var substitution = new Dictionary<Types.TypeParameter, Type>();
+        if (invocation.TypeArguments != null)
+        {
+            var explicitArguments = invocation.TypeArguments.ArgumentsList.ConvertAll(Visit);
+            if (!CheckGenericArity(invocation, functionType.TypeParameters, explicitArguments, "Function"))
+                return null;
+
+            for (var i = 0; i < explicitArguments.Count; i++)
+                substitution[functionType.TypeParameters[i]] = explicitArguments[i];
+        }
+        else
+        {
+            var inferred = InferTypeArguments(functionType, argumentTypes, invocation);
+            if (inferred == null)
+                return null;
+
+            foreach (var (tp, type) in inferred)
+                substitution[tp] = type;
+        }
+
+        foreach (var tp in functionType.TypeParameters)
+            if (substitution.TryGetValue(tp, out var substitutedType) && tp.Constraint != null)
+                CheckTypeParameterConstraints(invocation, substitutedType, tp);
+
+        return substitution;
+    }
+
+    private Dictionary<Types.TypeParameter, Type>? InferTypeArguments(
+        FunctionType functionType,
+        List<Type> argumentTypes,
+        Node errorNode)
+    {
+        var inferred = new Dictionary<Types.TypeParameter, Type>();
+        for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
+        {
+            var paramType = functionType.ParameterTypes[i];
+            if (paramType is not Types.TypeParameter tp) continue;
+
+            var argType = argumentTypes[i];
+            if (inferred.TryGetValue(tp, out var existing))
+            {
+                if (existing.Equals(argType)) continue;
+
+                _diagnostics.Error(
+                    errorNode,
+                    InternalCodes.InferredGenericConflict,
+                    $"Inferred type '{argType}' for parameter '{tp.Name}' conflicts with previous '{existing}'."
+                );
+            }
+            else
+            {
+                inferred[tp] = argType;
+            }
+        }
+
+        var substitution = new Dictionary<Types.TypeParameter, Type>();
+        foreach (var tp in functionType.TypeParameters)
+        {
+            if (inferred.TryGetValue(tp, out var inferredType))
+            {
+                substitution[tp] = inferredType;
+            }
+            else if (tp.DefaultType != null)
+            {
+                substitution[tp] = tp.DefaultType;
+            }
+            else
+            {
+                ReportCannotInfer(errorNode, tp);
+                return null;
+            }
+        }
+
+        return substitution;
+    }
+
+    private static List<Type> SubsituteTypeParameters(List<Type> types, Dictionary<Types.TypeParameter, Type> substitution) =>
+        types.ConvertAll(t => SubsituteTypeParameters(t, substitution));
+
+    private static Type SubsituteTypeParameters(Type type, Dictionary<Types.TypeParameter, Type> substitution)
+    {
+        if (type is Types.TypeParameter tp && substitution.TryGetValue(tp, out var substituted))
+            return substituted;
+
+        return TypeSolver.Transform(type, t => t is Types.TypeParameter tp2 && substitution.TryGetValue(tp2, out var s) ? s : t);
+    }
+
     private void CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
     {
         if (parameter.Constraint == null) return;
@@ -451,6 +469,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             InternalCodes.GenericArity,
             $"{genericKind} expects {arityDisplay} type argument{(minimum != maximum || maximum != 1 ? "s" : "")}, but {arguments.Count} were provided."
         );
+
         return false;
     }
 

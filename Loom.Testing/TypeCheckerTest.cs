@@ -415,6 +415,7 @@ public class TypeCheckerTest
             """;
 
         var type = Utility.GetLastStatementType(source);
+        Assert.True(type is LiteralType, $"Expected '42', got '{type}'");
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(42L, literal.Value);
     }
