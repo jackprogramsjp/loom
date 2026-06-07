@@ -1,4 +1,1 @@
-fn id<T: number>(value: T): T {
-    return value;
-}
-id::<number>(69)
+type Id<T: number = "abc"> = T
