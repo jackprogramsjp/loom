@@ -260,7 +260,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
         var constraint = MaybeVisit(typeParameter.ColonTypeClause);
         if (defaultType != null && constraint != null)
-            semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter);
+            semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter.EqualsTypeClause!);
         
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, constraint);
         return BindType(typeParameter, parameter);

@@ -54,6 +54,13 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("type A<T> = T; let x: A<number, bool> = 1");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, "Type 'A<T>' expects 1 type argument, but 2 were provided.");
     }
+    
+    [Fact]
+    public void ThrowsFor_MismatchedDefaultType()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type Id<T: number = \"abc\"> = T");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"abc\"' is not assignable to type 'number'.");
+    }
 
     [Theory]
     [InlineData("1 + true")]
