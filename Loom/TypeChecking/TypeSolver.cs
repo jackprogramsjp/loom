@@ -26,7 +26,9 @@ public class TypeSolver(DiagnosticBag diagnostics)
         {
             InstantiatedType instantiatedType => new InstantiatedType(
                 instantiatedType.Generic,
-                instantiatedType.Arguments.ConvertAll(fn)
+                instantiatedType.Arguments.ConvertAll(fn),
+                instantiatedType.Checker,
+                instantiatedType.Node
             ),
             IntersectionType intersectionType => new IntersectionType(intersectionType.Types.ConvertAll(fn)),
             UnionType unionType => new UnionType(unionType.Types.ConvertAll(fn)),
@@ -233,18 +235,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
             type = replacement;
         }
 
-        type = type switch
-        {
-            InstantiatedType inst => new InstantiatedType(inst.Generic, inst.Arguments.ConvertAll(Substitute)),
-            IntersectionType inter => new IntersectionType(inter.Types.ConvertAll(Substitute)),
-            UnionType union => new UnionType(union.Types.ConvertAll(Substitute)),
-            FunctionType fn => new FunctionType(
-                fn.TypeParameters,
-                fn.ParameterTypes.ConvertAll(Substitute),
-                Substitute(fn.ReturnType)),
-            _ => type
-        };
-
+        type = Transform(type, Substitute);
         if (type is InstantiatedType instantiated && instantiated.Arguments.All(a => a is not TypeVariable))
             type = instantiated.Expand();
 

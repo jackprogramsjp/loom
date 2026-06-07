@@ -1,7 +1,12 @@
+using Loom.Diagnostics;
+using Loom.Parsing.AST;
+
 namespace Loom.TypeChecking.Types;
 
-public class InstantiatedType(GenericType generic, List<Type> arguments) : Type
+public class InstantiatedType(GenericType generic, List<Type> arguments, TypeChecker typeChecker, Node node) : Type
 {
+    public Node Node { get; } = node;
+    public TypeChecker Checker { get; } = typeChecker;
     public GenericType Generic { get; } = generic;
     public List<Type> Arguments { get; } = arguments;
 
@@ -19,7 +24,17 @@ public class InstantiatedType(GenericType generic, List<Type> arguments) : Type
     {
         var substituted = new Dictionary<TypeParameter, Type>();
         for (var i = 0; i < Generic.Parameters.Count; i++)
-            substituted[Generic.Parameters[i]] = Arguments[i];
+        {
+            var parameter = Generic.Parameters[i];
+            var argument = i < Arguments.Count ? Arguments[i] : parameter.DefaultType;
+            if (argument == null)
+            {
+                Checker.ReportCannotInfer(Node, parameter);
+                return PrimitiveType.Never;
+            }
+        
+            substituted[parameter] = argument;
+        }
         
         return TypeSimplifier.Simplify(SubstituteParameters(Generic.Underlying, substituted));
     }
@@ -28,9 +43,6 @@ public class InstantiatedType(GenericType generic, List<Type> arguments) : Type
         type switch
         {
             TypeParameter parameter when substituted.TryGetValue(parameter, out var replacement) => replacement,
-            InstantiatedType instantiated => new InstantiatedType(instantiated.Generic, instantiated.Arguments.ConvertAll(a => SubstituteParameters(a, substituted))),
-            IntersectionType intersection => new IntersectionType(intersection.Types.ConvertAll(t => SubstituteParameters(t, substituted))),
-            UnionType union => new UnionType(union.Types.ConvertAll(t => SubstituteParameters(t, substituted))),
-            _ => type
+            _ => TypeSolver.Transform(type, t => SubstituteParameters(t, substituted))
         };
 }

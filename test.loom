@@ -1,5 +1,3 @@
-fn numbers<T: number>(value: T) {
-    return value;
-}
-
-numbers(69)
+mut x: string? = "abc"
+x ??= "foo"
+x

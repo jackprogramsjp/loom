@@ -1,6 +1,5 @@
 using Loom.Diagnostics;
 using Loom.TypeChecking.Types;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 
 namespace Loom.Testing;
 
@@ -140,7 +139,7 @@ public class TypeCheckerTest
             "Function expects 1 type argument, but 2 were provided."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_FunctionCall_IncorrectArity()
     {
@@ -156,7 +155,7 @@ public class TypeCheckerTest
             "Function expects 1 argument, but 2 were provided."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_FunctionCall_WithOptionalParams_IncorrectArity()
     {
@@ -172,7 +171,7 @@ public class TypeCheckerTest
             "Function expects 1-2 arguments, but 3 were provided."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_GenericFunctionCall_ExplicitTypeArgumentMismatch()
     {
@@ -187,6 +186,125 @@ public class TypeCheckerTest
             InternalCodes.TypeMismatch,
             "Type '69' is not assignable to type 'string'."
         );
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericFunctionCall_WithConstraintViolation()
+    {
+        const string source = """
+            fn identity<T: number>(value: T) -> value
+            identity("hello")
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.ConstraintViolation,
+            "Type '\"hello\"' does not satisfy constraint 'number' for type parameter 'T'."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_GenericTypeAlias_WithConstraintViolation()
+    {
+        const string source = """
+            type Box<T: number> = T
+            let x: Box<string> = "hello"
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation,
+            "Type 'string' does not satisfy constraint 'number' for type parameter 'T'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_GenericFunctionCall_MissingRequiredTypeParameter()
+    {
+        const string source = """
+            fn identity<T, U = number>(value: T?) -> value
+            identity()
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'T'. Provide explicit type arguments.");
+    }
+    
+    [Fact]
+    public void Checks_GenericFunctionCall_WithRequiredTypeParameter()
+    {
+        const string source = """
+            fn identity<T, U = number>(value: T?) -> value
+            identity::<number>()
+            """;
+        
+        var type = Utility.GetLastStatementType(source);
+        var optional = Assert.IsType<OptionalType>(type);
+        var primitive = Assert.IsType<PrimitiveType>(optional.NonNullableType);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+    
+    [Fact]
+    public void Checks_GenericTypeAlias_WithDefaultAndConstraint()
+    {
+        const string source = """
+            type Container<T: number = 42> = T
+            let x: Container = 42
+            x
+            """;
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result.Diagnostics);
+        
+        var literal = Assert.IsType<LiteralType>(result.ReturnType);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_WithMultipleDefaults()
+    {
+        const string source = """
+            fn pair<A = number, B = string>(a: A, b: B) -> a
+            pair(42, "hello")
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+    
+    [Fact]
+    public void Checks_GenericFunctionCall_WithConstraintSatisfied()
+    {
+        const string source = """
+            fn identity<T: number>(value: T) -> value
+            identity(42)
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_WithDefaultTypeParameter()
+    {
+        const string source = """
+            fn wrap<T = number>(value: T) -> value
+            wrap(42)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_ExplicitTypeArgumentOverridesDefault()
+    {
+        const string source = """
+            fn wrap<T = number>(value: T) -> value
+            wrap::<string>("hello")
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.String, primitive.Kind);
     }
 
     [Fact]
@@ -303,7 +421,7 @@ public class TypeCheckerTest
         var inner = Assert.IsType<PrimitiveType>(optional.NonNullableType);
         Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
     }
-    
+
     [Fact]
     public void Checks_NonGenericFunctionCall_InferredReturnType()
     {

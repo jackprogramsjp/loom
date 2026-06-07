@@ -29,6 +29,13 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var diagnostics = DiagnosticBag.Concat([semanticModel.TypeSolver.Diagnostics, _diagnostics]);
         return new TypeCheckerResult(type, diagnostics);
     }
+    
+    public void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
+        _diagnostics.Error(
+            node,
+            InternalCodes.CannotInferType,
+            $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
+        );
 
     public override Type Visit(Node node) => node.Accept(this);
 
@@ -102,7 +109,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
             finalType = finalType.Widen();
-
+        
         return BindType(variableDeclaration, TypeSimplifier.Simplify(finalType));
     }
 
@@ -180,12 +187,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 }
                 else
                 {
-                    _diagnostics.Error(
-                        invocation,
-                        InternalCodes.CannotInferType,
-                        $"Cannot infer type parameter '{tp.Name}'. Provide explicit type arguments."
-                    );
-
+                    ReportCannotInfer(invocation, tp);
                     substitution[tp] = Types.PrimitiveType.Never;
                 }
             }
@@ -226,18 +228,6 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             subst = null;
             return t is Types.TypeParameter tp && substitution.TryGetValue(tp, out subst);
         }
-    }
-
-    private void CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
-    {
-        if (parameter.Constraint == null) return;
-        if (type.IsAssignableTo(parameter.Constraint)) return;
-
-        _diagnostics.Error(
-            node,
-            InternalCodes.ConstraintViolation,
-            $"Type '{type}' does not satisfy constraint '{parameter.Constraint}' for type parameter '{parameter.Name}'."
-        );
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -332,11 +322,11 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (symbol != null)
         {
             var declaredType = semanticModel.GetType(symbol.Declaration);
-            if (typeName.TypeArguments == null)
-                return BindType(typeName, declaredType);
-
             if (declaredType is GenericType genericType)
                 return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);
+
+            if (typeName.TypeArguments == null)
+                return BindType(typeName, declaredType);
 
             _diagnostics.Error(typeName, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
             return BindType(typeName, Types.PrimitiveType.Never);
@@ -399,10 +389,10 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
-    private Type InstantiateGenericType(Node node, TypeArguments typeArguments, GenericType genericType)
+    private Type InstantiateGenericType(Node node, TypeArguments? typeArguments, GenericType genericType)
     {
-        var arguments = typeArguments.ArgumentsList.ConvertAll(Visit);
-        if (!CheckGenericArity(typeArguments, genericType.Parameters, arguments, $"Type '{genericType}'"))
+        var arguments = typeArguments?.ArgumentsList.ConvertAll(Visit) ?? [];
+        if (!CheckGenericArity(typeArguments ?? node, genericType.Parameters, arguments, $"Type '{genericType}'"))
             return BindType(node, Types.PrimitiveType.Never);
         
         var fullArguments = new List<Type>();
@@ -436,8 +426,20 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             CheckTypeParameterConstraints(node, argument, parameter);
         }
 
-        var instantiated = new InstantiatedType(genericType, arguments);
+        var instantiated = new InstantiatedType(genericType, arguments, this, node);
         return BindType(node, instantiated);
+    }
+    
+    private void CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
+    {
+        if (parameter.Constraint == null) return;
+        if (type.IsAssignableTo(parameter.Constraint)) return;
+
+        _diagnostics.Error(
+            node,
+            InternalCodes.ConstraintViolation,
+            $"Type '{type}' does not satisfy constraint '{parameter.Constraint}' for type parameter '{parameter.Name}'."
+        );
     }
 
     private bool CheckGenericArity(Node node, List<Types.TypeParameter> parameters, List<Type> arguments, string genericKind)
