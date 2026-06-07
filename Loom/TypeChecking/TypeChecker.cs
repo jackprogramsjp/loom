@@ -250,7 +250,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 );
             }
 
-            return TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]));
+            return TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]).NonNullable());
         }
 
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);

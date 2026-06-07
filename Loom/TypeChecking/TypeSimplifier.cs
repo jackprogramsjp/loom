@@ -20,22 +20,20 @@ public static class TypeSimplifier
         var flattened = FlattenNestedUnions(union.Types.ConvertAll(Simplify));
         var distinct = RemoveDuplicates(flattened, isUnion: true);
         var absorbed = ApplyAbsorption(distinct, isUnion: true);
-        if (absorbed.Any(Type.IsNone))
-        {
-            var nonNullable = absorbed.FindAll(Type.IsDefined);
-            return nonNullable.Count switch
+        if (!absorbed.Any(Type.IsNone))
+            return absorbed.Count switch
             {
-                0 => PrimitiveType.None,
-                1 => new OptionalType(nonNullable.First()),
-                _ => new OptionalType(SimplifyUnion(new UnionType(nonNullable)))
+                0 => PrimitiveType.Never,
+                1 => absorbed.First(),
+                _ => new UnionType(absorbed)
             };
-        }
-        
-        return absorbed.Count switch
+
+        var nonNullable = absorbed.FindAll(Type.IsDefined);
+        return nonNullable.Count switch
         {
-            0 => PrimitiveType.Never,
-            1 => absorbed.First(),
-            _ => new UnionType(absorbed)
+            0 => PrimitiveType.None,
+            1 => new OptionalType(nonNullable.First()),
+            _ => new OptionalType(SimplifyUnion(new UnionType(nonNullable)))
         };
     }
 

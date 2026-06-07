@@ -107,6 +107,7 @@ public class TypeCheckerTest
         {
             "string" => PrimitiveType.String,
             "bool" => PrimitiveType.Bool,
+            "number" => PrimitiveType.Number,
             _ => PrimitiveType.Never
         };
 
@@ -115,14 +116,36 @@ public class TypeCheckerTest
             $"Expected '{expectedTypeName}', got '{type}' for expression '{source}'"
         );
     }
+    
+    [Theory]
+    [InlineData("1 + 1", "number")]
+    [InlineData("'a' + 'b'", "string")]
+    [InlineData("1 - 2", "number")]
+    [InlineData("1 / 2", "number")]
+    [InlineData("1 * 2", "number")]
+    [InlineData("true && false", "bool")]
+    [InlineData("1 < 2", "bool")]
+    [InlineData("'a' > 'b'", "bool")]
+    [InlineData("1 ?? 1", "1")]
+    [InlineData("1 ?? 'a'", "1 | \"a\"")]
+    [InlineData("mut x: string? = 'a'; 1 ?? x", "1 | string")]
+    [InlineData("mut x: string? = 'a'; x ?? 'foo'", "string")]
+    public void Checks_BinaryOperator_ReturnsExpectedType(string source, string expectedTypeName)
+    {
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(
+            expectedTypeName == type.ToString(),
+            $"Expected '{expectedTypeName}', got '{type}' for expression '{source}'"
+        );
+    }
 
     [Theory]
-    [InlineData("!true", "bool")]  // logical not on bool -> bool
-    [InlineData("~5", "number")]   // bitwise not on number -> number
-    [InlineData("~0", "number")]   // bitwise not on number -> number
-    [InlineData("-5", "number")]   // unary minus on number -> number
-    [InlineData("-0", "number")]   // unary minus on number -> number
-    [InlineData("-(5)", "number")] // unary minus on parenthesized number -> number
+    [InlineData("!true", "bool")]
+    [InlineData("~5", "number")]
+    [InlineData("~0", "number")]
+    [InlineData("-5", "number")]
+    [InlineData("-0", "number")]
+    [InlineData("-(5)", "number")] 
     public void Checks_UnaryOperator_ValidOperand_ReturnsExpectedType(string source, string expectedTypeName)
     {
         var type = Utility.GetLastStatementType(source);
