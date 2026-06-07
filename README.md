@@ -90,6 +90,37 @@ y = 1
 x = y
 const z = x
 ```
+##
+```rs
+fn one -> 1;
+```
+```luau
+const function one()
+    return 1
+end
+```
+##
+```rs
+fn id<T>(value: T) -> value;
+```
+```luau
+const function id<T>(value: T)
+    return value
+end
+```
+##
+```rs
+fn id<T: number>(value: T): T {
+    return value;
+}
+id::<number>(69)
+```
+```luau
+const function id<T>(value: T & number): T & number
+    return value
+end
+id(69)
+```
 
 ## Planned Features
 

@@ -185,8 +185,18 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitTypeName(TypeName typeName)
     {
+        var symbol = semanticModel.GetSymbol(typeName);
+        if (symbol == null)
+        {
+            _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
+            return new NilLiteral();
+        }
+
+        
+        var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: {} clause } ? Visit(clause) : null;
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
-        return new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
+        var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
+        return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
 
     public override LuauNode VisitTypeParameters(TypeParameters typeParameters) =>

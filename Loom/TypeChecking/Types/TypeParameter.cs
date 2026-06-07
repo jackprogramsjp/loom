@@ -11,5 +11,5 @@ public class TypeParameter(string name, Type? defaultType = null, Type? constrai
         && (DefaultType?.Equals(parameter.DefaultType) ?? parameter.DefaultType == null)
         && (Constraint?.Equals(parameter.Constraint) ?? parameter.Constraint == null);
 
-    public override string ToString() => Name + (Constraint != null ? " : " + Constraint : "") + (DefaultType != null ? " = " + DefaultType : "");
+    public override string ToString() => Name + (Constraint != null ? ": " + Constraint : "") + (DefaultType != null ? " = " + DefaultType : "");
 }
