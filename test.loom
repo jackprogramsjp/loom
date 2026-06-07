@@ -1,1 +1,2 @@
-1 ?? 1
+fn id<T>(value: T) -> value
+            id::<string>(69)

@@ -13,7 +13,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number = 'hello'");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type 'number'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Assignment_DeclaredType_Mismatch()
     {
@@ -81,7 +81,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Assert.Contains(diagnostics.Set, d => d.Code is InternalCodes.TypeMismatch or InternalCodes.InvalidBinaryOp);
     }
-    
+
     [Theory]
     [InlineData("!5")]
     [InlineData("!'hello'")]
@@ -95,6 +95,225 @@ public class TypeCheckerTest
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Assert.Contains(diagnostics.Set, d => d.Code is InternalCodes.TypeMismatch or InternalCodes.InvalidUnaryOp);
+    }
+
+    [Fact]
+    public void ThrowsFor_NonGenericFunctionCall_ArgumentTypeMismatch()
+    {
+        const string source = """
+            fn add(a: number, b: number) -> a + b
+            add(1, "two")
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"two\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericFunctionCall_InferenceConflict()
+    {
+        const string source = """
+            fn first<T>(a: T, b: T) -> a
+            first(42, "hello")
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InferredGenericConflict, "Inferred type '\"hello\"' for parameter 'T' conflicts with previous '42'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_FunctionCall_IncorrectGenericArity()
+    {
+        const string source = """
+            fn id<T>(value: T) -> value
+            id::<number, string>(69)
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.GenericArity,
+            "Function expects 1 type argument, but 2 were provided."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_FunctionCall_IncorrectArity()
+    {
+        const string source = """
+            fn id(value: number) -> value
+            id(69, 420)
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvocationArity,
+            "Function expects 1 argument, but 2 were provided."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_FunctionCall_WithOptionalParams_IncorrectArity()
+    {
+        const string source = """
+            fn id(value: number, other: number?) -> value
+            id(69, 420, 1337)
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvocationArity,
+            "Function expects 1-2 arguments, but 3 were provided."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_GenericFunctionCall_ExplicitTypeArgumentMismatch()
+    {
+        const string source = """
+            fn id<T>(value: T) -> value
+            id::<string>(69)
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '69' is not assignable to type 'string'."
+        );
+    }
+
+    [Fact]
+    public void Checks_NonGenericFunctionCall()
+    {
+        const string source = """
+            fn add(a: number, b: number): number -> a + b
+            add(1, 2)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_Function()
+    {
+        var type = Utility.GetLastStatementType("fn concat(a: string, b: string) -> a + b");
+        var functionType = Assert.IsType<FunctionType>(type);
+        Assert.True(functionType.ReturnType.Equals(PrimitiveType.String), $"Expected 'string', got '{functionType.ReturnType}'");
+        Assert.Empty(functionType.TypeParameters);
+        Assert.Equal(2, functionType.ParameterTypes.Count);
+        Assert.All(functionType.ParameterTypes, t => Assert.True(t.Equals(PrimitiveType.String), $"Expected 'string', got '{t}'"));
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_InferredLiteralType()
+    {
+        const string source = """
+            fn id<T>(value: T) -> value
+            id(69)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(69L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_InferredPrimitiveType()
+    {
+        const string source = """
+            fn id<T>(value: T) -> value
+            let x: number = 42
+            id(x)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_WithOptionalReturn()
+    {
+        const string source = """
+            fn opt<T>(value: T): T? -> value
+            opt(69)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var optional = Assert.IsType<OptionalType>(type);
+        var inner = Assert.IsType<LiteralType>(optional.NonNullableType);
+        Assert.Equal(69L, inner.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_WithMultipleTypeParameters()
+    {
+        const string source = """
+            fn pair<A, B>(a: A, b: B) -> a
+            pair(42, "hello")
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_InferenceAcrossMultipleParameters()
+    {
+        const string source = """
+            fn first<T>(a: T, b: T) -> a
+            first(42, 69)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_ExplicitTypeArgument()
+    {
+        const string source = """
+            fn id<T>(value: T) -> value
+            id::<number>(69)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_ExplicitTypeArgument_WithOptional()
+    {
+        const string source = """
+            fn opt<T>(value: T): T? -> value
+            opt::<number>(69)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var optional = Assert.IsType<OptionalType>(type);
+        var inner = Assert.IsType<PrimitiveType>(optional.NonNullableType);
+        Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
+    }
+    
+    [Fact]
+    public void Checks_NonGenericFunctionCall_InferredReturnType()
+    {
+        const string source = """
+            fn concat(a: string, b: string) -> a + b
+            concat("hello", " world")
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.String), $"Expected 'string', got '{type}'");
     }
 
     [Theory]
@@ -116,7 +335,7 @@ public class TypeCheckerTest
             $"Expected '{expectedTypeName}', got '{type}' for expression '{source}'"
         );
     }
-    
+
     [Theory]
     [InlineData("1 + 1", "number")]
     [InlineData("'a' + 'b'", "string")]
@@ -145,7 +364,7 @@ public class TypeCheckerTest
     [InlineData("~0", "number")]
     [InlineData("-5", "number")]
     [InlineData("-0", "number")]
-    [InlineData("-(5)", "number")] 
+    [InlineData("-(5)", "number")]
     public void Checks_UnaryOperator_ValidOperand_ReturnsExpectedType(string source, string expectedTypeName)
     {
         var type = Utility.GetLastStatementType(source);
@@ -171,7 +390,7 @@ public class TypeCheckerTest
             $"Expected 'number', got '{type}'"
         );
     }
-    
+
     [Fact]
     public void Checks_Assignment_Resolution()
     {
@@ -219,7 +438,7 @@ public class TypeCheckerTest
         var type = Utility.GetLastStatementType("let x: number = 42");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_LiteralTypes()
     {

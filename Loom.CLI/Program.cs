@@ -3,19 +3,19 @@ using Loom.Diagnostics;
 using Loom.Utility;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
-DiagnosticBag.FailFast = false;
+DiagnosticBag.FailFast = true;
 
 var file = FileLoader.LoadSingle("test.loom");
 var compiledFile = CompilationUnit.Compile(file);
-var astDisplayer = new ASTDisplayer(compiledFile.Tree);
+// var astDisplayer = new ASTDisplayer(compiledFile.Tree);
 
 Console.WriteLine("Tokens:");
 foreach (var token in compiledFile.Tokens)
     Console.WriteLine(token.ToString());
 
-Console.WriteLine();
-Console.WriteLine("AST:");
-astDisplayer.Display();
+// Console.WriteLine();
+// Console.WriteLine("AST:");
+// astDisplayer.Display();
 
 Console.WriteLine();
 Console.WriteLine("Rebuilt program:");

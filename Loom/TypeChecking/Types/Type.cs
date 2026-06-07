@@ -9,6 +9,7 @@ public abstract class Type
     public static bool IsNever(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Never };
     public static bool IsDefined(Type type) => !IsNone(type);
     public static bool IsNone(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None };
+    public static bool IsNotOptional(Type type) => !IsOptional(type);
     public static bool IsOptional(Type type) => IsNone(type) || type is OptionalType || type is UnionType union && union.Types.Any(t => IsNone(t) || IsOptional(t));
 
     public Type Widen() =>
@@ -24,7 +25,7 @@ public abstract class Type
             : this is OptionalType optional
                 ? optional.NonNullableType
                 : IsOptional(this)
-                    ? TypeSimplifier.Simplify(NonNullable())
+                    ? TypeSimplifier.Simplify(this).NonNullable()
                     : this;
 
     public virtual bool IsAssignableTo(Type other)

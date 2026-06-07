@@ -125,20 +125,25 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return BindType(invocation, Types.PrimitiveType.Never);
         }
 
-        if (functionType.TypeParameters.Count == 0)
-            return functionType.ReturnType;
-
         var argumentTypes = invocation.Arguments.ArgumentList.ConvertAll(Visit);
+        if (functionType.TypeParameters.Count == 0)
+        {
+            CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
+            AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
+            return BindType(invocation, functionType.ReturnType);
+        }
+
         var substitution = new Dictionary<Types.TypeParameter, Type>();
         if (invocation.TypeArguments != null)
         {
             var explicitArgs = invocation.TypeArguments.ArgumentsList.ConvertAll(Visit);
             if (explicitArgs.Count != functionType.TypeParameters.Count)
             {
+                var s = functionType.TypeParameters.Count != 1 ? "s" : "";
                 _diagnostics.Error(
                     invocation,
                     InternalCodes.GenericArity,
-                    $"Function expects {functionType.TypeParameters.Count} type argument(s), but {explicitArgs.Count} were provided."
+                    $"Function expects {functionType.TypeParameters.Count} type argument{s}, but {explicitArgs.Count} were provided."
                 );
 
                 return BindType(invocation, Types.PrimitiveType.Never);
@@ -159,9 +164,9 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 {
                     if (!existing.Equals(argType))
                     {
-                        _diagnostics.Warn(
+                        _diagnostics.Error(
                             invocation,
-                            InternalCodes.TypeMismatch,
+                            InternalCodes.InferredGenericConflict,
                             $"Inferred type '{argType}' for parameter '{tp.Name}' conflicts with previous '{existing}'."
                         );
                     }
@@ -191,15 +196,8 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             returnType: substitutedReturnType
         );
 
-        for (var i = 0; i < Math.Min(argumentTypes.Count, substitutedParameterTypes.Count); i++)
-        {
-            semanticModel.TypeSolver.AddConstraint(
-                argumentTypes[i],
-                substitutedParameterTypes[i],
-                invocation.Arguments.ArgumentList[i]
-            );
-        }
-
+        CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes);
+        AddArgumentConstraints(invocation.Arguments, argumentTypes, substitutedParameterTypes);
         return BindType(invocation, instantiated.ReturnType);
 
         Type solveTypeParameters(Type forType) =>
@@ -297,7 +295,6 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     public override Type VisitIntersectionType(IntersectionType intersectionType) =>
         BindType(intersectionType, new Types.IntersectionType(intersectionType.Types.ConvertAll(Visit)));
 
-
     public override Type VisitUnionType(UnionType unionType) => BindType(unionType, new Types.UnionType(unionType.Types.ConvertAll(Visit)));
     public override Type VisitOptionalType(OptionalType optionalType) => new Types.OptionalType(Visit(optionalType.NonNullableType));
     public override Type VisitPrimitiveType(PrimitiveType primitiveType) => BindType(primitiveType, new Types.PrimitiveType(primitiveType.Kind));
@@ -330,6 +327,33 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         // var constraint = MaybeVisit(typeParameter.TypeConstraintClause);
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, null);
         return BindType(typeParameter, parameter);
+    }
+    
+    private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)
+    {
+        var requiredParameterTypes = parameterTypes.FindAll(Type.IsNotOptional);
+        var minimum = requiredParameterTypes.Count;
+        var maximum = parameterTypes.Count;
+        var arityDisplay = minimum == maximum
+            ? maximum.ToString()
+            : $"{minimum}-{maximum}";
+
+        if (argumentTypes.Count <= maximum && argumentTypes.Count >= minimum) return;
+
+        var s = minimum != maximum || maximum != 1 ? "s" : "";
+        _diagnostics.Error(arguments, InternalCodes.InvocationArity, $"Function expects {arityDisplay} argument{s}, but {argumentTypes.Count} were provided.");
+    }
+
+    private void AddArgumentConstraints(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)
+    {
+        for (var i = 0; i < Math.Min(argumentTypes.Count, parameterTypes.Count); i++)
+        {
+            semanticModel.TypeSolver.AddConstraint(
+                argumentTypes[i],
+                parameterTypes[i],
+                arguments.ArgumentList[i]
+            );
+        }
     }
 
     private Type GetReturnType(FunctionDeclaration functionDeclaration)
