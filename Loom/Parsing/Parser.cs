@@ -1,6 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Runtime.CompilerServices;
 using Loom.Diagnostics;
 using Loom.Lexing;
 using Loom.Parsing.AST;
@@ -79,9 +77,9 @@ public class Parser(LexerResult lexerResult)
         else if (Match(out var arrow, SyntaxKind.Arrow))
             body = new ExpressionBody(arrow, ParseExpression());
         else
-            body = new NullStatement(CurrentOrLast());
-        
-        if (body is not NullStatement { Token: { } token })
+            body = new NullStatement(MaybeCurrent());
+
+        if (body is not NullStatement nullStatement)
             return new FunctionDeclaration(
                 keyword,
                 name,
@@ -91,8 +89,12 @@ public class Parser(LexerResult lexerResult)
                 body
             );
 
-        _diagnostics.Error(token, InternalCodes.ExpectedFunctionBody, $"Expected function body, got {SafeTokenText(token)}.");
-        return new NullStatement(token);
+        _diagnostics.Error(
+            nullStatement.Token ?? CurrentOrLast(),
+            InternalCodes.MissingFunctionBody,
+            $"Expected function body, got {SafeTokenText(nullStatement.Token)}."
+        );
+        return new NullStatement(nullStatement.Token);
     }
 
     private TypeAlias ParseTypeAlias(Token keyword)
@@ -124,7 +126,7 @@ public class Parser(LexerResult lexerResult)
             parameters = ParseDelimited(ParseParameter);
             Expect(SyntaxKind.RParen);
         }
-        
+
         return new Parameters(leftParen, Last(), parameters);
     }
 
@@ -181,16 +183,19 @@ public class Parser(LexerResult lexerResult)
             ? new UnaryOperator(op, ParseUnary())
             : ParseInvocation();
 
-    private Expression ParseInvocation()
+    private Expression ParseInvocation(Expression? expression = null)
     {
-        var expression = ParsePrimary();
-        if (IsEof() || Current() is not { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
-            return expression;
+        while (true)
+        {
+            expression ??= ParsePrimary();
+            if (IsEof() || Current() is not { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
+                return expression;
 
-        var typeArguments = ParseTypeArguments();
-        var leftParen = Expect(SyntaxKind.LParen);
-        var arguments = ParseArguments(leftParen);
-        return new Invocation(expression, typeArguments, arguments);
+            var typeArguments = ParseTypeArguments(forFunction: true);
+            var leftParen = Expect(SyntaxKind.LParen);
+            var arguments = ParseArguments(leftParen);
+            expression = new Invocation(expression, typeArguments, arguments);
+        }
     }
 
     private Arguments ParseArguments(Token leftParen)
@@ -300,14 +305,67 @@ public class Parser(LexerResult lexerResult)
         return new TypeParameter(name, equalsTypeClause);
     }
 
-    private TypeArguments? ParseTypeArguments()
+    private TypeArguments? ParseTypeArguments(bool forFunction = false)
     {
-        if (!Match(out var leftArrow, SyntaxKind.ColonColonLArrow))
+        if (!Match(out var leftArrow, forFunction ? SyntaxKind.ColonColonLArrow : SyntaxKind.LArrow))
             return null;
 
         var arguments = ParseDelimited(ParseType);
-        var rightArrow = Expect(SyntaxKind.RArrow);
-        return new TypeArguments(leftArrow, rightArrow, arguments);
+        if (ExpectClosingArrow(out var rightArrow))
+            return new TypeArguments(leftArrow, rightArrow, arguments);
+
+        var token = CurrentOrLast();
+        _diagnostics.Error(
+            token,
+            InternalCodes.UnexpectedToken,
+            $"Expected '>', got '{token.Text}'."
+        );
+
+        return null;
+    }
+
+    // evil token splitting function
+    private bool ExpectClosingArrow([MaybeNullWhen(false)] out Token closingArrow)
+    {
+        closingArrow = null;
+        if (IsEof())
+            return false;
+
+        var token = Current();
+        switch (token.Kind)
+        {
+            case SyntaxKind.RArrow:
+                closingArrow = Advance();
+                return true;
+            case SyntaxKind.RArrowRArrow:
+            {
+                var firstSpan = new LocationSpan(token.Span.Start, 1);
+                var firstToken = new Token(SyntaxKind.RArrow, firstSpan, ">");
+                var remainderSpan = new LocationSpan(token.Span.Start + 1, token.Span.Length - 1);
+                var remainderToken = new Token(SyntaxKind.RArrow, remainderSpan, token.Text[1..]);
+                lexerResult.Tokens[_position] = firstToken;
+                lexerResult.Tokens.Insert(_position + 1, remainderToken);
+                Advance();
+
+                closingArrow = firstToken;
+                return true;
+            }
+            case SyntaxKind.RArrowRArrowRArrow:
+            {
+                var firstSpan = new LocationSpan(token.Span.Start, 1);
+                var firstToken = new Token(SyntaxKind.RArrow, firstSpan, ">");
+                var remainderSpan = new LocationSpan(token.Span.Start + 1, token.Span.Length - 1);
+                var remainderToken = new Token(SyntaxKind.RArrowRArrow, remainderSpan, token.Text[1..]);
+                lexerResult.Tokens[_position] = firstToken;
+                lexerResult.Tokens.Insert(_position + 1, remainderToken);
+                Advance();
+
+                closingArrow = firstToken;
+                return true;
+            }
+            default:
+                return false;
+        }
     }
 
     private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
@@ -349,7 +407,7 @@ public class Parser(LexerResult lexerResult)
         {
             var last = Last();
             var text = SyntaxFacts.GetText(kind) ?? kind.ToString();
-            _diagnostics.Error(last.Span, InternalCodes.UnexpectedEof, message != null ? message(null) : $"Expected '{text}', got end of file.");
+            _diagnostics.Error(last, InternalCodes.UnexpectedEof, message != null ? message(null) : $"Expected '{text}', got EOF.");
             return last;
         }
 
@@ -359,9 +417,9 @@ public class Parser(LexerResult lexerResult)
 
         var expected = SyntaxFacts.GetText(kind) ?? kind.ToString();
         _diagnostics.Error(
-            token.Span,
+            token,
             InternalCodes.UnexpectedToken,
-            message != null ? message(token) : $"Expected '{expected}', got '{token.Text}'."
+            message != null ? message(token) : $"Expected '{expected}', got '{SafeTokenText(token)}'."
         );
 
         return token;
@@ -374,6 +432,7 @@ public class Parser(LexerResult lexerResult)
         return current;
     }
 
+    private Token? MaybeCurrent() => IsEof() ? null : Current();
     private Token Current() => Peek(0);
     private Token CurrentOrLast() => !IsEof() ? Current() : Last();
     private Token Last() => Peek(-1);

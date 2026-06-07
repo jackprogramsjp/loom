@@ -31,6 +31,22 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_Function()
+    {
+        var parameters = new List<Parameter> { new("a", PrimitiveType.Number), new("b", new TypeName("T")) };
+        var typeParameter = new TypeParameter("T", PrimitiveType.Number) { OfFunction = true };
+        var fn = new Function(
+            "add",
+            new TypeParameters([typeParameter]),
+            parameters,
+            PrimitiveType.Number,
+            [new Return(new BinaryOperator(new Identifier("a"), "+", new Identifier("b")))]
+        );
+
+        Assert.Equal("const function add<T>(a: number, b: T): number\n  return a + b\nend", fn.Render());
+    }
+
+    [Fact]
     public void Renders_Call()
     {
         var emptyCall = new Call(new Identifier("abc"), []);

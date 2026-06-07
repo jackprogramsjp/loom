@@ -61,6 +61,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
     {
         var typeParameters = MaybeVisit<Luau.AST.TypeParameters>(functionDeclaration.TypeParameters);
+        if (typeParameters != null)
+            foreach (var typeParameter in typeParameters.Parameters)
+                typeParameter.OfFunction = true;
+
         var parameters = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit<Luau.AST.Parameter>) ?? [];
         var returnType = MaybeVisit<LuauType>(functionDeclaration.ReturnType);
         var statements = functionDeclaration.Body switch

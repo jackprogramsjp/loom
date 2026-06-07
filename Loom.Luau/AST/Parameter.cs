@@ -1,6 +1,6 @@
 namespace Loom.Luau.AST;
 
-public class Parameter(string name, LuauType? declaredType)
+public class Parameter(string name, LuauType? declaredType = null)
     : Variable(name, declaredType)
 {
     public override string Render(RenderState state) => Name + RenderType(state);

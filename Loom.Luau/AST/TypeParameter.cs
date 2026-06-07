@@ -1,6 +1,6 @@
 namespace Loom.Luau.AST;
 
-public class TypeParameter(string name, LuauType? defaultType) : LuauNode
+public class TypeParameter(string name, LuauType? defaultType = null) : LuauNode
 {
     public bool OfFunction { get; set; } = false;
     public string Name { get; } = name;

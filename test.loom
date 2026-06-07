@@ -1,4 +1,1 @@
-mut x: number? = 69;
-let foo = "foo";
-let y = foo ?? "abc";
-y
+abc::<A<B<C>>>()

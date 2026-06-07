@@ -1,11 +1,27 @@
 namespace Loom.Syntax;
 
-public class LocationSpan(Location start, Location end)
+public class LocationSpan
 {
-    public SourceFile File { get; } = start.File;
-    public Location Start { get; } = start;
-    public Location End { get; } = end;
-    public int Length { get; } = end.Position - start.Position;
+    public LocationSpan(Location start, Location end)
+    {
+        File = start.File;
+        Start = start;
+        End = end;
+        Length = end.Position - start.Position;
+    }
+    
+    public LocationSpan(Location start, int length)
+    {
+        File = start.File;
+        Start = start;
+        End = start + length;
+        Length = length;
+    }
+
+    public SourceFile File { get; }
+    public Location Start { get; }
+    public Location End { get; }
+    public int Length { get; }
 
     public static LocationSpan Empty(SourceFile file) => new(Location.Empty(file), Location.Empty(file));
 

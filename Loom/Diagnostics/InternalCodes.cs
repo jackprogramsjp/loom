@@ -11,7 +11,7 @@ public static class InternalCodes
     public const string UnexpectedToken = "L201";
     public const string UnexpectedEof = "L202";
     public const string InvalidAssignmentTarget = "L203";
-    public const string ExpectedFunctionBody = "L204";
+    public const string MissingFunctionBody = "L204";
 
     public const string CannotFindName = "L301";
     public const string DuplicateName = "L302";
