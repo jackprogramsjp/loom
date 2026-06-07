@@ -30,4 +30,7 @@ public static class InternalCodes
     public const string InvocationArity = "L315";
     public const string RedundantCode = "L316";
     public const string InferredGenericConflict = "L317";
+    public const string CannotInferType = "L318";
+    public const string ConstraintViolation = "L319";
+    public const string MissingTypeArgument = "L320";
 }

@@ -134,23 +134,15 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         }
 
         var substitution = new Dictionary<Types.TypeParameter, Type>();
+        var inferredTypes = new Dictionary<Types.TypeParameter, Type>();
         if (invocation.TypeArguments != null)
         {
-            var explicitArgs = invocation.TypeArguments.ArgumentsList.ConvertAll(Visit);
-            if (explicitArgs.Count != functionType.TypeParameters.Count)
-            {
-                var s = functionType.TypeParameters.Count != 1 ? "s" : "";
-                _diagnostics.Error(
-                    invocation,
-                    InternalCodes.GenericArity,
-                    $"Function expects {functionType.TypeParameters.Count} type argument{s}, but {explicitArgs.Count} were provided."
-                );
-
+            var explicitArguments = invocation.TypeArguments.ArgumentsList.ConvertAll(Visit);
+            if (!CheckGenericArity(invocation.Arguments, functionType.TypeParameters, explicitArguments, "Function"))
                 return BindType(invocation, Types.PrimitiveType.Never);
-            }
 
-            for (var i = 0; i < explicitArgs.Count; i++)
-                substitution[functionType.TypeParameters[i]] = explicitArgs[i];
+            for (var i = 0; i < explicitArguments.Count; i++)
+                substitution[functionType.TypeParameters[i]] = explicitArguments[i];
         }
         else
         {
@@ -159,8 +151,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 var paramType = functionType.ParameterTypes[i];
                 var argType = argumentTypes[i];
                 if (paramType is not Types.TypeParameter tp) continue;
-
-                if (substitution.TryGetValue(tp, out var existing))
+                if (inferredTypes.TryGetValue(tp, out var existing))
                 {
                     if (!existing.Equals(argType))
                     {
@@ -173,16 +164,39 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 }
                 else
                 {
-                    substitution[tp] = argType;
+                    inferredTypes[tp] = argType;
                 }
-
-                // TODO: nested type parameters, recursive inference pass
             }
 
-            foreach (var tp in functionType.TypeParameters.Where(tp => !substitution.ContainsKey(tp)))
+            foreach (var tp in functionType.TypeParameters)
             {
-                substitution[tp] = Types.PrimitiveType.Never;
+                if (inferredTypes.TryGetValue(tp, out var inferred))
+                {
+                    substitution[tp] = inferred;
+                }
+                else if (tp.DefaultType != null)
+                {
+                    substitution[tp] = tp.DefaultType;
+                }
+                else
+                {
+                    _diagnostics.Error(
+                        invocation,
+                        InternalCodes.CannotInferType,
+                        $"Cannot infer type parameter '{tp.Name}'. Provide explicit type arguments."
+                    );
+
+                    substitution[tp] = Types.PrimitiveType.Never;
+                }
             }
+        }
+
+        foreach (var tp in functionType.TypeParameters)
+        {
+            if (!substitution.TryGetValue(tp, out var substitutedType) || tp.Constraint == null)
+                continue;
+
+            CheckTypeParameterConstraints(invocation, substitutedType, tp);
         }
 
         var substitutedParameterTypes = functionType.ParameterTypes
@@ -212,6 +226,18 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             subst = null;
             return t is Types.TypeParameter tp && substitution.TryGetValue(tp, out subst);
         }
+    }
+
+    private void CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
+    {
+        if (parameter.Constraint == null) return;
+        if (type.IsAssignableTo(parameter.Constraint)) return;
+
+        _diagnostics.Error(
+            node,
+            InternalCodes.ConstraintViolation,
+            $"Type '{type}' does not satisfy constraint '{parameter.Constraint}' for type parameter '{parameter.Name}'."
+        );
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -323,12 +349,11 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     public override Type VisitTypeParameter(TypeParameter typeParameter)
     {
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
-
-        // var constraint = MaybeVisit(typeParameter.TypeConstraintClause);
-        var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, null);
+        var constraint = MaybeVisit(typeParameter.ColonTypeClause);
+        var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, constraint);
         return BindType(typeParameter, parameter);
     }
-    
+
     private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)
     {
         var requiredParameterTypes = parameterTypes.FindAll(Type.IsNotOptional);
@@ -377,22 +402,58 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     private Type InstantiateGenericType(Node node, TypeArguments typeArguments, GenericType genericType)
     {
         var arguments = typeArguments.ArgumentsList.ConvertAll(Visit);
-        var minimumParameterCount = genericType.Parameters.Count(p => p.DefaultType == null);
-        var maximumParameterCount = genericType.Parameters.Count;
-        var arityDisplay = minimumParameterCount == maximumParameterCount ? minimumParameterCount.ToString() : $"{minimumParameterCount}-{maximumParameterCount}";
-        if (arguments.Count != minimumParameterCount)
-        {
-            _diagnostics.Error(
-                node,
-                InternalCodes.GenericArity,
-                $"Type '{(node is FunctionDeclaration ? genericType.Underlying : genericType)}' expects {arityDisplay} type argument{(maximumParameterCount > 1 ? "s" : "")}, but {arguments.Count} were provided."
-            );
-
+        if (!CheckGenericArity(typeArguments, genericType.Parameters, arguments, $"Type '{genericType}'"))
             return BindType(node, Types.PrimitiveType.Never);
+        
+        var fullArguments = new List<Type>();
+        for (var i = 0; i < genericType.Parameters.Count; i++)
+        {
+            var param = genericType.Parameters[i];
+            if (i < arguments.Count)
+            {
+                fullArguments.Add(arguments[i]);
+            }
+            else if (param.DefaultType != null)
+            {
+                fullArguments.Add(param.DefaultType);
+            }
+            else
+            {
+                _diagnostics.Error(
+                    node,
+                    InternalCodes.MissingTypeArgument,
+                    $"Missing type argument for type parameter '{param.Name}'."
+                );
+                return BindType(node, Types.PrimitiveType.Never);
+            }
+        }
+    
+        for (var i = 0; i < genericType.Parameters.Count; i++)
+        {
+            var parameter = genericType.Parameters[i];
+            var argument = fullArguments[i];
+            if (parameter.Constraint == null) continue;
+            CheckTypeParameterConstraints(node, argument, parameter);
         }
 
         var instantiated = new InstantiatedType(genericType, arguments);
         return BindType(node, instantiated);
+    }
+
+    private bool CheckGenericArity(Node node, List<Types.TypeParameter> parameters, List<Type> arguments, string genericKind)
+    {
+        var minimum = parameters.Count(p => p.DefaultType == null);
+        var maximum = parameters.Count;
+        var arityDisplay = minimum == maximum ? minimum.ToString() : $"{minimum}-{maximum}";
+        if (arguments.Count >= minimum && arguments.Count <= maximum)
+            return true;
+
+        _diagnostics.Error(
+            node,
+            InternalCodes.GenericArity,
+            $"{genericKind} expects {arityDisplay} type argument{(minimum != maximum || maximum != 1 ? "s" : "")}, but {arguments.Count} were provided."
+        );
+        return false;
     }
 
     private T BindType<T>(Node node, T type)

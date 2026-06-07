@@ -1,2 +1,5 @@
-fn id<T>(value: T) -> value
-            id::<string>(69)
+fn numbers<T: number>(value: T) {
+    return value;
+}
+
+numbers(69)

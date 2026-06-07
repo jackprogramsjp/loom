@@ -301,8 +301,9 @@ public class Parser(LexerResult lexerResult)
     private TypeParameter ParseTypeParameter()
     {
         var name = ExpectIdentifier("type parameter name");
+        var constraint = ParseColonTypeClause();
         var equalsTypeClause = ParseEqualsTypeClause();
-        return new TypeParameter(name, equalsTypeClause);
+        return new TypeParameter(name, constraint, equalsTypeClause);
     }
 
     private TypeArguments? ParseTypeArguments(bool forFunction = false)
