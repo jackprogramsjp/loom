@@ -12,6 +12,21 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
         && ListEquals(ParameterTypes, functionType.ParameterTypes)
         && ReturnType.Equals(functionType.ReturnType);
 
+    public override bool IsAssignableTo(Type other)
+    {
+        if (base.IsAssignableTo(other))
+            return true;
+
+        if (other is not FunctionType target || ParameterTypes.Count != target.ParameterTypes.Count || TypeParameters.Count != target.TypeParameters.Count)
+            return false;
+
+        if (TypeParameters.Where((t, i) => !t.Equals(target.TypeParameters[i])).Any())
+            return false;
+
+        return !ParameterTypes.Where((t, i) => !target.ParameterTypes[i].IsAssignableTo(t)).Any()
+            && ReturnType.IsAssignableTo(target.ReturnType);
+    }
+
     public override string ToString() =>
         $"{(TypeParameters.Count != 0 ? $"<{string.Join(", ", TypeParameters)}>" : "")}({string.Join(", ", ParameterTypes)}) -> {ReturnType}";
 }

@@ -1,11 +1,326 @@
 using Loom.TypeChecking.Types;
+using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Testing;
+
 using static PrimitiveType;
 
 [Collection("Assembly")]
 public class TypesTest
 {
+    [Fact]
+    public void IsNever_ReturnsTrueForNever() => Assert.True(Type.IsNever(Never));
+
+    [Fact]
+    public void IsNever_ReturnsFalseForOtherTypes()
+    {
+        Assert.False(Type.IsNever(Number));
+        Assert.False(Type.IsNever(String));
+        Assert.False(Type.IsNever(Bool));
+        Assert.False(Type.IsNever(Void));
+        Assert.False(Type.IsNever(None));
+        Assert.False(Type.IsNever(Unknown));
+        Assert.False(Type.IsNever(new OptionalType(Number)));
+        Assert.False(Type.IsNever(new UnionType([Number, String])));
+        Assert.False(Type.IsNever(new IntersectionType([Number, String])));
+        Assert.False(Type.IsNever(new LiteralType(42)));
+    }
+
+    [Fact]
+    public void IsNotNever_ReturnsFalseForNever() => Assert.False(Type.IsNotNever(Never));
+
+    [Fact]
+    public void IsNotNever_ReturnsTrueForOtherTypes()
+    {
+        Assert.True(Type.IsNotNever(Number));
+        Assert.True(Type.IsNotNever(String));
+        Assert.True(Type.IsNotNever(new OptionalType(Number)));
+        Assert.True(Type.IsNotNever(new UnionType([Number, String])));
+    }
+
+    [Fact]
+    public void IsNone_ReturnsTrueForNoneAndVoid()
+    {
+        Assert.True(Type.IsNone(None));
+        Assert.True(Type.IsNone(Void));
+    }
+
+    [Fact]
+    public void IsNone_ReturnsFalseForOtherTypes()
+    {
+        Assert.False(Type.IsNone(Number));
+        Assert.False(Type.IsNone(String));
+        Assert.False(Type.IsNone(Bool));
+        Assert.False(Type.IsNone(Never));
+        Assert.False(Type.IsNone(Unknown));
+        Assert.False(Type.IsNone(new OptionalType(Number)));
+        Assert.False(Type.IsNone(new UnionType([Number, String])));
+    }
+
+    [Fact]
+    public void IsDefined_ReturnsFalseForNoneAndVoid()
+    {
+        Assert.False(Type.IsDefined(None));
+        Assert.False(Type.IsDefined(Void));
+    }
+
+    [Fact]
+    public void IsDefined_ReturnsTrueForOtherTypes()
+    {
+        Assert.True(Type.IsDefined(Number));
+        Assert.True(Type.IsDefined(String));
+        Assert.True(Type.IsDefined(Bool));
+        Assert.True(Type.IsDefined(Never));
+        Assert.True(Type.IsDefined(Unknown));
+        Assert.True(Type.IsDefined(new OptionalType(Number)));
+        Assert.True(Type.IsDefined(new UnionType([Number, String])));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsTrueForOptionalType() => Assert.True(Type.IsOptional(new OptionalType(Number)));
+
+    [Fact]
+    public void IsOptional_ReturnsTrueForNoneAndVoid()
+    {
+        Assert.True(Type.IsOptional(None));
+        Assert.True(Type.IsOptional(Void));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsFalseForRequiredTypes()
+    {
+        Assert.False(Type.IsOptional(Number));
+        Assert.False(Type.IsOptional(String));
+        Assert.False(Type.IsOptional(Bool));
+        Assert.False(Type.IsOptional(Never));
+        Assert.False(Type.IsOptional(new LiteralType(42)));
+        Assert.False(Type.IsOptional(new IntersectionType([Number, new OptionalType(String)])));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsTrueForUnionContainingNoneOrVoidOrOptional()
+    {
+        var unionWithNone = new UnionType([Number, None]);
+        var unionWithVoid = new UnionType([String, Void]);
+        var optional = new OptionalType(Bool);
+        var unionWithOptional = new UnionType([Number, optional]);
+        var nestedUnion = new UnionType([new UnionType([Number, None]), String]);
+
+        Assert.True(Type.IsOptional(unionWithNone));
+        Assert.True(Type.IsOptional(unionWithVoid));
+        Assert.True(Type.IsOptional(unionWithOptional));
+        Assert.True(Type.IsOptional(nestedUnion));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsFalseForUnionWithoutOptionalOrNone()
+    {
+        var union = new UnionType([Number, String]);
+        Assert.False(Type.IsOptional(union));
+    }
+
+    [Fact]
+    public void IsNotOptional_ReturnsFalseForOptionalNoneAndVoid()
+    {
+        Assert.False(Type.IsNotOptional(new OptionalType(Number)));
+        Assert.False(Type.IsNotOptional(None));
+        Assert.False(Type.IsNotOptional(Void));
+        Assert.False(Type.IsNotOptional(new UnionType([Number, None])));
+    }
+
+    [Fact]
+    public void IsNotOptional_ReturnsTrueForRequiredTypes()
+    {
+        Assert.True(Type.IsNotOptional(Number));
+        Assert.True(Type.IsNotOptional(String));
+        Assert.True(Type.IsNotOptional(Bool));
+        Assert.True(Type.IsNotOptional(new LiteralType(42)));
+    }
+
+    [Fact]
+    public void NonNullable_OnNoneOrVoid_ReturnsNever()
+    {
+        Assert.Same(Never, None.NonNullable());
+        Assert.Same(Never, Void.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnOptionalType_ReturnsNonNullableType()
+    {
+        var optional = new OptionalType(Number);
+        Assert.Same(Number, optional.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnOptionalOptionalType_ReturnsInnerType()
+    {
+        var innerOptional = new OptionalType(String);
+        var outerOptional = new OptionalType(innerOptional);
+        Assert.Same(String, outerOptional.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnRequiredType_ReturnsItself()
+    {
+        Assert.Same(Number, Number.NonNullable());
+        Assert.Same(Never, Never.NonNullable());
+        Assert.Same(Unknown, Unknown.NonNullable());
+
+        var literal = new LiteralType(42);
+        Assert.Same(literal, literal.NonNullable());
+
+        var intersection = new IntersectionType([Number, String]);
+        Assert.Same(intersection, intersection.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithoutNone_ReturnsItself()
+    {
+        var union = new UnionType([Number, String]);
+        Assert.Same(union, union.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithNoneOrVoid_RemovesThem()
+    {
+        var unionWithNone = new UnionType([Number, None, String]);
+        var expected1 = new UnionType([Number, String]);
+        Assert.True(expected1.Equals(unionWithNone.NonNullable()));
+
+        var unionWithVoid = new UnionType([Number, Void]);
+        Assert.True(Number.Equals(unionWithVoid.NonNullable()));
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithOptional_RemovesOptionalWrapper()
+    {
+        var optional = new OptionalType(Bool);
+        var union = new UnionType([Number, optional]);
+        var expected = new UnionType([Number, Bool]);
+        Assert.True(expected.Equals(union.NonNullable()));
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithOnlyNone_ReturnsNever()
+    {
+        var union = new UnionType([None]);
+        Assert.Same(Never, union.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithOnlyOptional_ReturnsUnderlyingType()
+    {
+        var optional = new OptionalType(String);
+        var union = new UnionType([optional]);
+        Assert.Same(String, union.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnComplexUnion_Simplifies()
+    {
+        var union = new UnionType([Number, new OptionalType(String), None, new UnionType([Bool, Void])]);
+        var expected = new UnionType([Number, String, Bool]);
+        Assert.True(expected.Equals(union.NonNullable()));
+    }
+
+    [Fact]
+    public void IsOptional_And_NonNullable_WorkTogether()
+    {
+        var union = new UnionType([Number, None]);
+        Assert.True(Type.IsOptional(union));
+
+        var nonNullable = union.NonNullable();
+        Assert.False(Type.IsOptional(nonNullable));
+        Assert.Same(Number, nonNullable);
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_SameSignature()
+    {
+        var fn1 = new FunctionType([], [Number], String);
+        var fn2 = new FunctionType([], [Number], String);
+        Assert.True(fn1.IsAssignableTo(fn2));
+        Assert.True(fn2.IsAssignableTo(fn1));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_CovariantReturn()
+    {
+        var fn1 = new FunctionType([], [Number], String);
+        var fn2 = new FunctionType([], [Number], Unknown);
+        Assert.True(fn1.IsAssignableTo(fn2));
+        Assert.False(fn2.IsAssignableTo(fn1));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_ContravariantParameters()
+    {
+        var fn1 = new FunctionType([], [Unknown], String);
+        var fn2 = new FunctionType([], [String], String);
+        Assert.True(fn1.IsAssignableTo(fn2));
+        Assert.True(fn1.IsAssignableTo(fn2));
+        Assert.False(fn2.IsAssignableTo(fn1));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_ContravariantMultipleParameters()
+    {
+        var fnWide = new FunctionType([], [Unknown, Unknown], String);
+        var fnNarrow = new FunctionType([], [String, Number], String);
+        Assert.True(fnWide.IsAssignableTo(fnNarrow));
+        Assert.False(fnNarrow.IsAssignableTo(fnWide));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_WithTypeParameters()
+    {
+        var paramT = new TypeParameter("T");
+        var paramU = new TypeParameter("U");
+        var fn1 = new FunctionType([paramT], [paramT], paramT);
+        var fn2 = new FunctionType([paramU], [paramU], paramU);
+        Assert.False(fn1.IsAssignableTo(fn2));
+        Assert.False(fn2.IsAssignableTo(fn1));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_WithInstantiatedTypeArguments()
+    {
+        var param = new TypeParameter("T");
+        var genericFn = new FunctionType([param], [param], param);
+        var instantiatedFn = new FunctionType([], [Number], Number);
+        Assert.False(genericFn.IsAssignableTo(instantiatedFn));
+        Assert.False(instantiatedFn.IsAssignableTo(genericFn));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_HigherOrder()
+    {
+        var innerWide = new FunctionType([], [Number], Unknown);
+        var innerNarrow = new FunctionType([], [Number], String);
+        var outerWide = new FunctionType([], [innerWide], Bool);
+        var outerNarrow = new FunctionType([], [innerNarrow], Bool);
+        Assert.True(outerWide.IsAssignableTo(outerNarrow));
+        Assert.False(outerNarrow.IsAssignableTo(outerWide));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_WithUnionParameter()
+    {
+        var withUnionParameter = new FunctionType([], [new UnionType([Number, String])], Bool);
+        var withNumberParameter = new FunctionType([], [Number], Bool);
+        Assert.True(withUnionParameter.IsAssignableTo(withNumberParameter));
+        Assert.False(withNumberParameter.IsAssignableTo(withUnionParameter));
+    }
+
+    [Fact]
+    public void FunctionType_Assignability_WithNeverIntersectionReturn()
+    {
+        var returnIntersection = new FunctionType([], [Number], new IntersectionType([String, Bool]));
+        var returnString = new FunctionType([], [Number], String);
+        Assert.False(returnIntersection.IsAssignableTo(returnString));
+        Assert.False(returnString.IsAssignableTo(returnIntersection));
+    }
+
     [Fact]
     public void Optional_Assignability()
     {
@@ -14,7 +329,7 @@ public class TypesTest
         Assert.False(optional.IsAssignableTo(required));
         Assert.True(required.IsAssignableTo(optional));
     }
-        
+
     [Fact]
     public void Intersection_Assignability()
     {
@@ -34,7 +349,7 @@ public class TypesTest
         Assert.True(Bool.IsAssignableTo(union2));
         Assert.True(intersection.IsAssignableTo(Bool));
     }
-    
+
     [Fact]
     public void Intersection_Literal_Assignability()
     {
@@ -52,7 +367,7 @@ public class TypesTest
         Assert.False(literal.IsAssignableTo(String));
         Assert.False(literal.IsAssignableTo(Number));
     }
-    
+
     [Fact]
     public void Union_Assignability()
     {
@@ -66,7 +381,7 @@ public class TypesTest
         Assert.True(union2.IsAssignableTo(union1));
         Assert.True(union1.IsAssignableTo(union2));
     }
-    
+
     [Fact]
     public void Union_Literal_Assignability()
     {
@@ -77,7 +392,7 @@ public class TypesTest
         Assert.True(literal.IsAssignableTo(Number));
         Assert.False(literal.IsAssignableTo(Bool));
     }
-    
+
     [Fact]
     public void Literal_Assignability()
     {
@@ -119,7 +434,25 @@ public class TypesTest
         Assert.False(Unknown.IsAssignableTo(Number));
         Assert.True(Number.IsAssignableTo(Unknown));
     }
-    
+
+    [Fact]
+    public void FunctionType_Equality()
+    {
+        var param1 = new TypeParameter("T");
+        var param2 = new TypeParameter("U");
+        var fn1 = new FunctionType([param1], [Number], Bool);
+        var fn2 = new FunctionType([param1], [Number], Bool);
+        var fn3 = new FunctionType([param1], [String], Bool);
+        var fn4 = new FunctionType([param2], [Number], Bool);
+        var fn5 = new FunctionType([], [Number], Bool);
+
+        Assert.True(fn1.Equals(fn2));
+        Assert.False(fn1.Equals(fn3));
+        Assert.True(fn1.Equals(fn4)); // type parameter name doesn't matter for equality (structural)
+        Assert.False(fn1.Equals(fn5));
+        Assert.False(fn1.Equals(Number));
+    }
+
     [Fact]
     public void Optional_Equality()
     {
@@ -138,7 +471,7 @@ public class TypesTest
         Assert.False(b.Equals(d));
         Assert.False(c.Equals(d));
     }
-    
+
     [Fact]
     public void Intersection_Equality()
     {
@@ -150,7 +483,7 @@ public class TypesTest
         Assert.False(a.Equals(c));
         Assert.False(b.Equals(c));
     }
-    
+
     [Fact]
     public void Union_Equality()
     {
@@ -162,7 +495,7 @@ public class TypesTest
         Assert.False(a.Equals(c));
         Assert.False(b.Equals(c));
     }
-    
+
     [Fact]
     public void Literal_Equality()
     {
@@ -174,7 +507,7 @@ public class TypesTest
         Assert.False(a.Equals(c));
         Assert.False(b.Equals(c));
     }
-    
+
     [Fact]
     public void Primitive_Equality()
     {

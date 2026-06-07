@@ -8,8 +8,8 @@ public sealed class IntersectionType(List<Type> types) : Type
 
     public override bool IsAssignableTo(Type other) =>
         other is LiteralType
-            ? Types.Any(t => t.IsAssignableTo(other))
-            : Types.All(other.IsAssignableTo);
+            ? Types.Exists(t => t.IsAssignableTo(other))
+            : Types.TrueForAll(other.IsAssignableTo);
 
     public override string ToString() => '(' + string.Join(" & ", Types.ConvertAll(type => type.ToString())) + ')';
 }
