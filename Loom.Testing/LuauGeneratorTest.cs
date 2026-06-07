@@ -259,17 +259,32 @@ public class LuauGeneratorTest
     }
 
     [Theory]
+    [InlineData("fn id<T: number>(value: T): T -> value", PrimitiveTypeKind.Number)]
     [InlineData("fn id<T>(value: T): T -> value")]
     [InlineData("fn id<T>(value: T): T { return value }")]
-    public void Generates_Generic_Functions(string source)
+    public void Generates_Generic_Functions(string source, PrimitiveTypeKind? expectedConstraintKind = null)
     {
         var luauTree = Utility.GetLuauAST(source);
         Assert.Single(luauTree.Statements);
 
         var fn = Assert.IsType<Function>(luauTree.Statements.First());
-        var returnType = Assert.IsType<TypeName>(fn.ReturnType);
+        if (expectedConstraintKind != null)
+        {
+            var intersection = Assert.IsType<IntersectionType>(fn.ReturnType);
+            Assert.Equal(2, intersection.Types.Count);
+            
+            var returnType = Assert.IsType<TypeName>(intersection.Types.First());
+            var constraintType = Assert.IsType<PrimitiveType>(intersection.Types.Last());
+            Assert.Equal("T", returnType.Name);
+            Assert.Equal(expectedConstraintKind, constraintType.Kind);
+        }
+        else
+        {
+            var returnType = Assert.IsType<TypeName>(fn.ReturnType);
+            Assert.Equal("T", returnType.Name);
+        }
+        
         Assert.Equal("id", fn.Name);
-        Assert.Equal("T", returnType.Name);
         Assert.NotNull(fn.TypeParameters);
         Assert.Single(fn.TypeParameters.Parameters);
 
@@ -282,8 +297,21 @@ public class LuauGeneratorTest
         var parameter = fn.Parameters.First();
         Assert.Equal("value", parameter.Name);
         
-        var parameterType = Assert.IsType<TypeName>(parameter.DeclaredType);
-        Assert.Equal("T", parameterType.Name);
+        if (expectedConstraintKind != null)
+        {
+            var intersection = Assert.IsType<IntersectionType>(parameter.DeclaredType);
+            Assert.Equal(2, intersection.Types.Count);
+            
+            var parameterType = Assert.IsType<TypeName>(intersection.Types.First());
+            var constraintType = Assert.IsType<PrimitiveType>(intersection.Types.Last());
+            Assert.Equal("T", parameterType.Name);
+            Assert.Equal(expectedConstraintKind, constraintType.Kind);
+        }
+        else
+        {
+            var parameterType = Assert.IsType<TypeName>(parameter.DeclaredType);
+            Assert.Equal("T", parameterType.Name);
+        }
         Assert.Single(fn.Statements);
 
         var returnStatement = Assert.IsType<Return>(fn.Statements.First());

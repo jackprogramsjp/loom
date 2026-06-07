@@ -191,7 +191,6 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
             return new NilLiteral();
         }
-
         
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: {} clause } ? Visit(clause) : null;
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);

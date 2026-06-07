@@ -398,22 +398,18 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var fullArguments = new List<Type>();
         for (var i = 0; i < genericType.Parameters.Count; i++)
         {
-            var param = genericType.Parameters[i];
+            var typeParameter = genericType.Parameters[i];
             if (i < arguments.Count)
             {
                 fullArguments.Add(arguments[i]);
             }
-            else if (param.DefaultType != null)
+            else if (typeParameter.DefaultType != null)
             {
-                fullArguments.Add(param.DefaultType);
+                fullArguments.Add(typeParameter.DefaultType);
             }
             else
             {
-                _diagnostics.Error(
-                    node,
-                    InternalCodes.MissingTypeArgument,
-                    $"Missing type argument for type parameter '{param.Name}'."
-                );
+                ReportCannotInfer(typeArguments ?? node, typeParameter);
                 return BindType(node, Types.PrimitiveType.Never);
             }
         }
