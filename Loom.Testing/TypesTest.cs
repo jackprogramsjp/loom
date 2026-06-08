@@ -235,6 +235,79 @@ public class TypesTest
     }
 
     [Fact]
+    public void ArrayType_Assignability_CovariantImmutable()
+    {
+        var immutBases = new ArrayType(Unknown, isMutable: false);
+        var immutSubtypes = new ArrayType(String, isMutable: false);
+        var immutNumbers = new ArrayType(Number, isMutable: false);
+        Assert.True(immutSubtypes.IsAssignableTo(immutBases));
+        Assert.True(immutNumbers.IsAssignableTo(immutBases));
+        Assert.False(immutSubtypes.IsAssignableTo(immutNumbers));
+        Assert.True(immutSubtypes.IsAssignableTo(immutSubtypes));
+    }
+
+    [Fact]
+    public void ArrayType_Assignability_InvariantMutable()
+    {
+        var mutNumbers = new ArrayType(Number, isMutable: true);
+        var mutStrings = new ArrayType(String, isMutable: true);
+        var mutUnknown = new ArrayType(Unknown, isMutable: true);
+        Assert.True(mutNumbers.IsAssignableTo(mutNumbers));
+        Assert.True(mutStrings.IsAssignableTo(mutStrings));
+        Assert.False(mutStrings.IsAssignableTo(mutUnknown));
+        Assert.False(mutNumbers.IsAssignableTo(mutUnknown));
+        Assert.False(mutStrings.IsAssignableTo(mutNumbers));
+
+        var mutStrings2 = new ArrayType(String, isMutable: true);
+        Assert.True(mutStrings.IsAssignableTo(mutStrings2));
+    }
+
+    [Fact]
+    public void ArrayType_Assignability_CrossMutability()
+    {
+        var immutNumbers = new ArrayType(Number, isMutable: false);
+        var mutNumbers = new ArrayType(Number, isMutable: true);
+        Assert.False(immutNumbers.IsAssignableTo(mutNumbers));
+        Assert.True(mutNumbers.IsAssignableTo(immutNumbers));
+
+        var immutStrings = new ArrayType(String, isMutable: false);
+        var mutStrings = new ArrayType(String, isMutable: true);
+        Assert.False(immutStrings.IsAssignableTo(mutStrings));
+        Assert.True(mutStrings.IsAssignableTo(immutStrings));
+    }
+
+    [Fact]
+    public void ArrayType_Assignability_WithOptionalElements()
+    {
+        var optionalNumber = new OptionalType(Number);
+        var requiredNumber = Number;
+        var arrayOfOptional = new ArrayType(optionalNumber, isMutable: false);
+        var arrayOfRequired = new ArrayType(requiredNumber, isMutable: false);
+        Assert.True(arrayOfRequired.IsAssignableTo(arrayOfOptional));
+        Assert.False(arrayOfOptional.IsAssignableTo(arrayOfRequired));
+
+        var mutArrayOfOptional = new ArrayType(optionalNumber, isMutable: true);
+        var mutArrayOfRequired = new ArrayType(requiredNumber, isMutable: true);
+        Assert.False(mutArrayOfRequired.IsAssignableTo(mutArrayOfOptional));
+        Assert.False(mutArrayOfOptional.IsAssignableTo(mutArrayOfRequired));
+    }
+
+    [Fact]
+    public void ArrayType_Assignability_NestedArrays()
+    {
+        var arrayOfNumberArray = new ArrayType(new ArrayType(Number, false), false);
+        var arrayOfStringArray = new ArrayType(new ArrayType(String, false), false);
+        var arrayOfUnknownArray = new ArrayType(new ArrayType(Unknown, false), false);
+        Assert.True(arrayOfStringArray.IsAssignableTo(arrayOfUnknownArray));
+        Assert.False(arrayOfNumberArray.IsAssignableTo(arrayOfStringArray));
+
+        var mutOuterImmutInner = new ArrayType(new ArrayType(Number, false), true);
+        var immutOuterMutInner = new ArrayType(new ArrayType(Number, true), false);
+        Assert.False(mutOuterImmutInner.IsAssignableTo(new ArrayType(new ArrayType(Unknown, false), true)));
+        Assert.False(immutOuterMutInner.IsAssignableTo(new ArrayType(new ArrayType(Unknown, true), false)));
+    }
+
+    [Fact]
     public void FunctionType_Assignability_SameSignature()
     {
         var fn1 = new FunctionType([], [Number], String);
@@ -433,6 +506,26 @@ public class TypesTest
         Assert.False(Number.IsAssignableTo(Never));
         Assert.False(Unknown.IsAssignableTo(Number));
         Assert.True(Number.IsAssignableTo(Unknown));
+    }
+
+    [Fact]
+    public void ArrayType_Equality()
+    {
+        var arr1 = new ArrayType(Number, isMutable: true);
+        var arr2 = new ArrayType(Number, isMutable: true);
+        var arr3 = new ArrayType(Number, isMutable: false);
+        var arr4 = new ArrayType(String, isMutable: true);
+        Assert.True(arr1.Equals(arr1));
+        Assert.True(arr1.Equals(arr2));
+        Assert.False(arr1.Equals(arr3));
+        Assert.False(arr1.Equals(arr4));
+        Assert.False(arr1.Equals(Number));
+
+        var immut1 = new ArrayType(Bool, isMutable: false);
+        var immut2 = new ArrayType(Bool, isMutable: false);
+        var mutable = new ArrayType(Bool, isMutable: true);
+        Assert.True(immut1.Equals(immut2));
+        Assert.False(immut1.Equals(mutable));
     }
 
     [Fact]

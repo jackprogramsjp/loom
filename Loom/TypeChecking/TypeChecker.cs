@@ -4,6 +4,7 @@ using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
+using ArrayType = Loom.Parsing.AST.ArrayType;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
@@ -231,7 +232,8 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         BindType(intersectionType, new Types.IntersectionType(intersectionType.Types.ConvertAll(Visit)));
 
     public override Type VisitUnionType(UnionType unionType) => BindType(unionType, new Types.UnionType(unionType.Types.ConvertAll(Visit)));
-    public override Type VisitOptionalType(OptionalType optionalType) => new Types.OptionalType(Visit(optionalType.NonNullableType));
+    public override Type VisitArrayType(ArrayType arrayType) => BindType(arrayType, new Types.ArrayType(Visit(arrayType.ElementType), arrayType.MutKeyword != null));
+    public override Type VisitOptionalType(OptionalType optionalType) => BindType(optionalType, new Types.OptionalType(Visit(optionalType.NonNullableType)));
     public override Type VisitPrimitiveType(PrimitiveType primitiveType) => BindType(primitiveType, new Types.PrimitiveType(primitiveType.Kind));
     public override Type VisitLiteralType(LiteralType literalType) => BindType(literalType, new Types.LiteralType(literalType.Value));
 
@@ -261,7 +263,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var constraint = MaybeVisit(typeParameter.ColonTypeClause);
         if (defaultType != null && constraint != null)
             semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter.EqualsTypeClause!);
-        
+
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, constraint);
         return BindType(typeParameter, parameter);
     }

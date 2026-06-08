@@ -180,6 +180,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.AST.Identifier(identifier.Name.Text);
     public override LuauNode VisitIntersectionType(IntersectionType intersectionType) => new Luau.AST.IntersectionType(intersectionType.Types.ConvertAll(Visit));
     public override LuauNode VisitUnionType(UnionType unionType) => new Luau.AST.UnionType(unionType.Types.ConvertAll(Visit));
+    public override LuauNode VisitArrayType(ArrayType arrayType) => new TableType(null, Visit(arrayType.ElementType));
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
     public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
 
@@ -191,8 +192,8 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
             return new NilLiteral();
         }
-        
-        var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: {} clause } ? Visit(clause) : null;
+
+        var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
         var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;

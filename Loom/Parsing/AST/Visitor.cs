@@ -83,6 +83,7 @@ public abstract class Visitor<T>
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
     public abstract T VisitTypeName(TypeName typeName);
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
+    public virtual T VisitArrayType(ArrayType arrayType) => Visit(arrayType.ElementType);
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
     public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
     public virtual T VisitIntersectionType(IntersectionType intersectionType) => VisitList(intersectionType.Types);

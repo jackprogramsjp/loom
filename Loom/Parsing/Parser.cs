@@ -238,14 +238,30 @@ public class Parser(LexerResult lexerResult)
     private TypeExpression ParseUnionType() => ParseChainedType(ParseIntersectionType, SyntaxKind.Pipe, (separators, types) => new UnionType(separators, types));
 
     private TypeExpression ParseIntersectionType() =>
-        ParseChainedType(ParseOptionalType, SyntaxKind.Ampersand, (separators, types) => new IntersectionType(separators, types));
+        ParseChainedType(ParsePostfixType, SyntaxKind.Ampersand, (separators, types) => new IntersectionType(separators, types));
 
-    private TypeExpression ParseOptionalType()
+    private TypeExpression ParsePostfixType()
     {
         var type = ParsePrimaryType();
-        return Match(out var question, SyntaxKind.Question)
-            ? new OptionalType(question, type)
-            : type;
+        while (true)
+        {
+            if (Match(out var leftBracket, SyntaxKind.LBracket))
+            {
+                var mutKeyword = Match(out var mutToken, SyntaxKind.MutKeyword) ? mutToken : null;
+                var rightBracket = Expect(SyntaxKind.RBracket);
+                type = new ArrayType(type, leftBracket, mutKeyword, rightBracket);
+            }
+            else if (Match(out var question, SyntaxKind.Question))
+            {
+                type = new OptionalType(question, type);
+            }
+            else
+            {
+                break;
+            }
+        }
+    
+        return type;
     }
 
     private TypeExpression ParsePrimaryType()

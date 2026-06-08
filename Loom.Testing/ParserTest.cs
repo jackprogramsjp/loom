@@ -3,6 +3,7 @@ using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
 using Microsoft.VisualBasic.CompilerServices;
+using ArrayType = Loom.Parsing.AST.ArrayType;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
@@ -123,6 +124,59 @@ public class ParserTest
         Assert.Equal(PrimitiveTypeKind.Number, numberType.Kind);
         Assert.Equal(PrimitiveTypeKind.String, stringType.Kind);
     }
+    
+    [Fact]
+    public void Parses_ArrayType_WithOptionals()
+    {
+        var tree = Utility.GetAST("let x: Abc?[]?");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var variableDeclaration = Assert.IsType<VariableDeclaration>(statement);
+        Assert.NotNull(variableDeclaration.ColonTypeClause);
+
+        var outerOptional = Assert.IsType<OptionalType>(variableDeclaration.ColonTypeClause.Type);
+        var array = Assert.IsType<ArrayType>(outerOptional.NonNullableType);
+        var innerOptional = Assert.IsType<OptionalType>(array.ElementType);
+        var typeName = Assert.IsType<TypeName>(innerOptional.NonNullableType);
+        Assert.Equal("Abc", typeName.Name.Text);
+    }
+    
+    [Fact]
+    public void Parses_ArrayType_Mutable()
+    {
+        var tree = Utility.GetAST("let x: Abc[mut]");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var variableDeclaration = Assert.IsType<VariableDeclaration>(statement);
+        Assert.NotNull(variableDeclaration.ColonTypeClause);
+
+        var array = Assert.IsType<ArrayType>(variableDeclaration.ColonTypeClause.Type);
+        Assert.NotNull(array.MutKeyword);
+        Assert.Equal(SyntaxKind.MutKeyword, array.MutKeyword.Kind);
+        
+        var typeName = Assert.IsType<TypeName>(array.ElementType);
+        Assert.Equal("Abc", typeName.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_ArrayType()
+    {
+        var tree = Utility.GetAST("let x: Abc[]");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var variableDeclaration = Assert.IsType<VariableDeclaration>(statement);
+        Assert.NotNull(variableDeclaration.ColonTypeClause);
+
+        var array = Assert.IsType<ArrayType>(variableDeclaration.ColonTypeClause.Type);
+        var typeName = Assert.IsType<TypeName>(array.ElementType);
+        Assert.Null(array.MutKeyword);
+        Assert.Equal("Abc", typeName.Name.Text);
+        Assert.Equal(SyntaxKind.LBracket, array.LeftBracket.Kind);
+        Assert.Equal(SyntaxKind.RBracket, array.RightBracket.Kind);
+    }
 
     [Fact]
     public void Parses_OptionalType()
@@ -133,6 +187,7 @@ public class ParserTest
         var statement = tree.Statements.First();
         var variableDeclaration = Assert.IsType<VariableDeclaration>(statement);
         Assert.NotNull(variableDeclaration.ColonTypeClause);
+
         var optional = Assert.IsType<OptionalType>(variableDeclaration.ColonTypeClause.Type);
         var typeName = Assert.IsType<TypeName>(optional.NonNullableType);
         Assert.Equal("Abc", typeName.Name.Text);
@@ -147,6 +202,7 @@ public class ParserTest
         var statement = tree.Statements.First();
         var variableDeclaration = Assert.IsType<VariableDeclaration>(statement);
         Assert.NotNull(variableDeclaration.ColonTypeClause);
+
         var typeName = Assert.IsType<TypeName>(variableDeclaration.ColonTypeClause.Type);
         Assert.Equal("Abc", typeName.Name.Text);
     }
@@ -260,11 +316,11 @@ public class ParserTest
         var fn = Assert.IsType<FunctionDeclaration>(tree.Statements.Single());
         Assert.NotNull(fn.Parameters);
         Assert.Single(fn.Parameters.ParameterList);
-        
+
         var parameter = fn.Parameters.ParameterList.First();
         Assert.Equal("name", parameter.Name.Text);
         Assert.NotNull(parameter.EqualsValueClause);
-        
+
         var literal = Assert.IsType<Literal>(parameter.EqualsValueClause.Value);
         Assert.Equal("\"world\"", literal.Token.Text);
     }
@@ -275,7 +331,7 @@ public class ParserTest
         var tree = Utility.GetAST("fn sum(a: number, b: number): number { return a + b; }");
         var fn = Assert.IsType<FunctionDeclaration>(tree.Statements.Single());
         Assert.NotNull(fn.ReturnType);
-        
+
         var returnType = Assert.IsType<PrimitiveType>(fn.ReturnType.Type);
         Assert.Equal(PrimitiveTypeKind.Number, returnType.Kind);
     }

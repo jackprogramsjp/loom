@@ -1,1 +1,0 @@
-type Id<T: number = "abc"> = T
