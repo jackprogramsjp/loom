@@ -247,10 +247,10 @@ public class TypesTest
     }
     
     [Fact]
-    public void ArrayType_Assignability_ContravariantImmutable()
+    public void ArrayType_Assignability_ContravariantMutable()
     {
-        var immutBase = new ArrayType(Number, isMutable: false);
-        var immutSubtype = new ArrayType(Never, isMutable: false);
+        var immutBase = new ArrayType(Number, isMutable: true);
+        var immutSubtype = new ArrayType(Never, isMutable: true);
         Assert.True(immutSubtype.IsAssignableTo(immutBase));
         Assert.False(immutBase.IsAssignableTo(immutSubtype));
     }
