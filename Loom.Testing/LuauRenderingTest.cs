@@ -47,6 +47,114 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_Long_ComputedProperty_Table()
+    {
+        var table = new Table(
+            [
+                new ComputedPropertyTableInitializer(new StringLiteral("a"), new NumberLiteral(1)),
+                new ComputedPropertyTableInitializer(new StringLiteral("b"), new NumberLiteral(2)),
+                new ComputedPropertyTableInitializer(new StringLiteral("c"), new NumberLiteral(3)),
+                new ComputedPropertyTableInitializer(new StringLiteral("d"), new NumberLiteral(4)),
+                new ComputedPropertyTableInitializer(new StringLiteral("e"), new NumberLiteral(5)),
+                new ComputedPropertyTableInitializer(new StringLiteral("f"), new NumberLiteral(6))
+            ]
+        );
+
+        Assert.Equal("{\n  [\"a\"] = 1,\n  [\"b\"] = 2,\n  [\"c\"] = 3,\n  [\"d\"] = 4,\n  [\"e\"] = 5,\n  [\"f\"] = 6,\n}", table.Render());
+    }
+
+    [Fact]
+    public void Renders_Short_ComputedProperty_Table()
+    {
+        var table = new Table(
+            [
+                new ComputedPropertyTableInitializer(new StringLiteral("foo"), new NumberLiteral(69)),
+                new ComputedPropertyTableInitializer(new StringLiteral("bar"), new NumberLiteral(420))
+            ]
+        );
+
+        Assert.Equal("{ [\"foo\"] = 69, [\"bar\"] = 420 }", table.Render());
+    }
+
+    [Fact]
+    public void Renders_Long_Property_Table()
+    {
+        var table = new Table(
+            [
+                new PropertyTableInitializer("a", new NumberLiteral(1)),
+                new PropertyTableInitializer("b", new NumberLiteral(2)),
+                new PropertyTableInitializer("c", new NumberLiteral(3)),
+                new PropertyTableInitializer("d", new NumberLiteral(4)),
+                new PropertyTableInitializer("e", new NumberLiteral(5)),
+                new PropertyTableInitializer("f", new NumberLiteral(6))
+            ]
+        );
+
+        Assert.Equal("{\n  a = 1,\n  b = 2,\n  c = 3,\n  d = 4,\n  e = 5,\n  f = 6,\n}", table.Render());
+    }
+
+    [Fact]
+    public void Renders_Short_Property_Table()
+    {
+        var table = new Table([new PropertyTableInitializer("foo", new NumberLiteral(69)), new PropertyTableInitializer("bar", new NumberLiteral(420))]);
+        Assert.Equal("{ foo = 69, bar = 420 }", table.Render());
+    }
+
+    [Fact]
+    public void Renders_Nested_Long_Array_Table()
+    {
+        var innerTable = new Table(
+            new List<int>
+            {
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+            }.ConvertAll(i => new TableInitializer(new NumberLiteral(i)))
+        );
+
+        var table = new Table(
+            [..innerTable.Initializers, new TableInitializer(new Table(innerTable.Initializers.Take(3).ToList())), new TableInitializer(innerTable)]
+        );
+
+        Assert.Equal("{\n  1,\n  2,\n  3,\n  4,\n  5,\n  6,\n  {1, 2, 3},\n  {\n    1,\n    2,\n    3,\n    4,\n    5,\n    6,\n  },\n}", table.Render());
+    }
+
+    [Fact]
+    public void Renders_Long_Array_Table()
+    {
+        var table = new Table(
+            new List<int>
+            {
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+            }.ConvertAll(i => new TableInitializer(new NumberLiteral(i)))
+        );
+
+        Assert.Equal("{\n  1,\n  2,\n  3,\n  4,\n  5,\n  6,\n}", table.Render());
+    }
+
+    [Fact]
+    public void Renders_Short_Array_Table()
+    {
+        var table = new Table(new List<int> { 1, 2, 3 }.ConvertAll(i => new TableInitializer(new NumberLiteral(i))));
+        Assert.Equal("{1, 2, 3}", table.Render());
+    }
+
+    [Fact]
+    public void Renders_Empty_Table()
+    {
+        var table = new Table([]);
+        Assert.Equal("{}", table.Render());
+    }
+
+    [Fact]
     public void Renders_Call()
     {
         var emptyCall = new Call(new Identifier("abc"), []);
@@ -182,6 +290,18 @@ public class LuauRenderingTest
     public void Renders_StringLiteralType()
     {
         Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteralType("abc").Render());
+    }
+    
+    [Fact]
+    public void Renders_Dictionary_TableType()
+    {
+        Assert.Equal("{ [string]: number }", new TableType(PrimitiveType.String, PrimitiveType.Number).Render());
+    }
+    
+    [Fact]
+    public void Renders_Array_TableType()
+    {
+        Assert.Equal("{ number }", new TableType(null, PrimitiveType.Number).Render());
     }
 
     [Theory]

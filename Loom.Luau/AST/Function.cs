@@ -16,6 +16,6 @@ public class Function(string name, TypeParameters? typeParameters, List<Paramete
         + ')'
         + (ReturnType != null ? ": " + ReturnType.Render(state) : "")
         + '\n'
-        + state.Block(() => string.Join('\n', Statements.ConvertAll(statement => state.Line(statement.Render(state)))))
+        + state.Block(() => string.Join('\n', Statements.ConvertAll(statement => state.IndentedLine(statement.Render(state)))))
         + "end";
 }

@@ -12,7 +12,7 @@ public class CompilationUnitTest
     {
         var file = FileLoader.LoadSingle($"{AssemblyFixture.TestFiles}/my-file.loom");
         var compiledFile = CompilationUnit.Compile(file);
-        Assert.Empty(compiledFile.Diagnostics.NotInfo().Set);
+        Assert.Empty(compiledFile.Diagnostics.WithoutInfo().Set);
         Assert.Equal(3, compiledFile.Tokens.Count);
         Assert.Single(compiledFile.Tree.Statements);
         Assert.IsType<BinaryOperator>(Assert.IsType<ExpressionStatement>(compiledFile.Tree.Statements.First()).Expression);

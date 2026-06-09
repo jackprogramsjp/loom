@@ -213,6 +213,14 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(unaryOperator, Types.PrimitiveType.Never);
     }
 
+    public override Type VisitArrayLiteral(ArrayLiteral arrayLiteral)
+    {
+        var expressionTypes = arrayLiteral.Expressions.ConvertAll(Visit).ConvertAll(t => t.Widen());
+        var elementType = TypeSimplifier.Simplify(new Types.UnionType(expressionTypes));
+        var isMutable = arrayLiteral.MutKeyword != null;
+        return new Types.ArrayType(elementType, isMutable);
+    }
+
     public override Type VisitLiteral(Literal literal) => BindType(literal, new Types.LiteralType(literal.Value));
 
     public override Type VisitIdentifier(Identifier identifier)

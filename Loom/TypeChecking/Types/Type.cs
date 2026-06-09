@@ -11,6 +11,7 @@ public abstract class Type
     public static bool IsNone(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None };
     public static bool IsNotOptional(Type type) => !IsOptional(type);
     public static bool IsOptional(Type type) => IsNone(type) || type is OptionalType || type is UnionType union && union.Types.Any(t => IsNone(t) || IsOptional(t));
+    protected static bool RequiresParentheses(Type type) => type is UnionType or IntersectionType or FunctionType;
     
     public Type NonNullable() =>
         IsNone(this)

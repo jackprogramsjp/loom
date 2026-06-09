@@ -221,6 +221,12 @@ public class Parser(LexerResult lexerResult)
             return new Parenthesized(leftParen, rightParen, expression);
         }
 
+        if (Match(out var mutKeyword, SyntaxKind.MutKeyword) && ParseArrayLiteral(mutKeyword) is { } mutableArrayLiteral)
+            return mutableArrayLiteral;
+
+        if (ParseArrayLiteral() is { } arrayLiteral)
+            return arrayLiteral;
+
         if (Match(out var name, SyntaxKind.Identifier))
             return new Identifier(name);
 
@@ -231,6 +237,19 @@ public class Parser(LexerResult lexerResult)
         _diagnostics.Error(currentOrLast.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
         _position++;
         return new NullExpression(currentOrLast);
+    }
+
+    private ArrayLiteral? ParseArrayLiteral(Token? mutKeyword = null)
+    {
+        if (!Match(out var leftBracket, SyntaxKind.LBracket))
+            return null;
+
+        if (Match(out var immediateRightBracket, SyntaxKind.RBracket))
+            return new ArrayLiteral(mutKeyword, leftBracket, immediateRightBracket, []);
+
+        var expressions = ParseDelimited(ParseExpression);
+        var rightBracket = Expect(SyntaxKind.RBracket);
+        return new ArrayLiteral(mutKeyword, leftBracket, rightBracket, expressions);
     }
 
     private TypeExpression ParseType() => ParseUnionType();

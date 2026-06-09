@@ -78,6 +78,7 @@ public abstract class Visitor<T>
 
     public virtual T VisitBinaryOperator(BinaryOperator binaryOperator) => CombineResults([Visit(binaryOperator.Left), Visit(binaryOperator.Right)]);
     public virtual T VisitUnaryOperator(UnaryOperator unaryOperator) => Visit(unaryOperator.Operand);
+    public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);
 
     public abstract T VisitLiteralType(LiteralType literalType);
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
@@ -112,4 +113,5 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
+
 }

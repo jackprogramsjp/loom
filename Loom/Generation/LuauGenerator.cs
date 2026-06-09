@@ -165,6 +165,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));
+    public override LuauNode VisitArrayLiteral(ArrayLiteral arrayLiteral) => new Table(arrayLiteral.Expressions.ConvertAll(e => new TableInitializer(Visit(e))));
 
     public override LuauNode VisitLiteral(Literal literal) =>
         literal.Value switch

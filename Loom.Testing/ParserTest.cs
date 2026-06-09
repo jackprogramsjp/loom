@@ -640,6 +640,74 @@ public class ParserTest
         Assert.Equal(SyntaxKind.Tilde, tildeC.Operator.Kind);
         Assert.IsType<Identifier>(exponentiation.Right);
     }
+    
+    [Fact]
+    public void Parses_Mutable_ArrayLiteral()
+    {
+        var tree = Utility.GetAST("let x = mut [69, 420]");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var variable = Assert.IsType<VariableDeclaration>(statement);
+        Assert.NotNull(variable.EqualsValueClause);
+        
+        var array = Assert.IsType<ArrayLiteral>(variable.EqualsValueClause.Value);
+        Assert.Equal(2, array.Expressions.Count);
+        Assert.NotNull(array.MutKeyword);
+        Assert.Equal(SyntaxKind.MutKeyword, array.MutKeyword.Kind);
+        
+        var firstLiteral = Assert.IsType<Literal>(array.Expressions.First());
+        var lastLiteral = Assert.IsType<Literal>(array.Expressions.Last());
+        Assert.Equal(69L, firstLiteral.Value);
+        Assert.Equal(420L, lastLiteral.Value);
+    }
+    
+    [Fact]
+    public void Parses_Nested_ArrayLiteral()
+    {
+        var tree = Utility.GetAST("[69, 420, [1, 2, 3]]");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
+        var array = Assert.IsType<ArrayLiteral>(expressionStatement.Expression);
+        Assert.Equal(3, array.Expressions.Count);
+        
+        var firstLiteral = Assert.IsType<Literal>(array.Expressions[0]);
+        var lastLiteral = Assert.IsType<Literal>(array.Expressions[1]);
+        Assert.Equal(69L, firstLiteral.Value);
+        Assert.Equal(420L, lastLiteral.Value);
+        
+        var nestedArray = Assert.IsType<ArrayLiteral>(array.Expressions[2]);
+        Assert.Equal(3, nestedArray.Expressions.Count);
+        
+        var firstNestedLiteral = Assert.IsType<Literal>(nestedArray.Expressions[0]);
+        var secondNestedLiteral = Assert.IsType<Literal>(nestedArray.Expressions[1]);
+        var thirdNestedLiteral = Assert.IsType<Literal>(nestedArray.Expressions[2]);
+        Assert.Equal(1L, firstNestedLiteral.Value);
+        Assert.Equal(2L, secondNestedLiteral.Value);
+        Assert.Equal(3L, thirdNestedLiteral.Value);
+    }
+    
+    [Fact]
+    public void Parses_ArrayLiteral()
+    {
+        var tree = Utility.GetAST("[69, 420]");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
+        var array = Assert.IsType<ArrayLiteral>(expressionStatement.Expression);
+        Assert.Equal(2, array.Expressions.Count);
+        Assert.Null(array.MutKeyword);
+        Assert.Equal(SyntaxKind.LBracket, array.LeftBracket.Kind);
+        Assert.Equal(SyntaxKind.RBracket, array.RightBracket.Kind);
+        
+        var firstLiteral = Assert.IsType<Literal>(array.Expressions.First());
+        var lastLiteral = Assert.IsType<Literal>(array.Expressions.Last());
+        Assert.Equal(69L, firstLiteral.Value);
+        Assert.Equal(420L, lastLiteral.Value);
+    }
 
     [Fact]
     public void Parses_Parenthesized()

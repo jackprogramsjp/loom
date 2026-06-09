@@ -9,8 +9,7 @@ public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     public static DiagnosticBag Concat(List<DiagnosticBag> bags) => new(bags.SelectMany(bag => bag.Set).ToHashSet());
     
     public HashSet<Diagnostic> Set { get; } = diagnostics ?? [];
-
-
+    
     public void Info(Node node, string message) => Info(node.Span, message);
     public void Info(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Info, null, message, null);
     public void Info(Node node, string code, string message) => Info(node.Span, code, message);
@@ -30,7 +29,7 @@ public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     public void CompilerError(LocationSpan span, string message) => Error(span, InternalCodes.CompilerError, message);
 
     public Diagnostic? Find(Func<Diagnostic, bool> predicate) => Set.FirstOrDefault(predicate);
-    public DiagnosticBag NotInfo() => new(Set.Where(d => d.Severity != DiagnosticSeverity.Info).ToHashSet());
+    public DiagnosticBag WithoutInfo() => new(Set.Where(d => d.Severity != DiagnosticSeverity.Info).ToHashSet());
     public DiagnosticBag Errors() => new(Set.Where(d => d.Severity == DiagnosticSeverity.Error).ToHashSet());
 
     public override string ToString() => string.Join('\n', Set);

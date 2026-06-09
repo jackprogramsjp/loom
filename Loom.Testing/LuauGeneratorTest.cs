@@ -19,7 +19,23 @@ namespace Loom.Testing;
 public class LuauGeneratorTest
 {
     [Fact]
-    public void Generates_IntersectionTypes()
+    public void Generates_Array_TableType()
+    {
+        var luauTree = Utility.GetLuauAST("mut x: number[];");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.First());
+        Assert.NotNull(variable.DeclaredType);
+
+        var table = Assert.IsType<TableType>(variable.DeclaredType);
+        Assert.Null(table.KeyType);
+        
+        var inner = Assert.IsType<PrimitiveType>(table.ValueType);
+        Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
+    }
+    
+    [Fact]
+    public void Generates_IntersectionType()
     {
         var luauTree = Utility.GetLuauAST("mut x: number & bool");
         Assert.Single(luauTree.Statements);
@@ -37,7 +53,7 @@ public class LuauGeneratorTest
     }
 
     [Fact]
-    public void Generates_UnionTypes()
+    public void Generates_UnionType()
     {
         var luauTree = Utility.GetLuauAST("mut x: number | bool");
         Assert.Single(luauTree.Statements);
@@ -55,7 +71,7 @@ public class LuauGeneratorTest
     }
 
     [Fact]
-    public void Generates_OptionalTypes()
+    public void Generates_OptionalType()
     {
         var luauTree = Utility.GetLuauAST("mut x: number?;");
         Assert.Single(luauTree.Statements);
@@ -366,6 +382,25 @@ public class LuauGeneratorTest
 
         var literal = Assert.IsType<NumberLiteral>(variable.Initializer);
         Assert.Equal(1, literal.Value);
+    }
+    
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Generates_ArrayLiterals(bool mutable)
+    {
+        var luauTree = Utility.GetLuauAST($"let _ = {(mutable ? "mut " : "")}[69, 420];");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var table = Assert.IsType<Table>(variable.Initializer);
+        Assert.Equal(2, table.Initializers.Count);
+        Assert.All(table.Initializers, i => Assert.IsType<TableInitializer>(i));
+        
+        var firstElement = Assert.IsType<NumberLiteral>(table.Initializers.First().Value);
+        var lastElement =  Assert.IsType<NumberLiteral>(table.Initializers.Last().Value);
+        Assert.Equal(69, firstElement.Value);
+        Assert.Equal(420, lastElement.Value);
     }
 
     [Fact]

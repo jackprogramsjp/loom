@@ -22,5 +22,5 @@ public sealed class ArrayType(Type elementType, bool isMutable) : Type
         return validMutability && ElementType.Equals(targetArray.ElementType);
     }
 
-    public override string ToString() => $"{ElementType}[{(IsMutable ? "mut" : "")}]";
+    public override string ToString() => $"{(RequiresParentheses(ElementType) ? $"({ElementType})" : ElementType)}[{(IsMutable ? "mut" : "")}]";
 }
