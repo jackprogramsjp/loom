@@ -1,5 +1,12 @@
 using Loom.TypeChecking.Types;
+using ArrayType = Loom.TypeChecking.Types.ArrayType;
+using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
+using LiteralType = Loom.TypeChecking.Types.LiteralType;
+using OptionalType = Loom.TypeChecking.Types.OptionalType;
+using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
+using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
+using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.Testing;
 
@@ -865,5 +872,255 @@ public class TypesTest
         var nonNullable = union.NonNullable();
         Assert.False(Type.IsOptional(nonNullable));
         Assert.Same(Number, nonNullable);
+    }
+
+    [Fact]
+    public void PrimitiveType_ToString()
+    {
+        Assert.Equal("number", Number.ToString());
+        Assert.Equal("string", String.ToString());
+        Assert.Equal("bool", Bool.ToString());
+        Assert.Equal("void", Void.ToString());
+        Assert.Equal("none", None.ToString());
+        Assert.Equal("never", Never.ToString());
+        Assert.Equal("unknown", Unknown.ToString());
+    }
+
+    [Fact]
+    public void OptionalType_ToString()
+    {
+        var optionalNumber = new OptionalType(Number);
+        Assert.Equal("number?", optionalNumber.ToString());
+
+        var optionalString = new OptionalType(String);
+        Assert.Equal("string?", optionalString.ToString());
+
+        var optionalOptional = new OptionalType(new OptionalType(Number));
+        Assert.Equal("number??", optionalOptional.ToString());
+
+        var optionalArray = new OptionalType(new ArrayType(Number, false));
+        Assert.Equal("number[]?", optionalArray.ToString());
+    }
+
+    [Fact]
+    public void ArrayType_ToString()
+    {
+        var mutArray = new ArrayType(Number, true);
+        Assert.Equal("number[mut]", mutArray.ToString());
+
+        var immutArray = new ArrayType(String, false);
+        Assert.Equal("string[]", immutArray.ToString());
+
+        var nestedMutArray = new ArrayType(new ArrayType(Bool, true), false);
+        Assert.Equal("bool[mut][]", nestedMutArray.ToString());
+
+        var optionalArray = new ArrayType(new OptionalType(Number), true);
+        Assert.Equal("number?[mut]", optionalArray.ToString());
+
+        var arrayOfOptional = new ArrayType(new OptionalType(Number), false);
+        Assert.Equal("number?[]", arrayOfOptional.ToString());
+    }
+
+    [Fact]
+    public void FunctionType_ToString()
+    {
+        var fn1 = new FunctionType([], [Number], String);
+        Assert.Equal("(number) -> string", fn1.ToString());
+
+        var fn2 = new FunctionType([], [Number, String, Bool], Void);
+        Assert.Equal("(number, string, bool) -> void", fn2.ToString());
+
+        var fn3 = new FunctionType([], [], Number);
+        Assert.Equal("() -> number", fn3.ToString());
+
+        var paramT = new TypeParameter("T");
+        var paramU = new TypeParameter("U");
+        var genericFn = new FunctionType([paramT, paramU], [paramT], paramU);
+        Assert.Equal("<T, U>(T) -> U", genericFn.ToString());
+
+        var innerFn = new FunctionType([], [Number], String);
+        var outerFn = new FunctionType([], [innerFn], Bool);
+        Assert.Equal("((number) -> string) -> bool", outerFn.ToString());
+
+        var complexFn = new FunctionType([], [new ArrayType(Number, true), new OptionalType(String)], new UnionType([Number, String]));
+        Assert.Equal("(number[mut], string?) -> number | string", complexFn.ToString());
+    }
+
+    [Fact]
+    public void TypeParameter_ToString()
+    {
+        var param = new TypeParameter("T");
+        Assert.Equal("T", param.ToString());
+        
+        var paramWithConstraint = new TypeParameter("T", new PrimitiveType(PrimitiveTypeKind.Number));
+        Assert.Equal("T: number", paramWithConstraint.ToString());
+
+        var paramWithConstraintAndDefault = new TypeParameter("T", new PrimitiveType(PrimitiveTypeKind.Number), new LiteralType(69));
+        Assert.Equal("T: number = 69", paramWithConstraintAndDefault.ToString());
+    }
+
+    [Fact]
+    public void UnionType_ToString()
+    {
+        var empty = new UnionType([Number]);
+        Assert.Equal("number", empty.ToString());
+        
+        var union1 = new UnionType([Number, String]);
+        Assert.Equal("number | string", union1.ToString());
+
+        var union2 = new UnionType([Number, String, Bool]);
+        Assert.Equal("number | string | bool", union2.ToString());
+
+        var union3 = new UnionType([new ArrayType(Number, true), new OptionalType(String), new FunctionType([], [], Void)]);
+        Assert.Equal("number[mut] | string? | (() -> void)", union3.ToString());
+
+        var union4 = new UnionType([Number]);
+        Assert.Equal("number", union4.ToString());
+    }
+
+    [Fact]
+    public void IntersectionType_ToString()
+    {
+        var intersection1 = new IntersectionType([Number, String]);
+        Assert.Equal("number & string", intersection1.ToString());
+
+        var intersection2 = new IntersectionType([Number, String, Bool]);
+        Assert.Equal("number & string & bool", intersection2.ToString());
+
+        var intersection3 = new IntersectionType([new ArrayType(Number, true), new OptionalType(String), new FunctionType([], [], Void)]);
+        Assert.Equal("number[mut] & string? & (() -> void)", intersection3.ToString());
+
+        var intersection4 = new IntersectionType([Number]);
+        Assert.Equal("number", intersection4.ToString());
+    }
+
+    [Fact]
+    public void LiteralType_ToString()
+    {
+        var intLiteral = new LiteralType(42);
+        Assert.Equal("42", intLiteral.ToString());
+
+        var floatLiteral = new LiteralType(3.14);
+        Assert.Equal("3.14", floatLiteral.ToString());
+
+        var stringLiteral = new LiteralType("hello");
+        Assert.Equal("\"hello\"", stringLiteral.ToString());
+
+        var boolLiteral = new LiteralType(true);
+        Assert.Equal("true", boolLiteral.ToString());
+
+        var nullLiteral = new LiteralType(null);
+        Assert.Equal("none", nullLiteral.ToString());
+    }
+
+    [Fact]
+    public void ObjectType_ToString_Empty()
+    {
+        var empty = new ObjectType(null, []);
+        Assert.Equal("{}", empty.ToString());
+    }
+
+    [Fact]
+    public void ObjectType_ToString_WithProperties()
+    {
+        var obj1 = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number)]);
+        Assert.Equal("{ x: number, y: number }", obj1.ToString());
+
+        var obj2 = new ObjectType(null, [new ObjectProperty(true, "counter", Number), new ObjectProperty(false, "name", String)]);
+        Assert.Equal("{ mut counter: number, name: string }", obj2.ToString());
+
+        var obj3 = new ObjectType(null, [new ObjectProperty(false, "single", Number)]);
+        Assert.Equal("{ single: number }", obj3.ToString());
+    }
+
+    [Fact]
+    public void ObjectType_ToString_WithIndexer()
+    {
+        var obj1 = new ObjectType(new ObjectIndexer(true, String, Number), []);
+        Assert.Equal("{ mut [string]: number }", obj1.ToString());
+
+        var obj2 = new ObjectType(new ObjectIndexer(false, Number, String), []);
+        Assert.Equal("{ [number]: string }", obj2.ToString());
+
+        var obj3 = new ObjectType(new ObjectIndexer(true, String, new ArrayType(Number, true)), []);
+        Assert.Equal("{ mut [string]: number[mut] }", obj3.ToString());
+    }
+
+    [Fact]
+    public void ObjectType_ToString_WithPropertiesAndIndexer()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(true, String, Number),
+            [new ObjectProperty(false, "name", String), new ObjectProperty(true, "age", Number)]
+        );
+
+        Assert.Equal("{ mut [string]: number, name: string, mut age: number }", obj.ToString());
+
+        var obj2 = new ObjectType(
+            new ObjectIndexer(false, Number, Bool),
+            [new ObjectProperty(false, "id", Number)]
+        );
+
+        Assert.Equal("{ [number]: bool, id: number }", obj2.ToString());
+    }
+
+    [Fact]
+    public void ObjectType_ToString_Nested()
+    {
+        var inner = new ObjectType(null, [new ObjectProperty(false, "value", Number)]);
+        var outer = new ObjectType(null, [new ObjectProperty(false, "data", inner)]);
+        Assert.Equal("{ data: { value: number } }", outer.ToString());
+    }
+
+    [Fact]
+    public void ObjectType_ToString_ComplexNested()
+    {
+        var inner = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            [new ObjectProperty(false, "name", String)]
+        );
+
+        var outer = new ObjectType(
+            new ObjectIndexer(true, Number, inner),
+            [new ObjectProperty(false, "items", new ArrayType(inner, true))]
+        );
+
+        Assert.Equal("{ mut [number]: { [string]: number, name: string }, items: { [string]: number, name: string }[mut] }", outer.ToString());
+    }
+
+    [Fact]
+    public void ObjectType_ToString_OrderIndependent()
+    {
+        var obj1 = new ObjectType(null, [new ObjectProperty(false, "a", Number), new ObjectProperty(false, "b", String)]);
+        var obj2 = new ObjectType(null, [new ObjectProperty(false, "b", String), new ObjectProperty(false, "a", Number)]);
+
+        var repr1 = obj1.ToString();
+        var repr2 = obj2.ToString();
+
+        Assert.Contains("a: number", repr1);
+        Assert.Contains("b: string", repr1);
+        Assert.Contains("a: number", repr2);
+        Assert.Contains("b: string", repr2);
+    }
+
+    [Fact]
+    public void ComplexNestedType_ToString()
+    {
+        var innerObj = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number)]);
+        var fnType = new FunctionType([], [Number, Number], innerObj);
+        var optionalFn = new OptionalType(fnType);
+        var arrayOfOptionalFn = new ArrayType(optionalFn, true);
+
+        Assert.Equal("((number, number) -> { x: number, y: number })?[mut]", arrayOfOptionalFn.ToString());
+
+        var union = new UnionType(
+            [
+                new ArrayType(Number, false),
+                new OptionalType(String),
+                new ObjectType(null, [new ObjectProperty(false, "tag", String), new ObjectProperty(false, "value", Number)])
+            ]
+        );
+
+        Assert.Equal("number[] | string? | { tag: string, value: number }", union.ToString());
     }
 }

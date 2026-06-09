@@ -11,5 +11,5 @@ public sealed class IntersectionType(List<Type> types) : Type
             ? Types.Exists(t => t.IsAssignableTo(other))
             : Types.TrueForAll(other.IsAssignableTo);
 
-    public override string ToString() => '(' + string.Join(" & ", Types.ConvertAll(type => type.ToString())) + ')';
+    public override string ToString() => string.Join(" & ", Types.ConvertAll(ParenthesizeIfNeeded));
 }

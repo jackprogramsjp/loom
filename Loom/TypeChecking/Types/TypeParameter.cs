@@ -1,10 +1,10 @@
 namespace Loom.TypeChecking.Types;
 
-public class TypeParameter(string name, Type? defaultType = null, Type? constraint = null) : Type
+public class TypeParameter(string name, Type? constraint = null, Type? defaultType = null) : Type
 {
     public string Name { get; } = name;
-    public Type? DefaultType { get; } = defaultType;
     public Type? Constraint { get; } = constraint;
+    public Type? DefaultType { get; } = defaultType;
 
     public override bool Equals(Type? other) =>
         other is TypeParameter parameter

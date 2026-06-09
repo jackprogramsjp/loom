@@ -7,5 +7,5 @@ public sealed class OptionalType(Type nonNullableType)
 
     public override bool Equals(Type? other) => other is OptionalType optional && NonNullableType.Equals(optional.NonNullableType);
 
-    public override string ToString() => NonNullableType + "?";
+    public override string ToString() => ParenthesizeIfNeeded(NonNullableType) + "?";
 }

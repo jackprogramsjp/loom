@@ -8,5 +8,5 @@ public class UnionType(List<Type> types) : Type
 
     public override bool IsAssignableTo(Type other) => base.IsAssignableTo(other) || other is UnionType && Types.Exists(t => t.IsAssignableTo(other));
 
-    public override string ToString() => string.Join(" | ", Types.ConvertAll(type => type.ToString()));
+    public override string ToString() => string.Join(" | ", Types.ConvertAll(ParenthesizeIfNeeded));
 }

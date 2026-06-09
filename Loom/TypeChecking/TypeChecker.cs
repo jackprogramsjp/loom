@@ -309,7 +309,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (defaultType != null && constraint != null)
             semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter.EqualsTypeClause!);
 
-        var parameter = new Types.TypeParameter(typeParameter.Name.Text, defaultType, constraint);
+        var parameter = new Types.TypeParameter(typeParameter.Name.Text, constraint, defaultType);
         return BindType(typeParameter, parameter);
     }
 

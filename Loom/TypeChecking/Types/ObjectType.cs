@@ -98,6 +98,6 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             ? $"{(Indexer.IsMutable ? "mut " : "")}[{Indexer.KeyType}]: {Indexer.ValueType}"
             : "";
 
-        return $"{{ {indexer}{(properties.Length > 0 ? ", " : "")}{properties} }}";
+        return $"{{ {indexer}{(Indexer != null && properties.Length > 0 ? ", " : "")}{properties} }}";
     }
 }

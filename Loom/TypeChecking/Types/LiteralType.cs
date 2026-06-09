@@ -18,7 +18,7 @@ public sealed class LiteralType(object? value)
         string => value,
         bool => value,
         null => value,
-        _ => throw new ArgumentException($"Unsupported literal type: {value.GetType()}")
+        _ => throw new ArgumentException($"Unsupported literal type: {value.GetType()}") // get this shit outta here
     };
 
     public override bool Equals(Type? other) => base.Equals(other) && other is LiteralType literal && (Value?.Equals(literal.Value) ?? literal.Value == null);
