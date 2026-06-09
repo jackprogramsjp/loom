@@ -5,6 +5,7 @@ using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
+using ElementAccess = Loom.Parsing.AST.ElementAccess;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Parsing.AST.Identifier;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
@@ -109,6 +110,9 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
+
+    public override LuauNode VisitElementAccess(ElementAccess elementAccess) =>
+        new Luau.AST.ElementAccess(Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression));
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {

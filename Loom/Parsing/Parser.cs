@@ -181,21 +181,34 @@ public class Parser(LexerResult lexerResult)
     private Expression ParseUnary() =>
         Match(out var op, SyntaxFacts.IsUnaryOperator)
             ? new UnaryOperator(op, ParseUnary())
-            : ParseInvocation();
+            : ParsePostfix();
 
-    private Expression ParseInvocation(Expression? expression = null)
+    private Expression ParsePostfix()
     {
-        while (true)
+        var expression = ParsePrimary();
+        while (!IsEof())
         {
-            expression ??= ParsePrimary();
-            if (IsEof() || Current() is not { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
-                return expression;
-
-            var typeArguments = ParseTypeArguments(forFunction: true);
-            var leftParen = Expect(SyntaxKind.LParen);
-            var arguments = ParseArguments(leftParen);
-            expression = new Invocation(expression, typeArguments, arguments);
+            if (Current() is { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
+            {
+                var typeArguments = ParseTypeArguments(forFunction: true);
+                var leftParen = Expect(SyntaxKind.LParen);
+                var arguments = ParseArguments(leftParen);
+                expression = new Invocation(expression, typeArguments, arguments);
+            }
+            else if (Match(out var leftBracket, SyntaxKind.LBracket))
+            {
+                var indexExpression = ParseExpression();
+                var rightBracket = Expect(SyntaxKind.RBracket);
+                expression = new ElementAccess(leftBracket, rightBracket, expression, indexExpression);
+            }
+            else
+            {
+                // TODO: postfix unary operators
+                break;
+            }
         }
+        
+        return expression;
     }
 
     private Arguments ParseArguments(Token leftParen)

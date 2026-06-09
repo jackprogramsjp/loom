@@ -72,6 +72,8 @@ public abstract class Visitor<T>
     
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
     public virtual T VisitInvocation(Invocation invocation) => CombineResults([Visit(invocation.Expression), Visit(invocation.Arguments)]);
+    
+    public virtual T VisitElementAccess(ElementAccess elementAccess) => CombineResults([Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression)]);
 
     public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) =>
         CombineResults([Visit(assignmentOperator.Left), Visit(assignmentOperator.Right)]);
@@ -113,5 +115,4 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
-
 }

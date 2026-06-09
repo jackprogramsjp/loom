@@ -33,9 +33,8 @@ public abstract class Type
             _ => false
         };
     }
-
-    protected static bool ListEquals<T>(List<T> list, List<T> otherList)
-        where T : Type =>
+    
+    protected static bool ListEquals<T>(List<T> list, List<T> otherList) where T : Type =>
         list.Count == otherList.Count
         && list.All(t => otherList.Any(u => u.Equals(t)));
 }

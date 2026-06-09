@@ -17,14 +17,18 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
         if (base.IsAssignableTo(other))
             return true;
 
-        if (other is not FunctionType target || ParameterTypes.Count != target.ParameterTypes.Count || TypeParameters.Count != target.TypeParameters.Count)
+        if (other is not FunctionType functionType
+            || ParameterTypes.Count != functionType.ParameterTypes.Count
+            || TypeParameters.Count != functionType.TypeParameters.Count)
+        {
+            return false;
+        }
+
+        if (TypeParameters.Where((t, i) => !t.Equals(functionType.TypeParameters[i])).Any())
             return false;
 
-        if (TypeParameters.Where((t, i) => !t.Equals(target.TypeParameters[i])).Any())
-            return false;
-
-        return !ParameterTypes.Where((t, i) => !target.ParameterTypes[i].IsAssignableTo(t)).Any()
-            && ReturnType.IsAssignableTo(target.ReturnType);
+        return !ParameterTypes.Where((t, i) => !functionType.ParameterTypes[i].IsAssignableTo(t)).Any()
+            && ReturnType.IsAssignableTo(functionType.ReturnType);
     }
 
     public override string ToString() =>

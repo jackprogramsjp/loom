@@ -150,6 +150,43 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(invocation, instantiated.ReturnType);
     }
 
+    public override Type VisitElementAccess(ElementAccess elementAccess)
+    {
+        var type = Visit(elementAccess.Expression);
+        if (type is not ObjectType objectType)
+        {
+            _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
+            return Types.PrimitiveType.Never;
+        }
+
+        var cannotFindReason = "";
+        var indexType = Visit(elementAccess.IndexExpression);
+        if (indexType is Types.LiteralType { Value: string name } && objectType.Properties.Count > 0)
+        {
+            var property = objectType.Properties.Find(p => p.Name == name);
+            if (property != null)
+                return property.Type;
+
+            cannotFindReason = $" Property '{name}' does not exist on type '{type}'.";
+        }
+
+        if (objectType.Indexer != null)
+        {
+            if (indexType.IsAssignableTo(objectType.Indexer.KeyType))
+                return objectType.Indexer.ValueType;
+
+            cannotFindReason = $" Index is not of type '{objectType.Indexer.KeyType}'.";
+        }
+
+        _diagnostics.Error(
+            elementAccess.IndexExpression,
+            InternalCodes.InvalidAccess,
+            $"Expression of type '{indexType}' cannot be used to index type '{type}'.{cannotFindReason}"
+        );
+
+        return Types.PrimitiveType.Never;
+    }
+
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
         var targetType = Visit(assignmentOperator.Left);
