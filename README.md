@@ -147,6 +147,15 @@ const arr: { number } = {1, 2, 3}
 const x = 69
 arr[1] = x
 ```
+##
+```rs
+let abc = 69;
+let name = nameof(abc)
+```
+```luau
+const abc = 69;
+const name = "abc"
+```
 
 ## Planned Features
 
