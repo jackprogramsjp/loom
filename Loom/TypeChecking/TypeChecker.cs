@@ -162,6 +162,9 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         }
 
         var indexType = Visit(elementAccess.IndexExpression);
+        if (type is Types.ArrayType && indexType.Equals(IntrinsicTypes.Range.Type))
+            return type;
+        
         var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
         if (bodyType != null)
             return bodyType.ValueType;
@@ -252,6 +255,16 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for '{unaryOperator.Operator.Text}{operandType.Widen()}'", hint);
 
         return BindType(unaryOperator, Types.PrimitiveType.Never);
+    }
+
+    public override Type VisitRangeLiteral(RangeLiteral rangeLiteral)
+    {
+        var minimumType = Visit(rangeLiteral.Minimum);
+        var maximumType = Visit(rangeLiteral.Maximum);
+        semanticModel.TypeSolver.AddConstraint(minimumType, Types.PrimitiveType.Number, rangeLiteral.Minimum);
+        semanticModel.TypeSolver.AddConstraint(maximumType, Types.PrimitiveType.Number, rangeLiteral.Maximum);
+        
+        return BindType(rangeLiteral, IntrinsicTypes.Range.Type);
     }
 
     public override Type VisitArrayLiteral(ArrayLiteral arrayLiteral)

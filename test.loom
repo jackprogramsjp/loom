@@ -1,2 +1,1 @@
-let abc = mut [1,2,3];
-let name = nameof(abc);
+let r = 1..5; let arr = [1,2,3,4,5]; arr[r]

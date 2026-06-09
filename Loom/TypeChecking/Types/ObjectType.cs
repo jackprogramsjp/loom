@@ -67,6 +67,9 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 
     public override bool IsAssignableTo(Type other)
     {
+        if (base.IsAssignableTo(other))
+            return true;
+        
         if (other is not ObjectType objectType)
             return false;
 

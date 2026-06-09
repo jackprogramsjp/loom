@@ -663,6 +663,19 @@ public class ParserTest
         var primitive = Assert.IsType<PrimitiveType>(innerType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
+    
+    [Fact]
+    public void Parses_RangeLiteral()
+    {
+        var tree = Utility.GetAST("1..5");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
+        var rangeLiteral = Assert.IsType<RangeLiteral>(expressionStatement.Expression);
+        Assert.Equal(1L, Assert.IsType<Literal>(rangeLiteral.Minimum).Value);
+        Assert.Equal(5L, Assert.IsType<Literal>(rangeLiteral.Maximum).Value);
+    }
 
     [Theory]
     [InlineData("a + b", SyntaxKind.Plus)]

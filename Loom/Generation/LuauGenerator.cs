@@ -1,11 +1,14 @@
+using System.Linq.Expressions;
 using Loom.Diagnostics;
 using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
+using Loom.TypeChecking;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ElementAccess = Loom.Parsing.AST.ElementAccess;
+using Expression = Loom.Parsing.AST.Expression;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Parsing.AST.Identifier;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
@@ -114,8 +117,36 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
 
-    public override LuauNode VisitElementAccess(ElementAccess elementAccess) =>
-        new Luau.AST.ElementAccess(Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression));
+    public override LuauNode VisitElementAccess(ElementAccess elementAccess)
+    {
+        var target = Visit(elementAccess.Expression);
+        var indexType = semanticModel.GetType(elementAccess.IndexExpression);
+        if (!indexType.Equals(IntrinsicTypes.Range.Type))
+            return new Luau.AST.ElementAccess(target, Visit(elementAccess.IndexExpression));
+
+        var one = new NumberLiteral(1);
+        var length = PushToVariable("_length", new Luau.AST.UnaryOperator("#", target));
+        Call? minimum, maximum;
+
+        if (elementAccess.IndexExpression is RangeLiteral literal)
+        {
+            var rangeTable = Visit<Table>(literal);
+            var properties = rangeTable.Initializers.OfType<PropertyTableInitializer>().ToList();
+            var minimumLiteral = properties.First(p => p.PropertyName == "minimum").Value;
+            var maximumLiteral = properties.First(p => p.PropertyName == "maximum").Value;
+            minimum = LuauFactory.MathCall("clamp", [minimumLiteral, one, length]);
+            maximum = LuauFactory.MathCall("clamp", [maximumLiteral, one, length]);
+        }
+        else
+        {
+            var index = Visit(elementAccess.IndexExpression);
+            var range = PushToVariable("_range", index);
+            minimum = LuauFactory.MathCall("clamp", [new Luau.AST.PropertyAccess(range, ["minimum"]), one, length]);
+            maximum = LuauFactory.MathCall("clamp", [new Luau.AST.PropertyAccess(range, ["maximum"]), one, length]);
+        }
+
+        return LuauFactory.TableCall("move", [target, minimum, maximum, one, new Table([])]);
+    }
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
@@ -188,6 +219,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));
+
+    public override LuauNode VisitRangeLiteral(RangeLiteral rangeLiteral) =>
+        new Table([new PropertyTableInitializer("minimum", Visit(rangeLiteral.Minimum)), new PropertyTableInitializer("maximum", Visit(rangeLiteral.Maximum))]);
+
     public override LuauNode VisitArrayLiteral(ArrayLiteral arrayLiteral) => new Table(arrayLiteral.Expressions.ConvertAll(e => new TableInitializer(Visit(e))));
 
     public override LuauNode VisitLiteral(Literal literal) =>

@@ -1,4 +1,5 @@
 using Loom.Diagnostics;
+using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
 
 namespace Loom.Testing;
@@ -263,7 +264,30 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, "Type 'Id<T, U = number>' expects 1-2 type arguments, but 0 were provided.");
     }
+
+    [Fact]
+    public void ThrowsFor_NonNumeric_RangeLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("'a'..'b'");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"a\"' is not assignable to type 'number'.");
+    }
     
+    [Fact]
+    public void Checks_RangeLiteral_ElementAccess()
+    {
+        var type = Utility.GetLastStatementType("let x = [1, 2, 3]; x[1..10]");
+        var array = Assert.IsType<ArrayType>(type);
+        var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Checks_RangeLiteral()
+    {
+        var type = Utility.GetLastStatementType("1..10");
+        Assert.True(type.Equals(IntrinsicTypes.Range.Type), $"Expected 'Range', got '{type}'");
+    }
+
     [Fact]
     public void Checks_NameOf()
     {
@@ -287,7 +311,7 @@ public class TypeCheckerTest
             "Cannot infer type parameter 'T'. Provide explicit type arguments."
         );
     }
-    
+
     [Fact]
     public void Checks_ElementAccess_NestedArray()
     {
@@ -347,9 +371,7 @@ public class TypeCheckerTest
             x
             """;
 
-        var result = Utility.TypeCheck(source);
-        Utility.AssertNoErrors(result.Diagnostics);
-
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         var literal = Assert.IsType<LiteralType>(result.ReturnType);
         Assert.Equal(42L, literal.Value);
     }

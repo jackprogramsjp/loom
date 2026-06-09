@@ -2,6 +2,7 @@ using Loom.Diagnostics;
 using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Syntax;
+using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
 
@@ -27,16 +28,21 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         var rootScope = new ScopeNode();
         _scopeNodes.Push(rootScope);
 
-        PushScope();
-        VisitTree(parserResult.Tree);
-        PopScope();
-        return new SemanticModel(
+        var semanticModel = new SemanticModel(
             parserResult.Tree,
             _diagnostics,
             _allDeclarations,
             _allReferences,
             rootScope
         );
+        
+        PushScope();
+        foreach (var symbol in IntrinsicTypes.GetSymbols(semanticModel))
+            DeclareSymbol(symbol);
+
+        VisitTree(parserResult.Tree);
+        PopScope();
+        return semanticModel;
     }
 
     public override bool Visit(Node node) => node.Accept(this);
@@ -62,7 +68,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         var symbol = new Symbol(functionDeclaration, SymbolKind.Function, name);
         DeclareSymbol(symbol);
         scope.InitializationState[name] = true;
-        
+
         PushScope();
         if (functionDeclaration.TypeParameters != null)
             Visit(functionDeclaration.TypeParameters);
@@ -72,7 +78,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         if (functionDeclaration.ReturnType != null)
             Visit(functionDeclaration.ReturnType);
-        
+
         Visit(functionDeclaration.Body);
         PopScope();
         return true;

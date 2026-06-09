@@ -48,6 +48,13 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("let x = 1; x = 69").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to an immutable variable.");
     }
+
+    [Theory]
+    [InlineData("Range")]
+    public void Declares_IntrinsicType_Symbols(string name)
+    {
+        Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
+    }
     
     [Fact]
     public void Declares_VariableSymbol()

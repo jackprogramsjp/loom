@@ -29,8 +29,8 @@ public abstract class Type
     {
         return other switch
         {
-            UnionType union => union.Types.Any(IsAssignableTo),
-            IntersectionType intersection => intersection.Types.All(IsAssignableTo),
+            UnionType union => union.Types.Exists(IsAssignableTo),
+            IntersectionType intersection => intersection.Types.TrueForAll(IsAssignableTo),
             _ => false
         };
     }

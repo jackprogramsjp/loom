@@ -157,7 +157,7 @@ public class Parser(LexerResult lexerResult)
     private Expression ParseBinaryLevel(int level)
     {
         if (level >= _binaryPrecedenceLevels.Length)
-            return ParseUnary();
+            return ParseRange();
 
         var (rightAssociative, matches) = _binaryPrecedenceLevels[level];
         var left = ParseBinaryLevel(level + 1);
@@ -177,6 +177,16 @@ public class Parser(LexerResult lexerResult)
         }
 
         return left;
+    }
+
+    private Expression ParseRange()
+    {
+        var expression = ParseUnary();
+        if (!Match(out var dotDot, SyntaxKind.DotDot))
+            return expression;
+
+        var maximum = ParseUnary();
+        return new RangeLiteral(dotDot, expression, maximum);
     }
 
     private Expression ParseUnary() =>

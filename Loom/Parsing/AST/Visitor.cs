@@ -66,6 +66,8 @@ public abstract class Visitor<T>
     public virtual T VisitReturn(Return @return) => Visit(@return.Expression);
     public virtual T VisitExpressionBody(ExpressionBody expressionBody) => Visit(new ExpressionStatement(expressionBody.Expression));
 
+    public virtual T VisitRangeLiteral(RangeLiteral rangeLiteral) => CombineResults([Visit(rangeLiteral.Minimum), Visit(rangeLiteral.Maximum)]);
+    public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);
     public abstract T VisitLiteral(Literal literal);
     public abstract T VisitIdentifier(Identifier identifier);
     
@@ -81,7 +83,6 @@ public abstract class Visitor<T>
 
     public virtual T VisitBinaryOperator(BinaryOperator binaryOperator) => CombineResults([Visit(binaryOperator.Left), Visit(binaryOperator.Right)]);
     public virtual T VisitUnaryOperator(UnaryOperator unaryOperator) => Visit(unaryOperator.Operand);
-    public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);
 
     public abstract T VisitLiteralType(LiteralType literalType);
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
@@ -116,4 +117,5 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
+
 }

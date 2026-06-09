@@ -42,6 +42,13 @@ internal static class Utility
     public static Token IdentifierToken(string name, LocationSpan? span = null) => Token(SyntaxKind.Identifier, name, span);
     public static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
 
+    public static T AssertNoErrors<T>(T result)
+        where T : DiagnosedResult
+    {
+        AssertNoErrors(result.Diagnostics);
+        return result;
+    }
+
     public static void AssertNoErrors(DiagnosticBag diagnostics) => Assert.Empty(diagnostics.Set.Where(d => d.Severity == DiagnosticSeverity.Error));
 
     public static void AssertDiagnostic(DiagnosticBag diagnostics, string code, string message)
