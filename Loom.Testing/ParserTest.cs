@@ -46,6 +46,13 @@ public class ParserTest
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 0, got EOF.");
         Utility.AssertDiagnostic(diagnostics2, InternalCodes.UnexpectedToken, "Expected ')' here to close '(' at character 0, got ']'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_UnterminatedBrackets()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("arr[0");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected ']', got EOF.");
+    }
 
     [Fact]
     public void ThrowsFor_InvalidAssignmentTarget()
@@ -124,7 +131,7 @@ public class ParserTest
         Assert.Equal(PrimitiveTypeKind.Number, numberType.Kind);
         Assert.Equal(PrimitiveTypeKind.String, stringType.Kind);
     }
-    
+
     [Fact]
     public void Parses_ArrayType_WithOptionals()
     {
@@ -141,7 +148,7 @@ public class ParserTest
         var typeName = Assert.IsType<TypeName>(innerOptional.NonNullableType);
         Assert.Equal("Abc", typeName.Name.Text);
     }
-    
+
     [Fact]
     public void Parses_ArrayType_Mutable()
     {
@@ -155,7 +162,7 @@ public class ParserTest
         var array = Assert.IsType<ArrayType>(variableDeclaration.ColonTypeClause.Type);
         Assert.NotNull(array.MutKeyword);
         Assert.Equal(SyntaxKind.MutKeyword, array.MutKeyword.Kind);
-        
+
         var typeName = Assert.IsType<TypeName>(array.ElementType);
         Assert.Equal("Abc", typeName.Name.Text);
     }
@@ -420,6 +427,115 @@ public class ParserTest
     }
 
     [Fact]
+    public void Parses_ElementAccess_Basic()
+    {
+        var tree = Utility.GetAST("arr[0]");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var elementAccess = Assert.IsType<ElementAccess>(expressionStatement.Expression);
+        Assert.Equal(SyntaxKind.LBracket, elementAccess.LeftBracket.Kind);
+        Assert.Equal(SyntaxKind.RBracket, elementAccess.RightBracket.Kind);
+
+        var identifier = Assert.IsType<Identifier>(elementAccess.Expression);
+        Assert.Equal("arr", identifier.Name.Text);
+
+        var index = Assert.IsType<Literal>(elementAccess.IndexExpression);
+        Assert.Equal(0L, index.Value);
+
+        Assert.Equal(SyntaxKind.LBracket, elementAccess.LeftBracket.Kind);
+        Assert.Equal(SyntaxKind.RBracket, elementAccess.RightBracket.Kind);
+    }
+
+    [Fact]
+    public void Parses_ElementAccess_WithExpressionIndex()
+    {
+        var tree = Utility.GetAST("arr[i + 1]");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var elementAccess = Assert.IsType<ElementAccess>(expressionStatement.Expression);
+
+        var identifier = Assert.IsType<Identifier>(elementAccess.Expression);
+        Assert.Equal("arr", identifier.Name.Text);
+
+        var binary = Assert.IsType<BinaryOperator>(elementAccess.IndexExpression);
+        Assert.Equal(SyntaxKind.Plus, binary.Operator.Kind);
+
+        var left = Assert.IsType<Identifier>(binary.Left);
+        var right = Assert.IsType<Literal>(binary.Right);
+        Assert.Equal("i", left.Name.Text);
+        Assert.Equal(1L, right.Value);
+    }
+
+    [Fact]
+    public void Parses_ElementAccess_AsAssignmentTarget()
+    {
+        var tree = Utility.GetAST("arr[0] = 42");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var assignment = Assert.IsType<AssignmentOperator>(expressionStatement.Expression);
+
+        var elementAccess = Assert.IsType<ElementAccess>(assignment.Left);
+        var identifier = Assert.IsType<Identifier>(elementAccess.Expression);
+        Assert.Equal("arr", identifier.Name.Text);
+
+        var index = Assert.IsType<Literal>(elementAccess.IndexExpression);
+        Assert.Equal(0L, index.Value);
+
+        var value = Assert.IsType<Literal>(assignment.Right);
+        Assert.Equal(42L, value.Value);
+    }
+
+    [Fact]
+    public void Parses_ElementAccess_Chained()
+    {
+        var tree = Utility.GetAST("arr[0][1][2]");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+
+        var outer = Assert.IsType<ElementAccess>(expressionStatement.Expression);
+        var outerIndex = Assert.IsType<Literal>(outer.IndexExpression);
+        Assert.Equal(2L, outerIndex.Value);
+
+        var middle = Assert.IsType<ElementAccess>(outer.Expression);
+        var middleIndex = Assert.IsType<Literal>(middle.IndexExpression);
+        Assert.Equal(1L, middleIndex.Value);
+
+        var inner = Assert.IsType<ElementAccess>(middle.Expression);
+        var innerIndex = Assert.IsType<Literal>(inner.IndexExpression);
+        Assert.Equal(0L, innerIndex.Value);
+
+        var identifier = Assert.IsType<Identifier>(inner.Expression);
+        Assert.Equal("arr", identifier.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_ElementAccess_WithInvocation()
+    {
+        var tree = Utility.GetAST("getArr()[0]");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var elementAccess = Assert.IsType<ElementAccess>(expressionStatement.Expression);
+
+        var invocation = Assert.IsType<Invocation>(elementAccess.Expression);
+        var identifier = Assert.IsType<Identifier>(invocation.Expression);
+        Assert.Equal("getArr", identifier.Name.Text);
+
+        var index = Assert.IsType<Literal>(elementAccess.IndexExpression);
+        Assert.Equal(0L, index.Value);
+    }
+
+    [Fact]
+    public void Parses_ElementAccess_WithNestedInvocation()
+    {
+        var tree = Utility.GetAST("arr[0]()");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<Invocation>(expressionStatement.Expression);
+
+        var elementAccess = Assert.IsType<ElementAccess>(invocation.Expression);
+        var identifier = Assert.IsType<Identifier>(elementAccess.Expression);
+        Assert.Equal("arr", identifier.Name.Text);
+
+        var index = Assert.IsType<Literal>(elementAccess.IndexExpression);
+        Assert.Equal(0L, index.Value);
+        Assert.Empty(invocation.Arguments.ArgumentList);
+    }
+
+    [Fact]
     public void Parses_Invocation_NoArguments()
     {
         var tree = Utility.GetAST("foo()");
@@ -640,7 +756,7 @@ public class ParserTest
         Assert.Equal(SyntaxKind.Tilde, tildeC.Operator.Kind);
         Assert.IsType<Identifier>(exponentiation.Right);
     }
-    
+
     [Fact]
     public void Parses_Mutable_ArrayLiteral()
     {
@@ -650,18 +766,18 @@ public class ParserTest
         var statement = tree.Statements.First();
         var variable = Assert.IsType<VariableDeclaration>(statement);
         Assert.NotNull(variable.EqualsValueClause);
-        
+
         var array = Assert.IsType<ArrayLiteral>(variable.EqualsValueClause.Value);
         Assert.Equal(2, array.Expressions.Count);
         Assert.NotNull(array.MutKeyword);
         Assert.Equal(SyntaxKind.MutKeyword, array.MutKeyword.Kind);
-        
+
         var firstLiteral = Assert.IsType<Literal>(array.Expressions.First());
         var lastLiteral = Assert.IsType<Literal>(array.Expressions.Last());
         Assert.Equal(69L, firstLiteral.Value);
         Assert.Equal(420L, lastLiteral.Value);
     }
-    
+
     [Fact]
     public void Parses_Nested_ArrayLiteral()
     {
@@ -672,15 +788,15 @@ public class ParserTest
         var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
         var array = Assert.IsType<ArrayLiteral>(expressionStatement.Expression);
         Assert.Equal(3, array.Expressions.Count);
-        
+
         var firstLiteral = Assert.IsType<Literal>(array.Expressions[0]);
         var lastLiteral = Assert.IsType<Literal>(array.Expressions[1]);
         Assert.Equal(69L, firstLiteral.Value);
         Assert.Equal(420L, lastLiteral.Value);
-        
+
         var nestedArray = Assert.IsType<ArrayLiteral>(array.Expressions[2]);
         Assert.Equal(3, nestedArray.Expressions.Count);
-        
+
         var firstNestedLiteral = Assert.IsType<Literal>(nestedArray.Expressions[0]);
         var secondNestedLiteral = Assert.IsType<Literal>(nestedArray.Expressions[1]);
         var thirdNestedLiteral = Assert.IsType<Literal>(nestedArray.Expressions[2]);
@@ -688,7 +804,7 @@ public class ParserTest
         Assert.Equal(2L, secondNestedLiteral.Value);
         Assert.Equal(3L, thirdNestedLiteral.Value);
     }
-    
+
     [Fact]
     public void Parses_ArrayLiteral()
     {
@@ -702,7 +818,7 @@ public class ParserTest
         Assert.Null(array.MutKeyword);
         Assert.Equal(SyntaxKind.LBracket, array.LeftBracket.Kind);
         Assert.Equal(SyntaxKind.RBracket, array.RightBracket.Kind);
-        
+
         var firstLiteral = Assert.IsType<Literal>(array.Expressions.First());
         var lastLiteral = Assert.IsType<Literal>(array.Expressions.Last());
         Assert.Equal(69L, firstLiteral.Value);

@@ -384,6 +384,20 @@ public class LuauGeneratorTest
         Assert.Equal(1, literal.Value);
     }
     
+    [Fact]
+    public void Generates_ElementAccess()
+    {
+        var luauTree = Utility.GetLuauAST("abc[1]");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var elementAccess = Assert.IsType<ElementAccess>(variable.Initializer);
+        var identifier = Assert.IsType<Identifier>(elementAccess.Target);
+        var index = Assert.IsType<NumberLiteral>(elementAccess.Index);
+        Assert.Equal("abc", identifier.Name);
+        Assert.Equal(1, index.Value);
+    }
+    
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
