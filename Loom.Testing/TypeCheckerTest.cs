@@ -81,6 +81,13 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void ThrowsFor_ElementAccess_ImmutableAssignment()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let arr: number[] = [1, 2, 3]; arr[0] = 69;");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable index 'number'.");
+    }
+
+    [Fact]
     public void Checks_ElementAccess_NestedArray()
     {
         var type = Utility.GetLastStatementType("let matrix = [[1, 2], [3, 4]]; matrix[0][1]");
