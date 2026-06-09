@@ -1,2 +1,1 @@
-let x = [];
-x
+mut x: number[];

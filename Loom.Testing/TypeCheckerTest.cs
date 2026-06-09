@@ -612,7 +612,7 @@ public class TypeCheckerTest
     [Fact]
     public void Checks_Mutable_ArrayTypes()
     {
-        var type = Utility.GetLastStatementType("mut x: number[mut];");
+        var type = Utility.GetLastStatementType("let x: number[mut] = [];");
         var array = Assert.IsType<ArrayType>(type);
         Assert.True(array.IsMutable);
         
@@ -623,7 +623,7 @@ public class TypeCheckerTest
     [Fact]
     public void Checks_ArrayTypes()
     {
-        var type = Utility.GetLastStatementType("mut x: number[];");
+        var type = Utility.GetLastStatementType("let x: number[] = [];");
         var array = Assert.IsType<ArrayType>(type);
         Assert.False(array.IsMutable);
         
