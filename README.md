@@ -137,6 +137,16 @@ let arr: number[mut] = mut [1, 2, 3];
 ```luau
 const arr: { number } = {1, 2, 3}
 ```
+##
+```rs
+let arr: number[mut] = mut [1, 2, 3];
+let x = arr[1] = 69;
+```
+```luau
+const arr: { number } = {1, 2, 3}
+const x = 69
+arr[1] = x
+```
 
 ## Planned Features
 

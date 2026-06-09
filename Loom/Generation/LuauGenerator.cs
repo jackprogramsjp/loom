@@ -30,6 +30,7 @@ internal class LuauScope(LuauScope? parent = null)
 
     public LuauScope? Parent { get; } = parent;
     public List<LuauStatement> PrereqStatements { get; } = [];
+    public List<LuauStatement> PostreqStatements { get; } = [];
 
     public string AddIdentifier(string name)
     {
@@ -126,13 +127,20 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             Prereq(assignmentStatement);
             return binary.Left;
         }
-        
-        var left = Visit(assignmentOperator.Left);
-        var right = PushToVariable("_assigned", Visit(assignmentOperator.Right));
-        var expressionStatement = new Luau.AST.ExpressionStatement(new Luau.AST.BinaryOperator(left, "=", right));
-        Prereq(expressionStatement);
 
-        return right;
+        var left = Visit(assignmentOperator.Left);
+        var right = Visit(assignmentOperator.Right);
+        if (assignmentOperator.Parent is EqualsValueClause { Parent: NamedDeclaration declaration })
+        {
+            var identifierAssignment = new Luau.AST.BinaryOperator(left, "=", new Luau.AST.Identifier(declaration.Name.Text));
+            Postreq(new Luau.AST.ExpressionStatement(identifierAssignment));
+            return right;
+        }
+
+        var assigned = PushToVariable("_assigned", right);
+        var boundAssignment = new Luau.AST.BinaryOperator(left, "=", assigned);
+        Prereq(new Luau.AST.ExpressionStatement(boundAssignment));
+        return assigned;
     }
 
     public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
@@ -262,6 +270,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             var (luauStatement, scope) = Capture(() => Visit(statement));
             result.AddRange(scope.PrereqStatements);
             result.Add(luauStatement);
+            result.AddRange(scope.PostreqStatements);
         }
 
         return result;
@@ -295,6 +304,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     private void Prereq(params LuauStatement[] statements) => _scope.PrereqStatements.AddRange(statements);
+    private void Postreq(params LuauStatement[] statements) => _scope.PostreqStatements.AddRange(statements);
 
     private static bool IsUnorphanableExpression(LuauExpression expression) =>
         expression is Call

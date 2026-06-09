@@ -387,9 +387,33 @@ public class LuauGeneratorTest
     }
     
     [Fact]
-    public void Generates_ElementAccess_Assignment()
+    public void Generates_ElementAccess_Assignment_Short()
     {
         var luauTree = Utility.GetLuauAST("let x = abc[1] = 69");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var bindingVariable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
+        var bindingValue = Assert.IsType<NumberLiteral>(bindingVariable.Initializer);
+        Assert.Equal("x", bindingVariable.Name);
+        Assert.Equal(69, bindingValue.Value);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
+        var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", assignment.Operator);
+        
+        var elementAccess = Assert.IsType<ElementAccess>(assignment.Left);
+        var assignmentValue = Assert.IsType<Identifier>(assignment.Right);
+        var identifier = Assert.IsType<Identifier>(elementAccess.Target);
+        var index = Assert.IsType<NumberLiteral>(elementAccess.Index);
+        Assert.Equal("abc", identifier.Name);
+        Assert.Equal(1, index.Value);
+        Assert.Equal("x", assignmentValue.Name);
+    }
+    
+    [Fact]
+    public void Generates_ElementAccess_Assignment()
+    {
+        var luauTree = Utility.GetLuauAST("x[abc[1] = 69]");
         Assert.Equal(3, luauTree.Statements.Count);
 
         var bindingVariable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
@@ -410,10 +434,13 @@ public class LuauGeneratorTest
         Assert.Equal("_assigned", assignmentValue.Name);
         
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
-        Assert.Equal("x", variable.Name);
+        Assert.Equal("_", variable.Name);
 
-        var value = Assert.IsType<Identifier>(variable.Initializer);
-        Assert.Equal("_assigned", value.Name);
+        var value = Assert.IsType<ElementAccess>(variable.Initializer);
+        var name = Assert.IsType<Identifier>(value.Target);
+        var indexName = Assert.IsType<Identifier>(value.Index);
+        Assert.Equal("x", name.Name);
+        Assert.Equal("_assigned", indexName.Name);
     }
     
     [Fact]
