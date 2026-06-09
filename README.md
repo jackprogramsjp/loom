@@ -156,6 +156,35 @@ let name = nameof(abc)
 const abc = 69;
 const name = "abc"
 ```
+##
+```rs
+let range = 1..10;
+```
+```luau
+const range = { minimum = 1, maximum = 10 }
+```
+##
+```rs
+let range = 1..3
+let arr = [1, 2, 3, 4, 5];
+let slice = arr[range];
+```
+```luau
+const range = { minimum = 1, maximum = 3 }
+const arr = {1, 2, 3, 4, 5}
+const _length = #arr
+const slice = table.move(arr, math.clamp(range.minimum, 1, _length), math.clamp(range.maximum, 1, _length), 1, {})
+```
+##
+```rs
+let arr = [1, 2, 3, 4, 5];
+let slice = arr[1..3];
+```
+```luau
+const arr = {1, 2, 3, 4, 5}
+const _length = #arr
+const slice = table.move(arr, math.clamp(1, 1, _length), math.clamp(3, 1, _length), 1, {})
+```
 
 ## Planned Features
 
