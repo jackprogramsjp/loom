@@ -9,229 +9,174 @@ using static PrimitiveType;
 public class TypesTest
 {
     [Fact]
-    public void IsNever_ReturnsTrueForNever() => Assert.True(Type.IsNever(Never));
-
-    [Fact]
-    public void IsNever_ReturnsFalseForOtherTypes()
+    public void ObjectType_Assignability_EmptyObject()
     {
-        Assert.False(Type.IsNever(Number));
-        Assert.False(Type.IsNever(String));
-        Assert.False(Type.IsNever(Bool));
-        Assert.False(Type.IsNever(Void));
-        Assert.False(Type.IsNever(None));
-        Assert.False(Type.IsNever(Unknown));
-        Assert.False(Type.IsNever(new OptionalType(Number)));
-        Assert.False(Type.IsNever(new UnionType([Number, String])));
-        Assert.False(Type.IsNever(new IntersectionType([Number, String])));
-        Assert.False(Type.IsNever(new LiteralType(42)));
+        var empty = new ObjectType(null, []);
+        var withProps = new ObjectType(null, [new ObjectProperty(false, "x", Number)]);
+        Assert.False(empty.IsAssignableTo(withProps));
+        Assert.True(withProps.IsAssignableTo(empty));
     }
 
     [Fact]
-    public void IsNotNever_ReturnsFalseForNever() => Assert.False(Type.IsNotNever(Never));
-
-    [Fact]
-    public void IsNotNever_ReturnsTrueForOtherTypes()
+    public void ObjectType_Assignability_ExtraProperties()
     {
-        Assert.True(Type.IsNotNever(Number));
-        Assert.True(Type.IsNotNever(String));
-        Assert.True(Type.IsNotNever(new OptionalType(Number)));
-        Assert.True(Type.IsNotNever(new UnionType([Number, String])));
+        var point = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number)]);
+        var point3D = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number), new ObjectProperty(false, "z", Number)]);
+        var justX = new ObjectType(null, [new ObjectProperty(false, "x", Number)]);
+        Assert.True(point3D.IsAssignableTo(point));
+        Assert.True(point3D.IsAssignableTo(justX));
+        Assert.False(point.IsAssignableTo(point3D));
+        Assert.False(justX.IsAssignableTo(point));
     }
 
     [Fact]
-    public void IsNone_ReturnsTrueForNoneAndVoid()
+    public void ObjectType_Assignability_PropertyTypeCovariance()
     {
-        Assert.True(Type.IsNone(None));
-        Assert.True(Type.IsNone(Void));
+        var numberProp = new ObjectType(null, [new ObjectProperty(false, "value", Number)]);
+        var unknownProp = new ObjectType(null, [new ObjectProperty(false, "value", Unknown)]);
+        var neverProp = new ObjectType(null, [new ObjectProperty(false, "value", Never)]);
+        Assert.True(numberProp.IsAssignableTo(unknownProp));
+        Assert.False(unknownProp.IsAssignableTo(numberProp));
+        Assert.True(neverProp.IsAssignableTo(numberProp));
+        Assert.False(numberProp.IsAssignableTo(neverProp));
     }
 
     [Fact]
-    public void IsNone_ReturnsFalseForOtherTypes()
+    public void ObjectType_Assignability_PropertyMutability()
     {
-        Assert.False(Type.IsNone(Number));
-        Assert.False(Type.IsNone(String));
-        Assert.False(Type.IsNone(Bool));
-        Assert.False(Type.IsNone(Never));
-        Assert.False(Type.IsNone(Unknown));
-        Assert.False(Type.IsNone(new OptionalType(Number)));
-        Assert.False(Type.IsNone(new UnionType([Number, String])));
+        var mutableProp = new ObjectType(null, [new ObjectProperty(true, "x", Number)]);
+        var immutableProp = new ObjectType(null, [new ObjectProperty(false, "x", Number)]);
+        Assert.True(immutableProp.IsAssignableTo(mutableProp));
+        Assert.False(mutableProp.IsAssignableTo(immutableProp));
     }
 
     [Fact]
-    public void IsDefined_ReturnsFalseForNoneAndVoid()
+    public void ObjectType_Assignability_MissingProperty()
     {
-        Assert.False(Type.IsDefined(None));
-        Assert.False(Type.IsDefined(Void));
+        var withName = new ObjectType(null, [new ObjectProperty(false, "name", String)]);
+        var withNameAndAge = new ObjectType(null, [new ObjectProperty(false, "name", String), new ObjectProperty(false, "age", Number)]);
+        Assert.True(withNameAndAge.IsAssignableTo(withName));
+        Assert.False(withName.IsAssignableTo(withNameAndAge));
     }
 
     [Fact]
-    public void IsDefined_ReturnsTrueForOtherTypes()
+    public void ObjectType_Assignability_DifferentPropertyNames()
     {
-        Assert.True(Type.IsDefined(Number));
-        Assert.True(Type.IsDefined(String));
-        Assert.True(Type.IsDefined(Bool));
-        Assert.True(Type.IsDefined(Never));
-        Assert.True(Type.IsDefined(Unknown));
-        Assert.True(Type.IsDefined(new OptionalType(Number)));
-        Assert.True(Type.IsDefined(new UnionType([Number, String])));
+        var point = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number)]);
+        var differentNames = new ObjectType(null, [new ObjectProperty(false, "a", Number), new ObjectProperty(false, "b", Number)]);
+        Assert.False(point.IsAssignableTo(differentNames));
+        Assert.False(differentNames.IsAssignableTo(point));
     }
 
     [Fact]
-    public void IsOptional_ReturnsTrueForOptionalType() => Assert.True(Type.IsOptional(new OptionalType(Number)));
-
-    [Fact]
-    public void IsOptional_ReturnsTrueForNoneAndVoid()
+    public void ObjectType_Assignability_WithIndexer_MutableTarget()
     {
-        Assert.True(Type.IsOptional(None));
-        Assert.True(Type.IsOptional(Void));
+        var withIndexer = new ObjectType(
+            new ObjectIndexer(true, String, Number),
+            [new ObjectProperty(false, "name", String)]
+        );
+
+        var withoutIndexer = new ObjectType(null, [new ObjectProperty(false, "name", String)]);
+
+        Assert.False(withoutIndexer.IsAssignableTo(withIndexer));
+        Assert.True(withIndexer.IsAssignableTo(withoutIndexer));
     }
 
     [Fact]
-    public void IsOptional_ReturnsFalseForRequiredTypes()
+    public void ObjectType_Assignability_WithIndexer_ImmutableBoth()
     {
-        Assert.False(Type.IsOptional(Number));
-        Assert.False(Type.IsOptional(String));
-        Assert.False(Type.IsOptional(Bool));
-        Assert.False(Type.IsOptional(Never));
-        Assert.False(Type.IsOptional(new LiteralType(42)));
-        Assert.False(Type.IsOptional(new IntersectionType([Number, new OptionalType(String)])));
+        var indexer1 = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            []
+        );
+
+        var indexer2 = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            []
+        );
+
+        var indexerDiffKey = new ObjectType(
+            new ObjectIndexer(false, Number, Number),
+            []
+        );
+
+        var indexerDiffValue = new ObjectType(
+            new ObjectIndexer(false, String, String),
+            []
+        );
+
+        Assert.True(indexer1.IsAssignableTo(indexer2));
+        Assert.False(indexer1.IsAssignableTo(indexerDiffKey));
+        Assert.False(indexer1.IsAssignableTo(indexerDiffValue));
     }
 
     [Fact]
-    public void IsOptional_ReturnsTrueForUnionContainingNoneOrVoidOrOptional()
+    public void ObjectType_Assignability_WithIndexer_MutableVsImmutable()
     {
-        var unionWithNone = new UnionType([Number, None]);
-        var unionWithVoid = new UnionType([String, Void]);
-        var optional = new OptionalType(Bool);
-        var unionWithOptional = new UnionType([Number, optional]);
-        var nestedUnion = new UnionType([new UnionType([Number, None]), String]);
+        var mutableIndexer = new ObjectType(
+            new ObjectIndexer(true, String, Number),
+            []
+        );
 
-        Assert.True(Type.IsOptional(unionWithNone));
-        Assert.True(Type.IsOptional(unionWithVoid));
-        Assert.True(Type.IsOptional(unionWithOptional));
-        Assert.True(Type.IsOptional(nestedUnion));
+        var immutableIndexer = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            []
+        );
+
+        Assert.True(mutableIndexer.IsAssignableTo(immutableIndexer));
+        Assert.False(immutableIndexer.IsAssignableTo(mutableIndexer));
     }
 
     [Fact]
-    public void IsOptional_ReturnsFalseForUnionWithoutOptionalOrNone()
+    public void ObjectType_Assignability_ComplexNested()
     {
-        var union = new UnionType([Number, String]);
-        Assert.False(Type.IsOptional(union));
+        var innerNumber = new ObjectType(null, [new ObjectProperty(false, "value", Number)]);
+        var innerUnknown = new ObjectType(null, [new ObjectProperty(false, "value", Unknown)]);
+        var outerNumber = new ObjectType(null, [new ObjectProperty(false, "data", innerNumber)]);
+        var outerUnknown = new ObjectType(null, [new ObjectProperty(false, "data", innerUnknown)]);
+        Assert.True(outerNumber.IsAssignableTo(outerUnknown));
+        Assert.False(outerUnknown.IsAssignableTo(outerNumber));
     }
 
     [Fact]
-    public void IsNotOptional_ReturnsFalseForOptionalNoneAndVoid()
+    public void ObjectType_Assignability_WithOptionalProperties()
     {
-        Assert.False(Type.IsNotOptional(new OptionalType(Number)));
-        Assert.False(Type.IsNotOptional(None));
-        Assert.False(Type.IsNotOptional(Void));
-        Assert.False(Type.IsNotOptional(new UnionType([Number, None])));
+        var required = new ObjectType(null, [new ObjectProperty(false, "name", String)]);
+        var optional = new ObjectType(null, [new ObjectProperty(false, "name", new OptionalType(String))]);
+        Assert.True(required.IsAssignableTo(optional));
+        Assert.False(optional.IsAssignableTo(required));
     }
 
     [Fact]
-    public void IsNotOptional_ReturnsTrueForRequiredTypes()
+    public void ObjectType_Assignability_WithNeverAndUnknown()
     {
-        Assert.True(Type.IsNotOptional(Number));
-        Assert.True(Type.IsNotOptional(String));
-        Assert.True(Type.IsNotOptional(Bool));
-        Assert.True(Type.IsNotOptional(new LiteralType(42)));
+        var neverObj = new ObjectType(null, [new ObjectProperty(false, "prop", Never)]);
+
+        var numberObj = new ObjectType(null, [new ObjectProperty(false, "prop", Number)]);
+
+        // Never is subtype of all, so object with Never property is subtype
+        Assert.True(neverObj.IsAssignableTo(numberObj));
+        Assert.False(numberObj.IsAssignableTo(neverObj));
+
+        var unknownObj = new ObjectType(null, [new ObjectProperty(false, "prop", Unknown)]);
+
+        // Unknown is supertype
+        Assert.True(numberObj.IsAssignableTo(unknownObj));
+        Assert.False(unknownObj.IsAssignableTo(numberObj));
     }
 
     [Fact]
-    public void NonNullable_OnNoneOrVoid_ReturnsNever()
+    public void ObjectType_Assignability_PropertyTypeContravariance()
     {
-        Assert.Same(Never, None.NonNullable());
-        Assert.Same(Never, Void.NonNullable());
-    }
+        // For mutable properties, you might want contravariance on writes
+        // This test assumes mutable properties are contravariant
 
-    [Fact]
-    public void NonNullable_OnOptionalType_ReturnsNonNullableType()
-    {
-        var optional = new OptionalType(Number);
-        Assert.Same(Number, optional.NonNullable());
-    }
+        var animalWriter = new ObjectType(null, [new ObjectProperty(true, "set", new FunctionType([], [Unknown], Void))]);
 
-    [Fact]
-    public void NonNullable_OnOptionalOptionalType_ReturnsInnerType()
-    {
-        var innerOptional = new OptionalType(String);
-        var outerOptional = new OptionalType(innerOptional);
-        Assert.Same(String, outerOptional.NonNullable());
-    }
+        var catWriter = new ObjectType(null, [new ObjectProperty(true, "set", new FunctionType([], [String], Void))]);
 
-    [Fact]
-    public void NonNullable_OnRequiredType_ReturnsItself()
-    {
-        Assert.Same(Number, Number.NonNullable());
-        Assert.Same(Never, Never.NonNullable());
-        Assert.Same(Unknown, Unknown.NonNullable());
-
-        var literal = new LiteralType(42);
-        Assert.Same(literal, literal.NonNullable());
-
-        var intersection = new IntersectionType([Number, String]);
-        Assert.Same(intersection, intersection.NonNullable());
-    }
-
-    [Fact]
-    public void NonNullable_OnUnionWithoutNone_ReturnsItself()
-    {
-        var union = new UnionType([Number, String]);
-        Assert.Same(union, union.NonNullable());
-    }
-
-    [Fact]
-    public void NonNullable_OnUnionWithNoneOrVoid_RemovesThem()
-    {
-        var unionWithNone = new UnionType([Number, None, String]);
-        var expected1 = new UnionType([Number, String]);
-        Assert.True(expected1.Equals(unionWithNone.NonNullable()));
-
-        var unionWithVoid = new UnionType([Number, Void]);
-        Assert.True(Number.Equals(unionWithVoid.NonNullable()));
-    }
-
-    [Fact]
-    public void NonNullable_OnUnionWithOptional_RemovesOptionalWrapper()
-    {
-        var optional = new OptionalType(Bool);
-        var union = new UnionType([Number, optional]);
-        var expected = new UnionType([Number, Bool]);
-        Assert.True(expected.Equals(union.NonNullable()));
-    }
-
-    [Fact]
-    public void NonNullable_OnUnionWithOnlyNone_ReturnsNever()
-    {
-        var union = new UnionType([None]);
-        Assert.Same(Never, union.NonNullable());
-    }
-
-    [Fact]
-    public void NonNullable_OnUnionWithOnlyOptional_ReturnsUnderlyingType()
-    {
-        var optional = new OptionalType(String);
-        var union = new UnionType([optional]);
-        Assert.Same(String, union.NonNullable());
-    }
-
-    [Fact]
-    public void NonNullable_OnComplexUnion_Simplifies()
-    {
-        var union = new UnionType([Number, new OptionalType(String), None, new UnionType([Bool, Void])]);
-        var expected = new UnionType([Number, String, Bool]);
-        Assert.True(expected.Equals(union.NonNullable()));
-    }
-
-    [Fact]
-    public void IsOptional_And_NonNullable_WorkTogether()
-    {
-        var union = new UnionType([Number, None]);
-        Assert.True(Type.IsOptional(union));
-
-        var nonNullable = union.NonNullable();
-        Assert.False(Type.IsOptional(nonNullable));
-        Assert.Same(Number, nonNullable);
+        // Contravariance: AnimalWriter → CatWriter
+        Assert.True(animalWriter.IsAssignableTo(catWriter));
     }
 
     [Fact]
@@ -245,7 +190,7 @@ public class TypesTest
         Assert.False(immutSubtypes.IsAssignableTo(immutNumbers));
         Assert.True(immutSubtypes.IsAssignableTo(immutSubtypes));
     }
-    
+
     [Fact]
     public void ArrayType_Assignability_ContravariantMutable()
     {
@@ -518,6 +463,84 @@ public class TypesTest
     }
 
     [Fact]
+    public void ObjectType_Equality_EmptyObjects()
+    {
+        var empty1 = new ObjectType(null, []);
+        var empty2 = new ObjectType(null, []);
+        var emptyWithIndexer = new ObjectType(new ObjectIndexer(true, String, Number), []);
+
+        Assert.True(empty1.Equals(empty1));
+        Assert.True(empty1.Equals(empty2));
+        Assert.False(empty1.Equals(emptyWithIndexer));
+    }
+
+    [Fact]
+    public void ObjectType_Equality_WithProperties()
+    {
+        var obj1 = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number)]);
+        var obj2 = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number)]);
+        var obj3 = new ObjectType(null, [new ObjectProperty(false, "y", Number), new ObjectProperty(false, "x", Number)]);
+        var obj4 = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", Number), new ObjectProperty(true, "y", Number)]
+        );
+
+        var obj5 = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", String)]
+        );
+
+        var obj6 = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", Number)]
+        );
+
+        Assert.True(obj1.Equals(obj2));
+        Assert.True(obj1.Equals(obj3));
+        Assert.False(obj1.Equals(obj4));
+        Assert.False(obj1.Equals(obj5));
+        Assert.False(obj1.Equals(obj6));
+    }
+
+    [Fact]
+    public void ObjectType_Equality_WithIndexer()
+    {
+        var obj1 = new ObjectType(new ObjectIndexer(true, String, Number), []);
+        var obj2 = new ObjectType(new ObjectIndexer(true, String, Number), []);
+        var obj3 = new ObjectType(new ObjectIndexer(false, String, Number), []);
+        var obj4 = new ObjectType(new ObjectIndexer(true, Number, Number), []);
+        var obj5 = new ObjectType(new ObjectIndexer(true, String, String), []);
+        var obj6 = new ObjectType(null, []);
+        Assert.True(obj1.Equals(obj2));
+        Assert.False(obj1.Equals(obj3));
+        Assert.False(obj1.Equals(obj4));
+        Assert.False(obj1.Equals(obj5));
+        Assert.False(obj1.Equals(obj6));
+    }
+
+    [Fact]
+    public void ObjectType_Equality_WithPropertiesAndIndexer()
+    {
+        var obj1 = new ObjectType(
+            new ObjectIndexer(true, String, Number),
+            [new ObjectProperty(false, "name", String), new ObjectProperty(true, "age", Number)]
+        );
+
+        var obj2 = new ObjectType(
+            new ObjectIndexer(true, String, Number),
+            [new ObjectProperty(false, "name", String), new ObjectProperty(true, "age", Number)]
+        );
+
+        var obj3 = new ObjectType(
+            new ObjectIndexer(true, String, Number),
+            [new ObjectProperty(true, "age", Number), new ObjectProperty(false, "name", String)]
+        );
+
+        Assert.True(obj1.Equals(obj2));
+        Assert.True(obj1.Equals(obj3));
+    }
+
+    [Fact]
     public void ArrayType_Equality()
     {
         var arr1 = new ArrayType(Number, isMutable: true);
@@ -616,5 +639,231 @@ public class TypesTest
         Assert.True(Bool.Equals(Bool));
         Assert.True(Bool.Equals(new PrimitiveType(PrimitiveTypeKind.Bool)));
         Assert.False(Bool.Equals(String));
+    }
+
+    [Fact]
+    public void IsNever_ReturnsTrueForNever() => Assert.True(Type.IsNever(Never));
+
+    [Fact]
+    public void IsNever_ReturnsFalseForOtherTypes()
+    {
+        Assert.False(Type.IsNever(Number));
+        Assert.False(Type.IsNever(String));
+        Assert.False(Type.IsNever(Bool));
+        Assert.False(Type.IsNever(Void));
+        Assert.False(Type.IsNever(None));
+        Assert.False(Type.IsNever(Unknown));
+        Assert.False(Type.IsNever(new OptionalType(Number)));
+        Assert.False(Type.IsNever(new UnionType([Number, String])));
+        Assert.False(Type.IsNever(new IntersectionType([Number, String])));
+        Assert.False(Type.IsNever(new LiteralType(42)));
+    }
+
+    [Fact]
+    public void IsNotNever_ReturnsFalseForNever() => Assert.False(Type.IsNotNever(Never));
+
+    [Fact]
+    public void IsNotNever_ReturnsTrueForOtherTypes()
+    {
+        Assert.True(Type.IsNotNever(Number));
+        Assert.True(Type.IsNotNever(String));
+        Assert.True(Type.IsNotNever(new OptionalType(Number)));
+        Assert.True(Type.IsNotNever(new UnionType([Number, String])));
+    }
+
+    [Fact]
+    public void IsNone_ReturnsTrueForNoneAndVoid()
+    {
+        Assert.True(Type.IsNone(None));
+        Assert.True(Type.IsNone(Void));
+    }
+
+    [Fact]
+    public void IsNone_ReturnsFalseForOtherTypes()
+    {
+        Assert.False(Type.IsNone(Number));
+        Assert.False(Type.IsNone(String));
+        Assert.False(Type.IsNone(Bool));
+        Assert.False(Type.IsNone(Never));
+        Assert.False(Type.IsNone(Unknown));
+        Assert.False(Type.IsNone(new OptionalType(Number)));
+        Assert.False(Type.IsNone(new UnionType([Number, String])));
+    }
+
+    [Fact]
+    public void IsDefined_ReturnsFalseForNoneAndVoid()
+    {
+        Assert.False(Type.IsDefined(None));
+        Assert.False(Type.IsDefined(Void));
+    }
+
+    [Fact]
+    public void IsDefined_ReturnsTrueForOtherTypes()
+    {
+        Assert.True(Type.IsDefined(Number));
+        Assert.True(Type.IsDefined(String));
+        Assert.True(Type.IsDefined(Bool));
+        Assert.True(Type.IsDefined(Never));
+        Assert.True(Type.IsDefined(Unknown));
+        Assert.True(Type.IsDefined(new OptionalType(Number)));
+        Assert.True(Type.IsDefined(new UnionType([Number, String])));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsTrueForOptionalType() => Assert.True(Type.IsOptional(new OptionalType(Number)));
+
+    [Fact]
+    public void IsOptional_ReturnsTrueForNoneAndVoid()
+    {
+        Assert.True(Type.IsOptional(None));
+        Assert.True(Type.IsOptional(Void));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsFalseForRequiredTypes()
+    {
+        Assert.False(Type.IsOptional(Number));
+        Assert.False(Type.IsOptional(String));
+        Assert.False(Type.IsOptional(Bool));
+        Assert.False(Type.IsOptional(Never));
+        Assert.False(Type.IsOptional(new LiteralType(42)));
+        Assert.False(Type.IsOptional(new IntersectionType([Number, new OptionalType(String)])));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsTrueForUnionContainingNoneOrVoidOrOptional()
+    {
+        var unionWithNone = new UnionType([Number, None]);
+        var unionWithVoid = new UnionType([String, Void]);
+        var optional = new OptionalType(Bool);
+        var unionWithOptional = new UnionType([Number, optional]);
+        var nestedUnion = new UnionType([new UnionType([Number, None]), String]);
+
+        Assert.True(Type.IsOptional(unionWithNone));
+        Assert.True(Type.IsOptional(unionWithVoid));
+        Assert.True(Type.IsOptional(unionWithOptional));
+        Assert.True(Type.IsOptional(nestedUnion));
+    }
+
+    [Fact]
+    public void IsOptional_ReturnsFalseForUnionWithoutOptionalOrNone()
+    {
+        var union = new UnionType([Number, String]);
+        Assert.False(Type.IsOptional(union));
+    }
+
+    [Fact]
+    public void IsNotOptional_ReturnsFalseForOptionalNoneAndVoid()
+    {
+        Assert.False(Type.IsNotOptional(new OptionalType(Number)));
+        Assert.False(Type.IsNotOptional(None));
+        Assert.False(Type.IsNotOptional(Void));
+        Assert.False(Type.IsNotOptional(new UnionType([Number, None])));
+    }
+
+    [Fact]
+    public void IsNotOptional_ReturnsTrueForRequiredTypes()
+    {
+        Assert.True(Type.IsNotOptional(Number));
+        Assert.True(Type.IsNotOptional(String));
+        Assert.True(Type.IsNotOptional(Bool));
+        Assert.True(Type.IsNotOptional(new LiteralType(42)));
+    }
+
+    [Fact]
+    public void NonNullable_OnNoneOrVoid_ReturnsNever()
+    {
+        Assert.Same(Never, None.NonNullable());
+        Assert.Same(Never, Void.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnOptionalType_ReturnsNonNullableType()
+    {
+        var optional = new OptionalType(Number);
+        Assert.Same(Number, optional.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnOptionalOptionalType_ReturnsInnerType()
+    {
+        var innerOptional = new OptionalType(String);
+        var outerOptional = new OptionalType(innerOptional);
+        Assert.Same(String, outerOptional.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnRequiredType_ReturnsItself()
+    {
+        Assert.Same(Number, Number.NonNullable());
+        Assert.Same(Never, Never.NonNullable());
+        Assert.Same(Unknown, Unknown.NonNullable());
+
+        var literal = new LiteralType(42);
+        Assert.Same(literal, literal.NonNullable());
+
+        var intersection = new IntersectionType([Number, String]);
+        Assert.Same(intersection, intersection.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithoutNone_ReturnsItself()
+    {
+        var union = new UnionType([Number, String]);
+        Assert.Same(union, union.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithNoneOrVoid_RemovesThem()
+    {
+        var unionWithNone = new UnionType([Number, None, String]);
+        var expected1 = new UnionType([Number, String]);
+        Assert.True(expected1.Equals(unionWithNone.NonNullable()));
+
+        var unionWithVoid = new UnionType([Number, Void]);
+        Assert.True(Number.Equals(unionWithVoid.NonNullable()));
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithOptional_RemovesOptionalWrapper()
+    {
+        var optional = new OptionalType(Bool);
+        var union = new UnionType([Number, optional]);
+        var expected = new UnionType([Number, Bool]);
+        Assert.True(expected.Equals(union.NonNullable()));
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithOnlyNone_ReturnsNever()
+    {
+        var union = new UnionType([None]);
+        Assert.Same(Never, union.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnUnionWithOnlyOptional_ReturnsUnderlyingType()
+    {
+        var optional = new OptionalType(String);
+        var union = new UnionType([optional]);
+        Assert.Same(String, union.NonNullable());
+    }
+
+    [Fact]
+    public void NonNullable_OnComplexUnion_Simplifies()
+    {
+        var union = new UnionType([Number, new OptionalType(String), None, new UnionType([Bool, Void])]);
+        var expected = new UnionType([Number, String, Bool]);
+        Assert.True(expected.Equals(union.NonNullable()));
+    }
+
+    [Fact]
+    public void IsOptional_And_NonNullable_WorkTogether()
+    {
+        var union = new UnionType([Number, None]);
+        Assert.True(Type.IsOptional(union));
+
+        var nonNullable = union.NonNullable();
+        Assert.False(Type.IsOptional(nonNullable));
+        Assert.Same(Number, nonNullable);
     }
 }

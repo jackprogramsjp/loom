@@ -44,15 +44,20 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     {
         if (other is not ObjectType objectType)
             return false;
-        
-        var propertyMap = objectType.Properties.ToDictionary(p => p.Name, p => p);
-        foreach (var sourceProperty in Properties)
+
+        if (Properties.Count < objectType.Properties.Count)
+            return false;
+
+        var sourcePropertyMap = Properties.ToDictionary(p => p.Name, p => p);
+        foreach (var targetProperty in objectType.Properties)
         {
-            if (!propertyMap.TryGetValue(sourceProperty.Name, out var property)) continue;
-            if (sourceProperty.IsMutable && !property.IsMutable)
+            if (!sourcePropertyMap.TryGetValue(targetProperty.Name, out var sourceProperty))
+                return false;
+            
+            if (sourceProperty.IsMutable && !targetProperty.IsMutable)
                 return false;
 
-            if (!sourceProperty.Type.IsAssignableTo(property.Type))
+            if (!sourceProperty.Type.IsAssignableTo(targetProperty.Type))
                 return false;
         }
 
@@ -61,18 +66,25 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 
         if (Indexer == null)
             return false;
-            
+
         if (Indexer.IsMutable || objectType.Indexer.IsMutable)
         {
-            if (!Indexer.IsMutable && objectType.Indexer.IsMutable || !Indexer.KeyType.Equals(objectType.Indexer.KeyType) || !Indexer.ValueType.Equals(objectType.Indexer.ValueType))
+            if (!Indexer.IsMutable && objectType.Indexer.IsMutable
+                || !Indexer.KeyType.Equals(objectType.Indexer.KeyType)
+                || !Indexer.ValueType.Equals(objectType.Indexer.ValueType))
+            {
                 return false;
+            }
         }
         else
         {
-            if (!Indexer.KeyType.IsAssignableTo(objectType.Indexer.KeyType) || !Indexer.ValueType.IsAssignableTo(objectType.Indexer.ValueType))
+            if (!Indexer.KeyType.IsAssignableTo(objectType.Indexer.KeyType) 
+                || !Indexer.ValueType.IsAssignableTo(objectType.Indexer.ValueType))
+            {
                 return false;
+            }
         }
-        
+
         return true;
     }
 
@@ -80,7 +92,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     {
         if (Indexer == null && Properties.Count == 0)
             return "{}";
-        
+
         var properties = string.Join(", ", Properties.ConvertAll(p => $"{(p.IsMutable ? "mut " : "")}{p.Name}: {p.Type}"));
         var indexer = Indexer != null
             ? $"{(Indexer.IsMutable ? "mut " : "")}[{Indexer.KeyType}]: {Indexer.ValueType}"
