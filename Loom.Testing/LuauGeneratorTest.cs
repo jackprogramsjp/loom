@@ -1,5 +1,7 @@
 using Loom.Luau.AST;
+using Loom.Parsing.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;
+using ElementAccess = Loom.Luau.AST.ElementAccess;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
 using Identifier = Loom.Luau.AST.Identifier;
 using IntersectionType = Loom.Luau.AST.IntersectionType;
@@ -382,6 +384,36 @@ public class LuauGeneratorTest
 
         var literal = Assert.IsType<NumberLiteral>(variable.Initializer);
         Assert.Equal(1, literal.Value);
+    }
+    
+    [Fact]
+    public void Generates_ElementAccess_Assignment()
+    {
+        var luauTree = Utility.GetLuauAST("let x = abc[1] = 69");
+        Assert.Equal(3, luauTree.Statements.Count);
+
+        var bindingVariable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
+        var bindingValue = Assert.IsType<NumberLiteral>(bindingVariable.Initializer);
+        Assert.Equal("_assigned", bindingVariable.Name);
+        Assert.Equal(69, bindingValue.Value);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
+        var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", assignment.Operator);
+        
+        var elementAccess = Assert.IsType<ElementAccess>(assignment.Left);
+        var assignmentValue = Assert.IsType<Identifier>(assignment.Right);
+        var identifier = Assert.IsType<Identifier>(elementAccess.Target);
+        var index = Assert.IsType<NumberLiteral>(elementAccess.Index);
+        Assert.Equal("abc", identifier.Name);
+        Assert.Equal(1, index.Value);
+        Assert.Equal("_assigned", assignmentValue.Name);
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
+        Assert.Equal("x", variable.Name);
+
+        var value = Assert.IsType<Identifier>(variable.Initializer);
+        Assert.Equal("_assigned", value.Name);
     }
     
     [Fact]

@@ -54,12 +54,66 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("type A<T> = T; let x: A<number, bool> = 1");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, "Type 'A<T>' expects 1 type argument, but 2 were provided.");
     }
-    
+
     [Fact]
     public void ThrowsFor_MismatchedDefaultType()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("type Id<T: number = \"abc\"> = T");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"abc\"' is not assignable to type 'number'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ElementAccess_InvalidTarget()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo -> 42; foo[0]");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccessTarget, "Cannot index value of type '() -> 42'");
+    }
+
+    [Fact]
+    public void ThrowsFor_ElementAccess_InvalidIndex()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let arr: number[] = [1, 2, 3]; arr[true]");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidAccessIndex,
+            "Expression of type 'true' cannot be used to index type 'number[]'. Index is not of type 'number'."
+        );
+    }
+
+    [Fact]
+    public void Checks_ElementAccess_NestedArray()
+    {
+        var type = Utility.GetLastStatementType("let matrix = [[1, 2], [3, 4]]; matrix[0][1]");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Checks_ElementAccess_AsAssignmentTarget()
+    {
+        var type = Utility.GetLastStatementType("let arr = mut [1, 2, 3]; arr[0] = 42;");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_ElementAccess_ArrayIndexWithExpression()
+    {
+        var type = Utility.GetLastStatementType("let arr = [10, 20, 30]; let i = 1; arr[i + 1]");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Theory]
+    [InlineData("let arr = [1, 2, 3]; arr[0]")]
+    [InlineData("let arr = mut [1, 2, 3]; arr[0]")]
+    [InlineData("mut arr = mut [1, 2, 3]; arr[0]")]
+    [InlineData("mut arr = [1, 2, 3]; arr[0]")]
+    public void Checks_ElementAccess_ArrayIndex(string source)
+    {
+        var type = Utility.GetLastStatementType(source);
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
 
     [Theory]
@@ -544,8 +598,8 @@ public class TypeCheckerTest
     public void Checks_Assignment_Resolution()
     {
         var type = Utility.GetLastStatementType("mut x = 42; x = 69");
-        var literal = Assert.IsType<PrimitiveType>(type);
-        Assert.Equal(PrimitiveTypeKind.Number, literal.Kind);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(69L, literal.Value);
     }
 
     [Theory]
@@ -587,7 +641,7 @@ public class TypeCheckerTest
         var type = Utility.GetLastStatementType("let x: number = 42");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_IntersectionTypes()
     {
@@ -595,42 +649,42 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.Never, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_UnionTypes()
     {
         var type = Utility.GetLastStatementType("mut x: number | string;");
         var union = Assert.IsType<UnionType>(type);
         Assert.Equal(2, union.Types.Count);
-        
+
         var firstPrimitive = Assert.IsType<PrimitiveType>(union.Types.First());
         var lastPrimitive = Assert.IsType<PrimitiveType>(union.Types.Last());
         Assert.Equal(PrimitiveTypeKind.Number, firstPrimitive.Kind);
         Assert.Equal(PrimitiveTypeKind.String, lastPrimitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_Mutable_ArrayTypes()
     {
         var type = Utility.GetLastStatementType("let x: number[mut] = [];");
         var array = Assert.IsType<ArrayType>(type);
         Assert.True(array.IsMutable);
-        
+
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_ArrayTypes()
     {
         var type = Utility.GetLastStatementType("let x: number[] = [];");
         var array = Assert.IsType<ArrayType>(type);
         Assert.False(array.IsMutable);
-        
+
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_OptionalTypes()
     {
@@ -639,7 +693,7 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(optional.NonNullableType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_PrimitiveTypes()
     {
@@ -655,26 +709,26 @@ public class TypeCheckerTest
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(69L, literal.Value);
     }
-    
+
     [Fact]
     public void Checks_MixedOptional_ArrayLiterals()
     {
         var type = Utility.GetLastStatementType("[1, none]");
         var array = Assert.IsType<ArrayType>(type);
         Assert.False(array.IsMutable);
-        
+
         var optional = Assert.IsType<OptionalType>(array.ElementType);
         var primitive = Assert.IsType<PrimitiveType>(optional.NonNullableType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_Mixed_ArrayLiterals()
     {
         var type = Utility.GetLastStatementType("[1, true]");
         var array = Assert.IsType<ArrayType>(type);
         Assert.False(array.IsMutable);
-        
+
         var union = Assert.IsType<UnionType>(array.ElementType);
         Assert.Equal(2, union.Types.Count);
 
@@ -683,47 +737,47 @@ public class TypeCheckerTest
         Assert.Equal(PrimitiveTypeKind.Number, number.Kind);
         Assert.Equal(PrimitiveTypeKind.Bool, boolean.Kind);
     }
-    
+
     [Fact]
     public void Checks_Widened_Empty_ArrayLiterals()
     {
         var type = Utility.GetLastStatementType("mut x = []");
         var array = Assert.IsType<ArrayType>(type);
         Assert.False(array.IsMutable);
-        
+
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Unknown, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_Empty_ArrayLiterals()
     {
         var type = Utility.GetLastStatementType("[]");
         var array = Assert.IsType<ArrayType>(type);
         Assert.False(array.IsMutable);
-        
+
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Never, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_ArrayLiterals()
     {
         var type = Utility.GetLastStatementType("[1, 2, 3]");
         var array = Assert.IsType<ArrayType>(type);
         Assert.False(array.IsMutable);
-        
+
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_Mutable_ArrayLiterals()
     {
         var type = Utility.GetLastStatementType("let x = mut [1, 2, 3]; x");
         var array = Assert.IsType<ArrayType>(type);
         Assert.True(array.IsMutable);
-        
+
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }

@@ -119,11 +119,20 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         if (assignmentOperator.Parent is ExpressionStatement)
             return VisitBinaryOperator(assignmentOperator);
 
-        var binary = (Luau.AST.BinaryOperator)VisitBinaryOperator(assignmentOperator);
-        var assignmentStatement = new Luau.AST.ExpressionStatement(binary);
-        Prereq(assignmentStatement);
+        if (assignmentOperator.Left is Identifier)
+        {
+            var binary = (Luau.AST.BinaryOperator)VisitBinaryOperator(assignmentOperator);
+            var assignmentStatement = new Luau.AST.ExpressionStatement(binary);
+            Prereq(assignmentStatement);
+            return binary.Left;
+        }
+        
+        var left = Visit(assignmentOperator.Left);
+        var right = PushToVariable("_assigned", Visit(assignmentOperator.Right));
+        var expressionStatement = new Luau.AST.ExpressionStatement(new Luau.AST.BinaryOperator(left, "=", right));
+        Prereq(expressionStatement);
 
-        return binary.Left;
+        return right;
     }
 
     public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
@@ -275,13 +284,13 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         return captured;
     }
 
-    private Luau.AST.Identifier PushToVariable(LuauExpression expression, string name)
+    private Luau.AST.Identifier PushToVariable(string name, LuauExpression expression, LuauType? type = null, bool isConst = true)
     {
         if (expression is Luau.AST.Identifier identifier)
             return identifier;
 
         var id = _scope.AddIdentifier(name);
-        Prereq(new LocalVariable(id, null, expression));
+        Prereq(isConst ? new ConstVariable(id, type, expression) : new LocalVariable(id, type, expression));
         return new Luau.AST.Identifier(id);
     }
 

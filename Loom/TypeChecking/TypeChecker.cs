@@ -155,10 +155,11 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = Visit(elementAccess.Expression);
         if (type is not ObjectType objectType)
         {
-            _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
+            _diagnostics.Error(elementAccess, InternalCodes.InvalidAccessTarget, $"Cannot index value of type '{type}'");
             return Types.PrimitiveType.Never;
         }
 
+        var code = InternalCodes.InvalidAccessTarget;
         var cannotFindReason = "";
         var indexType = Visit(elementAccess.IndexExpression);
         if (indexType is Types.LiteralType { Value: string name } && objectType.Properties.Count > 0)
@@ -175,12 +176,13 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             if (indexType.IsAssignableTo(objectType.Indexer.KeyType))
                 return objectType.Indexer.ValueType;
 
+            code = InternalCodes.InvalidAccessIndex;
             cannotFindReason = $" Index is not of type '{objectType.Indexer.KeyType}'.";
         }
 
         _diagnostics.Error(
             elementAccess.IndexExpression,
-            InternalCodes.InvalidAccess,
+            code,
             $"Expression of type '{indexType}' cannot be used to index type '{type}'.{cannotFindReason}"
         );
 
@@ -195,7 +197,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return base.VisitBinaryOperator(assignmentOperator);
 
         semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
-        return BindType(assignmentOperator, targetType);
+        return BindType(assignmentOperator, valueType);
     }
 
     public override Type VisitBinaryOperator(BinaryOperator binaryOperator)
@@ -252,10 +254,12 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitArrayLiteral(ArrayLiteral arrayLiteral)
     {
+        // TODO: array literal types for immutable arrays assigned to immutable names
         var expressionTypes = arrayLiteral.Expressions.ConvertAll(Visit).ConvertAll(t => t.Widen());
         var elementType = TypeSimplifier.Simplify(new Types.UnionType(expressionTypes));
         var isMutable = arrayLiteral.MutKeyword != null;
-        return new Types.ArrayType(elementType, isMutable);
+        var type = new Types.ArrayType(elementType, isMutable);
+        return isMutable ? type.Widen() : type;
     }
 
     public override Type VisitLiteral(Literal literal) => BindType(literal, new Types.LiteralType(literal.Value));
