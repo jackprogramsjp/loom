@@ -23,7 +23,7 @@ public static class SyntaxFacts
             new("else", SyntaxKind.ElseKeyword),
             new("while", SyntaxKind.WhileKeyword),
             new("match", SyntaxKind.MatchKeyword),
-            new("nameof", SyntaxKind.NameofKeyword),
+            new("nameof", SyntaxKind.NameOfKeyword),
         ]
     );
     public static readonly Dictionary<string, SyntaxKind> OperatorMap = new(

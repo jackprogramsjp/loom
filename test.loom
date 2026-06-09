@@ -1,2 +1,2 @@
 let abc = mut [1,2,3];
-let x = abc[1] = 69
+let name = nameof(abc);

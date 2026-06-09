@@ -33,4 +33,5 @@ public static class InternalCodes
     public const string CannotInferType = "L318";
     public const string ConstraintViolation = "L319";
     public const string InvalidAccess = "L320";
+    public const string InvalidNameOf = "L321";
 }

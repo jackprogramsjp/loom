@@ -87,42 +87,6 @@ public class TypeCheckerTest
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable index 'number'.");
     }
 
-    [Fact]
-    public void Checks_ElementAccess_NestedArray()
-    {
-        var type = Utility.GetLastStatementType("let matrix = [[1, 2], [3, 4]]; matrix[0][1]");
-        var primitive = Assert.IsType<PrimitiveType>(type);
-        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
-    }
-
-    [Fact]
-    public void Checks_ElementAccess_AsAssignmentTarget()
-    {
-        var type = Utility.GetLastStatementType("let arr = mut [1, 2, 3]; arr[0] = 42;");
-        var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal(42L, literal.Value);
-    }
-
-    [Fact]
-    public void Checks_ElementAccess_ArrayIndexWithExpression()
-    {
-        var type = Utility.GetLastStatementType("let arr = [10, 20, 30]; let i = 1; arr[i + 1]");
-        var primitive = Assert.IsType<PrimitiveType>(type);
-        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
-    }
-
-    [Theory]
-    [InlineData("let arr = [1, 2, 3]; arr[0]")]
-    [InlineData("let arr = mut [1, 2, 3]; arr[0]")]
-    [InlineData("mut arr = mut [1, 2, 3]; arr[0]")]
-    [InlineData("mut arr = [1, 2, 3]; arr[0]")]
-    public void Checks_ElementAccess_ArrayIndex(string source)
-    {
-        var type = Utility.GetLastStatementType(source);
-        var primitive = Assert.IsType<PrimitiveType>(type);
-        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
-    }
-
     [Theory]
     [InlineData("1 + true")]
     [InlineData("true + 1")]
@@ -299,6 +263,14 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, "Type 'Id<T, U = number>' expects 1-2 type arguments, but 0 were provided.");
     }
+    
+    [Fact]
+    public void Checks_NameOf()
+    {
+        var type = Utility.GetLastStatementType("let x = 1; nameof(x)");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal("x", literal.Value);
+    }
 
     [Fact]
     public void ThrowsFor_GenericFunctionCall_MissingRequiredTypeParameter()
@@ -314,6 +286,42 @@ public class TypeCheckerTest
             InternalCodes.CannotInferType,
             "Cannot infer type parameter 'T'. Provide explicit type arguments."
         );
+    }
+    
+    [Fact]
+    public void Checks_ElementAccess_NestedArray()
+    {
+        var type = Utility.GetLastStatementType("let matrix = [[1, 2], [3, 4]]; matrix[0][1]");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Checks_ElementAccess_AsAssignmentTarget()
+    {
+        var type = Utility.GetLastStatementType("let arr = mut [1, 2, 3]; arr[0] = 42;");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_ElementAccess_ArrayIndexWithExpression()
+    {
+        var type = Utility.GetLastStatementType("let arr = [10, 20, 30]; let i = 1; arr[i + 1]");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Theory]
+    [InlineData("let arr = [1, 2, 3]; arr[0]")]
+    [InlineData("let arr = mut [1, 2, 3]; arr[0]")]
+    [InlineData("mut arr = mut [1, 2, 3]; arr[0]")]
+    [InlineData("mut arr = [1, 2, 3]; arr[0]")]
+    public void Checks_ElementAccess_ArrayIndex(string source)
+    {
+        var type = Utility.GetLastStatementType(source);
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
 
     [Fact]

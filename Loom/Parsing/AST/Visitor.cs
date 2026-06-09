@@ -68,8 +68,9 @@ public abstract class Visitor<T>
 
     public abstract T VisitLiteral(Literal literal);
     public abstract T VisitIdentifier(Identifier identifier);
-    public virtual T VisitParenthesized(Parenthesized parenthesized) => Visit(parenthesized.Expression);
     
+    public virtual T VisitParenthesized(Parenthesized parenthesized) => Visit(parenthesized.Expression);
+    public virtual T VisitNameOf(NameOf nameOf) => Visit(nameOf.Name);
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
     public virtual T VisitInvocation(Invocation invocation) => CombineResults([Visit(invocation.Expression), Visit(invocation.Arguments)]);
     

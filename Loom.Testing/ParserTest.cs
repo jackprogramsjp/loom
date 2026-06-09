@@ -34,19 +34,32 @@ public class ParserTest
     [Fact]
     public void ThrowsFor_UnexpectedToken()
     {
-        var diagnostics = Utility.GetParserDiagnostics("!");
+        var diagnostics = Utility.GetParserDiagnostics("$");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Unexpected token.");
     }
-
-    [Fact]
-    public void ThrowsFor_UnterminatedParens()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("(1 + 2");
-        var diagnostics2 = Utility.GetParserDiagnostics("(1 + 2]");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 0, got EOF.");
-        Utility.AssertDiagnostic(diagnostics2, InternalCodes.UnexpectedToken, "Expected ')' here to close '(' at character 0, got ']'.");
-    }
     
+    [Fact]
+    public void ThrowsFor_InvalidNameOf()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("nameof(123)");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidNameOf, "'123' is not a valid name.");
+    }
+
+    [Theory]
+    [InlineData("(1 + 2")]
+    [InlineData("(1 + 2]", "]")]
+    [InlineData("nameof(abc", null, 6)]
+    [InlineData("nameof(abc]", "]", 6)]
+    public void ThrowsFor_UnterminatedParens(string source, string got = "EOF", int character = 0)
+    {
+        var diagnostics = Utility.GetParserDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            got == "EOF" ? InternalCodes.UnexpectedEof : InternalCodes.UnexpectedToken,
+            $"Expected ')' here to close '(' at character {character}, got {got}."
+        );
+    }
+
     [Fact]
     public void ThrowsFor_UnterminatedBrackets()
     {
@@ -823,6 +836,22 @@ public class ParserTest
         var lastLiteral = Assert.IsType<Literal>(array.Expressions.Last());
         Assert.Equal(69L, firstLiteral.Value);
         Assert.Equal(420L, lastLiteral.Value);
+    }
+    
+    [Fact]
+    public void Parses_NameOf()
+    {
+        var tree = Utility.GetAST("nameof(abc)");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var expressionStatement = Assert.IsType<ExpressionStatement>(statement);
+        var nameOf = Assert.IsType<NameOf>(expressionStatement.Expression);
+        Assert.Equal(SyntaxKind.NameOfKeyword, nameOf.Keyword.Kind);
+        Assert.Equal(SyntaxKind.LParen, nameOf.LeftParen.Kind);
+        Assert.Equal(SyntaxKind.RParen, nameOf.RightParen.Kind);
+        Assert.Equal(SyntaxKind.Identifier, nameOf.Name.Token.Kind);
+        Assert.Equal("abc", nameOf.Name.Token.Text);
     }
 
     [Fact]

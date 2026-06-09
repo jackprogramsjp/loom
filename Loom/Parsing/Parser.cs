@@ -94,6 +94,7 @@ public class Parser(LexerResult lexerResult)
             InternalCodes.MissingFunctionBody,
             $"Expected function body, got {SafeTokenText(nullStatement.Token)}."
         );
+
         return new NullStatement(nullStatement.Token);
     }
 
@@ -207,7 +208,7 @@ public class Parser(LexerResult lexerResult)
                 break;
             }
         }
-        
+
         return expression;
     }
 
@@ -223,15 +224,15 @@ public class Parser(LexerResult lexerResult)
 
     private Expression ParsePrimary()
     {
-        if (Match(out var leftParen, SyntaxKind.LParen))
+        if (Match(out var openingParen, SyntaxKind.LParen))
         {
             var expression = ParseExpression();
             var rightParen = Expect(
                 SyntaxKind.RParen,
-                got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
+                got => $"Expected ')' here to close '{openingParen.Text}' at character {openingParen.Span.Start.Character}, got {SafeTokenText(got)}."
             );
 
-            return new Parenthesized(leftParen, rightParen, expression);
+            return new Parenthesized(openingParen, rightParen, expression);
         }
 
         if (Match(out var mutKeyword, SyntaxKind.MutKeyword) && ParseArrayLiteral(mutKeyword) is { } mutableArrayLiteral)
@@ -240,8 +241,20 @@ public class Parser(LexerResult lexerResult)
         if (ParseArrayLiteral() is { } arrayLiteral)
             return arrayLiteral;
 
-        if (Match(out var name, SyntaxKind.Identifier))
-            return new Identifier(name);
+        if (Match(out var nameOfKeyword, SyntaxKind.NameOfKeyword))
+        {
+            var leftParen = Expect(SyntaxKind.LParen);
+            var expression = ParseExpression();
+            var rightParen = Expect(SyntaxKind.RParen);
+            if (expression is Name name)
+                return new NameOf(nameOfKeyword, leftParen, rightParen, name);
+
+            _diagnostics.Error(expression, InternalCodes.InvalidNameOf, $"'{expression}' is not a valid name.");
+            return new NullExpression(nameOfKeyword);
+        }
+
+        if (Match(out var nameToken, SyntaxKind.Identifier))
+            return new Identifier(nameToken);
 
         if (Match(out var token, SyntaxFacts.IsLiteral))
             return new Literal(token, LiteralUtility.ResolveValue(token));
@@ -292,7 +305,7 @@ public class Parser(LexerResult lexerResult)
                 break;
             }
         }
-    
+
         return type;
     }
 

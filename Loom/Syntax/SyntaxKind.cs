@@ -82,7 +82,7 @@ public enum SyntaxKind : ushort
     ElseKeyword,
     WhileKeyword,
     MatchKeyword,
-    NameofKeyword,
+    NameOfKeyword,
 
     Identifier
 }
