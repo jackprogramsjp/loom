@@ -123,6 +123,20 @@ const function id<T>(value: T & number): T & number
 end
 id(69)
 ```
+##
+```rs
+let arr: number[] = [1, 2, 3];
+```
+```luau
+const arr: { number } = {1, 2, 3}
+```
+##
+```rs
+let arr: number[mut] = mut [1, 2, 3];
+```
+```luau
+const arr: { number } = {1, 2, 3}
+```
 
 ## Planned Features
 
