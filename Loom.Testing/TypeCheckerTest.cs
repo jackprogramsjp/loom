@@ -66,7 +66,7 @@ public class TypeCheckerTest
     public void ThrowsFor_ElementAccess_InvalidTarget()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo -> 42; foo[0]");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccessTarget, "Cannot index value of type '() -> 42'");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot index value of type '() -> 42'");
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let arr: number[] = [1, 2, 3]; arr[true]");
         Utility.AssertDiagnostic(
             diagnostics,
-            InternalCodes.InvalidAccessIndex,
+            InternalCodes.InvalidAccess,
             "Expression of type 'true' cannot be used to index type 'number[]'. Index is not of type 'number'."
         );
     }

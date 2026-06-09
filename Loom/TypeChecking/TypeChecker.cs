@@ -155,34 +155,18 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = Visit(elementAccess.Expression);
         if (type is not ObjectType objectType)
         {
-            _diagnostics.Error(elementAccess, InternalCodes.InvalidAccessTarget, $"Cannot index value of type '{type}'");
+            _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
             return Types.PrimitiveType.Never;
         }
 
-        var code = InternalCodes.InvalidAccessTarget;
-        var cannotFindReason = "";
         var indexType = Visit(elementAccess.IndexExpression);
-        if (indexType is Types.LiteralType { Value: string name } && objectType.Properties.Count > 0)
-        {
-            var property = objectType.Properties.Find(p => p.Name == name);
-            if (property != null)
-                return property.Type;
-
-            cannotFindReason = $" Property '{name}' does not exist on type '{type}'.";
-        }
-
-        if (objectType.Indexer != null)
-        {
-            if (indexType.IsAssignableTo(objectType.Indexer.KeyType))
-                return objectType.Indexer.ValueType;
-
-            code = InternalCodes.InvalidAccessIndex;
-            cannotFindReason = $" Index is not of type '{objectType.Indexer.KeyType}'.";
-        }
+        var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
+        if (bodyType != null)
+            return bodyType.ValueType;
 
         _diagnostics.Error(
             elementAccess.IndexExpression,
-            code,
+            InternalCodes.InvalidAccess,
             $"Expression of type '{indexType}' cannot be used to index type '{type}'.{cannotFindReason}"
         );
 
@@ -195,6 +179,22 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var valueType = Visit(assignmentOperator.Right);
         if (assignmentOperator.Operator.Kind != SyntaxKind.Equals)
             return base.VisitBinaryOperator(assignmentOperator);
+
+        if (assignmentOperator.Left is ElementAccess access && semanticModel.GetType(access.Expression) is ObjectType objectType)
+        {
+            var indexType = semanticModel.GetType(access.IndexExpression);
+            var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
+            if (bodyType is { IsMutable: false })
+            {
+                var display = bodyType switch
+                {
+                    ObjectProperty property => $"property '{property.Name}'.",
+                    ObjectIndexer indexer => $"index '{indexer.KeyType}'.",
+                    _ => ""
+                };
+                _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
+            }
+        }
 
         semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
         return BindType(assignmentOperator, valueType);

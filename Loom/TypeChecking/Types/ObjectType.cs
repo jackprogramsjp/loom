@@ -1,12 +1,37 @@
 namespace Loom.TypeChecking.Types;
 
-public record ObjectIndexer(bool IsMutable, Type KeyType, Type ValueType);
-public record ObjectProperty(bool IsMutable, string Name, Type Type);
+public record ObjectBodyType(bool IsMutable, Type ValueType);
+
+public record ObjectIndexer(bool IsMutable, Type KeyType, Type ValueType)
+    : ObjectBodyType(IsMutable, ValueType);
+
+public record ObjectProperty(bool IsMutable, string Name, Type ValueType)
+    : ObjectBodyType(IsMutable, ValueType);
 
 public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties) : Type
 {
     public ObjectIndexer? Indexer { get; } = indexer;
     public List<ObjectProperty> Properties { get; } = properties;
+
+    public (ObjectBodyType?, string) GetTypeAtIndex(Type indexType)
+    {
+        var cannotFindReason = "";
+        if (indexType is LiteralType { Value: string name } && Properties.Count > 0)
+        {
+            var property = Properties.Find(p => p.Name == name);
+            if (property != null)
+                return (property, "");
+
+            cannotFindReason = $" Property '{name}' does not exist on type '{this}'.";
+        }
+
+        if (Indexer == null)
+            return (null, cannotFindReason);
+
+        return indexType.IsAssignableTo(Indexer.KeyType)
+            ? (Indexer, "")
+            : (null, $" Index is not of type '{Indexer.KeyType}'.");
+    }
 
     public override bool Equals(Type? other)
     {
@@ -25,7 +50,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             if (prop.IsMutable != otherProp.IsMutable)
                 return false;
 
-            if (!prop.Type.Equals(otherProp.Type))
+            if (!prop.ValueType.Equals(otherProp.ValueType))
                 return false;
         }
 
@@ -53,11 +78,11 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
         {
             if (!sourcePropertyMap.TryGetValue(targetProperty.Name, out var sourceProperty))
                 return false;
-            
+
             if (sourceProperty.IsMutable && !targetProperty.IsMutable)
                 return false;
 
-            if (!sourceProperty.Type.IsAssignableTo(targetProperty.Type))
+            if (!sourceProperty.ValueType.IsAssignableTo(targetProperty.ValueType))
                 return false;
         }
 
@@ -78,7 +103,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
         }
         else
         {
-            if (!Indexer.KeyType.IsAssignableTo(objectType.Indexer.KeyType) 
+            if (!Indexer.KeyType.IsAssignableTo(objectType.Indexer.KeyType)
                 || !Indexer.ValueType.IsAssignableTo(objectType.Indexer.ValueType))
             {
                 return false;
@@ -93,7 +118,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
         if (Indexer == null && Properties.Count == 0)
             return "{}";
 
-        var properties = string.Join(", ", Properties.ConvertAll(p => $"{(p.IsMutable ? "mut " : "")}{p.Name}: {p.Type}"));
+        var properties = string.Join(", ", Properties.ConvertAll(p => $"{(p.IsMutable ? "mut " : "")}{p.Name}: {p.ValueType}"));
         var indexer = Indexer != null
             ? $"{(Indexer.IsMutable ? "mut " : "")}[{Indexer.KeyType}]: {Indexer.ValueType}"
             : "";
