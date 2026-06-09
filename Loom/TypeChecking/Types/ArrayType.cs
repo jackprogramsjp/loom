@@ -22,5 +22,7 @@ public sealed class ArrayType(Type elementType, bool isMutable) : Type
         return validMutability && ElementType.Equals(targetArray.ElementType);
     }
 
+    public override Type Widen() => IsNever(ElementType) ? new ArrayType(PrimitiveType.Unknown, IsMutable) : ElementType;
+
     public override string ToString() => $"{(RequiresParentheses(ElementType) ? $"({ElementType})" : ElementType)}[{(IsMutable ? "mut" : "")}]";
 }

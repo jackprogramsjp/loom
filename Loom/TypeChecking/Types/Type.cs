@@ -22,12 +22,7 @@ public abstract class Type
                     ? TypeSimplifier.Simplify(this).NonNullable()
                     : this;
 
-    public Type Widen() =>
-        this switch
-        {
-            LiteralType literal => new PrimitiveType(literal.Kind),
-            _ => this
-        };
+    public virtual Type Widen() => this;
 
     public virtual bool IsAssignableTo(Type other)
     {

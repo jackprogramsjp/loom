@@ -26,6 +26,8 @@ public sealed class LiteralType(object? value)
     public override bool IsAssignableTo(Type other) =>
         base.IsAssignableTo(other) || other is LiteralType literal && (Value?.Equals(literal.Value) ?? literal.Value == null);
 
+    public override Type Widen() => new PrimitiveType(Kind);
+
     public override string ToString() =>
         Value switch
         {

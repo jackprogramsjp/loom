@@ -685,6 +685,28 @@ public class TypeCheckerTest
     }
     
     [Fact]
+    public void Checks_Widened_Empty_ArrayLiterals()
+    {
+        var type = Utility.GetLastStatementType("mut x = []");
+        var array = Assert.IsType<ArrayType>(type);
+        Assert.False(array.IsMutable);
+        
+        var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
+        Assert.Equal(PrimitiveTypeKind.Unknown, primitive.Kind);
+    }
+    
+    [Fact]
+    public void Checks_Empty_ArrayLiterals()
+    {
+        var type = Utility.GetLastStatementType("[]");
+        var array = Assert.IsType<ArrayType>(type);
+        Assert.False(array.IsMutable);
+        
+        var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
+        Assert.Equal(PrimitiveTypeKind.Never, primitive.Kind);
+    }
+    
+    [Fact]
     public void Checks_ArrayLiterals()
     {
         var type = Utility.GetLastStatementType("[1, 2, 3]");
