@@ -238,6 +238,12 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_ExpressionStatement()
+    {
+        Assert.Equal("1", new ExpressionStatement(new NumberLiteral(1)).Render());
+    }
+
+    [Fact]
     public void Renders_OptionalType_RequiresParens()
     {
         Assert.Equal("(string | boolean)?", new OptionalType(new UnionType([PrimitiveType.String, PrimitiveType.Boolean])).Render());
@@ -291,13 +297,13 @@ public class LuauRenderingTest
     {
         Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteralType("abc").Render());
     }
-    
+
     [Fact]
     public void Renders_Dictionary_TableType()
     {
         Assert.Equal("{ [string]: number }", new TableType(PrimitiveType.String, PrimitiveType.Number).Render());
     }
-    
+
     [Fact]
     public void Renders_Array_TableType()
     {
