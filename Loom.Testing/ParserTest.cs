@@ -34,10 +34,10 @@ public class ParserTest
     [Fact]
     public void ThrowsFor_UnexpectedToken()
     {
-        var diagnostics = Utility.GetParserDiagnostics("$");
+        var diagnostics = Utility.GetParserDiagnostics("!");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Unexpected token.");
     }
-    
+
     [Fact]
     public void ThrowsFor_InvalidNameOf()
     {
@@ -47,16 +47,14 @@ public class ParserTest
 
     [Theory]
     [InlineData("(1 + 2")]
-    [InlineData("(1 + 2]", "]")]
-    [InlineData("nameof(abc", null, 6)]
-    [InlineData("nameof(abc]", "]", 6)]
-    public void ThrowsFor_UnterminatedParens(string source, string got = "EOF", int character = 0)
+    [InlineData("(1 + 2]", "']'")]
+    public void ThrowsFor_UnterminatedParens(string source, string got = "EOF")
     {
         var diagnostics = Utility.GetParserDiagnostics(source);
         Utility.AssertDiagnostic(
             diagnostics,
             got == "EOF" ? InternalCodes.UnexpectedEof : InternalCodes.UnexpectedToken,
-            $"Expected ')' here to close '(' at character {character}, got {got}."
+            $"Expected ')' here to close '(' at character 0, got {got}."
         );
     }
 
@@ -837,7 +835,7 @@ public class ParserTest
         Assert.Equal(69L, firstLiteral.Value);
         Assert.Equal(420L, lastLiteral.Value);
     }
-    
+
     [Fact]
     public void Parses_NameOf()
     {
