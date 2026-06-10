@@ -212,6 +212,74 @@ public class LuauGeneratorTest
     }
 
     [Fact]
+    public void Generates_QualifiedName_AsPropertyAccessChain()
+    {
+        var luauTree = Utility.GetLuauAST("a.b");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var propAccess = Assert.IsType<PropertyAccess>(variable.Initializer);
+        var target = Assert.IsType<Identifier>(propAccess.Target);
+        Assert.Equal("a", target.Name);
+        Assert.Single(propAccess.Names);
+        Assert.Equal("b", propAccess.Names[0]);
+    }
+
+    [Fact]
+    public void Generates_QualifiedName_Chained()
+    {
+        var luauTree = Utility.GetLuauAST("a.b.c");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var outerAccess = Assert.IsType<PropertyAccess>(variable.Initializer);
+        Assert.Equal(2, outerAccess.Names.Count);
+        Assert.Equal("b", outerAccess.Names.First());
+        Assert.Equal("c", outerAccess.Names.Last());
+    }
+
+    [Fact]
+    public void Generates_PropertyAccess_OnRangeLiteral()
+    {
+        var luauTree = Utility.GetLuauAST("(1..10).minimum");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var propAccess = Assert.IsType<PropertyAccess>(variable.Initializer);
+        Assert.Single(propAccess.Names);
+        Assert.Equal("minimum", propAccess.Names[0]);
+
+        var parenthesized = Assert.IsType<Parenthesized>(propAccess.Target);
+        var rangeTable = Assert.IsType<Table>(parenthesized.Expression);
+        Assert.Equal(2, rangeTable.Initializers.Count);
+        var minInit = Assert.IsType<PropertyTableInitializer>(rangeTable.Initializers[0]);
+        var maxInit = Assert.IsType<PropertyTableInitializer>(rangeTable.Initializers[1]);
+        Assert.Equal("minimum", minInit.PropertyName);
+        Assert.Equal("maximum", maxInit.PropertyName);
+        Assert.IsType<NumberLiteral>(minInit.Value);
+        Assert.IsType<NumberLiteral>(maxInit.Value);
+    }
+
+    [Fact]
+    public void Generates_PropertyAccess_OnVariable()
+    {
+        var luauTree = Utility.GetLuauAST("let r = 1..10; r.minimum");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var rVariable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
+        Assert.Equal("r", rVariable.Name);
+        Assert.IsType<Table>(rVariable.Initializer);
+
+        var accessVariable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var propAccess = Assert.IsType<PropertyAccess>(accessVariable.Initializer);
+        Assert.Single(propAccess.Names);
+        Assert.Equal("minimum", propAccess.Names[0]);
+
+        var target = Assert.IsType<Identifier>(propAccess.Target);
+        Assert.Equal("r", target.Name);
+    }
+
+    [Fact]
     public void Generates_ComputedAssignment()
     {
         var luauTree = Utility.GetLuauAST("mut x = 1; mut y = 2; let z = x = y = 69");
@@ -488,7 +556,7 @@ public class LuauGeneratorTest
 
         var arrayVariable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
         Assert.IsType<Table>(arrayVariable.Initializer);
-        
+
         var lengthVariable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         Assert.Equal("_length", lengthVariable.Name);
         Assert.IsType<UnaryOperator>(lengthVariable.Initializer);
@@ -500,7 +568,7 @@ public class LuauGeneratorTest
         Assert.Equal("table", target.Name);
         Assert.Single(propertyAccess.Names);
         Assert.Equal("move", propertyAccess.Names[0]);
-        
+
         Assert.Equal(5, call.Arguments.Count);
         Assert.IsType<Identifier>(call.Arguments[0]);
         var start = Assert.IsType<Call>(call.Arguments[1]);
@@ -515,12 +583,12 @@ public class LuauGeneratorTest
         Assert.Equal("math", startTarget.Name);
         Assert.Equal("clamp", startCall.Names[0]);
         Assert.Equal(3, start.Arguments.Count);
-        Assert.IsType<NumberLiteral>(start.Arguments[0]); 
-        Assert.IsType<NumberLiteral>(start.Arguments[1]); 
-        Assert.IsType<Identifier>(start.Arguments[2]);   
+        Assert.IsType<NumberLiteral>(start.Arguments[0]);
+        Assert.IsType<NumberLiteral>(start.Arguments[1]);
+        Assert.IsType<Identifier>(start.Arguments[2]);
 
-        Assert.IsType<NumberLiteral>(call.Arguments[3]); 
-        Assert.IsType<Table>(call.Arguments[4]);         
+        Assert.IsType<NumberLiteral>(call.Arguments[3]);
+        Assert.IsType<Table>(call.Arguments[4]);
     }
 
     [Fact]
@@ -535,7 +603,7 @@ public class LuauGeneratorTest
         var result = Assert.IsType<ExpressionStatement>(luauTree.Statements[3]);
         Assert.IsType<Table>(rangeVariable.Initializer);
         Assert.IsType<Table>(arrayVariable.Initializer);
-        
+
         var lengthOp = Assert.IsType<UnaryOperator>(lengthVariable.Initializer);
         Assert.Equal("#", lengthOp.Operator);
 

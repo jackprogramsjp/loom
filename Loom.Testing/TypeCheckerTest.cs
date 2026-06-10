@@ -273,6 +273,58 @@ public class TypeCheckerTest
     }
     
     [Fact]
+    public void ThrowsFor_QualifiedName_Chained_AfterNumber()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let r = (1..10); r.minimum.foo");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot access property 'foo' on type 'number'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_QualifiedName_Chained_MissingIntermediate()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let r = (1..10); r.missing.next");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Expression of type '\"missing\"' cannot be used to index type 'Range'. Property 'missing' does not exist on type 'Range'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_PropertyAccess_Chained_AfterNumber()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("(1..10).minimum.foo");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot access property 'foo' on type 'number'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_PropertyAccess_Chained_MissingIntermediate()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("(1..10).missing.next");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Expression of type '\"missing\"' cannot be used to index type 'Range'. Property 'missing' does not exist on type 'Range'.");
+    }
+    
+    [Fact]
+    public void Checks_QualifiedName_SingleDot_OnRange()
+    {
+        var type = Utility.GetLastStatementType("let r = (1..10); r.minimum");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+
+        type = Utility.GetLastStatementType("let r = (1..10); r.maximum");
+        primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+    
+    [Fact]
+    public void Checks_PropertyAccess_SingleDot_OnRange()
+    {
+        var type = Utility.GetLastStatementType("(1..10).minimum");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+
+        type = Utility.GetLastStatementType("(1..10).maximum");
+        primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+    
+    [Fact]
     public void Checks_RangeLiteral_ElementAccess()
     {
         var type = Utility.GetLastStatementType("let x = [1, 2, 3]; x[1..10]");

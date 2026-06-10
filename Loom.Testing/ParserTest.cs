@@ -436,6 +436,37 @@ public class ParserTest
         var primitive = Assert.IsType<PrimitiveType>(variableDeclaration.ColonTypeClause.Type);
         Assert.Equal(type, primitive.Kind);
     }
+    
+    [Fact]
+    public void Parses_QualifiedName_Basic()
+    {
+        var tree = Utility.GetAST("a.b");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var qualifiedName = Assert.IsType<QualifiedName>(expressionStatement.Expression);
+        Assert.Equal("a", qualifiedName.Identifier.Name.Text);
+        Assert.Single(qualifiedName.Names);
+
+        var name = qualifiedName.Names.First();
+        Assert.Equal("b", name.Name.Text);
+        Assert.Equal(SyntaxKind.Identifier, name.Name.Kind);
+        Assert.Equal(SyntaxKind.Dot, name.Dot.Kind);
+    }
+    
+    [Fact]
+    public void Parses_PropertyAccess_Basic()
+    {
+        var tree = Utility.GetAST("\'a\'.b");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var propertyAccess = Assert.IsType<PropertyAccess>(expressionStatement.Expression);
+        var literal = Assert.IsType<Literal>(propertyAccess.Expression);
+        Assert.Equal("a", literal.Value);
+        Assert.Single(propertyAccess.Names);
+
+        var name = propertyAccess.Names.First();
+        Assert.Equal("b", name.Name.Text);
+        Assert.Equal(SyntaxKind.Identifier, name.Name.Kind);
+        Assert.Equal(SyntaxKind.Dot, name.Dot.Kind);
+    }
 
     [Fact]
     public void Parses_ElementAccess_Basic()

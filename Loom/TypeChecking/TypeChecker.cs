@@ -333,7 +333,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         {
             if (type is not ObjectType objectType)
             {
-                _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'");
+                _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
                 return Types.PrimitiveType.Never;
             }
 
