@@ -17,6 +17,7 @@ using Parameter = Loom.Parsing.AST.Parameter;
 using Parenthesized = Loom.Parsing.AST.Parenthesized;
 using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
+using PropertyAccess = Loom.Parsing.AST.PropertyAccess;
 using Return = Loom.Parsing.AST.Return;
 using TypeAlias = Loom.Parsing.AST.TypeAlias;
 using TypeName = Loom.Parsing.AST.TypeName;
@@ -116,6 +117,12 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitNameOf(NameOf nameOf) => new StringLiteral(semanticModel.GetSymbol(nameOf.Name)?.Name ?? "???");
 
     public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
+
+    public override LuauNode VisitQualifiedName(QualifiedName qualifiedName) =>
+        new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
+    
+    public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess) =>
+        new Luau.AST.PropertyAccess(Visit(propertyAccess.Expression), propertyAccess.Names.ConvertAll(dotName => dotName.Name.Text));
 
     public override LuauNode VisitElementAccess(ElementAccess elementAccess)
     {

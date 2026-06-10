@@ -76,6 +76,8 @@ public abstract class Visitor<T>
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
     public virtual T VisitInvocation(Invocation invocation) => CombineResults([Visit(invocation.Expression), Visit(invocation.Arguments)]);
     
+    public virtual T VisitQualifiedName(QualifiedName qualifiedName) => Visit(qualifiedName.Identifier);
+    public virtual T VisitPropertyAccess(PropertyAccess propertyAccess) => Visit(propertyAccess.Expression);
     public virtual T VisitElementAccess(ElementAccess elementAccess) => CombineResults([Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression)]);
 
     public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) =>

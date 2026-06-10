@@ -1,4 +1,1 @@
-mut a = 1;
-mut b = 3;
-let arr = [1, 2, 3, 4, 5];
-let slice = arr[a..b];
+(1..10).minimum

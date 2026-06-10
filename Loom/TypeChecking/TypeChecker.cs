@@ -143,14 +143,17 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (substitution == null)
             return BindType(invocation, Types.PrimitiveType.Never);
 
-        var substitutedParameterTypes = SubsituteTypeParameters(functionType.ParameterTypes, substitution);
-        var substitutedReturnType = SubsituteTypeParameters(functionType.ReturnType, substitution);
+        var substitutedParameterTypes = SubstituteTypeParameters(functionType.ParameterTypes, substitution);
+        var substitutedReturnType = SubstituteTypeParameters(functionType.ReturnType, substitution);
         var instantiated = new FunctionType([], substitutedParameterTypes, substitutedReturnType);
 
         CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes);
         AddArgumentConstraints(invocation.Arguments, argumentTypes, substitutedParameterTypes);
         return BindType(invocation, instantiated.ReturnType);
     }
+
+    public override Type VisitQualifiedName(QualifiedName qualifiedName) => GetTypeOfNamedAccess(qualifiedName, qualifiedName.Identifier, qualifiedName.Names);
+    public override Type VisitPropertyAccess(PropertyAccess propertyAccess) => GetTypeOfNamedAccess(propertyAccess, propertyAccess.Expression, propertyAccess.Names);
 
     public override Type VisitElementAccess(ElementAccess elementAccess)
     {
@@ -164,18 +167,8 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var indexType = Visit(elementAccess.IndexExpression);
         if (type is Types.ArrayType && indexType.Equals(IntrinsicTypes.Range.Type))
             return type;
-        
-        var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
-        if (bodyType != null)
-            return bodyType.ValueType;
 
-        _diagnostics.Error(
-            elementAccess.IndexExpression,
-            InternalCodes.InvalidAccess,
-            $"Expression of type '{indexType}' cannot be used to index type '{type}'.{cannotFindReason}"
-        );
-
-        return Types.PrimitiveType.Never;
+        return GetTypeAtIndexInObject(elementAccess.IndexExpression, objectType, indexType);
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -197,6 +190,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                     ObjectIndexer indexer => $"index '{indexer.KeyType}'.",
                     _ => ""
                 };
+
                 _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
             }
         }
@@ -263,7 +257,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var maximumType = Visit(rangeLiteral.Maximum);
         semanticModel.TypeSolver.AddConstraint(minimumType, Types.PrimitiveType.Number, rangeLiteral.Minimum);
         semanticModel.TypeSolver.AddConstraint(maximumType, Types.PrimitiveType.Number, rangeLiteral.Maximum);
-        
+
         return BindType(rangeLiteral, IntrinsicTypes.Range.Type);
     }
 
@@ -330,6 +324,34 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, constraint, defaultType);
         return BindType(typeParameter, parameter);
+    }
+    
+    private Type GetTypeOfNamedAccess(Node node, Expression expression, List<DotName> names)
+    {
+        var type = Visit(expression);
+        foreach (var dotName in names)
+        {
+            if (type is not ObjectType objectType)
+            {
+                _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'");
+                return Types.PrimitiveType.Never;
+            }
+
+            var indexType = new Types.LiteralType(dotName.Name.Text);
+            type = GetTypeAtIndexInObject(node, objectType, indexType);
+        }
+
+        return type;
+    }
+    
+    private Type GetTypeAtIndexInObject(Node node, ObjectType objectType, Type indexType)
+    {
+        var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
+        if (bodyType != null)
+            return bodyType.ValueType;
+
+        _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
+        return Types.PrimitiveType.Never;
     }
 
     private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)
@@ -502,10 +524,10 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return substitution;
     }
 
-    private static List<Type> SubsituteTypeParameters(List<Type> types, Dictionary<Types.TypeParameter, Type> substitution) =>
-        types.ConvertAll(t => SubsituteTypeParameters(t, substitution));
+    private static List<Type> SubstituteTypeParameters(List<Type> types, Dictionary<Types.TypeParameter, Type> substitution) =>
+        types.ConvertAll(t => SubstituteTypeParameters(t, substitution));
 
-    private static Type SubsituteTypeParameters(Type type, Dictionary<Types.TypeParameter, Type> substitution)
+    private static Type SubstituteTypeParameters(Type type, Dictionary<Types.TypeParameter, Type> substitution)
     {
         if (type is Types.TypeParameter tp && substitution.TryGetValue(tp, out var substituted))
             return substituted;

@@ -181,12 +181,27 @@ public class Parser(LexerResult lexerResult)
 
     private Expression ParseRange()
     {
-        var expression = ParseUnary();
+        var expression = ParseNamedAccess();
         if (!Match(out var dotDot, SyntaxKind.DotDot))
             return expression;
 
-        var maximum = ParseUnary();
+        var maximum = ParseNamedAccess();
         return new RangeLiteral(dotDot, expression, maximum);
+    }
+
+    private Expression ParseNamedAccess()
+    {
+        var expression = ParseUnary();
+        var names = new List<DotName>();
+        while (Match(out var dot, SyntaxKind.Dot))
+            names.Add(new DotName(dot, Expect(SyntaxKind.Identifier)));
+
+        if (names.Count <= 0)
+            return expression;
+
+        return expression is Identifier identifier
+            ? new QualifiedName(identifier, names)
+            : new PropertyAccess(expression, names);
     }
 
     private Expression ParseUnary() =>

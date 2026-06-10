@@ -9,6 +9,7 @@ using OptionalType = Loom.Luau.AST.OptionalType;
 using Parenthesized = Loom.Luau.AST.Parenthesized;
 using ParenthesizedType = Loom.Luau.AST.ParenthesizedType;
 using PrimitiveType = Loom.Luau.AST.PrimitiveType;
+using PropertyAccess = Loom.Luau.AST.PropertyAccess;
 using Return = Loom.Luau.AST.Return;
 using TypeAlias = Loom.Luau.AST.TypeAlias;
 using TypeName = Loom.Luau.AST.TypeName;
