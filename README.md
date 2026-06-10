@@ -185,6 +185,22 @@ const arr = {1, 2, 3, 4, 5}
 const _length = #arr
 const slice = table.move(arr, math.clamp(1, 1, _length), math.clamp(3, 1, _length), 1, {})
 ```
+##
+```rs
+let min = (1..10).minimum
+```
+```luau
+const min = ({ minimum = 1, maximum = 10 }).minimum
+```
+##
+```rs
+let range = 1..10;
+let name = nameof(range.minimum)
+```
+```luau
+const range = { minimum = 1, maximum = 10 }
+const name = "range.minimum"
+```
 
 ## Planned Features
 
