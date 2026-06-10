@@ -114,7 +114,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             : new ConstVariable("_", null, expression);
     }
 
-    public override LuauNode VisitNameOf(NameOf nameOf) => new StringLiteral(semanticModel.GetSymbol(nameOf.Name)?.Name ?? "???");
+    public override LuauNode VisitNameOf(NameOf nameOf) => new StringLiteral(nameOf.Name.ToString());
 
     public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
 

@@ -347,6 +347,14 @@ public class TypeCheckerTest
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal("x", literal.Value);
     }
+    
+    [Fact]
+    public void Checks_NameOf_QualifiedName()
+    {
+        var type = Utility.GetLastStatementType("let r = 1..10; nameof(r.minimum)");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal("r.minimum", literal.Value);
+    }
 
     [Fact]
     public void ThrowsFor_GenericFunctionCall_MissingRequiredTypeParameter()

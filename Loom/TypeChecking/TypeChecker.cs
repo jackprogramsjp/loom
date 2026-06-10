@@ -124,7 +124,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(parameter, declaredType ?? initializerType!);
     }
 
-    public override Type VisitNameOf(NameOf nameOf) => new Types.LiteralType(semanticModel.GetSymbol(nameOf.Name)?.Name ?? "???");
+    public override Type VisitNameOf(NameOf nameOf) => new Types.LiteralType(nameOf.Name.ToString());
 
     public override Type VisitInvocation(Invocation invocation)
     {
