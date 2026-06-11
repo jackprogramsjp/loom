@@ -165,7 +165,7 @@ const range = { minimum = 1, maximum = 10 }
 ```
 ##
 ```rs
-let range = 1..3
+let range = 1..3;
 let arr = [1, 2, 3, 4, 5];
 let slice = arr[range];
 ```
@@ -187,7 +187,7 @@ const slice = table.move(arr, math.clamp(1, 1, _length), math.clamp(3, 1, _lengt
 ```
 ##
 ```rs
-let min = (1..10).minimum
+let min = (1..10).minimum;
 ```
 ```luau
 const min = ({ minimum = 1, maximum = 10 }).minimum
@@ -195,11 +195,33 @@ const min = ({ minimum = 1, maximum = 10 }).minimum
 ##
 ```rs
 let range = 1..10;
-let name = nameof(range.minimum)
+let name = nameof(range.minimum);
 ```
 ```luau
 const range = { minimum = 1, maximum = 10 }
 const name = "range.minimum"
+```
+##
+```rs
+enum Abc { A, B = 69, C }
+let a = Abc.A;
+let b = Abc.B;
+let c = Abc.C;
+```
+```luau
+const a = 0
+const b = 69
+const c = 70
+```
+##
+```rs
+enum Tag: string {
+    Lava = "lava"
+}
+let tag = Tag.Lava
+```
+```luau
+const tag = "lava"
 ```
 
 ## Planned Features
