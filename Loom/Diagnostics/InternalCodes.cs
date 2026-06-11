@@ -34,4 +34,7 @@ public static class InternalCodes
     public const string ConstraintViolation = "L319";
     public const string InvalidAccess = "L320";
     public const string InvalidNameOf = "L321";
+    public const string InvalidEnumBaseType = "L322";
+    public const string StringEnumMemberMustHaveInitializer = "L323";
+    public const string DynamicEnumMemberInitializer = "L324";
 }

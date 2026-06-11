@@ -57,6 +57,9 @@ public class Parser(LexerResult lexerResult)
         if (Match(out var typeKeyword, SyntaxKind.TypeKeyword))
             return ParseTypeAlias(typeKeyword);
 
+        if (Match(out var enumKeyword, SyntaxKind.EnumKeyword))
+            return ParseEnumDeclaration(enumKeyword);
+
         if (Match(out var returnKeyword, SyntaxKind.ReturnKeyword))
             return new Return(returnKeyword, ParseExpression());
 
@@ -115,6 +118,18 @@ public class Parser(LexerResult lexerResult)
         var equalsValueClause = ParseEqualsValueClause();
         return new VariableDeclaration(keyword, name, colonTypeClause, equalsValueClause);
     }
+
+    private EnumDeclaration ParseEnumDeclaration(Token keyword)
+    {
+        var name = ExpectIdentifier();
+        var colonTypeClause = ParseColonTypeClause();
+        var leftBrace = Expect(SyntaxKind.LBrace);
+        var members = ParseDelimited(ParseEnumMember).OfType<EnumMember>().ToList();
+        var rightBrace = Expect(SyntaxKind.RBrace);
+        return new EnumDeclaration(keyword, name, leftBrace, rightBrace, colonTypeClause, members);
+    }
+
+    private EnumMember? ParseEnumMember() => Match(out var name, SyntaxKind.Identifier) ? new EnumMember(name, ParseEqualsValueClause()) : null;
 
     private Parameters? ParseParameters()
     {
@@ -456,11 +471,19 @@ public class Parser(LexerResult lexerResult)
     }
 
     private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
-        where T : Node
+        where T : Node?
     {
-        var nodes = new List<T> { parse() };
+        var first = parse();
+        if (first == null)
+            return [];
+        
+        var nodes = new List<T> { first };
         while (Match(delimiter))
-            nodes.Add(parse());
+        {
+            var node = parse();
+            if (node == null) continue;
+            nodes.Add(node);
+        }
 
         return nodes;
     }

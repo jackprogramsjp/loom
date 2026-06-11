@@ -147,6 +147,23 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return false;
     }
 
+    public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration)
+    {
+        var scope = CurrentScope();
+        var name = enumDeclaration.Name.Text;
+        var symbol = new Symbol(enumDeclaration, SymbolKind.Variable, name);
+        DeclareSymbol(symbol);
+        scope.InitializationState[name] = true;
+
+        return true;
+    }
+
+    public override bool VisitEnumMember(EnumMember enumMember)
+    {
+        DeclareSymbol(new Symbol(enumMember, SymbolKind.EnumMember, enumMember.Name.Text));
+        return true;
+    }
+
     public override bool VisitLiteral(Literal literal) => true;
 
     public override bool VisitAssignmentOperator(AssignmentOperator assignmentOperator)

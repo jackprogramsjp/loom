@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Luau;
 using Loom.Luau.AST;
@@ -106,6 +106,8 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
 
+    public override LuauNode VisitEnumDeclaration(EnumDeclaration enumDeclaration) => new NoOpStatement();
+
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var expression = Visit(expressionStatement.Expression);
@@ -120,16 +122,20 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName) =>
         new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
-    
+
     public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess) =>
-        new Luau.AST.PropertyAccess(Visit(propertyAccess.Expression), propertyAccess.Names.ConvertAll(dotName => dotName.Name.Text));
+        TryGetEnumConstant(propertyAccess, out var enumValue)
+            ? enumValue
+            : new Luau.AST.PropertyAccess(Visit(propertyAccess.Expression), propertyAccess.Names.ConvertAll(dotName => dotName.Name.Text));
 
     public override LuauNode VisitElementAccess(ElementAccess elementAccess)
     {
         var target = Visit(elementAccess.Expression);
         var indexType = semanticModel.GetType(elementAccess.IndexExpression);
         if (!indexType.Equals(IntrinsicTypes.Range.Type))
-            return new Luau.AST.ElementAccess(target, Visit(elementAccess.IndexExpression));
+            return TryGetEnumConstant(elementAccess, out var enumValue)
+                ? enumValue
+                : new Luau.AST.ElementAccess(target, Visit(elementAccess.IndexExpression));
 
         var one = new NumberLiteral(1);
         var length = PushToVariable("_length", new Luau.AST.UnaryOperator("#", target));
@@ -303,6 +309,23 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             AddBit32Arguments(argument, name, arguments);
         }
 
+        return true;
+    }
+
+    private bool TryGetEnumConstant(Node node, [MaybeNullWhen(false)] out LuauNode constantType)
+    {
+        constantType = null;
+        var symbol = semanticModel.GetSymbol(node);
+        if (symbol == null)
+            return false;
+
+        var type = semanticModel.GetType(symbol.Declaration);
+        if (type is not TypeChecking.Types.LiteralType { Value: long or int or double or string } literal)
+        {
+            return false;
+        }
+
+        constantType = literal.Value is string s ? new StringLiteral(s) : new NumberLiteral(Convert.ToDouble(literal.Value));
         return true;
     }
 

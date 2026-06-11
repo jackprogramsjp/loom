@@ -59,6 +59,9 @@ public abstract class Visitor<T>
 
         return CombineResults(results);
     }
+    
+    public virtual T VisitEnumDeclaration(EnumDeclaration enumDeclaration) => VisitList(enumDeclaration.Members);
+    public virtual T VisitEnumMember(EnumMember enumMember) => MaybeVisit(enumMember.EqualsValueClause)!;
 
     public virtual T VisitParameters(Parameters parameters) => CombineResults([VisitList(parameters.ParameterList)]);
     public virtual T VisitBlock(Block block) => VisitList(block.Statements);

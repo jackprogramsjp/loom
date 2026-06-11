@@ -1,2 +1,6 @@
-let r = 1..10
-nameof(r.minimum)
+enum Abc : bool {
+    A = "abc",
+    B
+}
+
+Abc.A

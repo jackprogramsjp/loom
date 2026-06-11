@@ -124,6 +124,72 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(parameter, declaredType ?? initializerType!);
     }
 
+    public override Type VisitEnumDeclaration(EnumDeclaration enumDeclaration)
+    {
+        var properties = new List<ObjectProperty>();
+        var baseType = MaybeVisit(enumDeclaration.ColonTypeClause) ?? Types.PrimitiveType.Number;
+        if (enumDeclaration.ColonTypeClause != null && !baseType.IsAssignableTo(Types.PrimitiveType.String) && !baseType.IsAssignableTo(Types.PrimitiveType.Number))
+        {
+            _diagnostics.Error(enumDeclaration.ColonTypeClause, InternalCodes.InvalidEnumBaseType, "Invalid enum base type.", "valid types are 'string' and 'number'");
+            return BindType(enumDeclaration, Types.PrimitiveType.Never);
+        }
+
+        if (!baseType.IsAssignableTo(Types.PrimitiveType.String))
+        {
+            var nextValue = 0d;
+            foreach (var member in enumDeclaration.Members)
+            {
+                var memberValue = nextValue;
+                if (member.EqualsValueClause != null)
+                {
+                    var explicitType = Visit(member.EqualsValueClause);
+                    if (CheckEnumMemberConst(member, explicitType))
+                    {
+                        memberValue = explicitType switch
+                        {
+                            Types.LiteralType { Value: long l } => l,
+                            Types.LiteralType { Value: int i } => i,
+                            Types.LiteralType { Value: double d } => d,
+                            _ => nextValue
+                        };
+
+                        semanticModel.TypeSolver.AddConstraint(explicitType, baseType, member.EqualsValueClause.Value);
+                    }
+                }
+
+                var memberType = new Types.LiteralType(memberValue);
+                if (CheckEnumMemberConst(member, memberType))
+                    properties.Add(new ObjectProperty(false, member.Name.Text, memberType));
+
+                nextValue = memberValue + 1;
+            }
+
+            return BindType(enumDeclaration, new ObjectType(null, properties));
+        }
+
+        foreach (var member in enumDeclaration.Members)
+        {
+            if (member.EqualsValueClause == null)
+            {
+                _diagnostics.Error(
+                    member,
+                    InternalCodes.StringEnumMemberMustHaveInitializer,
+                    $"Member '{member.Name.Text}' of string enum '{enumDeclaration.Name.Text}' must have an initializer."
+                );
+
+                return BindType(enumDeclaration, Types.PrimitiveType.Never);
+            }
+
+            var type = MaybeVisit(member.EqualsValueClause) ?? baseType;
+            if (!CheckEnumMemberConst(member, type)) continue;
+
+            semanticModel.TypeSolver.AddConstraint(type, baseType, member.EqualsValueClause.Value);
+            properties.Add(new ObjectProperty(false, member.Name.Text, type));
+        }
+
+        return BindType(enumDeclaration, new ObjectType(null, properties));
+    }
+
     public override Type VisitNameOf(NameOf nameOf) => new Types.LiteralType(nameOf.Name.ToString());
 
     public override Type VisitInvocation(Invocation invocation)
@@ -161,7 +227,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (type is not ObjectType objectType)
         {
             _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
-            return Types.PrimitiveType.Never;
+            return BindType(elementAccess, Types.PrimitiveType.Never);
         }
 
         var indexType = Visit(elementAccess.IndexExpression);
@@ -325,7 +391,16 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, constraint, defaultType);
         return BindType(typeParameter, parameter);
     }
-    
+
+    private bool CheckEnumMemberConst(EnumMember member, Type type)
+    {
+        if (type is Types.LiteralType { Value: string or long or int or double })
+            return true;
+
+        _diagnostics.Error(member.EqualsValueClause!.Value, InternalCodes.DynamicEnumMemberInitializer, "Enum member initializers must be constant values.");
+        return false;
+    }
+
     private Type GetTypeOfNamedAccess(Node node, Expression expression, List<DotName> names)
     {
         var type = Visit(expression);
@@ -334,16 +409,16 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             if (type is not ObjectType objectType)
             {
                 _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
-                return Types.PrimitiveType.Never;
+                return BindType(node, Types.PrimitiveType.Never);
             }
 
             var indexType = new Types.LiteralType(dotName.Name.Text);
             type = GetTypeAtIndexInObject(node, objectType, indexType);
         }
 
-        return type;
+        return BindType(node, type);
     }
-    
+
     private Type GetTypeAtIndexInObject(Node node, ObjectType objectType, Type indexType)
     {
         var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
@@ -351,7 +426,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return bodyType.ValueType;
 
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
-        return Types.PrimitiveType.Never;
+        return BindType(node, Types.PrimitiveType.Never);
     }
 
     private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)

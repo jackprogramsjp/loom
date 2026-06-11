@@ -5,5 +5,6 @@ public enum SymbolKind : byte
     Variable,
     Function,
     Type,
-    Parameter
+    Parameter,
+    EnumMember
 }
