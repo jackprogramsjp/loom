@@ -209,6 +209,7 @@ let b = Abc.B;
 let c = Abc.C;
 ```
 ```luau
+type Abc = number
 const a = 0
 const b = 69
 const c = 70
@@ -216,11 +217,13 @@ const c = 70
 ##
 ```rs
 enum Tag: string {
-    Lava = "lava"
+    Lava = "lava",
+    Something = "something"
 }
 let tag = Tag.Lava
 ```
 ```luau
+type Tag = "lava" | "something"
 const tag = "lava"
 ```
 
