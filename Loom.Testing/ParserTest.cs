@@ -263,6 +263,125 @@ public class ParserTest
     }
 
     [Fact]
+    public void Parses_EnumDeclaration_WithImplicitValues()
+    {
+        var tree = Utility.GetAST("enum Abc { A, B, C }");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var enumDecl = Assert.IsType<EnumDeclaration>(statement);
+        Assert.Equal("Abc", enumDecl.Name.Text);
+        Assert.Equal(SyntaxKind.EnumKeyword, enumDecl.Keyword.Kind);
+        Assert.Null(enumDecl.ColonTypeClause);
+        Assert.Equal(SyntaxKind.LBrace, enumDecl.LeftBrace.Kind);
+        Assert.Equal(SyntaxKind.RBrace, enumDecl.RightBrace.Kind);
+        Assert.Equal(3, enumDecl.Members.Count);
+
+        Assert.Equal("A", enumDecl.Members[0].Name.Text);
+        Assert.Null(enumDecl.Members[0].EqualsValueClause);
+
+        Assert.Equal("B", enumDecl.Members[1].Name.Text);
+        Assert.Null(enumDecl.Members[1].EqualsValueClause);
+
+        Assert.Equal("C", enumDecl.Members[2].Name.Text);
+        Assert.Null(enumDecl.Members[2].EqualsValueClause);
+    }
+
+    [Fact]
+    public void Parses_EnumDeclaration_WithExplicitValues()
+    {
+        var tree = Utility.GetAST("enum Status { Active = 1, Inactive = 0, Pending = 2 }");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var enumDecl = Assert.IsType<EnumDeclaration>(statement);
+        Assert.Equal("Status", enumDecl.Name.Text);
+        Assert.Equal(3, enumDecl.Members.Count);
+
+        Assert.Equal("Active", enumDecl.Members[0].Name.Text);
+        Assert.NotNull(enumDecl.Members[0].EqualsValueClause);
+        var activeValue = Assert.IsType<Literal>(enumDecl.Members[0].EqualsValueClause!.Value);
+        Assert.Equal(1L, activeValue.Value);
+
+        Assert.Equal("Inactive", enumDecl.Members[1].Name.Text);
+        Assert.NotNull(enumDecl.Members[1].EqualsValueClause);
+        var inactiveValue = Assert.IsType<Literal>(enumDecl.Members[1].EqualsValueClause!.Value);
+        Assert.Equal(0L, inactiveValue.Value);
+
+        Assert.Equal("Pending", enumDecl.Members[2].Name.Text);
+        Assert.NotNull(enumDecl.Members[2].EqualsValueClause);
+        var pendingValue = Assert.IsType<Literal>(enumDecl.Members[2].EqualsValueClause!.Value);
+        Assert.Equal(2L, pendingValue.Value);
+    }
+
+    [Fact]
+    public void Parses_EnumDeclaration_WithMixedImplicitAndExplicitValues()
+    {
+        var tree = Utility.GetAST("enum Mixed { A, B = 69, C }");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var enumDecl = Assert.IsType<EnumDeclaration>(statement);
+        Assert.Equal("Mixed", enumDecl.Name.Text);
+        Assert.Equal(3, enumDecl.Members.Count);
+
+        Assert.Equal("A", enumDecl.Members[0].Name.Text);
+        Assert.Null(enumDecl.Members[0].EqualsValueClause);
+
+        Assert.Equal("B", enumDecl.Members[1].Name.Text);
+        Assert.NotNull(enumDecl.Members[1].EqualsValueClause);
+        var bValue = Assert.IsType<Literal>(enumDecl.Members[1].EqualsValueClause!.Value);
+        Assert.Equal(69L, bValue.Value);
+
+        Assert.Equal("C", enumDecl.Members[2].Name.Text);
+        Assert.Null(enumDecl.Members[2].EqualsValueClause);
+    }
+
+    [Fact]
+    public void Parses_EnumDeclaration_WithStringBackedValues()
+    {
+        var tree = Utility.GetAST("enum Colors : string { Red = \"FF0000\", Green = \"00FF00\", Blue = \"0000FF\" }");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var enumDecl = Assert.IsType<EnumDeclaration>(statement);
+        Assert.Equal("Colors", enumDecl.Name.Text);
+        Assert.NotNull(enumDecl.ColonTypeClause);
+        var baseType = Assert.IsType<PrimitiveType>(enumDecl.ColonTypeClause.Type);
+        Assert.Equal(PrimitiveTypeKind.String, baseType.Kind);
+        Assert.Equal(3, enumDecl.Members.Count);
+
+        Assert.Equal("Red", enumDecl.Members[0].Name.Text);
+        Assert.NotNull(enumDecl.Members[0].EqualsValueClause);
+        var redValue = Assert.IsType<Literal>(enumDecl.Members[0].EqualsValueClause!.Value);
+        Assert.Equal("FF0000", redValue.Value);
+
+        Assert.Equal("Green", enumDecl.Members[1].Name.Text);
+        Assert.NotNull(enumDecl.Members[1].EqualsValueClause);
+        var greenValue = Assert.IsType<Literal>(enumDecl.Members[1].EqualsValueClause!.Value);
+        Assert.Equal("00FF00", greenValue.Value);
+
+        Assert.Equal("Blue", enumDecl.Members[2].Name.Text);
+        Assert.NotNull(enumDecl.Members[2].EqualsValueClause);
+        var blueValue = Assert.IsType<Literal>(enumDecl.Members[2].EqualsValueClause!.Value);
+        Assert.Equal("0000FF", blueValue.Value);
+    }
+    
+    [Fact]
+    public void Parses_EmptyEnumDeclaration()
+    {
+        var tree = Utility.GetAST("enum Empty { }");
+        Assert.Single(tree.Statements);
+
+        var statement = tree.Statements.First();
+        var enumDecl = Assert.IsType<EnumDeclaration>(statement);
+        Assert.Equal("Empty", enumDecl.Name.Text);
+        Assert.Empty(enumDecl.Members);
+        Assert.Equal(SyntaxKind.LBrace, enumDecl.LeftBrace.Kind);
+        Assert.Equal(SyntaxKind.RBrace, enumDecl.RightBrace.Kind);
+    }
+
+    [Fact]
     public void Parses_TypeAlias_GenericWithDefault()
     {
         var tree = Utility.GetAST("type Id<T = number> = T");
@@ -436,7 +555,7 @@ public class ParserTest
         var primitive = Assert.IsType<PrimitiveType>(variableDeclaration.ColonTypeClause.Type);
         Assert.Equal(type, primitive.Kind);
     }
-    
+
     [Fact]
     public void Parses_QualifiedName_Basic()
     {
@@ -451,7 +570,7 @@ public class ParserTest
         Assert.Equal(SyntaxKind.Identifier, name.Name.Kind);
         Assert.Equal(SyntaxKind.Dot, name.Dot.Kind);
     }
-    
+
     [Fact]
     public void Parses_PropertyAccess_Basic()
     {
@@ -694,7 +813,7 @@ public class ParserTest
         var primitive = Assert.IsType<PrimitiveType>(innerType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Parses_RangeLiteral()
     {

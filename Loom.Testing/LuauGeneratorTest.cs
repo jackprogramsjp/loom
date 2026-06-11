@@ -161,6 +161,185 @@ public class LuauGeneratorTest
     }
 
     [Fact]
+    public void Generates_EnumDeclaration_AsNumberTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("enum Abc { A, B, C }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Abc", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var primitive = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+        Assert.Equal("number", primitive.Render());
+    }
+
+    [Fact]
+    public void Generates_EnumDeclaration_WithExplicitNumberValues_AsNumberTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("enum Status { Active = 1, Inactive = 0, Pending = 2 }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Status", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var primitive = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+        Assert.Equal("number", primitive.Render());
+    }
+
+    [Fact]
+    public void Generates_EnumDeclaration_WithStringValues_AsUnionOfStringLiterals()
+    {
+        var luauTree = Utility.GetLuauAST("enum Colors : string { Red = \"FF0000\", Green = \"00FF00\", Blue = \"0000FF\" }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Colors", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var union = Assert.IsType<UnionType>(typeAlias.Type);
+        Assert.Equal(3, union.Types.Count);
+
+        var red = Assert.IsType<StringLiteralType>(union.Types[0]);
+        var green = Assert.IsType<StringLiteralType>(union.Types[1]);
+        var blue = Assert.IsType<StringLiteralType>(union.Types[2]);
+        Assert.Equal("\"FF0000\"", red.Render());
+        Assert.Equal("\"00FF00\"", green.Render());
+        Assert.Equal("\"0000FF\"", blue.Render());
+        Assert.Equal("\"FF0000\" | \"00FF00\" | \"0000FF\"", union.Render());
+    }
+
+    [Fact]
+    public void Generates_EnumDeclaration_WithMixedValues_AsNumberTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("enum Mixed { A, B = 69, C }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Mixed", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var primitive = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+        Assert.Equal("number", primitive.Render());
+    }
+
+    [Fact]
+    public void Generates_EnumDeclaration_WithDuplicateStringValues_AsUnionWithDuplicatesRemoved()
+    {
+        var luauTree = Utility.GetLuauAST("enum Duplicates : string { A = \"same\", B = \"same\", C = \"different\" }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Duplicates", typeAlias.Name);
+        
+        var union = Assert.IsType<UnionType>(typeAlias.Type);
+        Assert.Equal(2, union.Types.Count);
+
+        var literalTypes = union.Types.Cast<StringLiteralType>().ToList();
+        Assert.Contains(literalTypes, t => t.Render() == "\"same\"");
+        Assert.Contains(literalTypes, t => t.Render() == "\"different\"");
+        Assert.Equal("\"same\" | \"different\"", union.Render());
+    }
+
+    [Fact]
+    public void Generates_EmptyEnum_AsNumberTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("enum Empty { }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Empty", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var never = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, never.Kind);
+    }
+
+    [Fact]
+    public void Generates_EnumDeclaration_WithSingleStringValue_AsStringLiteralType()
+    {
+        var luauTree = Utility.GetLuauAST("enum Single : string { Only = \"value\" }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Single", typeAlias.Name);
+
+        var literalType = Assert.IsType<StringLiteralType>(typeAlias.Type);
+        Assert.Equal("\"value\"", literalType.Render());
+    }
+
+    [Fact]
+    public void Generates_EnumDeclaration_WithNumberBaseTypeExplicit_AsNumberTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("enum Values : number { One = 1, Two = 2, Three = 3 }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Values", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var primitive = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Generates_EnumDeclaration_WithNumberBaseTypeImplicit_AsNumberTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("enum Values : number { A, B, C }", true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("Values", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var primitive = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Generates_EnumAccess_AsLiteralValue()
+    {
+        var luauTree = Utility.GetLuauAST("enum Abc { A, B, C }; let x = Abc.A", true);
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements[0]);
+        Assert.Equal("Abc", typeAlias.Name);
+        var primitive = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal("number", primitive.Render());
+
+        var x = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        Assert.Equal("x", x.Name);
+        var literal = Assert.IsType<NumberLiteral>(x.Initializer);
+        Assert.Equal(0, literal.Value);
+    }
+
+    [Fact]
+    public void Generates_EnumInVariableTypeAnnotation()
+    {
+        var luauTree = Utility.GetLuauAST("enum Status { Active, Inactive }; let x: Status = Status.Active", true);
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements[0]);
+        Assert.Equal("Status", typeAlias.Name);
+        var primitive = Assert.IsType<PrimitiveType>(typeAlias.Type);
+        Assert.Equal("number", primitive.Render());
+
+        var x = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        Assert.Equal("x", x.Name);
+        Assert.NotNull(x.DeclaredType);
+        var typeName = Assert.IsType<TypeName>(x.DeclaredType);
+        Assert.Equal("Status", typeName.Name);
+        Assert.Empty(typeName.TypeArguments);
+
+        var literal = Assert.IsType<NumberLiteral>(x.Initializer);
+        Assert.Equal(0, literal.Value);
+    }
+
+    [Fact]
     public void Generates_TypeAliases_GenericWithDefault()
     {
         var luauTree = Utility.GetLuauAST("type Id<T = number> = T");

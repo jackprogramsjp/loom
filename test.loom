@@ -1,6 +1,1 @@
-enum Abc : bool {
-    A = "abc",
-    B
-}
-
-Abc.A
+enum Abc { A, B, C }; let x = Abc.A

@@ -35,7 +35,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             _allReferences,
             rootScope
         );
-        
+
         PushScope();
         foreach (var symbol in IntrinsicTypes.GetSymbols(semanticModel))
             DeclareSymbol(symbol);
@@ -152,15 +152,11 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         var scope = CurrentScope();
         var name = enumDeclaration.Name.Text;
         var symbol = new Symbol(enumDeclaration, SymbolKind.Variable, name);
+        var typeSymbol = new Symbol(enumDeclaration, SymbolKind.EnumType, name);
         DeclareSymbol(symbol);
+        DeclareSymbol(typeSymbol);
         scope.InitializationState[name] = true;
 
-        return true;
-    }
-
-    public override bool VisitEnumMember(EnumMember enumMember)
-    {
-        DeclareSymbol(new Symbol(enumMember, SymbolKind.EnumMember, enumMember.Name.Text));
         return true;
     }
 
@@ -199,6 +195,12 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return false;
         }
 
+        if (symbol.Declaration is EnumDeclaration && identifier.Parent is not QualifiedName or ElementAccess)
+        {
+            _diagnostics.Error(identifier, InternalCodes.DynamicEnumAccess, "Cannot use enums dynamically because they are compile-time constants.");
+            return false;
+        }
+
         _allReferences[identifier.Id] = symbol;
         return true;
     }
@@ -206,7 +208,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     public override bool VisitTypeName(TypeName typeName)
     {
         var name = typeName.Name.Text;
-        var symbol = LookupSymbol(name, SymbolKind.Type);
+        var symbol = LookupSymbol(name, SymbolKind.Type) ?? LookupSymbol(name, SymbolKind.EnumType);
         if (symbol == null)
         {
             _diagnostics.Error(typeName, InternalCodes.CannotFindName, $"Cannot find type '{name}'.");
@@ -238,7 +240,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     private void DeclareSymbol(Symbol symbol)
     {
         var scope = CurrentScope();
-        var lookup = symbol.Kind == SymbolKind.Type ? scope.TypeLookup : scope.VariableLookup;
+        var lookup = GetLookup(symbol.Kind, scope);
         var nodeId = symbol.Declaration.Id;
         lookup[symbol.Name] = symbol;
         scope.Declarations[nodeId] = symbol;
@@ -255,7 +257,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     private Symbol? LookupSymbol(string name, SymbolKind kind)
     {
-        var lookups = _scopes.Select(scope => kind == SymbolKind.Type ? scope.TypeLookup : scope.VariableLookup);
+        var lookups = _scopes.Select(scope => GetLookup(kind, scope));
         foreach (var lookup in lookups)
         {
             if (!lookup.TryGetValue(name, out var symbol)) continue;
@@ -264,6 +266,9 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         return null;
     }
+
+    private static Dictionary<string, Symbol> GetLookup(SymbolKind kind, ResolverScope scope) =>
+        kind is SymbolKind.Type or SymbolKind.EnumType ? scope.TypeLookup : scope.VariableLookup;
 
     private bool IsSymbolInitialized(Symbol symbol) =>
     (

@@ -37,4 +37,5 @@ public static class InternalCodes
     public const string InvalidEnumBaseType = "L322";
     public const string StringEnumMemberMustHaveInitializer = "L323";
     public const string DynamicEnumMemberInitializer = "L324";
+    public const string DynamicEnumAccess = "L325";
 }

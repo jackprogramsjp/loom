@@ -10,4 +10,6 @@ public static class LuauFactory
 
     private static Call LibraryCall(string libraryName, string name, List<LuauExpression> arguments) =>
         new(new PropertyAccess(new Identifier(libraryName), [name]), arguments);
+
+    public static LuauNode EmptyVariable() => new ConstVariable("_", null, new NilLiteral());
 }

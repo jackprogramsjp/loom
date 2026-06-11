@@ -51,11 +51,14 @@ internal static class Utility
 
     public static void AssertNoErrors(DiagnosticBag diagnostics) => Assert.Empty(diagnostics.Set.Where(d => d.Severity == DiagnosticSeverity.Error));
 
-    public static void AssertDiagnostic(DiagnosticBag diagnostics, string code, string message)
+    public static void AssertDiagnostic(DiagnosticBag diagnostics, string code, string message, string? hint = null)
     {
         var diagnostic = diagnostics.Find(d => d.Code == code);
         Assert.NotNull(diagnostic);
         Assert.Equal(message, diagnostic.Message);
+        
+        if (hint == null) return;
+        Assert.Equal(hint, diagnostic.Hint);
     }
 
     private static LexerResult Tokenize(string source) => new Lexer(TestFile(source)).Tokenize();

@@ -124,7 +124,7 @@ public class Parser(LexerResult lexerResult)
         var name = ExpectIdentifier();
         var colonTypeClause = ParseColonTypeClause();
         var leftBrace = Expect(SyntaxKind.LBrace);
-        var members = ParseDelimited(ParseEnumMember).OfType<EnumMember>().ToList();
+        var members = !IsEof() && Current() is { Kind: SyntaxKind.Identifier } ? ParseDelimited(ParseEnumMember).OfType<EnumMember>().ToList() : [];
         var rightBrace = Expect(SyntaxKind.RBrace);
         return new EnumDeclaration(keyword, name, leftBrace, rightBrace, colonTypeClause, members);
     }

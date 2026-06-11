@@ -13,40 +13,47 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("mut x; x;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfUnassigned, "Use of unassigned variable 'x'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_UninitializedConst()
     {
         var diagnostics = Utility.GetSemanticModel("let x;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateVariable()
     {
         var diagnostics = Utility.GetSemanticModel("let x = 1; let x = 2;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'x' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_UndefinedVariable()
     {
         var diagnostics = Utility.GetSemanticModel("x;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find name 'x'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_UndefinedType()
     {
         var diagnostics = Utility.GetSemanticModel("let x: Abc = 1").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find type 'Abc'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_AssignToImmutable()
     {
         var diagnostics = Utility.GetSemanticModel("let x = 1; x = 69").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to an immutable variable.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DynamicEnumAccess()
+    {
+        var diagnostics = Utility.GetSemanticModel("enum Abc { A, B, C }; Abc").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DynamicEnumAccess, "Cannot use enums dynamically because they are compile-time constants.");
     }
 
     [Theory]
@@ -55,7 +62,7 @@ public class ResolverTest
     {
         Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
     }
-    
+
     [Fact]
     public void Declares_VariableSymbol()
     {
@@ -72,7 +79,7 @@ public class ResolverTest
         Assert.Equal("x", symbol.Name);
         Assert.Equal(SymbolKind.Variable, symbol.Kind);
         Assert.Equal(variableDeclaration, symbol.Declaration);
-        
+
         var declaringSymbol = model.GetDeclaringSymbol(identifier);
         var declarationSymbol = model.GetDeclarationSymbol(variableDeclaration);
         Assert.NotNull(declaringSymbol);

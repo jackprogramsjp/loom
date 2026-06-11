@@ -13,6 +13,8 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public ObjectIndexer? Indexer { get; } = indexer;
     public List<ObjectProperty> Properties { get; } = properties;
 
+    public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
+
     public (ObjectBodyType?, string) GetTypeAtIndex(Type indexType)
     {
         var cannotFindReason = "";

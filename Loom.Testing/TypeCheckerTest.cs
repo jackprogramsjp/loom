@@ -271,7 +271,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("'a'..'b'");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"a\"' is not assignable to type 'number'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_QualifiedName_Chained_AfterNumber()
     {
@@ -283,7 +283,11 @@ public class TypeCheckerTest
     public void ThrowsFor_QualifiedName_Chained_MissingIntermediate()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let r = (1..10); r.missing.next");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Expression of type '\"missing\"' cannot be used to index type 'Range'. Property 'missing' does not exist on type 'Range'.");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidAccess,
+            "Expression of type '\"missing\"' cannot be used to index type 'Range'. Property 'missing' does not exist on type 'Range'."
+        );
     }
 
     [Fact]
@@ -297,9 +301,202 @@ public class TypeCheckerTest
     public void ThrowsFor_PropertyAccess_Chained_MissingIntermediate()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("(1..10).missing.next");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Expression of type '\"missing\"' cannot be used to index type 'Range'. Property 'missing' does not exist on type 'Range'.");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidAccess,
+            "Expression of type '\"missing\"' cannot be used to index type 'Range'. Property 'missing' does not exist on type 'Range'."
+        );
     }
-    
+
+    [Fact]
+    public void ThrowsFor_StringEnumMemberWithoutInitializer()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Colors : string { Red, Green = \"00FF00\" }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.StringEnumMemberMustHaveInitializer,
+            "Member 'Red' of string enum 'Colors' must have an initializer."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_InvalidEnumBaseType()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Flags : bool { Flag1 = true }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidEnumBaseType,
+            "Invalid enum base type.",
+            "valid types are 'string' and 'number'"
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_EnumMemberNonConstantInitializer()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Test { A = 1 + 2, B }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DynamicEnumMemberInitializer,
+            "Enum member initializers must be constant values."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_EnumTypeMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Status { Active, Inactive } let x: Status = 5");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '5' is not assignable to type '0 | 1'.");
+    }
+
+    [Fact]
+    public void Checks_EnumTypeAnnotation()
+    {
+        var type = Utility.GetLastStatementType("enum Status { Active, Inactive } let x: Status = Status.Active");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Equal(0d, Assert.IsType<LiteralType>(union.Types.First()).Value);
+        Assert.Equal(1d, Assert.IsType<LiteralType>(union.Types.Last()).Value);
+    }
+
+    [Fact]
+    public void Checks_EnumWithNumberBaseTypeExplicit()
+    {
+        var type = Utility.GetLastStatementType("enum Values : number { One = 1, Two = 2, Three = 3 }");
+        var objectType = Assert.IsType<ObjectType>(type);
+        Assert.Equal(3, objectType.Properties.Count);
+
+        var oneType = Assert.IsType<LiteralType>(objectType.Properties[0].ValueType);
+        Assert.Equal(1d, oneType.Value);
+
+        var twoType = Assert.IsType<LiteralType>(objectType.Properties[1].ValueType);
+        Assert.Equal(2d, twoType.Value);
+
+        var threeType = Assert.IsType<LiteralType>(objectType.Properties[2].ValueType);
+        Assert.Equal(3d, threeType.Value);
+    }
+
+    [Fact]
+    public void Checks_EnumWithNumberBaseTypeImplicit()
+    {
+        var type = Utility.GetLastStatementType("enum Values : number { A, B, C }");
+        var objectType = Assert.IsType<ObjectType>(type);
+        Assert.Equal(3, objectType.Properties.Count);
+
+        var aType = Assert.IsType<LiteralType>(objectType.Properties[0].ValueType);
+        Assert.Equal(0d, aType.Value);
+
+        var bType = Assert.IsType<LiteralType>(objectType.Properties[1].ValueType);
+        Assert.Equal(1d, bType.Value);
+
+        var cType = Assert.IsType<LiteralType>(objectType.Properties[2].ValueType);
+        Assert.Equal(2d, cType.Value);
+    }
+
+    [Fact]
+    public void Checks_EmptyEnum()
+    {
+        var type = Utility.GetLastStatementType("enum Empty { }");
+        var objectType = Assert.IsType<ObjectType>(type);
+        Assert.Empty(objectType.Properties);
+    }
+
+    [Fact]
+    public void Checks_EnumDeclaration_WithImplicitNumberValues()
+    {
+        var type = Utility.GetLastStatementType("enum Abc { A, B, C }");
+        var objectType = Assert.IsType<ObjectType>(type);
+        Assert.Equal(3, objectType.Properties.Count);
+
+        Assert.Equal("A", objectType.Properties[0].Name);
+        var aType = Assert.IsType<LiteralType>(objectType.Properties[0].ValueType);
+        Assert.Equal(0d, aType.Value);
+
+        Assert.Equal("B", objectType.Properties[1].Name);
+        var bType = Assert.IsType<LiteralType>(objectType.Properties[1].ValueType);
+        Assert.Equal(1d, bType.Value);
+
+        Assert.Equal("C", objectType.Properties[2].Name);
+        var cType = Assert.IsType<LiteralType>(objectType.Properties[2].ValueType);
+        Assert.Equal(2d, cType.Value);
+    }
+
+    [Fact]
+    public void Checks_EnumDeclaration_WithExplicitNumberValues()
+    {
+        var type = Utility.GetLastStatementType("enum Status { Active = 1, Inactive = 0, Pending = 2 }");
+        var objectType = Assert.IsType<ObjectType>(type);
+        Assert.Equal(3, objectType.Properties.Count);
+
+        Assert.Equal("Active", objectType.Properties[0].Name);
+        var activeType = Assert.IsType<LiteralType>(objectType.Properties[0].ValueType);
+        Assert.Equal(1d, activeType.Value);
+
+        Assert.Equal("Inactive", objectType.Properties[1].Name);
+        var inactiveType = Assert.IsType<LiteralType>(objectType.Properties[1].ValueType);
+        Assert.Equal(0d, inactiveType.Value);
+
+        Assert.Equal("Pending", objectType.Properties[2].Name);
+        var pendingType = Assert.IsType<LiteralType>(objectType.Properties[2].ValueType);
+        Assert.Equal(2d, pendingType.Value);
+    }
+
+    [Fact]
+    public void Checks_EnumDeclaration_WithMixedImplicitAndExplicitValues()
+    {
+        var type = Utility.GetLastStatementType("enum Mixed { A, B = 69, C }");
+        var objectType = Assert.IsType<ObjectType>(type);
+        Assert.Equal(3, objectType.Properties.Count);
+
+        Assert.Equal("A", objectType.Properties[0].Name);
+        var aType = Assert.IsType<LiteralType>(objectType.Properties[0].ValueType);
+        Assert.Equal(0d, aType.Value);
+
+        Assert.Equal("B", objectType.Properties[1].Name);
+        var bType = Assert.IsType<LiteralType>(objectType.Properties[1].ValueType);
+        Assert.Equal(69d, bType.Value);
+
+        Assert.Equal("C", objectType.Properties[2].Name);
+        var cType = Assert.IsType<LiteralType>(objectType.Properties[2].ValueType);
+        Assert.Equal(70d, cType.Value);
+    }
+
+    [Fact]
+    public void Checks_EnumDeclaration_WithStringBackedValues()
+    {
+        var type = Utility.GetLastStatementType("enum Colors : string { Red = \"FF0000\", Green = \"00FF00\", Blue = \"0000FF\" }");
+        var objectType = Assert.IsType<ObjectType>(type);
+        Assert.Equal(3, objectType.Properties.Count);
+
+        Assert.Equal("Red", objectType.Properties[0].Name);
+        var redType = Assert.IsType<LiteralType>(objectType.Properties[0].ValueType);
+        Assert.Equal("FF0000", redType.Value);
+
+        Assert.Equal("Green", objectType.Properties[1].Name);
+        var greenType = Assert.IsType<LiteralType>(objectType.Properties[1].ValueType);
+        Assert.Equal("00FF00", greenType.Value);
+
+        Assert.Equal("Blue", objectType.Properties[2].Name);
+        var blueType = Assert.IsType<LiteralType>(objectType.Properties[2].ValueType);
+        Assert.Equal("0000FF", blueType.Value);
+    }
+
+    [Fact]
+    public void Checks_EnumMemberAccess()
+    {
+        var type = Utility.GetLastStatementType("enum Status { Active, Inactive }; Status.Active");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(0d, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_EnumMemberAccess_WithExplicitValue()
+    {
+        var type = Utility.GetLastStatementType("enum Priority { Low = 10, High = 20 } Priority.High");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(20d, literal.Value);
+    }
+
     [Fact]
     public void Checks_QualifiedName_SingleDot_OnRange()
     {
@@ -311,7 +508,7 @@ public class TypeCheckerTest
         primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_PropertyAccess_SingleDot_OnRange()
     {
@@ -323,7 +520,7 @@ public class TypeCheckerTest
         primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_RangeLiteral_ElementAccess()
     {
@@ -347,7 +544,7 @@ public class TypeCheckerTest
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal("x", literal.Value);
     }
-    
+
     [Fact]
     public void Checks_NameOf_QualifiedName()
     {

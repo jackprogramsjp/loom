@@ -143,7 +143,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 if (member.EqualsValueClause != null)
                 {
                     var explicitType = Visit(member.EqualsValueClause);
-                    if (CheckEnumMemberConst(member, explicitType))
+                    if (CheckEnumMemberIsConstant(member, explicitType))
                     {
                         memberValue = explicitType switch
                         {
@@ -158,7 +158,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 }
 
                 var memberType = new Types.LiteralType(memberValue);
-                if (CheckEnumMemberConst(member, memberType))
+                if (CheckEnumMemberIsConstant(member, memberType))
                     properties.Add(new ObjectProperty(false, member.Name.Text, memberType));
 
                 nextValue = memberValue + 1;
@@ -181,7 +181,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             }
 
             var type = MaybeVisit(member.EqualsValueClause) ?? baseType;
-            if (!CheckEnumMemberConst(member, type)) continue;
+            if (!CheckEnumMemberIsConstant(member, type)) continue;
 
             semanticModel.TypeSolver.AddConstraint(type, baseType, member.EqualsValueClause.Value);
             properties.Add(new ObjectProperty(false, member.Name.Text, type));
@@ -367,6 +367,9 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (symbol != null)
         {
             var declaredType = semanticModel.GetType(symbol.Declaration);
+            if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
+                return objectType.PropertyUnion();
+            
             if (declaredType is GenericType genericType)
                 return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);
 
@@ -392,7 +395,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(typeParameter, parameter);
     }
 
-    private bool CheckEnumMemberConst(EnumMember member, Type type)
+    private bool CheckEnumMemberIsConstant(EnumMember member, Type type)
     {
         if (type is Types.LiteralType { Value: string or long or int or double })
             return true;

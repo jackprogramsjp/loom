@@ -6,12 +6,15 @@ using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking;
+using Loom.TypeChecking.Types;
+using ArrayType = Loom.Parsing.AST.ArrayType;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ElementAccess = Loom.Parsing.AST.ElementAccess;
 using Expression = Loom.Parsing.AST.Expression;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Parsing.AST.Identifier;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
+using LiteralType = Loom.Parsing.AST.LiteralType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
 using Parameter = Loom.Parsing.AST.Parameter;
 using Parenthesized = Loom.Parsing.AST.Parenthesized;
@@ -106,7 +109,35 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
 
-    public override LuauNode VisitEnumDeclaration(EnumDeclaration enumDeclaration) => new NoOpStatement();
+    public override LuauNode VisitEnumDeclaration(EnumDeclaration enumDeclaration)
+    {
+        if (semanticModel.GetType(enumDeclaration) is not ObjectType objectType)
+            return LuauFactory.EmptyVariable();
+
+        var propertyUnion = objectType.PropertyUnion();
+        return new Luau.AST.TypeAlias(
+            enumDeclaration.Name.Text,
+            new Luau.AST.TypeParameters(),
+            propertyUnion switch
+            {
+                TypeChecking.Types.UnionType union =>
+                    union.Types.Any(t => t.IsAssignableTo(TypeChecking.Types.PrimitiveType.Number))
+                        ? Luau.AST.PrimitiveType.Number
+                        : new Luau.AST.UnionType(
+                            union.Types.ConvertAll(t => t is TypeChecking.Types.LiteralType { Value: string s }
+                                    ? new StringLiteralType(s)
+                                    : Luau.AST.PrimitiveType.Number
+                                )
+                                .OfType<LuauType>()
+                                .ToList()
+                        ),
+                TypeChecking.Types.LiteralType { Value: string s } => new StringLiteralType(s),
+                _ => Luau.AST.PrimitiveType.Number
+            }
+        );
+
+        ;
+    }
 
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
@@ -121,7 +152,9 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
 
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName) =>
-        new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
+        TryGetEnumConstant(qualifiedName, out var enumValue)
+            ? enumValue
+            : new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
 
     public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess) =>
         TryGetEnumConstant(propertyAccess, out var enumValue)
@@ -315,15 +348,9 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     private bool TryGetEnumConstant(Node node, [MaybeNullWhen(false)] out LuauNode constantType)
     {
         constantType = null;
-        var symbol = semanticModel.GetSymbol(node);
-        if (symbol == null)
-            return false;
-
-        var type = semanticModel.GetType(symbol.Declaration);
+        var type = semanticModel.GetType(node);
         if (type is not TypeChecking.Types.LiteralType { Value: long or int or double or string } literal)
-        {
             return false;
-        }
 
         constantType = literal.Value is string s ? new StringLiteral(s) : new NumberLiteral(Convert.ToDouble(literal.Value));
         return true;
