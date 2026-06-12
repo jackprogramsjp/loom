@@ -122,6 +122,13 @@ public class ResolverTest
     }
     
     [Fact]
+    public void WarnsFor_UnreachableCode()
+    {
+        var diagnostics = Utility.GetSemanticModel("fn foo { return 42; let x = 1 }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
+    }
+    
+    [Fact]
     public void Allows_NestedScopes_WithSameVariableNames()
     {
         Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 42; { let x = 69; x; } x;"));

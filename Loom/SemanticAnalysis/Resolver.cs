@@ -14,7 +14,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     private readonly Dictionary<NodeId, Symbol> _allReferences = [];
     private readonly Stack<ScopeNode> _scopeNodes = [];
     private readonly Stack<ResolverScope> _scopes = [];
-    private readonly Stack<InitializationState> _initializationStates = [];
+    private readonly Stack<FlowState> _flowStates = [];
     private bool _insideFunction;
 
     public SemanticModel Resolve()
@@ -31,12 +31,12 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         );
 
         PushScope();
-        PushInitializationState(new InitializationState([], []));
+        PushFlowState(new FlowState([], []));
         foreach (var symbol in IntrinsicTypes.GetSymbols(semanticModel))
             DeclareSymbol(symbol);
 
         VisitTree(parserResult.Tree);
-        PopInitializationState();
+        PopFlowState();
         PopScope();
 
         return semanticModel;
@@ -44,29 +44,30 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     protected override bool Visit(Node node) => node.Accept(this);
 
+    public override bool VisitTree(Tree tree) => ResolveStatements(tree.Statements);
+
     public override bool VisitBlock(Block block)
     {
         PushScope();
-        var parentState = CurrentInitializationState();
-        var blockState = PushInheritedInitializationState();
-        var result = block.Statements.All(Visit);
-
-        MergeInitializationState(blockState, target: parentState);
-        PopInitializationState();
-        PushInitializationState(parentState);
-
+        var parentState = CurrentFlowState();
+        var blockState = PushInheritedFlowState();
+        var result = ResolveStatements(block.Statements);
+        MergeFlowState(blockState, target: parentState);
+        PopFlowState();
+        PushFlowState(parentState);
         PopScope();
+
         return result;
     }
 
     public override bool VisitIf(If @if)
     {
         Visit(@if.Condition);
-        var beforeIf = new InitializationState(CurrentInitializationState());
+        var beforeIf = new FlowState(CurrentFlowState());
         var thenState = PushAndVisitBranch(@if.ThenBranch, beforeIf);
         if (thenState == null) return false;
 
-        InitializationState elseState;
+        FlowState elseState;
         if (@if.ElseBranch != null)
         {
             var state = PushAndVisitBranch(@if.ElseBranch.Branch, beforeIf);
@@ -75,23 +76,26 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         }
         else
         {
-            elseState = new InitializationState(beforeIf);
+            elseState = new FlowState(beforeIf);
         }
 
-        var definite = new HashSet<Symbol>(beforeIf.Definite.Concat(thenState.Definite.Intersect(elseState.Definite)));
-        var maybe = new HashSet<Symbol>(beforeIf.Maybe);
-        maybe.UnionWith(thenState.Maybe);
-        maybe.UnionWith(elseState.Maybe);
+        var definitely = new HashSet<Symbol>(beforeIf.DefinitelyInitialized.Concat(thenState.DefinitelyInitialized.Intersect(elseState.DefinitelyInitialized)));
+        var maybe = new HashSet<Symbol>(beforeIf.MaybeInitialized);
+        maybe.UnionWith(thenState.MaybeInitialized);
+        maybe.UnionWith(elseState.MaybeInitialized);
 
-        PopInitializationState();
-        _initializationStates.Push(new InitializationState(definite, maybe));
+        PopFlowState();
+        _flowStates.Push(new FlowState(definitely, maybe, beforeIf.IsUnreachable || thenState.IsUnreachable && elseState.IsUnreachable));
         return true;
     }
 
     public override bool VisitReturn(Return @return)
     {
         if (_insideFunction)
+        {
+            CurrentFlowState().IsUnreachable = true;
             return base.VisitReturn(@return);
+        }
 
         _diagnostics.Error(@return, InternalCodes.ReturnOutsideFunction, "Return statements can only be used inside of functions.");
         return false;
@@ -122,9 +126,9 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         var wasInsideFunction = _insideFunction;
         _insideFunction = true;
-        PushInheritedInitializationState();
+        PushInheritedFlowState();
         Visit(functionDeclaration.Body);
-        PopInitializationState();
+        PopFlowState();
         _insideFunction = wasInsideFunction;
         PopScope();
 
@@ -208,11 +212,11 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         var symbol = LookupValueId(name);
         if (symbol == null)
             return base.VisitAssignmentOperator(assignmentOperator);
-        
+
         if (assignmentOperator.Operator.Kind == SyntaxKind.Equals)
             MarkDefinitelyInitialized(symbol);
-        
-        if (symbol is { Mutable: true })
+
+        if (symbol is { IsMutable: true })
             return base.VisitAssignmentOperator(assignmentOperator);
 
         _diagnostics.Error(
@@ -287,6 +291,16 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return typeParameter.EqualsTypeClause == null || Visit(typeParameter.EqualsTypeClause);
     }
 
+    private bool ResolveStatements(List<Statement> statements) =>
+        statements.All(statement =>
+            {
+                if (CurrentFlowState().IsUnreachable)
+                    _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
+
+                return Visit(statement);
+            }
+        );
+
     private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
     {
         symbol = null;
@@ -358,26 +372,26 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return;
         }
 
-        var state = CurrentInitializationState();
-        state.Definite.Add(symbol);
-        state.Maybe.Add(symbol);
+        var state = CurrentFlowState();
+        state.DefinitelyInitialized.Add(symbol);
+        state.MaybeInitialized.Add(symbol);
     }
 
     /// <summary>Merges <paramref name="source"/> into <paramref name="target"/>.</summary>
-    private static void MergeInitializationState(InitializationState source, InitializationState target)
+    private static void MergeFlowState(FlowState source, FlowState target)
     {
-        foreach (var v in source.Definite)
-            target.Definite.Add(v);
+        foreach (var v in source.DefinitelyInitialized)
+            target.DefinitelyInitialized.Add(v);
 
-        foreach (var v in source.Maybe)
-            target.Maybe.Add(v);
+        foreach (var v in source.MaybeInitialized)
+            target.MaybeInitialized.Add(v);
     }
 
     /// <summary>Pushes a copy of the current initialization state and returns that copy.</summary>
-    private InitializationState PushInheritedInitializationState()
+    private FlowState PushInheritedFlowState()
     {
-        var state = new InitializationState(CurrentInitializationState());
-        PushInitializationState(state);
+        var state = new FlowState(CurrentFlowState());
+        PushFlowState(state);
         return state;
     }
 
@@ -385,19 +399,19 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     /// Visits a branch with a fresh inherited state copied from <paramref name="inherited"/>,
     /// then pops that state and returns its final content (or null if visit failed).
     /// </summary>
-    private InitializationState? PushAndVisitBranch(Node node, InitializationState inherited)
+    private FlowState? PushAndVisitBranch(Node node, FlowState inherited)
     {
-        PushInitializationState(new InitializationState(inherited));
+        PushFlowState(new FlowState(inherited));
         var ok = Visit(node);
-        var state = PopInitializationState();
+        var state = PopFlowState();
         return ok ? state : null;
     }
 
-    private void PushInitializationState(InitializationState state) => _initializationStates.Push(state);
-    private bool IsDefinitelyInitialized(Symbol symbol) => CurrentInitializationState().Definite.Contains(symbol);
-    private bool IsMaybeInitialized(Symbol symbol) => CurrentInitializationState().Maybe.Contains(symbol);
-    private InitializationState CurrentInitializationState() => _initializationStates.Peek();
-    private InitializationState PopInitializationState() => _initializationStates.Pop();
+    private void PushFlowState(FlowState state) => _flowStates.Push(state);
+    private bool IsDefinitelyInitialized(Symbol symbol) => CurrentFlowState().DefinitelyInitialized.Contains(symbol);
+    private bool IsMaybeInitialized(Symbol symbol) => CurrentFlowState().MaybeInitialized.Contains(symbol);
+    private FlowState CurrentFlowState() => _flowStates.Peek();
+    private FlowState PopFlowState() => _flowStates.Pop();
     private ResolverScope CurrentScope() => _scopes.Peek();
     private void PopScope() => _scopes.Pop();
     private void PushScope() => _scopes.Push(new ResolverScope());

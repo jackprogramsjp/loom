@@ -1,6 +1,12 @@
-let x = true;
-if x {
+fn abc(a: bool) {
+    mut x: number
+    if a {
+        x = 69
+    } else {
+        x = 420
+    }
     x
-    +
-    1
+    return x;
 }
+
+let x = abc(true)

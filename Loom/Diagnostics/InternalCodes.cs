@@ -41,4 +41,6 @@ public static class InternalCodes
     public const string DeclarationOutsideOfBlock = "L326";
     public const string UseOfMaybeUninitialized = "L327";
     public const string ReturnOutsideFunction = "L328";
+    public const string UnreachableCode = "L329";
+    public const string DeclarationUnused = "L330";
 }

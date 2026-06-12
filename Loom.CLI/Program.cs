@@ -24,7 +24,7 @@ Console.WriteLine();
 Console.WriteLine("Compiled Luau program:");
 Console.WriteLine(compiledFile.RenderedLuau);
 
-var diagnostics = compiledFile.Diagnostics.ToString(); //.NotInfo()
+var diagnostics = compiledFile.Diagnostics.ToString();
 Console.WriteLine();
 Console.WriteLine("Diagnostics:");
 Console.WriteLine(string.IsNullOrEmpty(diagnostics) ? "(none)" : diagnostics);

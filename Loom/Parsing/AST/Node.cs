@@ -33,7 +33,21 @@ public abstract class Node
 
     public abstract T Accept<T>(Visitor<T> visitor);
     public override string ToString() => Span.GetText();
-    public List<Node> GetDescendants() => Children.SelectMany(c => c.Children).ToList();
+    
+    public List<T> GetDescendants<T>() where T : Node => GetDescendants().OfType<T>().ToList();
+    public List<Node> GetDescendants() => Children.SelectMany(c => c.Children).Concat(Children).ToList();
+
+    public T? FirstAncestorOfType<T>()
+        where T : Node
+    {
+        if (this is Tree)
+            return null;
+
+        if (Parent is T node)
+            return node;
+        
+        return Parent.FirstAncestorOfType<T>();
+    }
 
     private static List<Node> SortChildren(IEnumerable<Node?> children) => children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();
     private static List<Token> SortTokens(IEnumerable<Token?> tokens) =>

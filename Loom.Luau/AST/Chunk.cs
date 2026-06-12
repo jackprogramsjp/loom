@@ -6,9 +6,9 @@ public class Chunk(List<LuauStatement> statements) : LuauStatement
 
     public override string Render(RenderState state)
     {
-        var renders = Statements.ConvertAll(statement => statement.Render(state));
+        var renders = Statements.ConvertAll(statement => statement.Render(state)).SelectMany(render => render.Split('\n')).Select(state.IndentedLine);
         return this is LuauTree
-            ? string.Join('\n', renders.ConvertAll(state.IndentedLine))
-            : state.Block(() => string.Join('\n', renders.ConvertAll(state.IndentedLine)));
+            ? string.Join("", renders)
+            : state.Block(() => string.Join("", renders));
     }
 }

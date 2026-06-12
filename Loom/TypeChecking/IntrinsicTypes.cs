@@ -9,7 +9,7 @@ namespace Loom.TypeChecking;
 public record IntrinsicType(string Name, Type Type)
 {
     public string Name { get; } = Name;
-    public Symbol Symbol { get; } = new(new NullStatement(null), SymbolKind.Type, Name);
+    public Symbol Symbol { get; } = new(new NullStatement(null), SymbolKind.Type, Name, false, true);
     public Type Type { get; } = Type;
 }
 
