@@ -226,6 +226,21 @@ let tag = Tag.Lava
 type Tag = "lava" | "something"
 const tag = "lava"
 ```
+##
+```rs
+if 69 == 420 {
+    let foo = 69
+} else if 69 == 69 {
+    let yes = "yes"
+}
+```
+```luau
+if 69 == 420 then
+    const foo = 69
+elseif 69 == 69 then
+    const yes = "yes"
+end
+```
 
 ## Planned Features
 
