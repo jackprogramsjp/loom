@@ -60,7 +60,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         _diagnostics.Info(expressionStatement, $"Solved type '{TypeSimplifier.Simplify(type)}' for expression");
         return BindType(expressionStatement, type);
     }
-
+    
     public override Type VisitIf(If @if)
     {
         var conditionType = Visit(@if.Condition);
@@ -74,6 +74,8 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(Visit<Types.TypeParameter>) ?? [];
         var parameterTypes = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit) ?? [];
+        Visit(functionDeclaration.Body);
+        
         var returnType = GetReturnType(functionDeclaration);
         var functionType = new FunctionType(typeParameters, parameterTypes, returnType);
 
@@ -484,14 +486,13 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         if (functionDeclaration.ReturnType != null)
             return Visit(functionDeclaration.ReturnType);
-
+        
         // TODO: flow analysis
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
-            : functionDeclaration.Body.Children.FindAll(n => n is not FunctionDeclaration)
-                .SelectMany(n => n.Children)
-                .Where(n => n is Return)
-                .Cast<Return>()
+            : functionDeclaration.Body
+                .GetDescendants<Return>()
+                .Where(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
                 .Select(Visit)
                 .ToList();
 
