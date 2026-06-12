@@ -352,7 +352,7 @@ public class TypeCheckerTest
     [Fact]
     public void ThrowsFor_IfStatement_NonBooleanCondition()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("if 42 { return 1 }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("if 42 { 1 }");
         Utility.AssertDiagnostic(
             diagnostics, 
             InternalCodes.TypeMismatch, 
@@ -364,7 +364,7 @@ public class TypeCheckerTest
     public void ThrowsFor_IfStatement_WithOptionalCondition()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
-            "let x: bool? = true; if x { return 1 }"
+            "let x: bool? = true; if x { 1 }"
         );
         Utility.AssertDiagnostic(
             diagnostics,

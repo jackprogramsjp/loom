@@ -15,7 +15,7 @@ public static class InternalCodes
 
     public const string CannotFindName = "L301";
     public const string DuplicateName = "L302";
-    public const string UseOfUnassigned = "L303";
+    public const string UseOfUninitialized = "L303";
     public const string MustHaveInitializer = "L304";
     public const string InfiniteType = "L305";
     public const string TypeMismatch = "L306";
@@ -39,4 +39,6 @@ public static class InternalCodes
     public const string DynamicEnumMemberInitializer = "L324";
     public const string DynamicEnumAccess = "L325";
     public const string DeclarationOutsideOfBlock = "L326";
+    public const string UseOfMaybeUninitialized = "L327";
+    public const string ReturnOutsideFunction = "L328";
 }

@@ -6,22 +6,15 @@ using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
 
-public class ResolverScope
-{
-    public Dictionary<NodeId, Symbol> Declarations { get; } = new();
-    public Dictionary<NodeId, Symbol> References { get; } = new();
-    public Dictionary<string, Symbol> VariableLookup { get; } = new();
-    public Dictionary<string, Symbol> TypeLookup { get; } = new();
-    public Dictionary<string, bool> InitializationState { get; } = new();
-}
-
 public class Resolver(ParserResult parserResult) : Visitor<bool>
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly Dictionary<NodeId, Symbol> _allDeclarations = new();
-    private readonly Dictionary<NodeId, Symbol> _allReferences = new();
-    private readonly Stack<ScopeNode> _scopeNodes = new();
-    private readonly Stack<ResolverScope> _scopes = new();
+    private readonly Dictionary<NodeId, Symbol> _allDeclarations = [];
+    private readonly Dictionary<NodeId, Symbol> _allReferences = [];
+    private readonly Stack<ScopeNode> _scopeNodes = [];
+    private readonly Stack<ResolverScope> _scopes = [];
+    private readonly Stack<InitializationState> _initializationStates = [];
+    private bool _insideFunction;
 
     public SemanticModel Resolve()
     {
@@ -37,11 +30,14 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         );
 
         PushScope();
+        PushInitializationState();
         foreach (var symbol in IntrinsicTypes.GetSymbols(semanticModel))
             DeclareSymbol(symbol);
-
+        
         VisitTree(parserResult.Tree);
+        PopInitializationState();
         PopScope();
+        
         return semanticModel;
     }
 
@@ -50,9 +46,57 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     public override bool VisitBlock(Block block)
     {
         PushScope();
-        var result = base.VisitBlock(block);
+        var savedState = InheritNewInitializationState();
+        var result = block.Statements.All(Visit);
+        var blockState = _initializationStates.Pop();
+        foreach (var var in blockState.Definite)
+            savedState.Definite.Add(var);
+        foreach (var var in blockState.Maybe)
+            savedState.Maybe.Add(var);
+        
+        _initializationStates.Push(savedState);
         PopScope();
+        
         return result;
+    }
+    
+    public override bool VisitIf(If @if)
+    {
+        var savedState = new InitializationState(InitializationState());
+        Visit(@if.Condition);
+    
+        var thenState = new InitializationState(savedState);
+        _initializationStates.Push(thenState);
+        var thenResult = Visit(@if.ThenBranch);
+        thenState = new InitializationState(_initializationStates.Pop());
+        InitializationState elseState;
+        
+        if (@if.ElseBranch != null)
+        {
+            var elseBranchState = new InitializationState(savedState);
+            _initializationStates.Push(elseBranchState);
+            Visit(@if.ElseBranch.Branch);
+            elseState = new InitializationState(_initializationStates.Pop());
+        }
+        else
+        {
+            elseState = new InitializationState(savedState);
+        }
+    
+        var definite = new HashSet<string>(savedState.Definite.Concat(thenState.Definite.Where(var => elseState.Definite.Contains(var))));
+        var maybe = new HashSet<string>(savedState.Maybe.Concat(thenState.Maybe).Concat(elseState.Maybe));
+        _initializationStates.Push(new InitializationState(definite, maybe));
+        
+        return thenResult;
+    }
+    
+    public override bool VisitReturn(Return @return)
+    {
+        if (_insideFunction)
+            return base.VisitReturn(@return);
+
+        _diagnostics.Error(@return, InternalCodes.ReturnOutsideFunction, "Return statements can only be used inside of functions.");
+        return false;
     }
 
     public override bool VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -61,14 +105,13 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         var name = functionDeclaration.Name.Text;
         if (scope.VariableLookup.ContainsKey(name))
         {
-            _diagnostics.Error(functionDeclaration.Span, InternalCodes.DuplicateName, $"Function '{name}' is already declared in this scope.");
+            _diagnostics.Error(functionDeclaration, InternalCodes.DuplicateName, $"Variable '{name}' is already declared in this scope.");
             return false;
         }
 
         var symbol = new Symbol(functionDeclaration, SymbolKind.Function, name);
         DeclareSymbol(symbol);
-        scope.InitializationState[name] = true;
-
+        SetDefinitelyInitialized(name);
         PushScope();
         if (functionDeclaration.TypeParameters != null)
             Visit(functionDeclaration.TypeParameters);
@@ -79,23 +122,20 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         if (functionDeclaration.ReturnType != null)
             Visit(functionDeclaration.ReturnType);
 
+        var wasInsideFunction = _insideFunction;
+        _insideFunction = true;
         Visit(functionDeclaration.Body);
+        _insideFunction = wasInsideFunction;
         PopScope();
+        
         return true;
     }
 
     public override bool VisitTypeAlias(TypeAlias typeAlias)
     {
-        var scope = CurrentScope();
-        var name = typeAlias.Name.Text;
-        if (scope.TypeLookup.ContainsKey(name))
-        {
-            _diagnostics.Error(typeAlias.Span, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
+        if (!DeclareType(typeAlias))
             return false;
-        }
-
-        var symbol = new Symbol(typeAlias, SymbolKind.Type, name);
-        DeclareSymbol(symbol);
+        
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();
@@ -104,24 +144,17 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
-        var scope = CurrentScope();
-        var name = variableDeclaration.Name.Text;
-        if (scope.VariableLookup.ContainsKey(name))
-        {
-            _diagnostics.Error(variableDeclaration.Span, InternalCodes.DuplicateName, $"Variable '{name}' is already declared in this scope.");
+        var isMutable = variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword;
+        if (!DeclareVariable(variableDeclaration, SymbolKind.Variable, isMutable))
             return false;
-        }
 
-        var mutable = variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword;
-        var symbol = new Symbol(variableDeclaration, SymbolKind.Variable, name, mutable);
-        DeclareSymbol(symbol);
-
+        var name = variableDeclaration.Name.Text;
         base.VisitVariableDeclaration(variableDeclaration);
         if (variableDeclaration.EqualsValueClause != null)
         {
-            scope.InitializationState[name] = true;
+            SetDefinitelyInitialized(name);
         }
-        else if (!mutable)
+        else if (!isMutable)
         {
             _diagnostics.Error(variableDeclaration, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
             return false;
@@ -136,10 +169,16 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     {
         var scope = CurrentScope();
         var name = parameter.Name.Text;
+        if (scope.VariableLookup.ContainsKey(name))
+        {
+            _diagnostics.Error(parameter, InternalCodes.DuplicateName, $"Parameter '{name}' is already declared for this function.");
+            return false;
+        }
+        
         var symbol = new Symbol(parameter, SymbolKind.Parameter, name);
         DeclareSymbol(symbol);
-        scope.InitializationState[name] = true;
-
+        SetDefinitelyInitialized(name);
+        
         if (parameter.EqualsValueClause != null || parameter.ColonTypeClause != null)
             return base.VisitParameter(parameter);
 
@@ -149,13 +188,14 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration)
     {
-        var scope = CurrentScope();
+        if (!DeclareVariable(enumDeclaration, SymbolKind.Variable))
+            return false;
+
+        if (!DeclareType(enumDeclaration, SymbolKind.EnumType))
+            return false;
+
         var name = enumDeclaration.Name.Text;
-        var symbol = new Symbol(enumDeclaration, SymbolKind.Variable, name);
-        var typeSymbol = new Symbol(enumDeclaration, SymbolKind.EnumType, name);
-        DeclareSymbol(symbol);
-        DeclareSymbol(typeSymbol);
-        scope.InitializationState[name] = true;
+        SetDefinitelyInitialized(name);
 
         return true;
     }
@@ -164,16 +204,22 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
-        if (assignmentOperator.Left is not Identifier identifier || LookupRuntimeId(identifier.Name.Text) is not { Mutable: false } symbol)
+        if (assignmentOperator.Left is not Identifier identifier)
             return base.VisitAssignmentOperator(assignmentOperator);
 
-        var declarationPart = symbol.Declaration is VariableDeclaration v ? v.ColonTypeClause + " " + v.EqualsValueClause : "";
-        var initializers = declarationPart.Length >= 72 ? " = ..." : declarationPart;
+        var name = identifier.Name.Text;
+        if (assignmentOperator.Operator.Kind == SyntaxKind.Equals)
+            SetDefinitelyInitialized(name);
+
+        var symbol = LookupValueId(name);
+        if (symbol is not { Mutable: false } || assignmentOperator.Operator.Kind != SyntaxKind.Equals)
+            return base.VisitAssignmentOperator(assignmentOperator);
+
         _diagnostics.Error(
             assignmentOperator,
             InternalCodes.AssignToImmutable,
-            "Cannot assign to an immutable variable.",
-            $"did you mean to write 'mut {symbol.Name}{initializers}'?"
+            $"Cannot assign to immutable variable '{name}'.",
+            $"did you mean to declare '{name}' as mutable?"
         );
 
         return false;
@@ -182,19 +228,23 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     public override bool VisitIdentifier(Identifier identifier)
     {
         var name = identifier.Name.Text;
-        var symbol = LookupRuntimeId(name);
+        var symbol = LookupValueId(name);
         if (symbol == null)
         {
             _diagnostics.Error(identifier, InternalCodes.CannotFindName, $"Cannot find name '{name}'.");
             return false;
         }
 
-        if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter or SymbolKind.Function && !IsSymbolInitialized(symbol))
+        if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter or SymbolKind.Function && !IsDefinitelyInitialized(name))
         {
-            _diagnostics.Error(identifier, InternalCodes.UseOfUnassigned, $"Use of unassigned variable '{name}'.");
+            if (IsMaybeInitialized(name))
+                _diagnostics.Error(identifier, InternalCodes.UseOfMaybeUninitialized, $"Variable '{name}' might not be initialized on this path.");
+            else
+                _diagnostics.Error(identifier, InternalCodes.UseOfUninitialized, $"Use of uninitialized variable '{name}'.");
+
             return false;
         }
-
+        
         if (symbol.Declaration is EnumDeclaration && identifier.Parent is not QualifiedName or ElementAccess)
         {
             _diagnostics.Error(identifier, InternalCodes.DynamicEnumAccess, "Cannot use enums dynamically because they are compile-time constants.");
@@ -236,6 +286,36 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         DeclareSymbol(symbol);
         return typeParameter.EqualsTypeClause == null || Visit(typeParameter.EqualsTypeClause);
     }
+    
+    private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, bool isMutable = false)
+    {
+        var scope = CurrentScope();
+        var name = node.Name.Text;
+        if (scope.VariableLookup.ContainsKey(name))
+        {
+            _diagnostics.Error(node, InternalCodes.DuplicateName, $"Variable '{name}' is already declared in this scope.");
+            return false;
+        }
+
+        var symbol = new Symbol(node, symbolKind, name, isMutable);
+        DeclareSymbol(symbol);
+        return true;
+    }
+    
+    private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type)
+    {
+        var scope = CurrentScope();
+        var name = node.Name.Text;
+        if (scope.TypeLookup.ContainsKey(name))
+        {
+            _diagnostics.Error(node, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
+            return false;
+        }
+
+        var symbol = new Symbol(node, symbolKind, name);
+        DeclareSymbol(symbol);
+        return true;
+    }
 
     private void DeclareSymbol(Symbol symbol)
     {
@@ -244,13 +324,12 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         var nodeId = symbol.Declaration.Id;
         lookup[symbol.Name] = symbol;
         scope.Declarations[nodeId] = symbol;
-        scope.InitializationState[symbol.Name] = false;
         _allDeclarations[nodeId] = symbol;
         _scopeNodes.Peek().Symbols.Add(symbol);
         _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
     }
 
-    private Symbol? LookupRuntimeId(string name) =>
+    private Symbol? LookupValueId(string name) =>
         LookupSymbol(name, SymbolKind.Variable)
         ?? LookupSymbol(name, SymbolKind.Function)
         ?? LookupSymbol(name, SymbolKind.Parameter);
@@ -269,23 +348,29 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     private static Dictionary<string, Symbol> GetLookup(SymbolKind kind, ResolverScope scope) =>
         kind is SymbolKind.Type or SymbolKind.EnumType ? scope.TypeLookup : scope.VariableLookup;
-
-    private bool IsSymbolInitialized(Symbol symbol) =>
-    (
-        from scope in _scopes
-        where scope.Declarations.ContainsKey(symbol.Declaration.Id)
-        select scope.InitializationState.TryGetValue(symbol.Name, out var initialized) && initialized
-    ).FirstOrDefault();
-
+    
+    private void SetDefinitelyInitialized(string name)
+    {
+        var state = _initializationStates.Peek();
+        state.Definite.Add(name);
+        state.Maybe.Add(name);
+    }
+    
+    private InitializationState InheritNewInitializationState()
+    {
+        var state = new InitializationState(InitializationState());
+        _initializationStates.Push(state);
+        return state;
+    }
+    
+    private void PushInitializationState() => _initializationStates.Push(new InitializationState([], []));
+    private bool IsDefinitelyInitialized(string name) => InitializationState().Definite.Contains(name);
+    private bool IsMaybeInitialized(string name) => InitializationState().Maybe.Contains(name);
+    private InitializationState InitializationState() => _initializationStates.Peek();
+    private void PopInitializationState() => _initializationStates.Pop();
     private ResolverScope CurrentScope() => _scopes.Peek();
     private void PopScope() => _scopes.Pop();
-
-    private ResolverScope PushScope()
-    {
-        var scope = new ResolverScope();
-        _scopes.Push(scope);
-        return scope;
-    }
+    private void PushScope() => _scopes.Push(new ResolverScope());
 
     protected override bool CombineResults(IEnumerable<bool> results) => results.All(t => t);
 }

@@ -48,6 +48,12 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             : Types.PrimitiveType.Never;
     }
 
+    public override Type VisitBlock(Block block)
+    {
+        var types = block.Statements.ConvertAll(Visit);
+        return types.LastOrDefault(Types.PrimitiveType.None);
+    }
+
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var type = base.VisitExpressionStatement(expressionStatement);
