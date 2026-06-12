@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Parsing;
 using Loom.Parsing.AST;
@@ -30,14 +31,14 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         );
 
         PushScope();
-        PushInitializationState();
+        PushInitializationState(new InitializationState([], []));
         foreach (var symbol in IntrinsicTypes.GetSymbols(semanticModel))
             DeclareSymbol(symbol);
-        
+
         VisitTree(parserResult.Tree);
         PopInitializationState();
         PopScope();
-        
+
         return semanticModel;
     }
 
@@ -46,50 +47,47 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     public override bool VisitBlock(Block block)
     {
         PushScope();
-        var savedState = InheritNewInitializationState();
+        var parentState = CurrentInitializationState();
+        var blockState = PushInheritedInitializationState();
         var result = block.Statements.All(Visit);
-        var blockState = _initializationStates.Pop();
-        foreach (var var in blockState.Definite)
-            savedState.Definite.Add(var);
-        foreach (var var in blockState.Maybe)
-            savedState.Maybe.Add(var);
-        
-        _initializationStates.Push(savedState);
+
+        MergeInitializationState(blockState, target: parentState);
+        PopInitializationState();
+        PushInitializationState(parentState);
+
         PopScope();
-        
         return result;
     }
-    
+
     public override bool VisitIf(If @if)
     {
-        var savedState = new InitializationState(InitializationState());
         Visit(@if.Condition);
-    
-        var thenState = new InitializationState(savedState);
-        _initializationStates.Push(thenState);
-        var thenResult = Visit(@if.ThenBranch);
-        thenState = new InitializationState(_initializationStates.Pop());
+        var beforeIf = new InitializationState(CurrentInitializationState());
+        var thenState = PushAndVisitBranch(@if.ThenBranch, beforeIf);
+        if (thenState == null) return false;
+
         InitializationState elseState;
-        
         if (@if.ElseBranch != null)
         {
-            var elseBranchState = new InitializationState(savedState);
-            _initializationStates.Push(elseBranchState);
-            Visit(@if.ElseBranch.Branch);
-            elseState = new InitializationState(_initializationStates.Pop());
+            var state = PushAndVisitBranch(@if.ElseBranch.Branch, beforeIf);
+            if (state == null) return false;
+            elseState = state;
         }
         else
         {
-            elseState = new InitializationState(savedState);
+            elseState = new InitializationState(beforeIf);
         }
-    
-        var definite = new HashSet<string>(savedState.Definite.Concat(thenState.Definite.Where(var => elseState.Definite.Contains(var))));
-        var maybe = new HashSet<string>(savedState.Maybe.Concat(thenState.Maybe).Concat(elseState.Maybe));
+
+        var definite = new HashSet<Symbol>(beforeIf.Definite.Concat(thenState.Definite.Intersect(elseState.Definite)));
+        var maybe = new HashSet<Symbol>(beforeIf.Maybe);
+        maybe.UnionWith(thenState.Maybe);
+        maybe.UnionWith(elseState.Maybe);
+
+        PopInitializationState();
         _initializationStates.Push(new InitializationState(definite, maybe));
-        
-        return thenResult;
+        return true;
     }
-    
+
     public override bool VisitReturn(Return @return)
     {
         if (_insideFunction)
@@ -111,7 +109,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         var symbol = new Symbol(functionDeclaration, SymbolKind.Function, name);
         DeclareSymbol(symbol);
-        SetDefinitelyInitialized(name);
+        MarkDefinitelyInitialized(symbol);
         PushScope();
         if (functionDeclaration.TypeParameters != null)
             Visit(functionDeclaration.TypeParameters);
@@ -124,10 +122,12 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         var wasInsideFunction = _insideFunction;
         _insideFunction = true;
+        PushInheritedInitializationState();
         Visit(functionDeclaration.Body);
+        PopInitializationState();
         _insideFunction = wasInsideFunction;
         PopScope();
-        
+
         return true;
     }
 
@@ -135,7 +135,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     {
         if (!DeclareType(typeAlias))
             return false;
-        
+
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();
@@ -145,14 +145,13 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     public override bool VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
         var isMutable = variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword;
-        if (!DeclareVariable(variableDeclaration, SymbolKind.Variable, isMutable))
+        if (!DeclareVariable(variableDeclaration, SymbolKind.Variable, out var symbol, isMutable))
             return false;
 
-        var name = variableDeclaration.Name.Text;
         base.VisitVariableDeclaration(variableDeclaration);
         if (variableDeclaration.EqualsValueClause != null)
         {
-            SetDefinitelyInitialized(name);
+            MarkDefinitelyInitialized(symbol);
         }
         else if (!isMutable)
         {
@@ -174,11 +173,11 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             _diagnostics.Error(parameter, InternalCodes.DuplicateName, $"Parameter '{name}' is already declared for this function.");
             return false;
         }
-        
+
         var symbol = new Symbol(parameter, SymbolKind.Parameter, name);
         DeclareSymbol(symbol);
-        SetDefinitelyInitialized(name);
-        
+        MarkDefinitelyInitialized(symbol);
+
         if (parameter.EqualsValueClause != null || parameter.ColonTypeClause != null)
             return base.VisitParameter(parameter);
 
@@ -188,15 +187,13 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration)
     {
-        if (!DeclareVariable(enumDeclaration, SymbolKind.Variable))
+        if (!DeclareVariable(enumDeclaration, SymbolKind.Variable, out var symbol))
             return false;
 
         if (!DeclareType(enumDeclaration, SymbolKind.EnumType))
             return false;
 
-        var name = enumDeclaration.Name.Text;
-        SetDefinitelyInitialized(name);
-
+        MarkDefinitelyInitialized(symbol);
         return true;
     }
 
@@ -208,11 +205,14 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return base.VisitAssignmentOperator(assignmentOperator);
 
         var name = identifier.Name.Text;
-        if (assignmentOperator.Operator.Kind == SyntaxKind.Equals)
-            SetDefinitelyInitialized(name);
-
         var symbol = LookupValueId(name);
-        if (symbol is not { Mutable: false } || assignmentOperator.Operator.Kind != SyntaxKind.Equals)
+        if (symbol == null)
+            return base.VisitAssignmentOperator(assignmentOperator);
+        
+        if (assignmentOperator.Operator.Kind == SyntaxKind.Equals)
+            MarkDefinitelyInitialized(symbol);
+        
+        if (symbol is { Mutable: true })
             return base.VisitAssignmentOperator(assignmentOperator);
 
         _diagnostics.Error(
@@ -235,16 +235,16 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return false;
         }
 
-        if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter or SymbolKind.Function && !IsDefinitelyInitialized(name))
+        if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter or SymbolKind.Function && !IsDefinitelyInitialized(symbol))
         {
-            if (IsMaybeInitialized(name))
+            if (IsMaybeInitialized(symbol))
                 _diagnostics.Error(identifier, InternalCodes.UseOfMaybeUninitialized, $"Variable '{name}' might not be initialized on this path.");
             else
                 _diagnostics.Error(identifier, InternalCodes.UseOfUninitialized, $"Use of uninitialized variable '{name}'.");
 
             return false;
         }
-        
+
         if (symbol.Declaration is EnumDeclaration && identifier.Parent is not QualifiedName or ElementAccess)
         {
             _diagnostics.Error(identifier, InternalCodes.DynamicEnumAccess, "Cannot use enums dynamically because they are compile-time constants.");
@@ -286,9 +286,10 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         DeclareSymbol(symbol);
         return typeParameter.EqualsTypeClause == null || Visit(typeParameter.EqualsTypeClause);
     }
-    
-    private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, bool isMutable = false)
+
+    private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
     {
+        symbol = null;
         var scope = CurrentScope();
         var name = node.Name.Text;
         if (scope.VariableLookup.ContainsKey(name))
@@ -297,11 +298,11 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return false;
         }
 
-        var symbol = new Symbol(node, symbolKind, name, isMutable);
+        symbol = new Symbol(node, symbolKind, name, isMutable);
         DeclareSymbol(symbol);
         return true;
     }
-    
+
     private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type)
     {
         var scope = CurrentScope();
@@ -348,26 +349,55 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     private static Dictionary<string, Symbol> GetLookup(SymbolKind kind, ResolverScope scope) =>
         kind is SymbolKind.Type or SymbolKind.EnumType ? scope.TypeLookup : scope.VariableLookup;
-    
-    private void SetDefinitelyInitialized(string name)
+
+    private void MarkDefinitelyInitialized(Symbol symbol)
     {
-        var state = _initializationStates.Peek();
-        state.Definite.Add(name);
-        state.Maybe.Add(name);
+        if (symbol.Kind is SymbolKind.Type or SymbolKind.EnumType)
+        {
+            _diagnostics.CompilerError(symbol.Declaration, "Attempt to mark symbol as initialized - but symbol is not a value symbol");
+            return;
+        }
+
+        var state = CurrentInitializationState();
+        state.Definite.Add(symbol);
+        state.Maybe.Add(symbol);
     }
-    
-    private InitializationState InheritNewInitializationState()
+
+    /// <summary>Merges <paramref name="source"/> into <paramref name="target"/>.</summary>
+    private static void MergeInitializationState(InitializationState source, InitializationState target)
     {
-        var state = new InitializationState(InitializationState());
-        _initializationStates.Push(state);
+        foreach (var v in source.Definite)
+            target.Definite.Add(v);
+
+        foreach (var v in source.Maybe)
+            target.Maybe.Add(v);
+    }
+
+    /// <summary>Pushes a copy of the current initialization state and returns that copy.</summary>
+    private InitializationState PushInheritedInitializationState()
+    {
+        var state = new InitializationState(CurrentInitializationState());
+        PushInitializationState(state);
         return state;
     }
-    
-    private void PushInitializationState() => _initializationStates.Push(new InitializationState([], []));
-    private bool IsDefinitelyInitialized(string name) => InitializationState().Definite.Contains(name);
-    private bool IsMaybeInitialized(string name) => InitializationState().Maybe.Contains(name);
-    private InitializationState InitializationState() => _initializationStates.Peek();
-    private void PopInitializationState() => _initializationStates.Pop();
+
+    /// <summary>
+    /// Visits a branch with a fresh inherited state copied from <paramref name="inherited"/>,
+    /// then pops that state and returns its final content (or null if visit failed).
+    /// </summary>
+    private InitializationState? PushAndVisitBranch(Node node, InitializationState inherited)
+    {
+        PushInitializationState(new InitializationState(inherited));
+        var ok = Visit(node);
+        var state = PopInitializationState();
+        return ok ? state : null;
+    }
+
+    private void PushInitializationState(InitializationState state) => _initializationStates.Push(state);
+    private bool IsDefinitelyInitialized(Symbol symbol) => CurrentInitializationState().Definite.Contains(symbol);
+    private bool IsMaybeInitialized(Symbol symbol) => CurrentInitializationState().Maybe.Contains(symbol);
+    private InitializationState CurrentInitializationState() => _initializationStates.Peek();
+    private InitializationState PopInitializationState() => _initializationStates.Pop();
     private ResolverScope CurrentScope() => _scopes.Peek();
     private void PopScope() => _scopes.Pop();
     private void PushScope() => _scopes.Push(new ResolverScope());

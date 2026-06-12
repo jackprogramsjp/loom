@@ -1,6 +1,6 @@
-
-
-let x =1;
-"abcd"
-+
-1234
+let x = true;
+if x {
+    x
+    +
+    1
+}
