@@ -372,7 +372,27 @@ public class TypeCheckerTest
             "Type 'bool?' is not assignable to type 'bool'."
         );
     }
+    
+    [Fact]
+    public void ThrowsFor_Never_InBinaryOperation()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = none; if x != none x + 1");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidBinaryOp, "No binary operation for 'never' + 'number'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_Never_InUnaryOperation()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = none; if x != none { -x }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidUnaryOp, "No unary operation for -never.");
+    }
 
+    [Fact]
+    public void Checks_IfStatementTypeNarrowing()
+    {
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics("let x: number? = 69; if x != none x + 420"));
+    }
+    
     [Fact]
     public void Checks_EnumTypeAnnotation()
     {

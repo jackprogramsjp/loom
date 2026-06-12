@@ -339,8 +339,16 @@ public class Parser(LexerResult lexerResult)
             return new Literal(token, LiteralUtility.ResolveValue(token));
 
         var currentOrLast = CurrentOrLast();
-        _diagnostics.Error(currentOrLast.Span, InternalCodes.UnexpectedToken, "Unexpected token.");
-        _position++;
+        if (IsEof())
+        {
+            _diagnostics.Error(currentOrLast, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+        }
+        else
+        {
+            _diagnostics.Error(currentOrLast, InternalCodes.UnexpectedToken, "Unexpected token.");
+            _position++;
+        }
+        
         return new NullExpression(currentOrLast);
     }
 

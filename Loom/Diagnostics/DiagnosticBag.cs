@@ -27,6 +27,7 @@ public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
         Error(span, InternalCodes.NotImplemented, feature ?? "This feature is not yet implemented.");
 
     public void CompilerError(Node node, string message) => CompilerError(node.Span, message);
+    public void CompilerError(SourceFile file, string message) => CompilerError(LocationSpan.Empty(file), message);
     public void CompilerError(LocationSpan span, string message) => Error(span, InternalCodes.CompilerError, message, "this is a compiler bug! please report an issue.");
 
     public Diagnostic? Find(Func<Diagnostic, bool> predicate) => Set.FirstOrDefault(predicate);

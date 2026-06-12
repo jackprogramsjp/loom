@@ -32,9 +32,16 @@ public class ParserTest
     }
 
     [Fact]
-    public void ThrowsFor_UnexpectedToken()
+    public void ThrowsFor_UnexpectedEof()
     {
         var diagnostics = Utility.GetParserDiagnostics("!");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_UnexpectedToken()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("if )");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Unexpected token.");
     }
 

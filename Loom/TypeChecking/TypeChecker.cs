@@ -322,7 +322,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         _diagnostics.Error(
             binaryOperator,
             InternalCodes.InvalidBinaryOp,
-            $"No binary operation for {leftType.Widen()} {binaryOperator.Operator.Text} {rightType.Widen()}",
+            $"No binary operation for '{leftType.Widen()}' {binaryOperator.Operator.Text} '{rightType.Widen()}'.",
             hint
         );
 
@@ -338,7 +338,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         var suggestion = UnaryOperatorBinder.GetSuggestion(unaryOperator, operandType);
         var hint = FormatUnaryHint(unaryOperator, operandType, suggestion);
-        _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for '{unaryOperator.Operator.Text}{operandType.Widen()}'", hint);
+        _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for {unaryOperator.Operator.Text}{operandType.Widen()}.", hint);
 
         return BindType(unaryOperator, Types.PrimitiveType.Never);
     }
