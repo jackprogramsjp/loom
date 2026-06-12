@@ -1,1 +1,6 @@
-mut x: number; if false x = 69; x;
+
+
+let x =1;
+"abcd"
++
+1234

@@ -36,7 +36,7 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
         var lines = new List<string>([header, location, gutter]);
         if (startLine - 1 < sourceLines.Length && startLine - 1 > 0)
         {
-            lines.Add($"{gutter} {Colors.Dim}{sourceLines[startLine - 2]}{Colors.Reset}");
+            lines.Add($"{Colors.Dim}{startLine - 1} │ {sourceLines[startLine - 2]}{Colors.Reset}");
             lines.Add(gutter);
         }
 
@@ -48,7 +48,7 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
             var lineContent = sourceLines[lineIndex];
             var lineNumber = line.ToString().PadLeft(lineDigits);
             var lineSubtraction = hasHint ? Math.Min(endChar - startChar, 1) : 0;
-            var linePrepend = hasHint ? line == startLine && startLine != endLine ? "─" : "┬" : "";
+            var linePrepend = hasHint ? line != endLine && startLine != endLine ? "─" : "┬" : "";
             if (line == startLine && line == endLine)
             {
                 var underline = $"{new string(' ', startChar)}{underlineColor}{linePrepend}{new string(underlineChar, endChar - startChar - lineSubtraction)}{Colors.Reset}";
@@ -70,25 +70,16 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
             else
             {
                 var underline = $"{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - lineSubtraction)}{Colors.Reset}";
-                lines.Add($"{Colors.Dim}{lineNumber} │{Colors.Reset} {lineContent}");
+                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
                 lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
             }
         }
 
-        if (hasHint && startLine == endLine)
+        if (hasHint)
         {
             lines.Add(
                 $"{gutter}{new string(' ', startChar)} {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
             );
-            lines.Add(gutter);
-        }
-
-        if (hasHint && startLine != endLine)
-        {
-            lines.Add(
-                $"{gutter}{new string(' ', startChar)}  {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
-            );
-
             lines.Add(gutter);
         }
         

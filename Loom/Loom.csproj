@@ -21,8 +21,4 @@
       <ProjectReference Include="..\Loom.Luau\Loom.Luau.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="FlowAnalysis\" />
-    </ItemGroup>
-
 </Project>

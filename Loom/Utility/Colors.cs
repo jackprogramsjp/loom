@@ -1,6 +1,6 @@
 namespace Loom.Utility;
 
-internal static class Colors
+public static class Colors
 {
     public const string Reset = "\e[0m";
     public const string Bold = "\e[1m";
