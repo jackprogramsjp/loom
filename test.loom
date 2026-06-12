@@ -1,1 +1,1 @@
-enum Abc { A, B, C }; let x = Abc.A
+return x if a > b else y

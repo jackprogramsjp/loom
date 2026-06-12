@@ -2,13 +2,24 @@ namespace Loom.Parsing.AST;
 
 public abstract class Visitor<T>
 {
-    public abstract T Visit(Node node);
+    protected abstract T Visit(Node node);
 
     protected TResult Visit<TResult>(Node node)
         where TResult : T =>
         (TResult)Visit(node)!;
 
     public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
+    
+    public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
+
+    public virtual T VisitIf(If @if)
+    {
+        var results = new List<T> { Visit(@if.Condition), Visit(@if.ThenBranch) };
+        if (@if.ElseBranch != null)
+            results.Add(Visit(@if.ElseBranch));
+        
+        return CombineResults(results);
+    }
 
     public virtual T VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
     {
@@ -122,5 +133,4 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
-
 }

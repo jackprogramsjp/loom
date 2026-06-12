@@ -34,6 +34,7 @@ internal static class Utility
     }
 
     public static DiagnosticBag GetLexerDiagnostics(string source) => Tokenize(source).Diagnostics;
+    public static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
     public static SemanticModel GetSemanticModel(string source) => new Resolver(Parse(source)).Resolve();
     public static TypeCheckerResult TypeCheck(string source) => new TypeChecker(GetSemanticModel(source)).Check();
@@ -62,7 +63,6 @@ internal static class Utility
     }
 
     private static LexerResult Tokenize(string source) => new Lexer(TestFile(source)).Tokenize();
-    private static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
 
     private static SourceFile TestFile(string source) => new("test", source);
 }

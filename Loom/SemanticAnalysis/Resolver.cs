@@ -45,7 +45,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return semanticModel;
     }
 
-    public override bool Visit(Node node) => node.Accept(this);
+    protected override bool Visit(Node node) => node.Accept(this);
 
     public override bool VisitBlock(Block block)
     {

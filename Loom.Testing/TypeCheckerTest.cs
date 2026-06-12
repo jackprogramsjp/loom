@@ -348,6 +348,30 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Status { Active, Inactive } let x: Status = 5");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '5' is not assignable to type '0 | 1'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_IfStatement_NonBooleanCondition()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("if 42 { return 1 }");
+        Utility.AssertDiagnostic(
+            diagnostics, 
+            InternalCodes.TypeMismatch, 
+            "Type '42' is not assignable to type 'bool'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_IfStatement_WithOptionalCondition()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "let x: bool? = true; if x { return 1 }"
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type 'bool?' is not assignable to type 'bool'."
+        );
+    }
 
     [Fact]
     public void Checks_EnumTypeAnnotation()

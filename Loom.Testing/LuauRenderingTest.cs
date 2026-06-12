@@ -11,6 +11,23 @@ namespace Loom.Testing;
 public class LuauRenderingTest
 {
     [Fact]
+    public void Renders_IfStatement()
+    {
+        Assert.Equal(
+            "if a then\n  x = 1\nelseif b then\n  x = 2\nelseif c then\n  x = 3\nelse\n  x = 69\nend",
+            new IfStatement(
+                new Identifier("a"),
+                new Chunk([setX(1)]),
+                [new ElseIfBranch(new Identifier("b"), new Chunk([setX(2)])), new ElseIfBranch(new Identifier("c"), new Chunk([setX(3)]))],
+                new Chunk([setX(69)])
+            ).Render()
+        );
+
+        return;
+        ExpressionStatement setX(int x) => new(new BinaryOperator(new Identifier("x"), "=", new NumberLiteral(x)));
+    }
+
+    [Fact]
     public void Renders_TypeAlias_GenericWithDefault()
     {
         var typeParameters = new TypeParameters([new TypeParameter("T", PrimitiveType.Number)]);
@@ -40,7 +57,7 @@ public class LuauRenderingTest
             new TypeParameters([typeParameter]),
             parameters,
             PrimitiveType.Number,
-            [new Return(new BinaryOperator(new Identifier("a"), "+", new Identifier("b")))]
+            new Chunk([new Return(new BinaryOperator(new Identifier("a"), "+", new Identifier("b")))])
         );
 
         Assert.Equal("const function add<T>(a: number, b: T): number\n  return a + b\nend", fn.Render());

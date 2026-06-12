@@ -48,6 +48,12 @@ public class Parser(LexerResult lexerResult)
 
     private Statement ParseStatement()
     {
+        if (Match(out var leftBrace, SyntaxKind.LBrace))
+            return ParseBlock(leftBrace);
+        
+        if (Match(out var returnKeyword, SyntaxKind.ReturnKeyword))
+            return new Return(returnKeyword, ParseExpression());
+
         if (Match(out var fnKeyword, SyntaxKind.FnKeyword))
             return ParseFunctionDeclaration(fnKeyword);
 
@@ -60,11 +66,37 @@ public class Parser(LexerResult lexerResult)
         if (Match(out var enumKeyword, SyntaxKind.EnumKeyword))
             return ParseEnumDeclaration(enumKeyword);
 
-        if (Match(out var returnKeyword, SyntaxKind.ReturnKeyword))
-            return new Return(returnKeyword, ParseExpression());
+        if (Match(out var ifKeyword, SyntaxKind.IfKeyword))
+            return ParseIf(ifKeyword);
 
         var expression = ParseExpression();
         return new ExpressionStatement(expression);
+    }
+
+    private Statement ParseIf(Token keyword)
+    {
+        var condition = ParseExpression();
+        var thenBranch = ParseStatement();
+        var elseBranch = Match(out var elseKeyword, SyntaxKind.ElseKeyword) ? new ElseBranch(elseKeyword, ParseStatement()) : null;
+        if (!AssertDeclarationInsideOfBlock(thenBranch) || elseBranch != null && !AssertDeclarationInsideOfBlock(elseBranch.Branch))
+            return new NullStatement(keyword);
+        
+        return new If(keyword, condition, thenBranch, elseBranch);
+    }
+
+    private bool AssertDeclarationInsideOfBlock(Statement statement)
+    {
+        if (statement is not NamedDeclaration namedDeclaration)
+            return true;
+
+        _diagnostics.Error(
+            namedDeclaration,
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        );
+
+        return false;
     }
 
     private Statement ParseFunctionDeclaration(Token keyword)
@@ -126,7 +158,14 @@ public class Parser(LexerResult lexerResult)
         var leftBrace = Expect(SyntaxKind.LBrace);
         var members = !IsEof() && Current() is { Kind: SyntaxKind.Identifier } ? ParseDelimited(ParseEnumMember).OfType<EnumMember>().ToList() : [];
         var rightBrace = Expect(SyntaxKind.RBrace);
-        return new EnumDeclaration(keyword, name, leftBrace, rightBrace, colonTypeClause, members);
+        return new EnumDeclaration(
+            keyword,
+            name,
+            leftBrace,
+            rightBrace,
+            colonTypeClause,
+            members
+        );
     }
 
     private EnumMember? ParseEnumMember() => Match(out var name, SyntaxKind.Identifier) ? new EnumMember(name, ParseEqualsValueClause()) : null;
@@ -476,7 +515,7 @@ public class Parser(LexerResult lexerResult)
         var first = parse();
         if (first == null)
             return [];
-        
+
         var nodes = new List<T> { first };
         while (Match(delimiter))
         {

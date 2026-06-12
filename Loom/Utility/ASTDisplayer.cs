@@ -15,7 +15,7 @@ public class ASTDisplayer(Tree ast) : Visitor<string>
         Console.WriteLine(content);
     }
 
-    public override string Visit(Node node) => node.Accept(this);
+    protected override string Visit(Node node) => node.Accept(this);
     public override string VisitLiteral(Literal literal) => $"Literal({literal})";
     public override string VisitIdentifier(Identifier identifier) => $"Identifier({identifier})";
     public override string VisitTypeName(TypeName typeName) => $"TypeName({typeName})";

@@ -38,7 +38,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
         );
 
-    public override Type Visit(Node node) => node.Accept(this);
+    protected override Type Visit(Node node) => node.Accept(this);
 
     public override Type VisitTree(Tree tree)
     {
@@ -53,6 +53,15 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = base.VisitExpressionStatement(expressionStatement);
         _diagnostics.Info(expressionStatement, $"Solved type '{TypeSimplifier.Simplify(type)}' for expression");
         return BindType(expressionStatement, type);
+    }
+
+    public override Type VisitIf(If @if)
+    {
+        var conditionType = Visit(@if.Condition);
+        semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
+
+        var thenBranchType = Visit(@if.ThenBranch);
+        return TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, @if.ElseBranch != null ? Visit(@if.ElseBranch) : Types.PrimitiveType.None]));
     }
 
     public override Type VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -130,7 +139,13 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var baseType = MaybeVisit(enumDeclaration.ColonTypeClause) ?? Types.PrimitiveType.Number;
         if (enumDeclaration.ColonTypeClause != null && !baseType.IsAssignableTo(Types.PrimitiveType.String) && !baseType.IsAssignableTo(Types.PrimitiveType.Number))
         {
-            _diagnostics.Error(enumDeclaration.ColonTypeClause, InternalCodes.InvalidEnumBaseType, "Invalid enum base type.", "valid types are 'string' and 'number'");
+            _diagnostics.Error(
+                enumDeclaration.ColonTypeClause,
+                InternalCodes.InvalidEnumBaseType,
+                "Invalid enum base type.",
+                "valid types are 'string' and 'number'"
+            );
+
             return BindType(enumDeclaration, Types.PrimitiveType.Never);
         }
 
@@ -369,7 +384,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             var declaredType = semanticModel.GetType(symbol.Declaration);
             if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
                 return objectType.PropertyUnion();
-            
+
             if (declaredType is GenericType genericType)
                 return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);
 

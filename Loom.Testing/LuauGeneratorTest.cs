@@ -159,6 +159,142 @@ public class LuauGeneratorTest
         var primitive = Assert.IsType<PrimitiveType>(variable.DeclaredType);
         Assert.Equal(expected ?? name, primitive.Render());
     }
+    
+    [Fact]
+    public void Generates_SimpleIfStatement()
+    {
+        var luauTree = Utility.GetLuauAST("if true { return 1 }");
+        Assert.Single(luauTree.Statements);
+
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        var condition = Assert.IsType<BooleanLiteral>(ifStatement.Condition);
+        Assert.True(condition.Value);
+        Assert.Single(ifStatement.ThenBranch.Statements);
+        
+        var returnStatement = Assert.IsType<Return>(ifStatement.ThenBranch.Statements.First());
+        var returnValue = Assert.IsType<NumberLiteral>(returnStatement.Expression);
+        Assert.Equal(1, returnValue.Value);
+        Assert.Empty(ifStatement.ElseIfBranches);
+        Assert.Null(ifStatement.ElseBranch);
+    }
+
+    [Fact]
+    public void Generates_IfElseStatement()
+    {
+        var luauTree = Utility.GetLuauAST("if x > 5 { return 1 } else { return 0 }");
+        Assert.Single(luauTree.Statements);
+
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        var condition = Assert.IsType<BinaryOperator>(ifStatement.Condition);
+        var left = Assert.IsType<Identifier>(condition.Left);
+        var right = Assert.IsType<NumberLiteral>(condition.Right);
+        Assert.Equal("x", left.Name);
+        Assert.Equal(5, right.Value);
+        Assert.Equal(">", condition.Operator);
+        Assert.Single(ifStatement.ThenBranch.Statements);
+        
+        var thenReturn = Assert.IsType<Return>(ifStatement.ThenBranch.Statements.First());
+        var thenValue = Assert.IsType<NumberLiteral>(thenReturn.Expression);
+        Assert.Equal(1, thenValue.Value);
+        Assert.NotNull(ifStatement.ElseBranch);
+        Assert.Single(ifStatement.ElseBranch.Statements);
+        
+        var elseReturn = Assert.IsType<Return>(ifStatement.ElseBranch.Statements.First());
+        var elseValue = Assert.IsType<NumberLiteral>(elseReturn.Expression);
+        Assert.Equal(0, elseValue.Value);
+        Assert.Empty(ifStatement.ElseIfBranches);
+    }
+
+    [Fact]
+    public void Generates_IfElseIfStatement()
+    {
+        var luauTree = Utility.GetLuauAST("if x > 5 { return 1 } else if x < 0 { return -1 } else { return 0 }");
+        Assert.Single(luauTree.Statements);
+
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        var mainCondition = Assert.IsType<BinaryOperator>(ifStatement.Condition);
+        var mainLeft = Assert.IsType<Identifier>(mainCondition.Left);
+        var mainRight = Assert.IsType<NumberLiteral>(mainCondition.Right);
+        Assert.Equal("x", mainLeft.Name);
+        Assert.Equal(5, mainRight.Value);
+        Assert.Single(ifStatement.ThenBranch.Statements);
+        Assert.Single(ifStatement.ElseIfBranches);
+        
+        var elseIf = ifStatement.ElseIfBranches.First();
+        var elseIfCondition = Assert.IsType<BinaryOperator>(elseIf.Condition);
+        var elseIfLeft = Assert.IsType<Identifier>(elseIfCondition.Left);
+        var elseIfRight = Assert.IsType<NumberLiteral>(elseIfCondition.Right);
+        Assert.Equal("x", elseIfLeft.Name);
+        Assert.Equal(0, elseIfRight.Value);
+        Assert.Equal("<", elseIfCondition.Operator);
+        Assert.Single(elseIf.Branch.Statements);
+        
+        var elseIfReturn = Assert.IsType<Return>(elseIf.Branch.Statements.First());
+        var elseIfUnary = Assert.IsType<UnaryOperator>(elseIfReturn.Expression);
+        var unaryValue = Assert.IsType<NumberLiteral>(elseIfUnary.Operand);
+        Assert.Equal("-", elseIfUnary.Operator);
+        Assert.Equal(1, unaryValue.Value);
+        Assert.NotNull(ifStatement.ElseBranch);
+        Assert.Single(ifStatement.ElseBranch.Statements);
+        
+        var elseReturn = Assert.IsType<Return>(ifStatement.ElseBranch.Statements.First());
+        var elseValue = Assert.IsType<NumberLiteral>(elseReturn.Expression);
+        Assert.Equal(0, elseValue.Value);
+    }
+
+    [Fact]
+    public void Generates_MultipleElseIfBranches()
+    {
+        var luauTree = Utility.GetLuauAST("if x == 1 { return 1 } else if x == 2 { return 2 } else if x == 3 { return 3 } else { return 0 }");
+        Assert.Single(luauTree.Statements);
+
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        Assert.Equal(2, ifStatement.ElseIfBranches.Count);
+        
+        var firstElseIf = ifStatement.ElseIfBranches[0];
+        var firstCondition = Assert.IsType<BinaryOperator>(firstElseIf.Condition);
+        Assert.Equal("==", firstCondition.Operator);
+        
+        var firstValue = Assert.IsType<NumberLiteral>(firstCondition.Right);
+        Assert.Equal(2, firstValue.Value);
+        
+        var secondElseIf = ifStatement.ElseIfBranches[1];
+        var secondCondition = Assert.IsType<BinaryOperator>(secondElseIf.Condition);
+        Assert.Equal("==", secondCondition.Operator);
+        
+        var secondValue = Assert.IsType<NumberLiteral>(secondCondition.Right);
+        Assert.Equal(3, secondValue.Value);
+        Assert.NotNull(ifStatement.ElseBranch);
+    }
+
+    [Fact]
+    public void Generates_IfStatement_WithBlockBody()
+    {
+        var luauTree = Utility.GetLuauAST("if true { mut x = 1; mut y = 2; }");
+        Assert.Single(luauTree.Statements);
+
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        Assert.Equal(2, ifStatement.ThenBranch.Statements.Count);
+        Assert.IsType<LocalVariable>(ifStatement.ThenBranch.Statements[0]);
+        Assert.IsType<LocalVariable>(ifStatement.ThenBranch.Statements[1]);
+    }
+
+    [Fact]
+    public void Generates_NestedIfStatements()
+    {
+        var luauTree = Utility.GetLuauAST("if x > 0 { if y > 0 { return 1 } }");
+        Assert.Single(luauTree.Statements);
+
+        var outerIf = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        Assert.Single(outerIf.ThenBranch.Statements);
+        
+        var innerIf = Assert.IsType<IfStatement>(outerIf.ThenBranch.Statements.First());
+        var innerCondition = Assert.IsType<BinaryOperator>(innerIf.Condition);
+        var innerLeft = Assert.IsType<Identifier>(innerCondition.Left);
+        Assert.Equal("y", innerLeft.Name);
+        Assert.Single(innerIf.ThenBranch.Statements);
+        Assert.IsType<Return>(innerIf.ThenBranch.Statements.First());
+    }
 
     [Fact]
     public void Generates_EnumDeclaration_AsNumberTypeAlias()
@@ -516,10 +652,10 @@ public class LuauGeneratorTest
         Assert.Null(fn.ReturnType);
         Assert.Null(fn.TypeParameters);
         Assert.Empty(fn.Parameters);
-        Assert.Single(fn.Statements);
+        Assert.Single(fn.Body.Statements);
         Assert.Equal("abc", fn.Name);
 
-        var returnStatement = Assert.IsType<Return>(fn.Statements.First());
+        var returnStatement = Assert.IsType<Return>(fn.Body.Statements.First());
         var literal = Assert.IsType<NumberLiteral>(returnStatement.Expression);
         Assert.Equal(69, literal.Value);
     }
@@ -579,9 +715,9 @@ public class LuauGeneratorTest
             Assert.Equal("T", parameterType.Name);
         }
 
-        Assert.Single(fn.Statements);
+        Assert.Single(fn.Body.Statements);
 
-        var returnStatement = Assert.IsType<Return>(fn.Statements.First());
+        var returnStatement = Assert.IsType<Return>(fn.Body.Statements.First());
         var identifier = Assert.IsType<Identifier>(returnStatement.Expression);
         Assert.Equal("value", identifier.Name);
     }
@@ -598,10 +734,10 @@ public class LuauGeneratorTest
         Assert.Null(fn.ReturnType);
         Assert.Null(fn.TypeParameters);
         Assert.Empty(fn.Parameters);
-        Assert.Single(fn.Statements);
+        Assert.Single(fn.Body.Statements);
         Assert.Equal("abc", fn.Name);
 
-        var returnStatement = Assert.IsType<Return>(fn.Statements.First());
+        var returnStatement = Assert.IsType<Return>(fn.Body.Statements.First());
         var literal = Assert.IsType<NumberLiteral>(returnStatement.Expression);
         Assert.Equal(69, literal.Value);
     }

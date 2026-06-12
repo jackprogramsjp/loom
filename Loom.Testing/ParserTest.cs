@@ -80,6 +80,30 @@ public class ParserTest
     }
 
     [Fact]
+    public void ThrowsFor_DeclarationOutsideOfBlock_InIfThenBranch()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("if true let x = 42");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclarationOutsideOfBlock_InIfElseBranch()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("if true { return 1 } else let x = 42");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        );
+    }
+
+    [Fact]
     public void Parses_Type_Precedence()
     {
         var tree = Utility.GetAST("let x: number? | bool & string");
@@ -263,6 +287,140 @@ public class ParserTest
     }
 
     [Fact]
+    public void Parses_IfElseStatement_WithExpressionElseBranch()
+    {
+        var tree = Utility.GetAST("if condition thenBranch else elseBranch");
+        Assert.Single(tree.Statements);
+
+        var ifStatement = Assert.IsType<If>(tree.Statements.First());
+        var thenBranch = Assert.IsType<ExpressionStatement>(ifStatement.ThenBranch);
+        var elseBranch = Assert.IsType<ExpressionStatement>(ifStatement.ElseBranch!.Branch);
+
+        Assert.IsType<Identifier>(thenBranch.Expression);
+        Assert.IsType<Identifier>(elseBranch.Expression);
+    }
+
+    [Fact]
+    public void Parses_IfStatement_WithComplexCondition()
+    {
+        var tree = Utility.GetAST("if x > 5 && y < 10 { return 1 }");
+        Assert.Single(tree.Statements);
+
+        var ifStatement = Assert.IsType<If>(tree.Statements.First());
+        var condition = Assert.IsType<BinaryOperator>(ifStatement.Condition);
+        Assert.Equal(SyntaxKind.AmpersandAmpersand, condition.Operator.Kind);
+
+        var left = Assert.IsType<BinaryOperator>(condition.Left);
+        var right = Assert.IsType<BinaryOperator>(condition.Right);
+        Assert.Equal(SyntaxKind.RArrow, left.Operator.Kind);
+        Assert.Equal(SyntaxKind.LArrow, right.Operator.Kind);
+    }
+
+    [Fact]
+    public void Parses_NestedIfStatements()
+    {
+        var tree = Utility.GetAST("if x > 0 { if y > 0 { return 1 } }");
+        Assert.Single(tree.Statements);
+
+        var outerIf = Assert.IsType<If>(tree.Statements.First());
+        var outerThen = Assert.IsType<Block>(outerIf.ThenBranch);
+        Assert.Single(outerThen.Statements);
+
+        var innerIf = Assert.IsType<If>(outerThen.Statements.First());
+        var innerCondition = Assert.IsType<BinaryOperator>(innerIf.Condition);
+        Assert.Equal(SyntaxKind.RArrow, innerCondition.Operator.Kind);
+
+        var innerThen = Assert.IsType<Block>(innerIf.ThenBranch);
+        Assert.Single(innerThen.Statements);
+        Assert.IsType<Return>(innerThen.Statements.First());
+    }
+
+    [Fact]
+    public void Parses_IfStatement_WithVariableDeclarationInside()
+    {
+        var result = Utility.Parse("if true { let x = 42 }");
+        Utility.AssertNoErrors(result);
+        Assert.Single(result.Tree.Statements);
+
+        var ifStatement = Assert.IsType<If>(result.Tree.Statements.First());
+        var thenBranch = Assert.IsType<Block>(ifStatement.ThenBranch);
+        Assert.Single(thenBranch.Statements);
+        Assert.IsType<VariableDeclaration>(thenBranch.Statements.First());
+    }
+
+    [Fact]
+    public void Parses_IfElseIfChain_WithMultipleElseIfBranches()
+    {
+        var tree = Utility.GetAST("if a { return 1 } else if b { return 2 } else if c { return 3 } else { return 4 }");
+        Assert.Single(tree.Statements);
+
+        var firstIf = Assert.IsType<If>(tree.Statements.First());
+        Assert.IsType<Identifier>(firstIf.Condition);
+        Assert.IsType<Block>(firstIf.ThenBranch);
+
+        Assert.NotNull(firstIf.ElseBranch);
+        var secondIf = Assert.IsType<If>(firstIf.ElseBranch.Branch);
+        Assert.IsType<Identifier>(secondIf.Condition);
+
+        Assert.NotNull(secondIf.ElseBranch);
+        var thirdIf = Assert.IsType<If>(secondIf.ElseBranch.Branch);
+        Assert.IsType<Identifier>(thirdIf.Condition);
+
+        Assert.NotNull(thirdIf.ElseBranch);
+        var elseBranch = Assert.IsType<Block>(thirdIf.ElseBranch.Branch);
+        Assert.Single(elseBranch.Statements);
+    }
+
+    [Fact]
+    public void Parses_IfStatement_WithMultipleStatementsInBlock()
+    {
+        var tree = Utility.GetAST("if true { let x = 1; let y = 2; return x + y }");
+        Assert.Single(tree.Statements);
+
+        var ifStatement = Assert.IsType<If>(tree.Statements.First());
+        var thenBranch = Assert.IsType<Block>(ifStatement.ThenBranch);
+        Assert.Equal(3, thenBranch.Statements.Count);
+
+        Assert.IsType<VariableDeclaration>(thenBranch.Statements[0]);
+        Assert.IsType<VariableDeclaration>(thenBranch.Statements[1]);
+        Assert.IsType<Return>(thenBranch.Statements[2]);
+    }
+
+    [Fact]
+    public void Parses_IfStatement_WithNoElseBranch()
+    {
+        var tree = Utility.GetAST("if condition { return 42 }");
+        Assert.Single(tree.Statements);
+
+        var ifStatement = Assert.IsType<If>(tree.Statements.First());
+        Assert.Null(ifStatement.ElseBranch);
+    }
+
+    [Fact]
+    public void Parses_IfStatement_WithEmptyThenBranch()
+    {
+        var tree = Utility.GetAST("if condition { }");
+        Assert.Single(tree.Statements);
+
+        var ifStatement = Assert.IsType<If>(tree.Statements.First());
+        var thenBranch = Assert.IsType<Block>(ifStatement.ThenBranch);
+        Assert.Empty(thenBranch.Statements);
+    }
+
+    [Fact]
+    public void Parses_IfStatement_WithEmptyElseBranch()
+    {
+        var tree = Utility.GetAST("if condition { return 1 } else { }");
+        Assert.Single(tree.Statements);
+
+        var ifStatement = Assert.IsType<If>(tree.Statements.First());
+        Assert.NotNull(ifStatement.ElseBranch);
+
+        var elseBranch = Assert.IsType<Block>(ifStatement.ElseBranch.Branch);
+        Assert.Empty(elseBranch.Statements);
+    }
+
+    [Fact]
     public void Parses_EnumDeclaration_WithImplicitValues()
     {
         var tree = Utility.GetAST("enum Abc { A, B, C }");
@@ -366,7 +524,7 @@ public class ParserTest
         var blueValue = Assert.IsType<Literal>(enumDecl.Members[2].EqualsValueClause!.Value);
         Assert.Equal("0000FF", blueValue.Value);
     }
-    
+
     [Fact]
     public void Parses_EmptyEnumDeclaration()
     {

@@ -63,8 +63,26 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         return new LuauGeneratorResult(luauTree, _diagnostics);
     }
 
-    public override LuauNode Visit(Node node) => node.Accept(this);
+    protected override LuauNode Visit(Node node) => node.Accept(this);
     public override LuauTree VisitTree(Tree tree) => new(GenerateStatements(tree.Statements));
+
+    public override IfStatement VisitIf(If @if)
+    {
+        var condition = Visit(@if.Condition);
+        var thenBranch = @if.ThenBranch is Block thenBlock ? VisitBlock(thenBlock) : new Chunk([Visit(@if.ThenBranch)]);
+        var elseBranch = @if.ElseBranch != null ? @if.ElseBranch.Branch is Block elseBlock ? VisitBlock(elseBlock) : new Chunk([Visit(@if.ElseBranch)]) : null;
+        var elseIfBranches = new List<ElseIfBranch>();
+        if (@if.ElseBranch is not { Branch: If elseIf })
+            return new IfStatement(condition, thenBranch, elseIfBranches, elseBranch);
+
+        var luauElseIf = VisitIf(elseIf);
+        elseBranch = luauElseIf.ElseBranch;
+        elseIfBranches.Add(new ElseIfBranch(luauElseIf.Condition, luauElseIf.ThenBranch));
+        elseIfBranches.AddRange(luauElseIf.ElseIfBranches);
+        
+        return new IfStatement(condition, thenBranch, elseIfBranches, elseBranch);
+    }
+
     public override LuauNode VisitReturn(Return @return) => new Luau.AST.Return(Visit(@return.Expression));
 
     public override LuauNode VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -83,8 +101,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             _ => []
         };
 
-        return new Function(functionDeclaration.Name.Text, typeParameters, parameters, returnType, statements);
+        return new Function(functionDeclaration.Name.Text, typeParameters, parameters, returnType, new Chunk(statements));
     }
+
+    public override Chunk VisitBlock(Block block) => new(GenerateStatements(block.Statements));
 
     public override LuauNode VisitTypeAlias(TypeAlias typeAlias)
     {
