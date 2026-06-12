@@ -1,12 +1,4 @@
-fn abc(a: bool) {
-    mut x: number
-    if a {
-        x = 69
-    } else {
-        x = 420
-    }
-    x
-    return x;
+let x: number? = 69
+if x != none {
+    x + 420
 }
-
-let x = abc(true)

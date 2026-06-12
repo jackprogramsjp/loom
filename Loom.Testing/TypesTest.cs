@@ -467,6 +467,7 @@ public class TypesTest
         Assert.False(Number.IsAssignableTo(Never));
         Assert.False(Unknown.IsAssignableTo(Number));
         Assert.True(Number.IsAssignableTo(Unknown));
+        Assert.True(new OptionalType(Number).IsAssignableTo(Unknown));
     }
 
     [Fact]
