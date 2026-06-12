@@ -42,6 +42,8 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
 
         const char underlineChar = '\u2500';
         var hasHint = !string.IsNullOrEmpty(Hint);
+        var pad = new string(' ', startChar);
+        var noPad = false;
         for (var line = startLine; line <= endLine; line++)
         {
             var lineIndex = line - 1;
@@ -51,24 +53,26 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
             var linePrepend = hasHint ? line != endLine && startLine != endLine ? "─" : "┬" : "";
             if (line == startLine && line == endLine)
             {
-                var underline = $"{new string(' ', startChar)}{underlineColor}{linePrepend}{new string(underlineChar, endChar - startChar - lineSubtraction)}{Colors.Reset}";
+                var underline = $"{pad}{underlineColor}{linePrepend}{new string(underlineChar, endChar - startChar - lineSubtraction)}{Colors.Reset}";
                 lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
                 lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
             }
             else if (line == startLine)
             {
-                var underline = $"{new string(' ', startChar)}{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - startChar - lineSubtraction)}{Colors.Reset}";
+                var underline = $"{pad}{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - startChar - lineSubtraction)}{Colors.Reset}";
                 lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
                 lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
             }
             else if (line == endLine)
             {
+                noPad = true;
                 var underline = $"{underlineColor}{linePrepend}{new string(underlineChar, endChar - lineSubtraction)}{Colors.Reset}";
                 lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
                 lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
             }
             else
             {
+                noPad = true;
                 var underline = $"{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - lineSubtraction)}{Colors.Reset}";
                 lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
                 lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
@@ -78,7 +82,7 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
         if (hasHint)
         {
             lines.Add(
-                $"{gutter}{new string(' ', startChar)} {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
+                $"{gutter}{(noPad ? "" : pad)} {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
             );
             lines.Add(gutter);
         }
