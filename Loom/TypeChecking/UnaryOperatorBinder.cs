@@ -13,12 +13,23 @@ public static class UnaryOperatorBinder
     ];
 
     public static UnaryOperatorRule? GetRule(UnaryOperator unaryOperator, Type operandType) =>
-        _rules.FirstOrDefault(rule => rule.OperatorKind == unaryOperator.Operator.Kind && operandType.IsAssignableTo(rule.OperandType));
+        _rules.FirstOrDefault(rule => rule.OperatorKind == unaryOperator.Operator.Kind
+            && Type.IsNotNever(operandType)
+            && operandType.IsAssignableTo(rule.OperandType)
+        );
 
     public static UnaryOperatorRule? GetSuggestion(UnaryOperator unaryOperator, Type operandType)
     {
-        var sameOp = _rules.FirstOrDefault(r => r.OperatorKind == unaryOperator.Operator.Kind && !operandType.IsAssignableTo(r.OperandType));
-        var differentOp = _rules.FirstOrDefault(r => r.OperatorKind != unaryOperator.Operator.Kind && operandType.IsAssignableTo(r.OperandType));
+        var sameOp = _rules.FirstOrDefault(r => r.OperatorKind == unaryOperator.Operator.Kind
+            && Type.IsNotNever(operandType)
+            && !operandType.IsAssignableTo(r.OperandType)
+        );
+
+        var differentOp = _rules.FirstOrDefault(r => r.OperatorKind != unaryOperator.Operator.Kind
+            && Type.IsNotNever(operandType)
+            && operandType.IsAssignableTo(r.OperandType)
+        );
+
         return differentOp ?? sameOp;
     }
 }

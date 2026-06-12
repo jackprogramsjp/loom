@@ -1,4 +1,0 @@
-let x: number? = 69
-if x != none {
-    x + 420
-}

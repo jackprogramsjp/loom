@@ -16,10 +16,10 @@ using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom.TypeChecking;
 
-public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
+public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private Type? _expectedType;
+    private readonly Stack<TypedFlowState> _flowStates = [];
 
     public TypeCheckerResult Check()
     {
@@ -42,7 +42,10 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitTree(Tree tree)
     {
+        _flowStates.Push(new TypedFlowState());
         base.VisitTree(tree);
+        _flowStates.Pop();
+        
         return tree.Statements.Count > 0
             ? semanticModel.GetType(tree.Statements.Last())
             : Types.PrimitiveType.Never;
@@ -60,14 +63,16 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         _diagnostics.Info(expressionStatement, $"Solved type '{TypeSimplifier.Simplify(type)}' for expression");
         return BindType(expressionStatement, type);
     }
-    
+
     public override Type VisitIf(If @if)
     {
         var conditionType = Visit(@if.Condition);
         semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
 
-        var thenBranchType = Visit(@if.ThenBranch);
-        return TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, @if.ElseBranch != null ? Visit(@if.ElseBranch) : Types.PrimitiveType.None]));
+        var (trueState, falseState) = ComputeBranchStates(@if.Condition);
+        var thenBranchType = VisitWithFlowState(@if.ThenBranch, trueState);
+        var elseBranchType = @if.ElseBranch != null ? VisitWithFlowState(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
+        return TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType]));
     }
 
     public override Type VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -75,7 +80,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(Visit<Types.TypeParameter>) ?? [];
         var parameterTypes = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit) ?? [];
         Visit(functionDeclaration.Body);
-        
+
         var returnType = GetReturnType(functionDeclaration);
         var functionType = new FunctionType(typeParameters, parameterTypes, returnType);
 
@@ -103,14 +108,9 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (variableDeclaration.ColonTypeClause != null)
             declaredType = Visit(variableDeclaration.ColonTypeClause);
 
-        var initializerType = declaredType ?? Types.PrimitiveType.Unknown;
-        if (variableDeclaration.EqualsValueClause != null)
-        {
-            var previousExpected = _expectedType;
-            _expectedType = declaredType;
-            initializerType = Visit(variableDeclaration.EqualsValueClause);
-            _expectedType = previousExpected;
-        }
+        var initializerType = variableDeclaration.EqualsValueClause != null
+            ? Visit(variableDeclaration.EqualsValueClause)
+            : declaredType ?? Types.PrimitiveType.Unknown;
 
         Type finalType = Types.PrimitiveType.None;
         if (declaredType != null)
@@ -246,6 +246,9 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitElementAccess(ElementAccess elementAccess)
     {
+        if (TryGetNarrowedType(elementAccess, out var narrowedType))
+            return BindType(elementAccess, narrowedType);
+        
         var type = Visit(elementAccess.Expression);
         if (type is not ObjectType objectType)
         {
@@ -364,6 +367,9 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitIdentifier(Identifier identifier)
     {
+        if (TryGetNarrowedType(identifier, out var narrowedType))
+            return BindType(identifier, narrowedType);
+        
         var symbol = semanticModel.GetSymbol(identifier);
         if (symbol != null)
         {
@@ -417,6 +423,142 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, constraint, defaultType);
         return BindType(typeParameter, parameter);
     }
+    
+    private Type VisitWithFlowState(Node node, TypedFlowState state)
+    {
+        _flowStates.Push(state);
+        var type = Visit(node);
+        _flowStates.Pop();
+        
+        return type;
+    }
+
+    private bool TryGetNarrowedType(Expression expression, [MaybeNullWhen(false)] out Type narrowedType)
+    {
+        if (_flowStates.TryPeek(out var flow) && GetFlowAddress(expression) is { } address && flow.NarrowedTypes.TryGetValue(address, out var narrowed))
+        {
+            narrowedType = BindType(expression, narrowed);
+            return true;
+        }
+        
+        narrowedType = null;
+        return false;
+    }
+
+    private (TypedFlowState trueState, TypedFlowState falseState) ComputeBranchStates(Expression condition)
+    {
+        var current = _flowStates.Peek();
+        if (condition is BinaryOperator { Operator.Kind: SyntaxKind.EqualsEquals or SyntaxKind.BangEquals } binaryOperator)
+            return NarrowByCondition(binaryOperator, current);
+
+        return (new TypedFlowState(current), new TypedFlowState(current));
+    }
+
+    private (TypedFlowState trueState, TypedFlowState falseState) NarrowByCondition(BinaryOperator binaryOperator, TypedFlowState current)
+    {
+        var trueState = new TypedFlowState(current);
+        var falseState = new TypedFlowState(current);
+        if (TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expr, out var literal)
+            || TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expr, out literal))
+        {
+            ApplyBinaryNarrowing(expr, literal, binaryOperator.Operator.Kind, trueState, falseState);
+        }
+
+        return (trueState, falseState);
+    }
+
+    private bool TryGetExpressionAndLiteral(
+        Expression expr1,
+        Expression expr2,
+        [MaybeNullWhen(false)] out Expression expr,
+        [MaybeNullWhen(false)] out Expression literal)
+    {
+        if (!IsCompileTimeLiteral(expr2))
+        {
+            expr = null;
+            literal = null;
+            return false;
+        }
+
+        expr = expr1;
+        literal = expr2;
+        return true;
+    }
+
+    private bool IsCompileTimeLiteral(Expression expr) =>
+        expr is Literal or NameOf || expr is QualifiedName && semanticModel.GetDeclaringSymbol(expr)?.Declaration is EnumDeclaration;
+
+    private void ApplyBinaryNarrowing(
+        Expression expression,
+        Expression literal,
+        SyntaxKind operatorKind,
+        TypedFlowState trueState,
+        TypedFlowState falseState)
+    {
+        var address = GetFlowAddress(expression);
+        if (address == null) return;
+        
+        var baseType = semanticModel.GetType(expression);
+        var literalType = semanticModel.GetType(literal);
+        var isNone = literal is Literal { Value: null };
+        var isEquals = operatorKind == SyntaxKind.EqualsEquals;
+
+        if (isNone)
+        {
+            if (isEquals)
+            {
+                trueState.NarrowedTypes[address] = literalType;
+                falseState.NarrowedTypes[address] = baseType.NonNullable();
+            }
+            else
+            {
+                trueState.NarrowedTypes[address] = baseType.NonNullable();
+                falseState.NarrowedTypes[address] = literalType;
+            }
+        }
+        else
+        {
+            if (isEquals)
+                trueState.NarrowedTypes[address] = literalType;
+            else
+                falseState.NarrowedTypes[address] = literalType;
+        }
+    }
+
+    private TypedFlowAddress? GetFlowAddress(Expression expr) =>
+        expr switch
+        {
+            Identifier identifier => GetIdentifierFlowAddress(identifier),
+            QualifiedName qualifiedName => BuildFieldChain(qualifiedName.Identifier, qualifiedName.Names),
+            PropertyAccess propertyAccess => BuildFieldChain(propertyAccess.Expression, propertyAccess.Names),
+            ElementAccess elementAccess => GetElementAddress(elementAccess),
+            _ => null
+        };
+
+    private TypedFlowAddress? BuildFieldChain(Expression baseExpr, List<DotName> dotNames)
+    {
+        var address = GetFlowAddress(baseExpr);
+        return address == null 
+            ? null 
+            : dotNames.Aggregate(address, (current, name) => TypedFlowAddress.Field(current, name.Name.Text));
+    }
+    
+    private TypedFlowAddress? GetElementAddress(ElementAccess elementAccess)
+    {
+        if (GetFlowAddress(elementAccess.Expression) is not { } baseAddress)
+            return null;
+
+        if (elementAccess.IndexExpression is Literal { Value: not null and not bool } literal)
+            return TypedFlowAddress.Element(baseAddress, literal.Value);
+
+        return null;
+    }
+
+    private TypedFlowAddress? GetIdentifierFlowAddress(Identifier identifier)
+    {
+        var symbol = semanticModel.GetSymbol(identifier);
+        return symbol != null ? TypedFlowAddress.Variable(symbol) : null;
+    }
 
     private bool CheckEnumMemberIsConstant(EnumMember member, Type type)
     {
@@ -427,22 +569,25 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return false;
     }
 
-    private Type GetTypeOfNamedAccess(Node node, Expression expression, List<DotName> names)
+    private Type GetTypeOfNamedAccess(Expression accessExpression, Expression targetExpression, List<DotName> names)
     {
-        var type = Visit(expression);
+        if (TryGetNarrowedType(accessExpression, out var narrowedType))
+            return BindType(accessExpression, narrowedType);
+        
+        var type = Visit(targetExpression);
         foreach (var dotName in names)
         {
             if (type is not ObjectType objectType)
             {
-                _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
-                return BindType(node, Types.PrimitiveType.Never);
+                _diagnostics.Error(accessExpression, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
+                return BindType(accessExpression, Types.PrimitiveType.Never);
             }
 
             var indexType = new Types.LiteralType(dotName.Name.Text);
-            type = GetTypeAtIndexInObject(node, objectType, indexType);
+            type = GetTypeAtIndexInObject(accessExpression, objectType, indexType);
         }
 
-        return BindType(node, type);
+        return BindType(accessExpression, type);
     }
 
     private Type GetTypeAtIndexInObject(Node node, ObjectType objectType, Type indexType)
@@ -486,7 +631,7 @@ public class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         if (functionDeclaration.ReturnType != null)
             return Visit(functionDeclaration.ReturnType);
-        
+
         // TODO: flow analysis
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
