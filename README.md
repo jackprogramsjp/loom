@@ -187,6 +187,24 @@ const slice = table.move(arr, math.clamp(1, 1, _length), math.clamp(3, 1, _lengt
 ```
 ##
 ```rs
+let s = "abcdef";
+let slice = s[1..3];
+```
+```luau
+const s = "abcdef"
+const slice = string.sub(s, 1, 3)
+```
+##
+```rs
+let s = "abcdef";
+let char = s[1];
+```
+```luau
+const s = "abcdef"
+const char = string.sub(s, 1, 1)
+```
+##
+```rs
 let min = (1..10).minimum;
 ```
 ```luau
