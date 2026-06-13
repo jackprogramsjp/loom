@@ -10,17 +10,16 @@ public class FunctionDeclaration(
     ColonTypeClause? returnType,
     Statement body
 )
-    : GenericNamedDeclaration(
+    : DeclareFunctionSignature(
         keyword,
         name,
         typeParameters,
         parameters,
-        returnType,
+        returnType!,
         body
     )
 {
-    public Parameters? Parameters { get; } = parameters;
-    public ColonTypeClause? ReturnType { get; } = returnType;
+    public new ColonTypeClause? ReturnType { get; } = returnType;
     public Statement Body { get; } = body;
 
     public override T Accept<T>(Visitor<T> visitor) => visitor.VisitFunctionDeclaration(this);

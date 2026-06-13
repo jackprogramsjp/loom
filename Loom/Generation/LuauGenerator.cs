@@ -82,7 +82,9 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         
         return new IfStatement(condition, thenBranch, elseIfBranches, elseBranch);
     }
-
+    
+    public override Chunk VisitBlock(Block block) => new(GenerateStatements(block.Statements));
+    public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
     public override LuauNode VisitReturn(Return @return) => new Luau.AST.Return(Visit(@return.Expression));
 
     public override LuauNode VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -104,8 +106,6 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         return new Function(functionDeclaration.Name.Text, typeParameters, parameters, returnType, new Chunk(statements));
     }
 
-    public override Chunk VisitBlock(Block block) => new(GenerateStatements(block.Statements));
-
     public override LuauNode VisitTypeAlias(TypeAlias typeAlias)
     {
         var typeParameters = typeAlias.TypeParameters != null
@@ -126,8 +126,6 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             ? new ConstVariable(name, type, initializer!)
             : new LocalVariable(name, type, initializer);
     }
-
-    public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
 
     public override LuauNode VisitEnumDeclaration(EnumDeclaration enumDeclaration)
     {
@@ -155,9 +153,9 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
                 _ => Luau.AST.PrimitiveType.Number
             }
         );
-
-        ;
     }
+
+    public override LuauNode VisitDeclare(Declare declare) => new NoOpStatement();
 
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
@@ -387,7 +385,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             result.AddRange(scope.PostreqStatements);
         }
 
-        return result;
+        return result.FindAll(s => s is not NoOpStatement);
     }
 
     private (T, LuauScope) Capture<T>(Func<T> callback)

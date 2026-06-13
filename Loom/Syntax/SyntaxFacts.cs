@@ -24,6 +24,7 @@ public static class SyntaxFacts
             new("while", SyntaxKind.WhileKeyword),
             new("match", SyntaxKind.MatchKeyword),
             new("nameof", SyntaxKind.NameOfKeyword),
+            new("declare", SyntaxKind.DeclareKeyword),
         ]
     );
     public static readonly Dictionary<string, SyntaxKind> OperatorMap = new(

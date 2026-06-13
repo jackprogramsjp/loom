@@ -50,7 +50,7 @@ public class Parser(LexerResult lexerResult)
     {
         if (Match(out var leftBrace, SyntaxKind.LBrace))
             return ParseBlock(leftBrace);
-        
+
         if (Match(out var returnKeyword, SyntaxKind.ReturnKeyword))
             return new Return(returnKeyword, ParseExpression());
 
@@ -66,6 +66,9 @@ public class Parser(LexerResult lexerResult)
         if (Match(out var enumKeyword, SyntaxKind.EnumKeyword))
             return ParseEnumDeclaration(enumKeyword);
 
+        if (Match(out var declareKeyword, SyntaxKind.DeclareKeyword))
+            return ParseDeclareStatement(declareKeyword);
+
         if (Match(out var ifKeyword, SyntaxKind.IfKeyword))
             return ParseIf(ifKeyword);
 
@@ -80,7 +83,7 @@ public class Parser(LexerResult lexerResult)
         var elseBranch = Match(out var elseKeyword, SyntaxKind.ElseKeyword) ? new ElseBranch(elseKeyword, ParseStatement()) : null;
         if (!AssertDeclarationInsideOfBlock(thenBranch) || elseBranch != null && !AssertDeclarationInsideOfBlock(elseBranch.Branch))
             return new NullStatement(keyword);
-        
+
         return new If(keyword, condition, thenBranch, elseBranch);
     }
 
@@ -97,6 +100,73 @@ public class Parser(LexerResult lexerResult)
         );
 
         return false;
+    }
+
+    private Statement ParseDeclareStatement(Token declareKeyword)
+    {
+        var statement = ParseDeclareSignature(declareKeyword);
+        if (statement is not DeclareSignature signature)
+            return statement;
+
+        return new Declare(declareKeyword, signature);
+    }
+
+    private Statement ParseDeclareSignature(Token declareKeyword)
+    {
+        if (Match(out var fnKeyword, SyntaxKind.FnKeyword))
+            return ParseDeclareFunctionSignature(fnKeyword);
+
+        if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
+            return ParseDeclareVariableSignature(variableKeyword);
+
+        _diagnostics.Error(declareKeyword, InternalCodes.ExpectedDeclarationSignature, $"Expected declaration signature, got {SafeTokenText(MaybeCurrent())}");
+        return new NullStatement(declareKeyword);
+    }
+
+    private Statement ParseDeclareVariableSignature(Token variableKeyword)
+    {
+        var name = ExpectIdentifier();
+        var colonTypeClause = ParseColonTypeClause();
+        if (colonTypeClause != null)
+            return new DeclareVariableSignature(variableKeyword, name, colonTypeClause);
+
+        _diagnostics.Error(
+            name,
+            InternalCodes.MissingDeclareFnReturnType,
+            "Declared variable signatures must have a type."
+        );
+
+        return new NullStatement(variableKeyword);
+    }
+
+    private Statement ParseDeclareFunctionSignature(Token fnKeyword)
+    {
+        var name = ExpectIdentifier();
+        var typeParameters = ParseTypeParameters();
+        var parameters = ParseParameters();
+        var returnType = ParseColonTypeClause();
+        if (returnType == null)
+        {
+            _diagnostics.Error(
+                parameters?.Span ?? typeParameters?.Span ?? name.Span,
+                InternalCodes.MissingDeclareFnReturnType,
+                "Declared function signatures must have a return type."
+            );
+
+            return new NullStatement(fnKeyword);
+        }
+
+        var parameterWithDefault = parameters?.ParameterList.Find(p => p.EqualsValueClause != null);
+        if (parameterWithDefault == null)
+            return new DeclareFunctionSignature(fnKeyword, name, typeParameters, parameters, returnType);
+
+        _diagnostics.Error(
+            parameterWithDefault,
+            InternalCodes.MissingDeclareFnReturnType,
+            "Parameters may not have default values in declared function signatures."
+        );
+
+        return new NullStatement(fnKeyword);
     }
 
     private Statement ParseFunctionDeclaration(Token keyword)
@@ -348,7 +418,7 @@ public class Parser(LexerResult lexerResult)
             _diagnostics.Error(currentOrLast, InternalCodes.UnexpectedToken, "Unexpected token.");
             _position++;
         }
-        
+
         return new NullExpression(currentOrLast);
     }
 

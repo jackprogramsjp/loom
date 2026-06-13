@@ -1,3 +1,1 @@
-const function foo()
-  return "bar"
-end
+print(69)

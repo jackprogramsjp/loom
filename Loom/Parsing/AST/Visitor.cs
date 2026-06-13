@@ -9,7 +9,7 @@ public abstract class Visitor<T>
         (TResult)Visit(node)!;
 
     public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
-    
+
     public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
 
     public virtual T VisitIf(If @if)
@@ -17,7 +17,7 @@ public abstract class Visitor<T>
         var results = new List<T> { Visit(@if.Condition), Visit(@if.ThenBranch) };
         if (@if.ElseBranch != null)
             results.Add(Visit(@if.ElseBranch));
-        
+
         return CombineResults(results);
     }
 
@@ -36,6 +36,13 @@ public abstract class Visitor<T>
         results.Add(Visit(functionDeclaration.Body));
         return CombineResults(results);
     }
+
+    public virtual T VisitDeclare(Declare declare) => Visit(declare.Signature);
+    public virtual T VisitDeclareVariableSignature(DeclareVariableSignature declareVariableSignature) => MaybeVisit(declareVariableSignature.ColonTypeClause)!;
+    public virtual T VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature) =>
+        CombineResults(
+            [MaybeVisit(declareFunctionSignature.TypeParameters), MaybeVisit(declareFunctionSignature.Parameters), Visit(declareFunctionSignature.ReturnType)]
+        );
 
     public virtual T VisitTypeAlias(TypeAlias typeAlias)
     {
@@ -70,7 +77,7 @@ public abstract class Visitor<T>
 
         return CombineResults(results);
     }
-    
+
     public virtual T VisitEnumDeclaration(EnumDeclaration enumDeclaration) => VisitList(enumDeclaration.Members);
     public virtual T VisitEnumMember(EnumMember enumMember) => MaybeVisit(enumMember.EqualsValueClause)!;
 
@@ -84,12 +91,12 @@ public abstract class Visitor<T>
     public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);
     public abstract T VisitLiteral(Literal literal);
     public abstract T VisitIdentifier(Identifier identifier);
-    
+
     public virtual T VisitParenthesized(Parenthesized parenthesized) => Visit(parenthesized.Expression);
     public virtual T VisitNameOf(NameOf nameOf) => Visit(nameOf.Name);
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
     public virtual T VisitInvocation(Invocation invocation) => CombineResults([Visit(invocation.Expression), Visit(invocation.Arguments)]);
-    
+
     public virtual T VisitQualifiedName(QualifiedName qualifiedName) => Visit(qualifiedName.Identifier);
     public virtual T VisitPropertyAccess(PropertyAccess propertyAccess) => Visit(propertyAccess.Expression);
     public virtual T VisitElementAccess(ElementAccess elementAccess) => CombineResults([Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression)]);
@@ -122,7 +129,7 @@ public abstract class Visitor<T>
     public virtual T VisitNullStatement(NullStatement nullStatement) => default!;
     public virtual T VisitNullTypeExpression(NullTypeExpression nullTypeExpression) => default!;
 
-    protected virtual T CombineResults(IEnumerable<T> results) => results.LastOrDefault()!;
+    protected virtual T CombineResults(IEnumerable<T?> results) => results.LastOrDefault(r => r != null)!;
 
     protected TResult? MaybeVisit<TResult>(Node? node)
         where TResult : T =>

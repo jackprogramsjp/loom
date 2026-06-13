@@ -166,6 +166,22 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return true;
     }
 
+    public override bool VisitDeclare(Declare declare)
+    {
+        var symbolKind = declare.Signature switch
+        {
+            DeclareFunctionSignature => SymbolKind.Function,
+            _ => SymbolKind.Variable
+        };
+        
+        var isMutable = declare.Signature is DeclareVariableSignature { Keyword.Kind: SyntaxKind.MutKeyword };
+        if (!DeclareVariable(declare.Signature, symbolKind, out var symbol, isMutable))
+            return false;
+        
+        MarkDefinitelyInitialized(symbol);
+        return Visit(declare.Signature);
+    }
+
     public override bool VisitParameters(Parameters parameters) => parameters.ParameterList.All(Visit);
 
     public override bool VisitParameter(Parameter parameter)

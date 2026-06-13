@@ -45,7 +45,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         _flowStates.Push(new TypedFlowState());
         base.VisitTree(tree);
         _flowStates.Pop();
-        
+
         return tree.Statements.Count > 0
             ? semanticModel.GetType(tree.Statements.Last())
             : Types.PrimitiveType.Never;
@@ -129,6 +129,23 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             finalType = finalType.Widen();
 
         return BindType(variableDeclaration, TypeSimplifier.Simplify(finalType));
+    }
+
+    public override Type VisitDeclare(Declare declare)
+    {
+        var type = declare.Signature switch
+        {
+            DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause),
+            DeclareFunctionSignature functionSignature => new FunctionType(
+                functionSignature.TypeParameters?.ParameterList.ConvertAll(Visit<Types.TypeParameter>) ?? [],
+                functionSignature.Parameters?.ParameterList.ConvertAll(Visit) ?? [],
+                Visit(functionSignature.ReturnType)
+            ),
+            _ => Types.PrimitiveType.Never
+        };
+
+        BindType(declare.Signature, type);
+        return BindType(declare, type);
     }
 
     public override Type VisitParameter(Parameter parameter)
@@ -248,7 +265,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         if (TryGetNarrowedType(elementAccess, out var narrowedType))
             return BindType(elementAccess, narrowedType);
-        
+
         var type = Visit(elementAccess.Expression);
         if (type is not ObjectType objectType)
         {
@@ -369,7 +386,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         if (TryGetNarrowedType(identifier, out var narrowedType))
             return BindType(identifier, narrowedType);
-        
+
         var symbol = semanticModel.GetSymbol(identifier);
         if (symbol != null)
         {
@@ -423,13 +440,13 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, constraint, defaultType);
         return BindType(typeParameter, parameter);
     }
-    
+
     private Type VisitWithFlowState(Node node, TypedFlowState state)
     {
         _flowStates.Push(state);
         var type = Visit(node);
         _flowStates.Pop();
-        
+
         return type;
     }
 
@@ -440,7 +457,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             narrowedType = BindType(expression, narrowed);
             return true;
         }
-        
+
         narrowedType = null;
         return false;
     }
@@ -497,7 +514,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         var address = GetFlowAddress(expression);
         if (address == null) return;
-        
+
         var baseType = semanticModel.GetType(expression);
         var literalType = semanticModel.GetType(literal);
         var isNone = literal is Literal { Value: null };
@@ -538,11 +555,11 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     private TypedFlowAddress? BuildFieldChain(Expression baseExpr, List<DotName> dotNames)
     {
         var address = GetFlowAddress(baseExpr);
-        return address == null 
-            ? null 
+        return address == null
+            ? null
             : dotNames.Aggregate(address, (current, name) => TypedFlowAddress.Field(current, name.Name.Text));
     }
-    
+
     private TypedFlowAddress? GetElementAddress(ElementAccess elementAccess)
     {
         if (GetFlowAddress(elementAccess.Expression) is not { } baseAddress)
@@ -573,7 +590,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         if (TryGetNarrowedType(accessExpression, out var narrowedType))
             return BindType(accessExpression, narrowedType);
-        
+
         var type = Visit(targetExpression);
         foreach (var dotName in names)
         {

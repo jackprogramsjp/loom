@@ -12,6 +12,9 @@ public static class InternalCodes
     public const string UnexpectedEof = "L202";
     public const string InvalidAssignmentTarget = "L203";
     public const string MissingFunctionBody = "L204";
+    public const string MissingDeclareFnReturnType = "L205";
+    public const string ExpectedDeclarationSignature = "L206";
+    public const string DeclarationOutsideOfBlock = "L207";
 
     public const string CannotFindName = "L301";
     public const string DuplicateName = "L302";
@@ -38,9 +41,7 @@ public static class InternalCodes
     public const string StringEnumMemberMustHaveInitializer = "L323";
     public const string DynamicEnumMemberInitializer = "L324";
     public const string DynamicEnumAccess = "L325";
-    public const string DeclarationOutsideOfBlock = "L326";
     public const string UseOfMaybeUninitialized = "L327";
     public const string ReturnOutsideFunction = "L328";
     public const string UnreachableCode = "L329";
-    public const string DeclarationUnused = "L330";
 }

@@ -83,6 +83,7 @@ public enum SyntaxKind : ushort
     WhileKeyword,
     MatchKeyword,
     NameOfKeyword,
+    DeclareKeyword,
 
     Identifier
 }
