@@ -1,1 +1,1 @@
-(69 as number) + 1
+let unknown = 69 as unknown;

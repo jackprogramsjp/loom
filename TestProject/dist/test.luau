@@ -1,1 +1,1 @@
-const _ = ((69 ::  number)) + 1
+const unknown = (69 :: unknown)

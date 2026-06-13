@@ -249,6 +249,13 @@ print("hello, world!");
 ```luau
 print("hello, world!")
 ```
+##
+```rs
+let unknown = 69 as unknown;
+```
+```luau
+const unknown = (69 :: unknown)
+```
 
 ## Planned Features
 
