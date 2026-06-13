@@ -2,15 +2,29 @@ using Loom.Diagnostics;
 using Loom.Generation;
 using Loom.Lexing;
 using Loom.Parsing;
+using Loom.Projects;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking;
 
 namespace Loom;
 
-public class CompilationUnit(List<SourceFile> files)
+public class CompilationUnit(LoomConfig loomConfig)
 {
-    public static CompiledFile Compile(SourceFile file)
+    public CompilationResult Compile()
+    {
+        var sourceFiles = FileManager.LoadDirectory(loomConfig.Files.SourceDirectory);
+        var compiledFiles = sourceFiles.ConvertAll(Compile);
+        var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
+        if (!diagnostics.ContainsErrors())
+        {
+            compiledFiles.ForEach(FileManager.WriteCompiledFile);
+        }
+
+        return new CompilationResult(compiledFiles, diagnostics);
+    }
+
+    public CompiledFile Compile(SourceFile file)
     {
         var pipelineDiagnostics = new List<DiagnosticBag>();
         try
@@ -30,6 +44,12 @@ public class CompilationUnit(List<SourceFile> files)
 
             return new CompiledFile
             {
+                Path = file.AbsolutePath
+                    .Replace(
+                        Path.GetFileName(loomConfig.Files.SourceDirectory) + Path.DirectorySeparatorChar,
+                        Path.GetFileName(loomConfig.Files.OutputDirectory) + Path.DirectorySeparatorChar
+                    )
+                    .Replace(FileManager.LoomExtension, ".luau"),
                 Diagnostics = diagnostics,
                 RenderedLuau = renderedLuau,
                 LuauTree = generatorResult.LuauTree,
@@ -46,19 +66,12 @@ public class CompilationUnit(List<SourceFile> files)
             diagnostics.CompilerError(file, $"The compiler threw an exception!\n{e.Message}\n{e.StackTrace}");
             return null!;
         }
-        
+
         T trackDiagnostics<T>(T result)
             where T : DiagnosedResult
         {
             pipelineDiagnostics.Add(result.Diagnostics);
             return result;
         }
-    }
-    
-    public CompilationResult Compile()
-    {
-        var compiledFiles = files.ConvertAll(Compile);
-        var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
-        return new CompilationResult(compiledFiles, diagnostics);
     }
 }

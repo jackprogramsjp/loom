@@ -25,4 +25,8 @@
         <ProjectReference Include="..\Loom\Loom.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="TestFiles\dist\" />
+    </ItemGroup>
+
 </Project>

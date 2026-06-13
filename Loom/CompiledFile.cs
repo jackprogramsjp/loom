@@ -1,5 +1,4 @@
 using Loom.Diagnostics;
-using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
@@ -10,6 +9,7 @@ namespace Loom;
 
 public class CompiledFile
 {
+    public required string Path { get; init; }
     public required DiagnosticBag Diagnostics { get; init; }
     public required string RenderedLuau { get; init; }
     public required LuauTree LuauTree { get; init; }
