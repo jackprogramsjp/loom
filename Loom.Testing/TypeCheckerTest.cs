@@ -691,6 +691,22 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
+    
+    [Fact]
+    public void Checks_RangeLiteral_StringElementAccess()
+    {
+        var type = Utility.GetLastStatementType("let x = 'abcdef'; x[1..3]");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.String, primitive.Kind);
+    }
+    
+    [Fact]
+    public void Checks_StringElementAccess()
+    {
+        var type = Utility.GetLastStatementType("let x = 'abcdef'; x[1]");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.String, primitive.Kind);
+    }
 
     [Fact]
     public void Checks_RangeLiteral()
