@@ -241,6 +241,14 @@ elseif 69 == 69 then
     const yes = "yes"
 end
 ```
+##
+```rs
+declare fn print(msg: unknown): void;
+print("hello, world!");
+```
+```luau
+print("hello, world!")
+```
 
 ## Planned Features
 
