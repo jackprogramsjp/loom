@@ -46,7 +46,7 @@ public abstract class Node
         if (Parent is T node)
             return node;
         
-        return Parent.FirstAncestorOfType<T>();
+        return Parent?.FirstAncestorOfType<T>();
     }
 
     private static List<Node> SortChildren(IEnumerable<Node?> children) => children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();

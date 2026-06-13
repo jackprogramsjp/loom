@@ -157,16 +157,30 @@ public class Parser(LexerResult lexerResult)
         }
 
         var parameterWithDefault = parameters?.ParameterList.Find(p => p.EqualsValueClause != null);
-        if (parameterWithDefault == null)
-            return new DeclareFunctionSignature(fnKeyword, name, typeParameters, parameters, returnType);
+        if (parameterWithDefault != null)
+        {
+            _diagnostics.Error(
+                parameterWithDefault,
+                InternalCodes.UseOfDeclareFnParameterDefaults,
+                "Parameters may not have default values in declared function signatures."
+            );
 
-        _diagnostics.Error(
-            parameterWithDefault,
-            InternalCodes.MissingDeclareFnReturnType,
-            "Parameters may not have default values in declared function signatures."
-        );
+            return new NullStatement(fnKeyword);
+        }
+        
+        var parameterWithoutType = parameters?.ParameterList.Find(p => p.ColonTypeClause == null);
+        if (parameterWithoutType != null)
+        {
+            _diagnostics.Error(
+                parameterWithoutType,
+                InternalCodes.MissingDeclareFnParameterType,
+                "Parameters must have types in declared function signatures."
+            );
 
-        return new NullStatement(fnKeyword);
+            return new NullStatement(fnKeyword);
+        }
+        
+        return new DeclareFunctionSignature(fnKeyword, name, typeParameters, parameters, returnType);
     }
 
     private Statement ParseFunctionDeclaration(Token keyword)

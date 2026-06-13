@@ -111,8 +111,9 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return false;
         }
 
-        var symbol = new Symbol(functionDeclaration, SymbolKind.Function, name);
-        DeclareSymbol(symbol);
+        if (!DeclareVariable(functionDeclaration, SymbolKind.Function, out var symbol))
+            return false;
+        
         MarkDefinitelyInitialized(symbol);
         PushScope();
         if (functionDeclaration.TypeParameters != null)
@@ -180,6 +181,17 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         
         MarkDefinitelyInitialized(symbol);
         return Visit(declare.Signature);
+    }
+
+    public override bool VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature)
+    {
+        PushScope();
+        MaybeVisit(declareFunctionSignature.TypeParameters);
+        MaybeVisit(declareFunctionSignature.Parameters);
+        Visit(declareFunctionSignature.ReturnType);
+        PopScope();
+
+        return true;
     }
 
     public override bool VisitParameters(Parameters parameters) => parameters.ParameterList.All(Visit);
@@ -403,7 +415,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             target.MaybeInitialized.Add(v);
     }
 
-    /// <summary>Pushes a copy of the current initialization state and returns that copy.</summary>
+    /// <summary>Pushes a copy of the current flow state and returns that copy.</summary>
     private FlowState PushInheritedFlowState()
     {
         var state = new FlowState(CurrentFlowState());

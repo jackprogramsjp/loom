@@ -79,13 +79,12 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     {
         var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(Visit<Types.TypeParameter>) ?? [];
         var parameterTypes = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit) ?? [];
-        Visit(functionDeclaration.Body);
-
         var returnType = GetReturnType(functionDeclaration);
-        var functionType = new FunctionType(typeParameters, parameterTypes, returnType);
-
+        var functionType = BindType(functionDeclaration, new FunctionType(typeParameters, parameterTypes, returnType));
+        Visit(functionDeclaration.Body);
+        
         _diagnostics.Info(functionDeclaration, $"Solved type '{TypeSimplifier.Simplify(functionType)}' for function");
-        return BindType(functionDeclaration, functionType);
+        return functionType;
     }
 
     public override Type VisitTypeAlias(TypeAlias typeAlias)
