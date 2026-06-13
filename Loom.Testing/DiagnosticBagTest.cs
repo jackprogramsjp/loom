@@ -7,16 +7,10 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class DiagnosticBagTest
 {
-    private readonly SourceFile _file = new("test.loom", "");
-    private readonly LocationSpan _span;
-
-    public DiagnosticBagTest()
-    {
-        _span = LocationSpan.Empty(_file);
-    }
+    private readonly LocationSpan _span = LocationSpan.Empty(SourceFile.Empty);
     
     private Token NewToken(SyntaxKind kind = SyntaxKind.Identifier, string text = "x")
-        => new(kind, LocationSpan.Empty(_file), text);
+        => new(kind, _span, text);
 
     private Identifier NewIdentifier(string name = "x")
         => new(new Token(SyntaxKind.Identifier, _span, name));
@@ -146,11 +140,11 @@ public class DiagnosticBagTest
     public void CompilerError_File_CreatesEmptySpanForFile()
     {
         var bag = new DiagnosticBag();
-        bag.CompilerError(_file, "file error");
+        bag.CompilerError(SourceFile.Empty, "file error");
         
         Assert.Single(bag.Set);
         var diag = bag.Set.Single();
-        Assert.Equal(_file, diag.Span.File);
+        Assert.Equal(SourceFile.Empty, diag.Span.File);
         Assert.Equal(0, diag.Span.Start.Character);
     }
     
