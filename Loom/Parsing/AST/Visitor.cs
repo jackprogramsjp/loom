@@ -56,6 +56,7 @@ public abstract class Visitor<T>
     public virtual T VisitPropertyAccess(PropertyAccess propertyAccess) => Visit(propertyAccess.Expression);
     public virtual T VisitElementAccess(ElementAccess elementAccess) => CombineResults([Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression)]);
 
+    public virtual T VisitAsExpression(AsExpression asExpression) => CombineResults([Visit(asExpression.Expression), Visit(asExpression.Type)]);
     public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) =>
         CombineResults([Visit(assignmentOperator.Left), Visit(assignmentOperator.Right)]);
 

@@ -252,6 +252,16 @@ public class VisitorTraversalTest
             "NameOf",
             "Identifier"
         );
+    
+    [Fact]
+    public void As_VisitsExpressionAndType() =>
+        AssertVisitOrder(
+            "x as number",
+            "ExpressionStatement",
+            "AsExpression",
+            "Identifier",
+            "PrimitiveType"
+        );
 
     [Fact]
     public void ArrayType_VisitsElementType() =>

@@ -988,6 +988,20 @@ public class LuauGeneratorTest
         var identifier = Assert.IsType<Identifier>(parenthesized.Expression);
         Assert.Equal("abc", identifier.Name);
     }
+    
+    [Fact]
+    public void Generates_TypeCasts()
+    {
+        var luauTree = Utility.GetLuauAST("abc as number");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var typeCast = Assert.IsType<TypeCast>(variable.Initializer);
+        var identifier = Assert.IsType<Identifier>(typeCast.Expression);
+        var primitive = Assert.IsType<PrimitiveType>(typeCast.Type);
+        Assert.Equal("abc", identifier.Name);
+        Assert.Equal("number", primitive.Render());
+    }
 
     [Fact]
     public void Generates_Identifiers()

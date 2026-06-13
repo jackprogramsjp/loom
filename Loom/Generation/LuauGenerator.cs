@@ -79,10 +79,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         elseBranch = luauElseIf.ElseBranch;
         elseIfBranches.Add(new ElseIfBranch(luauElseIf.Condition, luauElseIf.ThenBranch));
         elseIfBranches.AddRange(luauElseIf.ElseIfBranches);
-        
+
         return new IfStatement(condition, thenBranch, elseIfBranches, elseBranch);
     }
-    
+
     public override Chunk VisitBlock(Block block) => new(GenerateStatements(block.Statements));
     public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
     public override LuauNode VisitReturn(Return @return) => new Luau.AST.Return(Visit(@return.Expression));
@@ -240,13 +240,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         return assigned;
     }
 
-    public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
-    {
-        var operand = Visit(unaryOperator.Operand);
-        return SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind)
-            ? LuauFactory.Bit32Call("bnot", [operand])
-            : new Luau.AST.UnaryOperator(MapLuau.UnaryOperator(unaryOperator.Operator.Text), operand);
-    }
+    public override LuauNode VisitAsExpression(AsExpression asExpression) => new TypeCast(Visit(asExpression.Expression), Visit(asExpression.Type));
 
     public override LuauNode VisitBinaryOperator(BinaryOperator binaryOperator)
     {
@@ -280,6 +274,14 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         var isConcatenation = op.StartsWith('+') && leftType.IsAssignableTo(@string) && rightType.IsAssignableTo(@string);
         var mappedOperator = isConcatenation ? op.Replace("+", "..") : MapLuau.BinaryOperator(op);
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
+    }
+
+    public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
+    {
+        var operand = Visit(unaryOperator.Operand);
+        return SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind)
+            ? LuauFactory.Bit32Call("bnot", [operand])
+            : new Luau.AST.UnaryOperator(MapLuau.UnaryOperator(unaryOperator.Operator.Text), operand);
     }
 
     public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));

@@ -1125,6 +1125,119 @@ public class ParserTest
         Assert.Equal(5L, Assert.IsType<Literal>(rangeLiteral.Maximum).Value);
     }
 
+    [Fact]
+    public void Parses_AsExpression_Basic()
+    {
+        var tree = Utility.GetAST("x as number");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.First());
+        var asExpr = Assert.IsType<AsExpression>(exprStmt.Expression);
+
+        var left = Assert.IsType<Identifier>(asExpr.Expression);
+        Assert.Equal("x", left.Name.Text);
+
+        var type = Assert.IsType<PrimitiveType>(asExpr.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, type.Kind);
+
+        Assert.Equal(SyntaxKind.AsKeyword, asExpr.Keyword.Kind);
+    }
+
+    [Fact]
+    public void Parses_AsExpression_WithGenericType()
+    {
+        var tree = Utility.GetAST("x as List<number>");
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var asExpr = Assert.IsType<AsExpression>(exprStmt.Expression);
+        var typeName = Assert.IsType<TypeName>(asExpr.Type);
+        Assert.Equal("List", typeName.Name.Text);
+        Assert.NotNull(typeName.TypeArguments);
+        Assert.Single(typeName.TypeArguments.ArgumentsList);
+        Assert.IsType<PrimitiveType>(typeName.TypeArguments.ArgumentsList[0]);
+    }
+
+    [Fact]
+    public void Parses_AsExpression_Chained()
+    {
+        var tree = Utility.GetAST("x as unknown as number");
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var outerAs = Assert.IsType<AsExpression>(exprStmt.Expression);
+        Assert.IsType<PrimitiveType>(outerAs.Type);
+
+        var innerAs = Assert.IsType<AsExpression>(outerAs.Expression);
+        Assert.IsType<Identifier>(innerAs.Expression);
+        var innerType = Assert.IsType<PrimitiveType>(innerAs.Type);
+        Assert.Equal(PrimitiveTypeKind.Unknown, innerType.Kind);
+    }
+
+    [Fact]
+    public void Parses_AsExpression_ChainedThree()
+    {
+        var tree = Utility.GetAST("x as unknown as bool as string");
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var as3 = Assert.IsType<AsExpression>(exprStmt.Expression);
+        var as2 = Assert.IsType<AsExpression>(as3.Expression);
+        var as1 = Assert.IsType<AsExpression>(as2.Expression);
+        Assert.IsType<Identifier>(as1.Expression);
+        Assert.Equal(PrimitiveTypeKind.String, ((PrimitiveType)as3.Type).Kind);
+        Assert.Equal(PrimitiveTypeKind.Bool, ((PrimitiveType)as2.Type).Kind);
+        Assert.Equal(PrimitiveTypeKind.Unknown, ((PrimitiveType)as1.Type).Kind);
+    }
+
+    [Fact]
+    public void Parses_AsExpression_WithPostfixType()
+    {
+        var tree = Utility.GetAST("x as number[]?");
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var asExpr = Assert.IsType<AsExpression>(exprStmt.Expression);
+        var optType = Assert.IsType<OptionalType>(asExpr.Type);
+        var arrayType = Assert.IsType<ArrayType>(optType.NonNullableType);
+        Assert.IsType<PrimitiveType>(arrayType.ElementType);
+    }
+
+    [Fact]
+    public void Parses_AsExpression_InsideParentheses()
+    {
+        var tree = Utility.GetAST("(x as number)");
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var paren = Assert.IsType<Parenthesized>(exprStmt.Expression);
+        var asExpr = Assert.IsType<AsExpression>(paren.Expression);
+        Assert.IsType<Identifier>(asExpr.Expression);
+        Assert.IsType<PrimitiveType>(asExpr.Type);
+    }
+
+    [Fact]
+    public void Parses_AsExpression_WithUnionType()
+    {
+        var tree = Utility.GetAST("x as string | number");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var asExpr = Assert.IsType<AsExpression>(expressionStatement.Expression);
+        var union = Assert.IsType<UnionType>(asExpr.Type);
+        Assert.Equal(2, union.Types.Count);
+    }
+
+    [Fact]
+    public void Parses_AsExpression_WithIntersectionType()
+    {
+        var tree = Utility.GetAST("x as number & bool");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var asExpr = Assert.IsType<AsExpression>(expressionStatement.Expression);
+        var intersection = Assert.IsType<IntersectionType>(asExpr.Type);
+        Assert.Equal(2, intersection.Types.Count);
+    }
+    
+    [Theory]
+    [InlineData("a + b as number")]
+    [InlineData("a * b as string")]
+    [InlineData("a < b as number")]
+    [InlineData("a as number < b")]
+    [InlineData("a as bool == b as bool")]
+    [InlineData("a as unknown as number + 1")]
+    public void Parses_AsExpression_Precedence(string source)
+    {
+        Utility.AssertNoErrors(Utility.Parse(source));
+    }
+
     [Theory]
     [InlineData("a + b", SyntaxKind.Plus)]
     [InlineData("a - b", SyntaxKind.Minus)]
@@ -1203,7 +1316,6 @@ public class ParserTest
     [Fact]
     public void Parses_ArithmeticOperator_Precedence()
     {
-        // (-a) + (b * ((~c) ^ d))
         var tree = Utility.GetAST("-a + b * ~c ^ d");
         Assert.Single(tree.Statements);
 

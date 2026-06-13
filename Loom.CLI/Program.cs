@@ -54,5 +54,5 @@ void debugFile(CompiledFile compiledFile, bool tokens = true, bool ast = true, b
     var compilerDiagnostics = compiledFile.Diagnostics.ToString();
     Console.WriteLine();
     Console.WriteLine("Diagnostics:");
-    Console.WriteLine(string.IsNullOrEmpty(compilerDiagnostics) ? "(none)" : diagnostics);
+    Console.WriteLine(string.IsNullOrEmpty(compilerDiagnostics) ? "(none)" : compilerDiagnostics);
 }

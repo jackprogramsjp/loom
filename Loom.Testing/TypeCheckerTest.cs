@@ -384,6 +384,48 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = none; if x != none { -x }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidUnaryOp, "No unary operation for -never.");
     }
+    
+    [Fact]
+    public void ThrowsFor_Cast_Mismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("69 as string");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '69' is not assignable to type 'string'.");
+    }
+    
+    [Fact]
+    public void Checks_AsExpression_Chained_Unknown()
+    {
+        var type = Utility.GetLastStatementType("69 as unknown as number");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_AsExpression_Chained_Never()
+    {
+        var type = Utility.GetLastStatementType("69 as never as number");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_AsExpression_WithUnknown()
+    {
+        var type = Utility.GetLastStatementType("69 as unknown");
+        Assert.True(type.Equals(PrimitiveType.Unknown), $"Expected 'unknown', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_AsExpression_WithNever()
+    {
+        var type = Utility.GetLastStatementType("69 as never");
+        Assert.True(type.Equals(PrimitiveType.Never), $"Expected 'never', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_AsExpression()
+    {
+        var type = Utility.GetLastStatementType("69 as number");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
 
     [Fact]
     public void Checks_DeclareVariable_HasDeclaredType()

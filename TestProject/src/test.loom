@@ -1,2 +1,1 @@
-let x = 69;
-x;
+(69 as number) + 1

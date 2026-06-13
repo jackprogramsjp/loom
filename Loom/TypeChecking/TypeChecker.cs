@@ -229,6 +229,16 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(enumDeclaration, new ObjectType(null, properties));
     }
 
+    public override Type VisitAsExpression(AsExpression asExpression)
+    {
+        var expressionType = Visit(asExpression.Expression);
+        var castedType = Visit(asExpression.Type);
+        if (Type.IsNotUnknown(expressionType) && Type.IsNotNever(castedType) && Type.IsNotUnknown(castedType))
+            semanticModel.TypeSolver.AddConstraint(expressionType, castedType, asExpression);
+        
+        return BindType(asExpression, castedType);
+    }
+
     public override Type VisitNameOf(NameOf nameOf) => new Types.LiteralType(nameOf.Name.ToString());
 
     public override Type VisitInvocation(Invocation invocation)

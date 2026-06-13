@@ -7,6 +7,8 @@ public abstract class Type
 
     public static bool IsNotNever(Type type) => !IsNever(type);
     public static bool IsNever(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Never };
+    public static bool IsNotUnknown(Type type) => !IsUnknown(type);
+    public static bool IsUnknown(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Unknown };
     public static bool IsDefined(Type type) => !IsNone(type);
     public static bool IsNone(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None };
     public static bool IsNotOptional(Type type) => !IsOptional(type);

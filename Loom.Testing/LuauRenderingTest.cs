@@ -11,6 +11,13 @@ namespace Loom.Testing;
 public class LuauRenderingTest
 {
     [Fact]
+    public void Renders_TypeCast()
+    {
+        var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
+        Assert.Equal("(x :: number)", typeCast.Render());
+    }
+    
+    [Fact]
     public void Renders_IfStatement()
     {
         Assert.Equal(

@@ -31,6 +31,7 @@ public class Parser(LexerResult lexerResult)
         new(false, SyntaxKind.Plus, SyntaxKind.Minus),
         new(false, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.SlashSlash, SyntaxKind.Percent),
         new(true, SyntaxKind.Caret),
+        new(false, SyntaxKind.AsKeyword)
     ];
 
     private readonly DiagnosticBag _diagnostics = new();
@@ -167,7 +168,7 @@ public class Parser(LexerResult lexerResult)
 
             return new NullStatement(fnKeyword);
         }
-        
+
         var parameterWithoutType = parameters?.ParameterList.Find(p => p.ColonTypeClause == null);
         if (parameterWithoutType != null)
         {
@@ -179,7 +180,7 @@ public class Parser(LexerResult lexerResult)
 
             return new NullStatement(fnKeyword);
         }
-        
+
         return new DeclareFunctionSignature(fnKeyword, name, typeParameters, parameters, returnType);
     }
 
@@ -301,6 +302,13 @@ public class Parser(LexerResult lexerResult)
         var left = ParseBinaryLevel(level + 1);
         while (Match(out var op, matches))
         {
+            if (op.Kind == SyntaxKind.AsKeyword)
+            {
+                var type = ParseType();
+                left = new AsExpression(op, left, type);
+                continue;
+            }
+
             var right = ParseBinaryLevel(rightAssociative ? level : level + 1);
             var isAssignment = SyntaxFacts.IsAssignmentOperator(op.Kind);
             if (isAssignment && left is not AssignmentTarget)

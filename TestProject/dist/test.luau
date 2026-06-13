@@ -1,2 +1,1 @@
-const x = 69
-const _ = x
+const _ = ((69 ::  number)) + 1
