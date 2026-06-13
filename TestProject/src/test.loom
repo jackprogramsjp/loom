@@ -1,1 +1,2 @@
-let unknown = 69 as unknown;
+let s = "abcdef"
+let sliced = s[1];

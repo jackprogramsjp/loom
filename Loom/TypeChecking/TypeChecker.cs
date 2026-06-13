@@ -276,17 +276,21 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return BindType(elementAccess, narrowedType);
 
         var type = Visit(elementAccess.Expression);
-        if (type is not ObjectType objectType)
+        var indexType = Visit(elementAccess.IndexExpression);
+        if (type is ObjectType objectType)
         {
-            _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
-            return BindType(elementAccess, Types.PrimitiveType.Never);
+            if (type is Types.ArrayType && indexType.IsAssignableTo(IntrinsicTypes.Range.Type))
+                return type;
+
+            return GetTypeAtIndexInObject(elementAccess.IndexExpression, objectType, indexType);
         }
 
-        var indexType = Visit(elementAccess.IndexExpression);
-        if (type is Types.ArrayType && indexType.Equals(IntrinsicTypes.Range.Type))
-            return type;
+        var indexIsRangeOrNumber = indexType.IsAssignableTo(IntrinsicTypes.Range.Type) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
+        if (indexIsRangeOrNumber && type.IsAssignableTo(Types.PrimitiveType.String))
+            return Types.PrimitiveType.String;
 
-        return GetTypeAtIndexInObject(elementAccess.IndexExpression, objectType, indexType);
+        _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
+        return BindType(elementAccess, Types.PrimitiveType.Never);
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)

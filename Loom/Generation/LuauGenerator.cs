@@ -182,11 +182,19 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitElementAccess(ElementAccess elementAccess)
     {
         var target = Visit(elementAccess.Expression);
+        var targetType = semanticModel.GetType(elementAccess.Expression);
         var indexType = semanticModel.GetType(elementAccess.IndexExpression);
         if (!indexType.Equals(IntrinsicTypes.Range.Type))
-            return TryGetEnumConstant(elementAccess, out var enumValue)
-                ? enumValue
-                : new Luau.AST.ElementAccess(target, Visit(elementAccess.IndexExpression));
+        {
+            if (TryGetEnumConstant(elementAccess, out var enumValue))
+                return enumValue;
+
+            if (!indexType.IsAssignableTo(TypeChecking.Types.PrimitiveType.Number))
+                return new Luau.AST.ElementAccess(target, Visit(elementAccess.IndexExpression));
+
+            var index = Visit(elementAccess.IndexExpression);
+            return LuauFactory.StringCall("sub", [target, index, index]);
+        }
 
         var one = new NumberLiteral(1);
         var length = PushToVariable("_length", new Luau.AST.UnaryOperator("#", target));
@@ -209,7 +217,9 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             maximum = LuauFactory.MathCall("clamp", [new Luau.AST.PropertyAccess(range, ["maximum"]), one, length]);
         }
 
-        return LuauFactory.TableCall("move", [target, minimum, maximum, one, new Table([])]);
+        return targetType.IsAssignableTo(TypeChecking.Types.PrimitiveType.String)
+            ? LuauFactory.StringCall("sub", [target, minimum, maximum])
+            : LuauFactory.TableCall("move", [target, minimum, maximum, one, new Table([])]);
     }
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
