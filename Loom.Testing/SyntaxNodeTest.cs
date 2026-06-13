@@ -3,9 +3,10 @@ using Loom.Syntax;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class SyntaxNodeTest
 {
-    private Token T(string text, int start, int length, SyntaxKind kind = SyntaxKind.Identifier)
+    private static Token T(string text, int start, int length, SyntaxKind kind = SyntaxKind.Identifier)
         => new(kind, new LocationSpan(new Location(SourceFile.Empty, start, 1, start), length), text);
 
     [Fact]

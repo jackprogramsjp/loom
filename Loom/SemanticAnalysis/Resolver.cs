@@ -113,24 +113,17 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         if (!DeclareVariable(functionDeclaration, SymbolKind.Function, out var symbol))
             return false;
-        
+
         MarkDefinitelyInitialized(symbol);
         PushScope();
-        if (functionDeclaration.TypeParameters != null)
-            Visit(functionDeclaration.TypeParameters);
-
-        if (functionDeclaration.Parameters != null)
-            Visit(functionDeclaration.Parameters);
-
-        if (functionDeclaration.ReturnType != null)
-            Visit(functionDeclaration.ReturnType);
 
         var wasInsideFunction = _insideFunction;
         _insideFunction = true;
         PushInheritedFlowState();
-        Visit(functionDeclaration.Body);
+        base.VisitFunctionDeclaration(functionDeclaration);
         PopFlowState();
         _insideFunction = wasInsideFunction;
+
         PopScope();
 
         return true;
@@ -144,6 +137,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();
+        
         return true;
     }
 
@@ -174,35 +168,38 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             DeclareFunctionSignature => SymbolKind.Function,
             _ => SymbolKind.Variable
         };
-        
+
         var isMutable = declare.Signature is DeclareVariableSignature { Keyword.Kind: SyntaxKind.MutKeyword };
         if (!DeclareVariable(declare.Signature, symbolKind, out var symbol, isMutable))
             return false;
-        
+
         MarkDefinitelyInitialized(symbol);
-        return Visit(declare.Signature);
+        return base.VisitDeclare(declare);
     }
 
     public override bool VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature)
     {
         PushScope();
-        MaybeVisit(declareFunctionSignature.TypeParameters);
-        MaybeVisit(declareFunctionSignature.Parameters);
-        Visit(declareFunctionSignature.ReturnType);
+        base.VisitDeclareFunctionSignature(declareFunctionSignature);
         PopScope();
 
         return true;
     }
-
-    public override bool VisitParameters(Parameters parameters) => parameters.ParameterList.All(Visit);
-
+    
     public override bool VisitParameter(Parameter parameter)
     {
-        var scope = CurrentScope();
         var name = parameter.Name.Text;
-        if (scope.VariableLookup.ContainsKey(name))
+        var existingSymbol = LookupValueId(name);
+        if (existingSymbol != null)
         {
-            _diagnostics.Error(parameter, InternalCodes.DuplicateName, $"Parameter '{name}' is already declared for this function.");
+            _diagnostics.Error(
+                parameter,
+                InternalCodes.DuplicateName,
+                existingSymbol.Kind == SymbolKind.Parameter
+                    ? $"Parameter '{name}' is already declared for this function."
+                    : $"Variable '{name}' is already declared in this scope."
+            );
+
             return false;
         }
 

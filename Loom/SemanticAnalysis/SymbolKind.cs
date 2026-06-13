@@ -4,7 +4,7 @@ public enum SymbolKind : byte
 {
     Variable,
     Function,
+    Parameter,
     Type,
-    EnumType,
-    Parameter
+    EnumType
 }

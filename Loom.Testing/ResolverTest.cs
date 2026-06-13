@@ -136,6 +136,13 @@ public class ResolverTest
     }
 
     [Fact]
+    public void ThrowsFor_DuplicateDeclareFunctionParameter()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare fn f(x: number, x: string): void;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Parameter 'x' is already declared for this function.");
+    }
+    
+    [Fact]
     public void ThrowsFor_DeclareVariableConflictsWithFunction()
     {
         var diagnostics = Utility.GetSemanticModel("fn foo() {} declare let foo: number;").Diagnostics;

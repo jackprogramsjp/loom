@@ -9,79 +9,36 @@ public abstract class Visitor<T>
         (TResult)Visit(node)!;
 
     public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
-
+    public virtual T VisitIf(If @if) => CombineResults([Visit(@if.Condition), Visit(@if.ThenBranch), MaybeVisit(@if.ElseBranch)]);
     public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
 
-    public virtual T VisitIf(If @if)
-    {
-        var results = new List<T> { Visit(@if.Condition), Visit(@if.ThenBranch) };
-        if (@if.ElseBranch != null)
-            results.Add(Visit(@if.ElseBranch));
-
-        return CombineResults(results);
-    }
-
-    public virtual T VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
-    {
-        var results = new List<T>();
-        if (functionDeclaration.TypeParameters != null)
-            results.Add(Visit(functionDeclaration.TypeParameters));
-
-        if (functionDeclaration.Parameters != null)
-            results.Add(Visit(functionDeclaration.Parameters));
-
-        if (functionDeclaration.ReturnType != null)
-            results.Add(Visit(functionDeclaration.ReturnType));
-
-        results.Add(Visit(functionDeclaration.Body));
-        return CombineResults(results);
-    }
+    public virtual T VisitFunctionDeclaration(FunctionDeclaration functionDeclaration) =>
+        CombineResults(
+            [
+                MaybeVisit(functionDeclaration.TypeParameters),
+                MaybeVisit(functionDeclaration.Parameters),
+                MaybeVisit(functionDeclaration.ReturnType),
+                Visit(functionDeclaration.Body)
+            ]
+        );
 
     public virtual T VisitDeclare(Declare declare) => Visit(declare.Signature);
     public virtual T VisitDeclareVariableSignature(DeclareVariableSignature declareVariableSignature) => MaybeVisit(declareVariableSignature.ColonTypeClause)!;
+
     public virtual T VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature) =>
         CombineResults(
             [MaybeVisit(declareFunctionSignature.TypeParameters), MaybeVisit(declareFunctionSignature.Parameters), Visit(declareFunctionSignature.ReturnType)]
         );
 
-    public virtual T VisitTypeAlias(TypeAlias typeAlias)
-    {
-        var results = new List<T>();
-        if (typeAlias.TypeParameters != null)
-            results.Add(Visit(typeAlias.TypeParameters));
+    public virtual T VisitTypeAlias(TypeAlias typeAlias) => CombineResults([MaybeVisit(typeAlias.TypeParameters), Visit(typeAlias.EqualsTypeClause)]);
 
-        results.Add(Visit(typeAlias.EqualsTypeClause.Type));
-        return CombineResults(results);
-    }
-
-    public virtual T VisitVariableDeclaration(VariableDeclaration variableDeclaration)
-    {
-        var results = new List<T>();
-        if (variableDeclaration.ColonTypeClause != null)
-            results.Add(Visit(variableDeclaration.ColonTypeClause));
-
-        if (variableDeclaration.EqualsValueClause != null)
-            results.Add(Visit(variableDeclaration.EqualsValueClause));
-
-        return CombineResults(results);
-    }
-
-    public virtual T VisitParameter(Parameter parameter)
-    {
-        var results = new List<T>();
-        if (parameter.ColonTypeClause != null)
-            results.Add(Visit(parameter.ColonTypeClause));
-
-        if (parameter.EqualsValueClause != null)
-            results.Add(Visit(parameter.EqualsValueClause));
-
-        return CombineResults(results);
-    }
+    public virtual T VisitVariableDeclaration(VariableDeclaration variableDeclaration) =>
+        CombineResults([MaybeVisit(variableDeclaration.ColonTypeClause), MaybeVisit(variableDeclaration.EqualsValueClause)]);
 
     public virtual T VisitEnumDeclaration(EnumDeclaration enumDeclaration) => VisitList(enumDeclaration.Members);
     public virtual T VisitEnumMember(EnumMember enumMember) => MaybeVisit(enumMember.EqualsValueClause)!;
-
-    public virtual T VisitParameters(Parameters parameters) => CombineResults([VisitList(parameters.ParameterList)]);
+    public virtual T VisitParameters(Parameters parameters) => VisitList(parameters.ParameterList);
+    public virtual T VisitParameter(Parameter parameter) => CombineResults([MaybeVisit(parameter.ColonTypeClause), MaybeVisit(parameter.EqualsValueClause)]);
     public virtual T VisitBlock(Block block) => VisitList(block.Statements);
     public virtual T VisitExpressionStatement(ExpressionStatement expressionStatement) => Visit(expressionStatement.Expression);
     public virtual T VisitReturn(Return @return) => Visit(@return.Expression);
@@ -91,12 +48,10 @@ public abstract class Visitor<T>
     public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);
     public abstract T VisitLiteral(Literal literal);
     public abstract T VisitIdentifier(Identifier identifier);
-
     public virtual T VisitParenthesized(Parenthesized parenthesized) => Visit(parenthesized.Expression);
     public virtual T VisitNameOf(NameOf nameOf) => Visit(nameOf.Name);
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
-    public virtual T VisitInvocation(Invocation invocation) => CombineResults([Visit(invocation.Expression), Visit(invocation.Arguments)]);
-
+    public virtual T VisitInvocation(Invocation invocation) => CombineResults([Visit(invocation.Expression), MaybeVisit(invocation.TypeArguments), Visit(invocation.Arguments)]);
     public virtual T VisitQualifiedName(QualifiedName qualifiedName) => Visit(qualifiedName.Identifier);
     public virtual T VisitPropertyAccess(PropertyAccess propertyAccess) => Visit(propertyAccess.Expression);
     public virtual T VisitElementAccess(ElementAccess elementAccess) => CombineResults([Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression)]);
@@ -106,7 +61,6 @@ public abstract class Visitor<T>
 
     public virtual T VisitBinaryOperator(BinaryOperator binaryOperator) => CombineResults([Visit(binaryOperator.Left), Visit(binaryOperator.Right)]);
     public virtual T VisitUnaryOperator(UnaryOperator unaryOperator) => Visit(unaryOperator.Operand);
-
     public abstract T VisitLiteralType(LiteralType literalType);
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
     public abstract T VisitTypeName(TypeName typeName);
@@ -115,10 +69,7 @@ public abstract class Visitor<T>
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
     public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
     public virtual T VisitIntersectionType(IntersectionType intersectionType) => VisitList(intersectionType.Types);
-
-    public virtual T VisitTypeParameter(TypeParameter typeParameter) =>
-        typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : default!;
-
+    public virtual T VisitTypeParameter(TypeParameter typeParameter) => MaybeVisit(typeParameter.EqualsTypeClause)!;
     public virtual T VisitTypeParameters(TypeParameters typeParameters) => VisitList(typeParameters.ParameterList);
     public virtual T VisitTypeArguments(TypeArguments typeArguments) => VisitList(typeArguments.ArgumentsList);
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
