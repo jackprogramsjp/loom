@@ -21,6 +21,15 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class LuauGeneratorTest
 {
+    [Theory]
+    [InlineData("declare let x: number;")]
+    [InlineData("declare mut x: number;")]
+    [InlineData("declare fn x(): number;")]
+    public void Generates_Nothing(string source)
+    {
+        Assert.Empty(Utility.GetLuauAST(source).Statements);
+    }
+    
     [Fact]
     public void Generates_Array_TableType()
     {

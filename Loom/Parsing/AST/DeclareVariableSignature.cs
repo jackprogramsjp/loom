@@ -2,8 +2,8 @@ using Loom.Syntax;
 
 namespace Loom.Parsing.AST;
 
-public class DeclareVariableSignature(Token keyword, Token name, ColonTypeClause colonTypeClause)
-    : DeclareSignature([keyword], name, colonTypeClause)
+public class DeclareVariableSignature(Token keyword, Token name, ColonTypeClause colonTypeClause, params Node?[] extraChildren)
+    : DeclareSignature([keyword], name, [colonTypeClause, ..extraChildren])
 {
     public Token Keyword { get; } = keyword;
     public ColonTypeClause ColonTypeClause { get; } = colonTypeClause;

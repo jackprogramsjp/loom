@@ -119,7 +119,7 @@ public class Parser(LexerResult lexerResult)
         if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
             return ParseDeclareVariableSignature(variableKeyword);
 
-        _diagnostics.Error(declareKeyword, InternalCodes.ExpectedDeclarationSignature, $"Expected declaration signature, got {SafeTokenText(MaybeCurrent())}");
+        _diagnostics.Error(declareKeyword, InternalCodes.ExpectedDeclarationSignature, $"Expected declaration signature, got {SafeTokenText(MaybeCurrent())}.");
         return new NullStatement(declareKeyword);
     }
 
@@ -132,7 +132,7 @@ public class Parser(LexerResult lexerResult)
 
         _diagnostics.Error(
             name,
-            InternalCodes.MissingDeclareFnReturnType,
+            InternalCodes.MissingDeclareVariableType,
             "Declared variable signatures must have a type."
         );
 

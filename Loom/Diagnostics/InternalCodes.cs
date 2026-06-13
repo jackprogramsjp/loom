@@ -12,11 +12,12 @@ public static class InternalCodes
     public const string UnexpectedEof = "L202";
     public const string InvalidAssignmentTarget = "L203";
     public const string MissingFunctionBody = "L204";
-    public const string MissingDeclareFnReturnType = "L205";
-    public const string UseOfDeclareFnParameterDefaults = "L206";
-    public const string MissingDeclareFnParameterType = "L207";
-    public const string ExpectedDeclarationSignature = "L208";
-    public const string DeclarationOutsideOfBlock = "L209";
+    public const string MissingDeclareVariableType = "L205";
+    public const string MissingDeclareFnReturnType = "L206";
+    public const string UseOfDeclareFnParameterDefaults = "L207";
+    public const string MissingDeclareFnParameterType = "L208";
+    public const string ExpectedDeclarationSignature = "L209";
+    public const string DeclarationOutsideOfBlock = "L210";
 
     public const string CannotFindName = "L301";
     public const string DuplicateName = "L302";

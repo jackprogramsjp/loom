@@ -348,14 +348,14 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Status { Active, Inactive } let x: Status = 5");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '5' is not assignable to type '0 | 1'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_IfStatement_NonBooleanCondition()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("if 42 { 1 }");
         Utility.AssertDiagnostic(
-            diagnostics, 
-            InternalCodes.TypeMismatch, 
+            diagnostics,
+            InternalCodes.TypeMismatch,
             "Type '42' is not assignable to type 'bool'."
         );
     }
@@ -363,23 +363,21 @@ public class TypeCheckerTest
     [Fact]
     public void ThrowsFor_IfStatement_WithOptionalCondition()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(
-            "let x: bool? = true; if x { 1 }"
-        );
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: bool? = true; if x { 1 }");
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
             "Type 'bool?' is not assignable to type 'bool'."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_Never_InBinaryOperation()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = none; if x != none x + 1");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidBinaryOp, "No binary operation for 'never' + 'number'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Never_InUnaryOperation()
     {
@@ -388,11 +386,89 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Checks_DeclareVariable_HasDeclaredType()
+    {
+        var type = Utility.GetLastStatementType("declare let x: number");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_DeclareMutableVariable_HasDeclaredType()
+    {
+        var type = Utility.GetLastStatementType("declare mut y: string");
+        Assert.True(type.Equals(PrimitiveType.String), $"Expected 'string', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_DeclareFunction_HasFunctionType()
+    {
+        var type = Utility.GetLastStatementType("declare fn add(a: number, b: number): bool");
+        var fnType = Assert.IsType<FunctionType>(type);
+        Assert.True(fnType.ReturnType.Equals(PrimitiveType.Bool), $"Expected 'bool', got '{fnType.ReturnType}'");
+        Assert.Equal(2, fnType.ParameterTypes.Count);
+        Assert.All(fnType.ParameterTypes, t => Assert.True(t.Equals(PrimitiveType.Number), $"Expected 'number', got '{t}'"));
+    }
+
+    [Fact]
+    public void Checks_DeclareFunction_Generic_HasGenericFunctionType()
+    {
+        var type = Utility.GetLastStatementType("declare fn id<T>(value: T): T");
+        var fnType = Assert.IsType<FunctionType>(type);
+        Assert.Single(fnType.TypeParameters);
+        Assert.Equal("T", fnType.TypeParameters[0].Name);
+
+        var paramType = Assert.IsType<TypeParameter>(fnType.ParameterTypes[0]);
+        Assert.Equal("T", paramType.Name);
+        var returnType = Assert.IsType<TypeParameter>(fnType.ReturnType);
+        Assert.Equal("T", returnType.Name);
+    }
+
+    [Fact]
+    public void Checks_DeclareVariable_CanBeUsed()
+    {
+        var type = Utility.GetLastStatementType("declare let x: number; x");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_DeclareFunction_CanBeInvoked()
+    {
+        const string source = """
+            declare fn add(a: number, b: number): number;
+            add(1, 2)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_DeclareFunction_Generic_CanBeInvoked()
+    {
+        const string source = """
+            declare fn id<T>(value: T): T;
+            id(42)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_DeclareFunction_VoidReturnType()
+    {
+        var type = Utility.GetLastStatementType("declare fn print(msg: string): void");
+        var fnType = Assert.IsType<FunctionType>(type);
+        Assert.True(fnType.ReturnType.Equals(PrimitiveType.Void), $"Expected 'void', got '{fnType.ReturnType}'");
+    }
+
+    [Fact]
     public void Checks_IfStatementTypeNarrowing()
     {
         Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics("let x: number? = 69; if x != none x + 420"));
     }
-    
+
     [Fact]
     public void Checks_EnumTypeAnnotation()
     {

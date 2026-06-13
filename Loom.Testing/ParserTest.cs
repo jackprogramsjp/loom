@@ -37,7 +37,7 @@ public class ParserTest
         var diagnostics = Utility.GetParserDiagnostics("!");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Unexpected end of file.");
     }
-    
+
     [Fact]
     public void ThrowsFor_UnexpectedToken()
     {
@@ -108,6 +108,139 @@ public class ParserTest
             "Declarations can only be declared inside of a block.",
             "surround with '{' and '}'"
         );
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclareFunction_MissingReturnType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("declare fn foo(a: number)");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MissingDeclareFnReturnType,
+            "Declared function signatures must have a return type."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclareFunction_DefaultParameter()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("declare fn foo(a: number = 5): void");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.UseOfDeclareFnParameterDefaults,
+            "Parameters may not have default values in declared function signatures."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclareFunction_UntypedParameter()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("declare fn foo(a): void");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MissingDeclareFnParameterType,
+            "Parameters must have types in declared function signatures."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclareVariable_MissingType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("declare let x");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MissingDeclareVariableType,
+            "Declared variable signatures must have a type."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Declare_InvalidSignature()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("declare 123");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.ExpectedDeclarationSignature,
+            "Expected declaration signature, got '123'."
+        );
+    }
+
+    [Fact]
+    public void Parses_DeclareFunctionSignature_Basic()
+    {
+        var tree = Utility.GetAST("declare fn add(a: number, b: number): number");
+        Assert.Single(tree.Statements);
+
+        var declare = Assert.IsType<Declare>(tree.Statements.First());
+        var sig = Assert.IsType<DeclareFunctionSignature>(declare.Signature);
+        Assert.Equal("add", sig.Name.Text);
+        Assert.Null(sig.TypeParameters);
+        Assert.NotNull(sig.Parameters);
+        Assert.Equal(2, sig.Parameters.ParameterList.Count);
+        Assert.All(sig.Parameters.ParameterList, p => Assert.NotNull(p.ColonTypeClause));
+        Assert.NotNull(sig.ReturnType);
+        Assert.IsType<PrimitiveType>(sig.ReturnType.Type);
+    }
+
+    [Fact]
+    public void Parses_DeclareFunctionSignature_WithTypeParameters()
+    {
+        var tree = Utility.GetAST("declare fn id<T>(value: T): T");
+        var declare = Assert.IsType<Declare>(tree.Statements.Single());
+        var sig = Assert.IsType<DeclareFunctionSignature>(declare.Signature);
+        Assert.Equal("id", sig.Name.Text);
+        Assert.NotNull(sig.TypeParameters);
+        Assert.Single(sig.TypeParameters.ParameterList);
+        Assert.Equal("T", sig.TypeParameters.ParameterList.First().Name.Text);
+        Assert.NotNull(sig.ReturnType);
+        var returnType = Assert.IsType<TypeName>(sig.ReturnType.Type);
+        Assert.Equal("T", returnType.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_DeclareFunctionSignature_EmptyParameters()
+    {
+        var tree = Utility.GetAST("declare fn rand(): number");
+        var declare = Assert.IsType<Declare>(tree.Statements.Single());
+        var sig = Assert.IsType<DeclareFunctionSignature>(declare.Signature);
+        Assert.NotNull(sig.Parameters);
+        Assert.Empty(sig.Parameters.ParameterList);
+    }
+
+    [Fact]
+    public void Parses_DeclareFunctionSignature_NoParameters()
+    {
+        var tree = Utility.GetAST("declare fn exit: void");
+        var declare = Assert.IsType<Declare>(tree.Statements.Single());
+        var sig = Assert.IsType<DeclareFunctionSignature>(declare.Signature);
+        Assert.Null(sig.Parameters);
+        Assert.NotNull(sig.ReturnType);
+        var ret = Assert.IsType<PrimitiveType>(sig.ReturnType.Type);
+        Assert.Equal(PrimitiveTypeKind.Void, ret.Kind);
+    }
+
+    [Fact]
+    public void Parses_DeclareVariableSignature_Let()
+    {
+        var tree = Utility.GetAST("declare let x: number");
+        var declare = Assert.IsType<Declare>(tree.Statements.Single());
+        var sig = Assert.IsType<DeclareVariableSignature>(declare.Signature);
+        Assert.Equal("x", sig.Name.Text);
+        Assert.Equal(SyntaxKind.LetKeyword, sig.Keyword.Kind);
+        Assert.NotNull(sig.ColonTypeClause);
+        Assert.IsType<PrimitiveType>(sig.ColonTypeClause.Type);
+    }
+
+    [Fact]
+    public void Parses_DeclareVariableSignature_Mut()
+    {
+        var tree = Utility.GetAST("declare mut y: string");
+        var declare = Assert.IsType<Declare>(tree.Statements.Single());
+        var sig = Assert.IsType<DeclareVariableSignature>(declare.Signature);
+        Assert.Equal("y", sig.Name.Text);
+        Assert.Equal(SyntaxKind.MutKeyword, sig.Keyword.Kind);
+        Assert.NotNull(sig.ColonTypeClause);
+        Assert.IsType<PrimitiveType>(sig.ColonTypeClause.Type);
     }
 
     [Fact]

@@ -122,10 +122,73 @@ public class ResolverTest
     }
     
     [Fact]
+    public void ThrowsFor_DuplicateDeclareVariable()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare let x: number; declare let x: number;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'x' is already declared in this scope.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DuplicateDeclareFunction()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare fn f(): void; declare fn f(): void;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'f' is already declared in this scope.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclareVariableConflictsWithFunction()
+    {
+        var diagnostics = Utility.GetSemanticModel("fn foo() {} declare let foo: number;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'foo' is already declared in this scope.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclareFunctionConflictsWithVariable()
+    {
+        var diagnostics = Utility.GetSemanticModel("let x = 1; declare fn x(): void;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'x' is already declared in this scope.");
+    }
+
+    [Fact]
+    public void ThrowsFor_AssignToDeclaredImmutableVariable()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare let x: number; x = 42;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable variable 'x'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DeclaredVariableNotVisibleOutsideBlock()
+    {
+        var diagnostics = Utility.GetSemanticModel("{ declare let x: number; } x;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find name 'x'.");
+    }
+    
+    [Fact]
     public void WarnsFor_UnreachableCode()
     {
         var diagnostics = Utility.GetSemanticModel("fn foo { return 42; let x = 1 }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
+    }
+    
+    [Fact]
+    public void Allows_UsageOfDeclaredVariable()
+    {
+        var model = Utility.GetSemanticModel("declare let x: number; x;");
+        Utility.AssertNoErrors(model);
+    }
+
+    [Fact]
+    public void Allows_UsageOfDeclaredFunction()
+    {
+        var model = Utility.GetSemanticModel("declare fn foo(): void; foo;");
+        Utility.AssertNoErrors(model);
+    }
+
+    [Fact]
+    public void Allows_AssignToDeclaredMutableVariable()
+    {
+        var model = Utility.GetSemanticModel("declare mut counter: number; counter = 1;");
+        Utility.AssertNoErrors(model);
     }
     
     [Fact]
@@ -318,5 +381,55 @@ public class ResolverTest
         Assert.Equal("T", symbol.Name);
         Assert.Equal(SymbolKind.Type, symbol.Kind);
         Assert.Equal(typeParameter, symbol.Declaration);
+    }
+    
+    [Fact]
+    public void Declares_DeclareVariableSymbol()
+    {
+        var model = Utility.GetSemanticModel("declare let x: number");
+        Utility.AssertNoErrors(model);
+
+        var declare = Assert.IsType<Declare>(model.Tree.Statements.Single());
+        var sig = Assert.IsType<DeclareVariableSignature>(declare.Signature);
+        var symbol = model.GetDeclarationSymbol(sig);
+        Assert.NotNull(symbol);
+        Assert.Equal("x", symbol.Name);
+        Assert.Equal(SymbolKind.Variable, symbol.Kind);
+        Assert.False(symbol.IsMutable);
+        Assert.Equal(sig, symbol.Declaration);
+    }
+
+    [Fact]
+    public void Declares_DeclareVariableSymbol_Mutable()
+    {
+        var model = Utility.GetSemanticModel("declare mut y: string");
+        var declare = Assert.IsType<Declare>(model.Tree.Statements.Single());
+        var sig = Assert.IsType<DeclareVariableSignature>(declare.Signature);
+        var symbol = model.GetDeclarationSymbol(sig);
+        Assert.NotNull(symbol);
+        Assert.Equal("y", symbol.Name);
+        Assert.True(symbol.IsMutable);
+    }
+
+    [Fact]
+    public void Declares_DeclareFunctionSymbol()
+    {
+        var model = Utility.GetSemanticModel("declare fn add(a: number, b: number): number");
+        Utility.AssertNoErrors(model);
+
+        var declare = Assert.IsType<Declare>(model.Tree.Statements.Single());
+        var sig = Assert.IsType<DeclareFunctionSignature>(declare.Signature);
+        var symbol = model.GetDeclarationSymbol(sig);
+        Assert.NotNull(symbol);
+        Assert.Equal("add", symbol.Name);
+        Assert.Equal(SymbolKind.Function, symbol.Kind);
+        Assert.Equal(sig, symbol.Declaration);
+    }
+    
+    [Fact]
+    public void Declares_DeclareFunction_InsideBlock()
+    {
+        var model = Utility.GetSemanticModel("{ declare fn helper(): string; helper; }");
+        Utility.AssertNoErrors(model);
     }
 }
