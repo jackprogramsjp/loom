@@ -268,11 +268,26 @@ print("hello, world!");
 print("hello, world!")
 ```
 ##
+```ts
+declare let x: number;
+let y = x + 1;
+```
+```luau
+const y = x + 1
+```
+##
 ```rs
 let unknown = 69 as unknown;
 ```
 ```luau
 const unknown = (69 :: unknown)
+```
+##
+```rs
+type Callback = fn(): void
+```
+```luau
+type Callback = () -> ()
 ```
 
 ## Planned Features
