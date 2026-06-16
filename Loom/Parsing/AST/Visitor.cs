@@ -51,12 +51,16 @@ public abstract class Visitor<T>
     public virtual T VisitParenthesized(Parenthesized parenthesized) => Visit(parenthesized.Expression);
     public virtual T VisitNameOf(NameOf nameOf) => Visit(nameOf.Name);
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
-    public virtual T VisitInvocation(Invocation invocation) => CombineResults([Visit(invocation.Expression), MaybeVisit(invocation.TypeArguments), Visit(invocation.Arguments)]);
+
+    public virtual T VisitInvocation(Invocation invocation) =>
+        CombineResults([Visit(invocation.Expression), MaybeVisit(invocation.TypeArguments), Visit(invocation.Arguments)]);
+
     public virtual T VisitQualifiedName(QualifiedName qualifiedName) => Visit(qualifiedName.Identifier);
     public virtual T VisitPropertyAccess(PropertyAccess propertyAccess) => Visit(propertyAccess.Expression);
     public virtual T VisitElementAccess(ElementAccess elementAccess) => CombineResults([Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression)]);
 
     public virtual T VisitAsExpression(AsExpression asExpression) => CombineResults([Visit(asExpression.Expression), Visit(asExpression.Type)]);
+
     public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) =>
         CombineResults([Visit(assignmentOperator.Left), Visit(assignmentOperator.Right)]);
 
@@ -66,6 +70,7 @@ public abstract class Visitor<T>
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
     public abstract T VisitTypeName(TypeName typeName);
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
+    public virtual T VisitFunctionType(FunctionType functionType) => CombineResults([MaybeVisit(functionType.TypeParameters), MaybeVisit(functionType.Parameters), Visit(functionType.ReturnType)]);
     public virtual T VisitArrayType(ArrayType arrayType) => Visit(arrayType.ElementType);
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
     public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
@@ -92,4 +97,5 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
+
 }

@@ -32,5 +32,5 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
     }
 
     public override string ToString() =>
-        $"{(TypeParameters.Count != 0 ? $"<{string.Join(", ", TypeParameters)}>" : "")}({string.Join(", ", ParameterTypes)}) -> {ReturnType}";
+        $"fn{(TypeParameters.Count != 0 ? $"<{string.Join(", ", TypeParameters)}>" : "")}({string.Join(", ", ParameterTypes)}): {ReturnType}";
 }

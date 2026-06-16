@@ -47,4 +47,5 @@ public static class InternalCodes
     public const string UseOfMaybeUninitialized = "L327";
     public const string ReturnOutsideFunction = "L328";
     public const string UnreachableCode = "L329";
+    public const string InvalidVoidType = "L330";
 }

@@ -5,6 +5,7 @@ using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
+using FunctionType = Loom.Parsing.AST.FunctionType;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
@@ -77,12 +78,12 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
     {
-        var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(Visit<Types.TypeParameter>) ?? [];
+        var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [];
         var parameterTypes = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit) ?? [];
         var returnType = GetReturnType(functionDeclaration);
-        var functionType = BindType(functionDeclaration, new FunctionType(typeParameters, parameterTypes, returnType));
+        var functionType = BindType(functionDeclaration, new Types.FunctionType(typeParameters, parameterTypes, returnType));
         Visit(functionDeclaration.Body);
-        
+
         _diagnostics.Info(functionDeclaration, $"Solved type '{TypeSimplifier.Simplify(functionType)}' for function");
         return functionType;
     }
@@ -95,7 +96,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return BindType(typeAlias, TypeSimplifier.Simplify(type));
         }
 
-        var parameters = typeAlias.TypeParameters.ParameterList.ConvertAll(Visit<Types.TypeParameter>);
+        var parameters = typeAlias.TypeParameters.ParameterList.ConvertAll(VisitTypeParameter);
         var underlyingType = Visit(typeAlias.EqualsTypeClause);
         var genericType = new GenericType(typeAlias, parameters, underlyingType);
         return BindType(typeAlias, genericType);
@@ -135,8 +136,8 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = declare.Signature switch
         {
             DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause),
-            DeclareFunctionSignature functionSignature => new FunctionType(
-                functionSignature.TypeParameters?.ParameterList.ConvertAll(Visit<Types.TypeParameter>) ?? [],
+            DeclareFunctionSignature functionSignature => new Types.FunctionType(
+                functionSignature.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [],
                 functionSignature.Parameters?.ParameterList.ConvertAll(Visit) ?? [],
                 Visit(functionSignature.ReturnType)
             ),
@@ -235,7 +236,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var castedType = Visit(asExpression.Type);
         if (Type.IsNotUnknown(expressionType) && Type.IsNotNever(castedType) && Type.IsNotUnknown(castedType))
             semanticModel.TypeSolver.AddConstraint(expressionType, castedType, asExpression);
-        
+
         return BindType(asExpression, castedType);
     }
 
@@ -244,7 +245,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     public override Type VisitInvocation(Invocation invocation)
     {
         var type = Visit(invocation.Expression);
-        if (type is not FunctionType functionType)
+        if (type is not Types.FunctionType functionType)
         {
             _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, $"Cannot call value of type '{type}'");
             return BindType(invocation, Types.PrimitiveType.Never);
@@ -260,7 +261,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         var substitutedParameterTypes = SubstituteTypeParameters(functionType.ParameterTypes, substitution);
         var substitutedReturnType = SubstituteTypeParameters(functionType.ReturnType, substitution);
-        var instantiated = new FunctionType([], substitutedParameterTypes, substitutedReturnType);
+        var instantiated = new Types.FunctionType([], substitutedParameterTypes, substitutedReturnType);
 
         CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes);
         AddArgumentConstraints(invocation.Arguments, argumentTypes, substitutedParameterTypes);
@@ -415,6 +416,17 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         BindType(intersectionType, new Types.IntersectionType(intersectionType.Types.ConvertAll(Visit)));
 
     public override Type VisitUnionType(UnionType unionType) => BindType(unionType, new Types.UnionType(unionType.Types.ConvertAll(Visit)));
+
+    public override Type VisitFunctionType(FunctionType functionType) =>
+        BindType(
+            functionType,
+            new Types.FunctionType(
+                functionType.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [],
+                functionType.Parameters?.ParameterList.ConvertAll(Visit) ?? [],
+                Visit(functionType.ReturnType)
+            )
+        );
+
     public override Type VisitArrayType(ArrayType arrayType) => BindType(arrayType, new Types.ArrayType(Visit(arrayType.ElementType), arrayType.MutKeyword != null));
     public override Type VisitOptionalType(OptionalType optionalType) => BindType(optionalType, new Types.OptionalType(Visit(optionalType.NonNullableType)));
     public override Type VisitPrimitiveType(PrimitiveType primitiveType) => BindType(primitiveType, new Types.PrimitiveType(primitiveType.Kind));
@@ -443,7 +455,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(typeName, Types.PrimitiveType.Never);
     }
 
-    public override Type VisitTypeParameter(TypeParameter typeParameter)
+    public override Types.TypeParameter VisitTypeParameter(TypeParameter typeParameter)
     {
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
         var constraint = MaybeVisit(typeParameter.ColonTypeClause);
@@ -711,7 +723,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(node, instantiated);
     }
 
-    private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, FunctionType functionType)
+    private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, Types.FunctionType functionType)
     {
         CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
         AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
@@ -720,7 +732,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     private Dictionary<Types.TypeParameter, Type>? ResolveTypeArguments(
         Invocation invocation,
-        FunctionType functionType,
+        Types.FunctionType functionType,
         List<Type> argumentTypes)
     {
         var substitution = new Dictionary<Types.TypeParameter, Type>();
@@ -751,7 +763,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     }
 
     private Dictionary<Types.TypeParameter, Type>? InferTypeArguments(
-        FunctionType functionType,
+        Types.FunctionType functionType,
         List<Type> argumentTypes,
         Node errorNode)
     {

@@ -12,6 +12,7 @@ using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ElementAccess = Loom.Parsing.AST.ElementAccess;
 using Expression = Loom.Parsing.AST.Expression;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
+using FunctionType = Loom.Parsing.AST.FunctionType;
 using Identifier = Loom.Parsing.AST.Identifier;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
@@ -20,6 +21,7 @@ using Parameter = Loom.Parsing.AST.Parameter;
 using Parenthesized = Loom.Parsing.AST.Parenthesized;
 using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
+using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
 using PropertyAccess = Loom.Parsing.AST.PropertyAccess;
 using Return = Loom.Parsing.AST.Return;
 using TypeAlias = Loom.Parsing.AST.TypeAlias;
@@ -313,6 +315,14 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         };
 
     public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.AST.Identifier(identifier.Name.Text);
+
+    public override LuauNode VisitFunctionType(FunctionType functionType) =>
+        new Luau.AST.FunctionType(
+            MaybeVisit<Luau.AST.TypeParameters>(functionType.TypeParameters),
+            functionType.Parameters?.ParameterList.ConvertAll(p => Visit(p.ColonTypeClause!)) ?? [],
+            Visit(functionType.ReturnType)
+        );
+
     public override LuauNode VisitIntersectionType(IntersectionType intersectionType) => new Luau.AST.IntersectionType(intersectionType.Types.ConvertAll(Visit));
     public override LuauNode VisitUnionType(UnionType unionType) => new Luau.AST.UnionType(unionType.Types.ConvertAll(Visit));
     public override LuauNode VisitArrayType(ArrayType arrayType) => new TableType(null, Visit(arrayType.ElementType));
@@ -340,7 +350,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     public override LuauNode VisitTypeParameter(TypeParameter typeParameter) =>
         new Luau.AST.TypeParameter(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
 
-    public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) => new Luau.AST.PrimitiveType(MapLuau.PrimitiveTypeKind(primitiveType.Kind));
+    public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) =>
+        primitiveType is { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None, Parent: ColonTypeClause { Parent: DeclareFunctionSignature or FunctionType } }
+            ? new UnitType()
+            : new Luau.AST.PrimitiveType(MapLuau.PrimitiveTypeKind(primitiveType.Kind));
 
     public override LuauNode VisitLiteralType(LiteralType literalType) =>
         literalType.Value switch

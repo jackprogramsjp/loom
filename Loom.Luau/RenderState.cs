@@ -16,6 +16,9 @@ public class RenderState
     public string IndentedLine(LuauNode node) => IndentedLine(node.Render(this));
     public string IndentedLine(string text) => Indented(text) + '\n';
     public string Indented(string text) => _indent + text;
+    
+    public string ParenthesizeIfNeeded(LuauNode node) => RequiresParentheses(node) ? $"({node.Render(this)})" : node.Render(this);
+    private static bool RequiresParentheses(LuauNode node) => node is (UnionType or IntersectionType or FunctionType) and not OptionalType;
 
     public static string Escape(string input) =>
         input

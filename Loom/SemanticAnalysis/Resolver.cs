@@ -4,6 +4,10 @@ using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking;
+using Loom.TypeChecking.Types;
+using LiteralType = Loom.Parsing.AST.LiteralType;
+using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
+using TypeParameter = Loom.Parsing.AST.TypeParameter;
 
 namespace Loom.SemanticAnalysis;
 
@@ -299,6 +303,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     }
 
     public override bool VisitLiteralType(LiteralType literalType) => true;
+
     public override bool VisitPrimitiveType(PrimitiveType primitiveType) => true;
 
     public override bool VisitTypeParameter(TypeParameter typeParameter)

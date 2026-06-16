@@ -488,8 +488,54 @@ public class Parser(LexerResult lexerResult)
         return type;
     }
 
+    private TypeExpression ParseFunctionType(Token fnKeyword)
+    {
+        var typeParameters = ParseTypeParameters();
+        var parameters = ParseParameters();
+        var returnType = ParseColonTypeClause();
+        if (returnType == null)
+        {
+            _diagnostics.Error(
+                parameters?.Span ?? typeParameters?.Span ?? fnKeyword.Span,
+                InternalCodes.MissingDeclareFnReturnType,
+                "Function types must have a return type."
+            );
+
+            return new NullTypeExpression(fnKeyword);
+        }
+
+        var parameterWithDefault = parameters?.ParameterList.Find(p => p.EqualsValueClause != null);
+        if (parameterWithDefault != null)
+        {
+            _diagnostics.Error(
+                parameterWithDefault,
+                InternalCodes.UseOfDeclareFnParameterDefaults,
+                "Parameters may not have default values in function types."
+            );
+
+            return new NullTypeExpression(fnKeyword);
+        }
+
+        var parameterWithoutType = parameters?.ParameterList.Find(p => p.ColonTypeClause == null);
+        if (parameterWithoutType != null)
+        {
+            _diagnostics.Error(
+                parameterWithoutType,
+                InternalCodes.MissingDeclareFnParameterType,
+                "Parameters must have types in function types."
+            );
+
+            return new NullTypeExpression(fnKeyword);
+        }
+
+        return new FunctionType(fnKeyword, typeParameters, parameters, returnType);
+    }
+
     private TypeExpression ParsePrimaryType()
     {
+        if (Match(out var fnKeyword, SyntaxKind.FnKeyword))
+            return ParseFunctionType(fnKeyword);
+        
         if (Match(out var leftParen, SyntaxKind.LParen))
         {
             var type = ParseType();

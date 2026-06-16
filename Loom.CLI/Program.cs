@@ -14,7 +14,7 @@ if (loomConfig == null)
 
 var compilationUnit = new CompilationUnit(loomConfig);
 var result = compilationUnit.Compile();
-result.Files.ForEach(f => debugFile(f, tokens: false, ast: false));
+result.Files.ForEach(f => debugFile(f, tokens: false, ast: true));
 
 return;
 

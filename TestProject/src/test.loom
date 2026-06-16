@@ -1,2 +1,0 @@
-let s = "abcdef"
-let sliced = s[1];

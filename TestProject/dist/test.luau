@@ -1,2 +1,6 @@
-const s = "abcdef"
-const sliced = string.sub(s, 1, 1)
+type Instantiate<T> = (T) -> T
+const function id<T>(x: T)
+  return x
+end
+const idNumber: Instantiate<number> = (id :: never)
+idNumber(69)

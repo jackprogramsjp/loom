@@ -14,7 +14,7 @@ public abstract class Type
     public static bool IsNotOptional(Type type) => !IsOptional(type);
     public static bool IsOptional(Type type) => IsNone(type) || type is OptionalType || type is UnionType union && union.Types.Any(t => IsNone(t) || IsOptional(t));
     protected static string ParenthesizeIfNeeded(Type type) => RequiresParentheses(type) ? $"({type})" : type.ToString();
-    private static bool RequiresParentheses(Type type) => type is not OptionalType and UnionType or IntersectionType or FunctionType;
+    private static bool RequiresParentheses(Type type) => type is (UnionType or IntersectionType or FunctionType) and not OptionalType;
     
     public Type NonNullable() =>
         IsNone(this)
