@@ -67,7 +67,7 @@ public class TypeCheckerTest
     public void ThrowsFor_ElementAccess_InvalidTarget()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo -> 42; foo[0]");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot index value of type '() -> 42'");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot index value of type 'fn(): 42'");
     }
 
     [Fact]
@@ -1112,6 +1112,22 @@ public class TypeCheckerTest
     {
         var type = Utility.GetLastStatementType("let x: number = 42");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_FunctionTypes()
+    {
+        var type = Utility.GetLastStatementType("mut x: fn<T>(x: T): T?;");
+        var function = Assert.IsType<FunctionType>(type);
+        Assert.Single(function.TypeParameters);
+        Assert.Single(function.ParameterTypes);
+
+        var typeParameter = function.TypeParameters.First();
+        Assert.Equal("T", typeParameter.Name);
+        Assert.Null(typeParameter.Constraint);
+        Assert.Null(typeParameter.DefaultType);
+
+        Assert.IsType<OptionalType>(function.ReturnType);
     }
 
     [Fact]

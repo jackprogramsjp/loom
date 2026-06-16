@@ -304,6 +304,26 @@ public class VisitorTraversalTest
             "PrimitiveType",
             "PrimitiveType"
         );
+    
+    [Fact]
+    public void FunctionType_VisitsTypes() =>
+        AssertVisitOrder(
+            "let x: fn<T>(x: number, y: string): bool;",
+            "VariableDeclaration",
+            "ColonTypeClause",
+            "FunctionType",
+            "TypeParameters",
+            "TypeParameter",
+            "Parameters",
+            "Parameter",
+            "ColonTypeClause",
+            "PrimitiveType",
+            "Parameter",
+            "ColonTypeClause",
+            "PrimitiveType",
+            "ColonTypeClause",
+            "PrimitiveType"
+        );
 
     [Fact]
     public void TypeArguments_VisitsTypeList() =>

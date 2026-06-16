@@ -16,7 +16,7 @@ public class LuauRenderingTest
         var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
         Assert.Equal("(x :: number)", typeCast.Render());
     }
-    
+
     [Fact]
     public void Renders_IfStatement()
     {
@@ -277,6 +277,30 @@ public class LuauRenderingTest
     public void Renders_OptionalType()
     {
         Assert.Equal("number?", new OptionalType(PrimitiveType.Number).Render());
+    }
+
+    [Fact]
+    public void Renders_FunctionType_WithTypeParameters()
+    {
+        Assert.Equal(
+            "<T>(number, T) -> T",
+            new FunctionType(new TypeParameters([new TypeParameter("T")]), [PrimitiveType.Number, new TypeName("T")], new TypeName("T")).Render()
+        );
+    }
+
+    [Fact]
+    public void Renders_FunctionType()
+    {
+        Assert.Equal(
+            "(number, boolean?) -> ()",
+            new FunctionType(new TypeParameters(), [PrimitiveType.Number, new OptionalType(PrimitiveType.Boolean)], new UnitType()).Render()
+        );
+    }
+
+    [Fact]
+    public void Renders_UnionType_WithRequiredParens()
+    {
+        Assert.Equal("number | (() -> ())", new UnionType([PrimitiveType.Number, new FunctionType(new TypeParameters(), [], new UnitType())]).Render());
     }
 
     [Fact]

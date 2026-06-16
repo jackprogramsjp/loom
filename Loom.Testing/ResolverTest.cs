@@ -178,6 +178,13 @@ public class ResolverTest
     }
     
     [Fact]
+    public void Allows_SameParameterName_ChainedFnTypes()
+    {
+        var model = Utility.GetSemanticModel("type X = fn(x: number): void & fn(x: string): bool");
+        Utility.AssertNoErrors(model);
+    }
+    
+    [Fact]
     public void Allows_UsageOfDeclaredVariable()
     {
         var model = Utility.GetSemanticModel("declare let x: number; x;");

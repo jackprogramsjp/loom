@@ -3,6 +3,7 @@ using Loom.Parsing.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;
 using ElementAccess = Loom.Luau.AST.ElementAccess;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
+using FunctionType = Loom.Luau.AST.FunctionType;
 using Identifier = Loom.Luau.AST.Identifier;
 using IntersectionType = Loom.Luau.AST.IntersectionType;
 using OptionalType = Loom.Luau.AST.OptionalType;
@@ -28,6 +29,37 @@ public class LuauGeneratorTest
     public void Generates_Nothing(string source)
     {
         Assert.Empty(Utility.GetLuauAST(source).Statements);
+    }
+    
+    [Theory]
+    [InlineData("none")]
+    [InlineData("void")]
+    public void Generates_FunctionType_WithPrimitiveReturn_ThatUsesUnitConversion(string returnType)
+    {
+        var luauTree = Utility.GetLuauAST($"type Callback = fn(): {returnType}");
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        var functionType = Assert.IsType<FunctionType>(typeAlias.Type);
+        Assert.Empty(functionType.ParameterTypes);
+        Assert.IsType<UnitType>(functionType.ReturnType);
+    
+        var rendered = functionType.Render();
+        Assert.Contains("()", rendered);
+    }
+    
+    [Fact]
+    public void Generates_FunctionType()
+    {
+        var luauTree = Utility.GetLuauAST("type Optional = fn(x: number, y: string?): bool");
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        var functionType = Assert.IsType<FunctionType>(typeAlias.Type);
+        Assert.Equal(2, functionType.ParameterTypes.Count);
+        Assert.IsType<PrimitiveType>(functionType.ParameterTypes.First());
+        Assert.IsType<OptionalType>(functionType.ParameterTypes.Last());
+        Assert.IsType<PrimitiveType>(functionType.ReturnType);
     }
     
     [Fact]

@@ -351,7 +351,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         new Luau.AST.TypeParameter(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
 
     public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) =>
-        primitiveType is { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None, Parent: ColonTypeClause { Parent: DeclareFunctionSignature or FunctionType } }
+    primitiveType is { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None, Parent: ColonTypeClause { Parent: DeclareFunctionSignature or FunctionType } }
             ? new UnitType()
             : new Luau.AST.PrimitiveType(MapLuau.PrimitiveTypeKind(primitiveType.Kind));
 
@@ -361,6 +361,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
             long or int or double => Luau.AST.PrimitiveType.Number,
             bool b => new BooleanLiteralType(b),
             string s => new StringLiteralType(s),
+            _ when literalType.Parent is ColonTypeClause { Parent: DeclareFunctionSignature or FunctionType } => new UnitType(),
             _ => Luau.AST.PrimitiveType.Nil
         };
 

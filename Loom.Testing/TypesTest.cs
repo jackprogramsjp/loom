@@ -926,25 +926,25 @@ public class TypesTest
     public void FunctionType_ToString()
     {
         var fn1 = new FunctionType([], [Number], String);
-        Assert.Equal("(number) -> string", fn1.ToString());
+        Assert.Equal("fn(number): string", fn1.ToString());
 
         var fn2 = new FunctionType([], [Number, String, Bool], Void);
-        Assert.Equal("(number, string, bool) -> void", fn2.ToString());
+        Assert.Equal("fn(number, string, bool): void", fn2.ToString());
 
         var fn3 = new FunctionType([], [], Number);
-        Assert.Equal("() -> number", fn3.ToString());
+        Assert.Equal("fn(): number", fn3.ToString());
 
         var paramT = new TypeParameter("T");
         var paramU = new TypeParameter("U");
         var genericFn = new FunctionType([paramT, paramU], [paramT], paramU);
-        Assert.Equal("<T, U>(T) -> U", genericFn.ToString());
+        Assert.Equal("fn<T, U>(T): U", genericFn.ToString());
 
         var innerFn = new FunctionType([], [Number], String);
         var outerFn = new FunctionType([], [innerFn], Bool);
-        Assert.Equal("((number) -> string) -> bool", outerFn.ToString());
+        Assert.Equal("fn(fn(number): string): bool", outerFn.ToString());
 
         var complexFn = new FunctionType([], [new ArrayType(Number, true), new OptionalType(String)], new UnionType([Number, String]));
-        Assert.Equal("(number[mut], string?) -> number | string", complexFn.ToString());
+        Assert.Equal("fn(number[mut], string?): number | string", complexFn.ToString());
     }
 
     [Fact]
@@ -973,7 +973,7 @@ public class TypesTest
         Assert.Equal("number | string | bool", union2.ToString());
 
         var union3 = new UnionType([new ArrayType(Number, true), new OptionalType(String), new FunctionType([], [], Void)]);
-        Assert.Equal("number[mut] | string? | (() -> void)", union3.ToString());
+        Assert.Equal("number[mut] | string? | (fn(): void)", union3.ToString());
 
         var union4 = new UnionType([Number]);
         Assert.Equal("number", union4.ToString());
@@ -989,7 +989,7 @@ public class TypesTest
         Assert.Equal("number & string & bool", intersection2.ToString());
 
         var intersection3 = new IntersectionType([new ArrayType(Number, true), new OptionalType(String), new FunctionType([], [], Void)]);
-        Assert.Equal("number[mut] & string? & (() -> void)", intersection3.ToString());
+        Assert.Equal("number[mut] & string? & (fn(): void)", intersection3.ToString());
 
         var intersection4 = new IntersectionType([Number]);
         Assert.Equal("number", intersection4.ToString());
@@ -1112,7 +1112,7 @@ public class TypesTest
         var optionalFn = new OptionalType(fnType);
         var arrayOfOptionalFn = new ArrayType(optionalFn, true);
 
-        Assert.Equal("((number, number) -> { x: number, y: number })?[mut]", arrayOfOptionalFn.ToString());
+        Assert.Equal("(fn(number, number): { x: number, y: number })?[mut]", arrayOfOptionalFn.ToString());
 
         var union = new UnionType(
             [

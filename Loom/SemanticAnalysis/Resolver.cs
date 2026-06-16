@@ -5,6 +5,7 @@ using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
+using FunctionType = Loom.Parsing.AST.FunctionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using TypeParameter = Loom.Parsing.AST.TypeParameter;
@@ -189,11 +190,25 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         return true;
     }
-    
+
+    public override bool VisitFunctionType(FunctionType functionType)
+    {
+        PushScope();
+        base.VisitFunctionType(functionType);
+        PopScope();
+
+        return true;
+    }
+
     public override bool VisitParameter(Parameter parameter)
     {
+        var scope = CurrentScope();
         var name = parameter.Name.Text;
-        var existingSymbol = LookupValueId(name);
+        var existingSymbol = scope.VariableLookup
+            .Where(pair => pair.Key == name && pair.Value.Kind == SymbolKind.Parameter)
+            .Select(pair => pair.Value)
+            .FirstOrDefault();
+        
         if (existingSymbol != null)
         {
             _diagnostics.Error(

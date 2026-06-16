@@ -7,5 +7,5 @@ public class FunctionType(TypeParameters? typeParameters, List<LuauType> paramet
     public LuauType ReturnType { get; } = returnType;
 
     public override string Render(RenderState state) =>
-        (TypeParameters?.Render(state) ?? "") + '(' + string.Join(", ", state.RenderList(ParameterTypes)) + ") -> " + ReturnType.Render(state);
+        (TypeParameters?.Render(state) ?? "") + '(' + string.Join(", ", state.RenderList(ParameterTypes)) + ") -> " + state.ParenthesizeIfNeeded(ReturnType);
 }

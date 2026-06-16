@@ -4,6 +4,7 @@ using Loom.Syntax;
 using Loom.TypeChecking.Types;
 using Microsoft.VisualBasic.CompilerServices;
 using ArrayType = Loom.Parsing.AST.ArrayType;
+using FunctionType = Loom.Parsing.AST.FunctionType;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
@@ -164,6 +165,157 @@ public class ParserTest
             "Expected declaration signature, got '123'."
         );
     }
+
+    [Fact]
+    public void ThrowsFor_FunctionType_MissingReturnType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("type Fn = fn(number)");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MissingDeclareFnReturnType,
+            "Function types must have a return type."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_FunctionType_DefaultParameter()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("type Fn = fn(x: number = 5): number");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.UseOfDeclareFnParameterDefaults,
+            "Parameters may not have default values in function types."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_FunctionType_ParameterWithoutType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("type Fn = fn(x): number");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MissingDeclareFnParameterType,
+            "Parameters must have types in function types."
+        );
+    }
+    
+    [Fact]
+    public void Parses_FunctionType_Basic()
+    {
+        var tree = Utility.GetAST("let callback: fn: void");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+        var returnType = Assert.IsType<PrimitiveType>(fnType.ReturnType.Type);
+        Assert.Null(fnType.TypeParameters);
+        Assert.Null(fnType.Parameters);
+        Assert.Equal(PrimitiveTypeKind.Void, returnType.Kind);
+    }
+
+    [Fact]
+    public void Parses_FunctionType_ReturningOptional()
+    {
+        var tree = Utility.GetAST("let callback: fn(x: number): number?");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+        var returnType = Assert.IsType<OptionalType>(fnType.ReturnType.Type);
+        var inner = Assert.IsType<PrimitiveType>(returnType.NonNullableType);
+        Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
+    }
+
+    [Fact]
+    public void Parses_FunctionType_ReturningArray()
+    {
+        var tree = Utility.GetAST("let callback: fn(x: number): number[]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+        var returnType = Assert.IsType<ArrayType>(fnType.ReturnType.Type);
+        Assert.IsType<PrimitiveType>(returnType.ElementType);
+    }
+
+    [Fact]
+    public void Parses_FunctionType_ReturningUnion()
+    {
+        var tree = Utility.GetAST("let callback: fn(x: number): number | string");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+        var returnType = Assert.IsType<UnionType>(fnType.ReturnType.Type);
+        Assert.Equal(2, returnType.Types.Count);
+    }
+
+    [Fact]
+    public void Parses_OptionalFunction_WithParentheses()
+    {
+        var tree = Utility.GetAST("let callback: (fn(x: number): number)?");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var optional = Assert.IsType<OptionalType>(varDecl.ColonTypeClause!.Type);
+        var parenType = Assert.IsType<ParenthesizedType>(optional.NonNullableType);
+        var fnType = Assert.IsType<FunctionType>(parenType.Type);
+        Assert.NotNull(fnType.Parameters);
+        Assert.Single(fnType.Parameters.ParameterList);
+    }
+
+    [Fact]
+    public void Parses_ArrayOfFunctions_WithParentheses()
+    {
+        var tree = Utility.GetAST("let callbacks: (fn(x: number): number)[]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var arrayType = Assert.IsType<ArrayType>(varDecl.ColonTypeClause!.Type);
+        var parenType = Assert.IsType<ParenthesizedType>(arrayType.ElementType);
+        var fnType = Assert.IsType<FunctionType>(parenType.Type);
+        Assert.NotNull(fnType.Parameters);
+        Assert.Single(fnType.Parameters.ParameterList);
+    }
+    
+    [Fact]
+public void Parses_FunctionType_WithTypeParameters()
+{
+    var tree = Utility.GetAST("let identity: fn<T>(value: T): T");
+    var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+    var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+    
+    Assert.NotNull(fnType.TypeParameters);
+    Assert.Single(fnType.TypeParameters.ParameterList);
+    var tp = fnType.TypeParameters.ParameterList.First();
+    Assert.Equal("T", tp.Name.Text);
+    Assert.Null(tp.ColonTypeClause); // no constraint
+    
+    Assert.NotNull(fnType.Parameters);
+    Assert.Single(fnType.Parameters.ParameterList);
+    var param = fnType.Parameters.ParameterList.First();
+    Assert.Equal("value", param.Name.Text);
+    var paramType = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
+    Assert.Equal("T", paramType.Name.Text);
+    
+    var returnType = Assert.IsType<TypeName>(fnType.ReturnType.Type);
+    Assert.Equal("T", returnType.Name.Text);
+}
+
+[Fact]
+public void Parses_FunctionType_WithTypeParametersAndConstraints()
+{
+    var tree = Utility.GetAST("let wrap: fn<T: number>(item: T): T[]");
+    var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+    var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+    
+    Assert.NotNull(fnType.TypeParameters);
+    Assert.Single(fnType.TypeParameters.ParameterList);
+    var tp = fnType.TypeParameters.ParameterList.First();
+    Assert.Equal("T", tp.Name.Text);
+    Assert.NotNull(tp.ColonTypeClause);
+    var constraint = Assert.IsType<PrimitiveType>(tp.ColonTypeClause.Type);
+    Assert.Equal(PrimitiveTypeKind.Number, constraint.Kind);
+    
+    Assert.NotNull(fnType.Parameters);
+    Assert.Single(fnType.Parameters.ParameterList);
+    var param = fnType.Parameters.ParameterList.First();
+    Assert.Equal("item", param.Name.Text);
+    var paramType = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
+    Assert.Equal("T", paramType.Name.Text);
+    
+    var returnType = Assert.IsType<ArrayType>(fnType.ReturnType.Type);
+    var elementType = Assert.IsType<TypeName>(returnType.ElementType);
+    Assert.Equal("T", elementType.Name.Text);
+}
 
     [Fact]
     public void Parses_DeclareFunctionSignature_Basic()
@@ -1225,7 +1377,7 @@ public class ParserTest
         var intersection = Assert.IsType<IntersectionType>(asExpr.Type);
         Assert.Equal(2, intersection.Types.Count);
     }
-    
+
     [Theory]
     [InlineData("a + b as number")]
     [InlineData("a * b as string")]
