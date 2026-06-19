@@ -20,7 +20,6 @@ public class VisitorTraversalTest
 
         public override bool VisitLiteralType(LiteralType lt) => true;
         public override bool VisitPrimitiveType(PrimitiveType pt) => true;
-        public override bool VisitTypeName(TypeName tn) => true;
         public override bool VisitLiteral(Literal lit) => true;
         public override bool VisitIdentifier(Identifier id) => true;
     }
@@ -35,6 +34,27 @@ public class VisitorTraversalTest
 
     [Fact]
     public void ExpressionStatement_VisitsExpression() => AssertVisitOrder("42", "ExpressionStatement", "Literal");
+
+    [Fact]
+    public void Interface_VisitsConstraintsAndMembers() =>
+        AssertVisitOrder(
+            "interface A: B, C { [bool]: number, a: number, b: number }",
+            "InterfaceDeclaration",
+            "ColonTypeListClause",
+            "TypeName",
+            "TypeName",
+            "InterfaceBody",
+            "IndexerDeclaration",
+            "PrimitiveType",
+            "ColonTypeClause",
+            "PrimitiveType",
+            "PropertyDeclaration",
+            "ColonTypeClause",
+            "PrimitiveType",
+            "PropertyDeclaration",
+            "ColonTypeClause",
+            "PrimitiveType"
+        );
 
     [Fact]
     public void Return_VisitsExpression() =>
@@ -147,6 +167,17 @@ public class VisitorTraversalTest
         );
 
     [Fact]
+    public void TypeName_VisitsGenericArguments() =>
+        AssertVisitOrder(
+            "type X = A<T>",
+            "TypeAlias",
+            "EqualsTypeClause",
+            "TypeName",
+            "TypeArguments",
+            "TypeName"
+        );
+
+    [Fact]
     public void EnumDeclaration_VisitsMembers() =>
         AssertVisitOrder(
             "enum E { A, B }",
@@ -252,7 +283,7 @@ public class VisitorTraversalTest
             "NameOf",
             "Identifier"
         );
-    
+
     [Fact]
     public void As_VisitsExpressionAndType() =>
         AssertVisitOrder(
@@ -304,7 +335,7 @@ public class VisitorTraversalTest
             "PrimitiveType",
             "PrimitiveType"
         );
-    
+
     [Fact]
     public void FunctionType_VisitsTypes() =>
         AssertVisitOrder(

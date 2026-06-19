@@ -1,3 +1,4 @@
+using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.TypeChecking.Types.ArrayType;
 using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
@@ -15,6 +16,90 @@ using static PrimitiveType;
 [Collection("Assembly")]
 public class TypesTest
 {
+    [Fact]
+    public void InterfaceType_Assignability_Self()
+    {
+        var interfaceA = new InterfaceType("A", [], new ObjectType(null, []));
+        Assert.True(interfaceA.IsAssignableTo(interfaceA));
+    }
+
+    [Fact]
+    public void InterfaceType_Assignability_WithSingleConstraint()
+    {
+        var objectB = new ObjectType(null, [new ObjectProperty(false, "id", Number)]);
+        var interfaceB = new InterfaceType("B", [], objectB);
+        var interfaceA = new InterfaceType("A", [interfaceB], new ObjectType(null, [new ObjectProperty(false, "name", String)]));
+        Assert.True(interfaceA.IsAssignableTo(interfaceB));
+        Assert.False(interfaceB.IsAssignableTo(interfaceA));
+    }
+
+    [Fact]
+    public void InterfaceType_Assignability_WithMultipleConstraints()
+    {
+        var objectB = new ObjectType(null, [new ObjectProperty(false, "id", Number)]);
+        var interfaceB = new InterfaceType("B", [], objectB);
+        var objectC = new ObjectType(null, [new ObjectProperty(false, "name", String)]);
+        var interfaceC = new InterfaceType("C", [], objectC);
+        var interfaceA = new InterfaceType("A", [interfaceB, interfaceC], new ObjectType(null, []));
+        Assert.True(interfaceA.IsAssignableTo(interfaceB));
+        Assert.True(interfaceA.IsAssignableTo(interfaceC));
+        Assert.False(interfaceB.IsAssignableTo(interfaceA));
+        Assert.False(interfaceC.IsAssignableTo(interfaceA));
+    }
+
+    [Fact]
+    public void InterfaceType_Assignability_TransitiveConstraints()
+    {
+        var objectC = new ObjectType(null, [new ObjectProperty(false, "c", Number)]);
+        var interfaceC = new InterfaceType("C", [], objectC);
+        var objectB = new ObjectType(null, [new ObjectProperty(false, "b", Number)]);
+        var interfaceB = new InterfaceType("B", [interfaceC], objectB);
+        var objectA = new ObjectType(null, [new ObjectProperty(false, "a", Number)]);
+        var interfaceA = new InterfaceType("A", [interfaceB], objectA);
+        Assert.True(interfaceA.IsAssignableTo(interfaceB));
+        Assert.True(interfaceA.IsAssignableTo(interfaceC));
+        Assert.False(interfaceC.IsAssignableTo(interfaceA));
+    }
+
+    [Fact]
+    public void InterfaceType_Assignability_WithObjectTypeStructure()
+    {
+        var objectType = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number)]);
+        var interfacePoint = new InterfaceType("Point", [], objectType);
+        var interfaceCoord = new InterfaceType("Coord", [], objectType);
+        Assert.True(interfacePoint.IsAssignableTo(interfaceCoord));
+        Assert.True(interfaceCoord.IsAssignableTo(interfacePoint));
+        
+        var object3D = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number), new ObjectProperty(false, "z", Number)]
+        );
+        var interfacePoint3D = new InterfaceType("Point3D", [], object3D);
+        Assert.True(interfacePoint3D.IsAssignableTo(interfacePoint));
+        Assert.False(interfacePoint.IsAssignableTo(interfacePoint3D));
+    }
+
+    [Fact]
+    public void InterfaceType_Assignability_WithConstraintsAndObjectType()
+    {
+        var baseObj = new ObjectType(null, [new ObjectProperty(false, "id", Number)]);
+        var interfaceBase = new InterfaceType("Base", [], baseObj);
+        var derivedObj = new ObjectType(null, [new ObjectProperty(false, "name", String)]);
+        var interfaceDerived = new InterfaceType("Derived", [interfaceBase], derivedObj);
+        Assert.True(interfaceDerived.IsAssignableTo(interfaceBase));
+        Assert.False(interfaceBase.IsAssignableTo(interfaceDerived));
+    }
+
+    [Fact]
+    public void InterfaceType_Assignability_WithCovariantProperties()
+    {
+        var baseProp = new ObjectType(null, [new ObjectProperty(false, "value", Number)]);
+        var interfaceBase = new InterfaceType("Base", [], baseProp);
+        var derivedProp = new ObjectType(null, [new ObjectProperty(false, "value", new LiteralType(42))]);
+        var interfaceDerived = new InterfaceType("Derived", [interfaceBase], derivedProp);
+        Assert.True(interfaceDerived.IsAssignableTo(interfaceBase));
+    }
+
     [Fact]
     public void ObjectType_Assignability_EmptyObject()
     {
@@ -312,8 +397,8 @@ public class TypesTest
         var paramU = new TypeParameter("U");
         var fn1 = new FunctionType([paramT], [paramT], paramT);
         var fn2 = new FunctionType([paramU], [paramU], paramU);
-        Assert.False(fn1.IsAssignableTo(fn2));
-        Assert.False(fn2.IsAssignableTo(fn1));
+        Assert.True(fn1.IsAssignableTo(fn2));
+        Assert.True(fn2.IsAssignableTo(fn1));
     }
 
     [Fact]
@@ -351,7 +436,7 @@ public class TypesTest
     {
         var returnIntersection = new FunctionType([], [Number], new IntersectionType([String, Bool]));
         var returnString = new FunctionType([], [Number], String);
-        Assert.False(returnIntersection.IsAssignableTo(returnString));
+        Assert.True(returnIntersection.IsAssignableTo(returnString));
         Assert.False(returnString.IsAssignableTo(returnIntersection));
     }
 
@@ -381,7 +466,7 @@ public class TypesTest
         Assert.True(Bool.IsAssignableTo(intersection));
         Assert.True(Bool.IsAssignableTo(union1));
         Assert.True(Bool.IsAssignableTo(union2));
-        Assert.True(intersection.IsAssignableTo(Bool));
+        Assert.True(TypeSimplifier.Simplify(intersection).IsAssignableTo(Bool));
     }
 
     [Fact]
@@ -468,6 +553,23 @@ public class TypesTest
         Assert.False(Unknown.IsAssignableTo(Number));
         Assert.True(Number.IsAssignableTo(Unknown));
         Assert.True(new OptionalType(Number).IsAssignableTo(Unknown));
+    }
+
+    [Fact]
+    public void InterfaceType_Equality_DifferentNames()
+    {
+        var obj = new ObjectType(null, [new ObjectProperty(false, "x", Number)]);
+        var interfaceA = new InterfaceType("A", [], obj);
+        var interfaceB = new InterfaceType("B", [], obj);
+        var interfaceC = new InterfaceType("C", [interfaceB], obj);
+        Assert.True(interfaceA.Equals(interfaceA));
+        Assert.True(interfaceA.Equals(interfaceB));
+        Assert.True(interfaceB.Equals(interfaceA));
+        Assert.True(interfaceC.Equals(interfaceC));
+        Assert.False(interfaceB.Equals(interfaceC));
+        Assert.False(interfaceA.Equals(interfaceC));
+        Assert.False(interfaceC.Equals(interfaceA));
+        Assert.False(interfaceC.Equals(interfaceB));
     }
 
     [Fact]
@@ -952,7 +1054,7 @@ public class TypesTest
     {
         var param = new TypeParameter("T");
         Assert.Equal("T", param.ToString());
-        
+
         var paramWithConstraint = new TypeParameter("T", new PrimitiveType(PrimitiveTypeKind.Number));
         Assert.Equal("T: number", paramWithConstraint.ToString());
 
@@ -965,7 +1067,7 @@ public class TypesTest
     {
         var empty = new UnionType([Number]);
         Assert.Equal("number", empty.ToString());
-        
+
         var union1 = new UnionType([Number, String]);
         Assert.Equal("number | string", union1.ToString());
 
@@ -1094,14 +1196,19 @@ public class TypesTest
     {
         var obj1 = new ObjectType(null, [new ObjectProperty(false, "a", Number), new ObjectProperty(false, "b", String)]);
         var obj2 = new ObjectType(null, [new ObjectProperty(false, "b", String), new ObjectProperty(false, "a", Number)]);
-
         var repr1 = obj1.ToString();
         var repr2 = obj2.ToString();
-
         Assert.Contains("a: number", repr1);
         Assert.Contains("b: string", repr1);
         Assert.Contains("a: number", repr2);
         Assert.Contains("b: string", repr2);
+    }
+
+    [Fact]
+    public void InterfaceType_ToString()
+    {
+        var type = new InterfaceType("Box", [], new ObjectType(null, []));
+        Assert.Equal("Box", type.ToString());
     }
 
     [Fact]

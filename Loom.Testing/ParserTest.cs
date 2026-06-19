@@ -2,14 +2,12 @@ using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
-using Microsoft.VisualBasic.CompilerServices;
 using ArrayType = Loom.Parsing.AST.ArrayType;
 using FunctionType = Loom.Parsing.AST.FunctionType;
 using IntersectionType = Loom.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Parsing.AST.LiteralType;
 using OptionalType = Loom.Parsing.AST.OptionalType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
-using Type = System.Type;
 using TypeName = Loom.Parsing.AST.TypeName;
 using UnionType = Loom.Parsing.AST.UnionType;
 
@@ -198,7 +196,176 @@ public class ParserTest
             "Parameters must have types in function types."
         );
     }
+
+    [Fact]
+    public void ThrowsFor_InterfaceMember_MissingPropertyType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("interface I { name }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.ExpectedInterfaceMemberType,
+            "Expected indexer type, got '}'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceMember_MissingIndexerType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("interface I { [int] }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.ExpectedInterfaceMemberType,
+            "Expected indexer type, got '}'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceDeclaration_MissingName()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("interface { }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.UnexpectedToken,
+            "Expected interface name, got '{'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceMember_UnexpectedToken()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("interface I { 123 }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.UnexpectedToken,
+            "Expected property name, got '123'."
+        );
+    }
     
+    [Fact]
+    public void Parses_InterfaceDeclaration_NoBody()
+    {
+        var tree = Utility.GetAST("interface I;");
+        Assert.Single(tree.Statements);
+
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.Equal("I", iface.Name.Text);
+        Assert.Null(iface.TypeParameters);
+        Assert.Null(iface.ColonTypeListClause);
+        Assert.Null(iface.Body);
+        Assert.Equal(SyntaxKind.InterfaceKeyword, iface.Keyword.Kind);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_EmptyBody()
+    {
+        var tree = Utility.GetAST("interface I { }");
+        Assert.Single(tree.Statements);
+
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.Equal("I", iface.Name.Text);
+        Assert.Null(iface.TypeParameters);
+        Assert.Null(iface.ColonTypeListClause);
+        Assert.NotNull(iface.Body);
+        Assert.Empty(iface.Body.Members);
+        Assert.Equal(SyntaxKind.InterfaceKeyword, iface.Keyword.Kind);
+        Assert.Equal(SyntaxKind.LBrace, iface.Body.LeftBrace.Kind);
+        Assert.Equal(SyntaxKind.RBrace, iface.Body.RightBrace.Kind);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_WithProperty()
+    {
+        var tree = Utility.GetAST("interface IPoint { x: number }");
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.NotNull(iface.Body);
+        Assert.Single(iface.Body.Members);
+        
+        var prop = Assert.IsType<PropertyDeclaration>(iface.Body.Members.First());
+        Assert.Null(prop.MutKeyword);
+        Assert.Equal("x", prop.Name.Text);
+        Assert.NotNull(prop.ColonTypeClause);
+        Assert.IsType<PrimitiveType>(prop.ColonTypeClause.Type);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_WithMutableProperty()
+    {
+        var result = Utility.Parse("interface I { mut count: int }");
+        Utility.AssertNoErrors(result);
+        
+        var iface = Assert.IsType<InterfaceDeclaration>(result.Tree.Statements.First());
+        Assert.NotNull(iface.Body);
+        
+        var prop = Assert.IsType<PropertyDeclaration>(iface.Body.Members.First());
+        Assert.NotNull(prop.MutKeyword);
+        Assert.Equal(SyntaxKind.MutKeyword, prop.MutKeyword.Kind);
+        Assert.Equal("count", prop.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_WithIndexer()
+    {
+        var tree = Utility.GetAST("interface I { [number]: string }");
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.NotNull(iface.Body);
+        
+        var idx = Assert.IsType<IndexerDeclaration>(iface.Body.Members.First());
+        Assert.Null(idx.MutKeyword);
+        Assert.NotNull(idx.IndexType);
+        Assert.IsType<PrimitiveType>(idx.IndexType);
+        Assert.NotNull(idx.ColonTypeClause);
+        Assert.IsType<PrimitiveType>(idx.ColonTypeClause.Type);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_WithMutableIndexer()
+    {
+        var tree = Utility.GetAST("interface I { mut [string]: number }");
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.NotNull(iface.Body);
+        
+        var idx = Assert.IsType<IndexerDeclaration>(iface.Body.Members.First());
+        Assert.NotNull(idx.MutKeyword);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_MultipleMembers()
+    {
+        var tree = Utility.GetAST("interface I { x: number, y: string, [int]: bool }");
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.NotNull(iface.Body);
+        Assert.Equal(3, iface.Body.Members.Count);
+        Assert.IsType<PropertyDeclaration>(iface.Body.Members[0]);
+        Assert.IsType<PropertyDeclaration>(iface.Body.Members[1]);
+        Assert.IsType<IndexerDeclaration>(iface.Body.Members[2]);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_MembersWithoutCommas()
+    {
+        var tree = Utility.GetAST("interface I { x: number y: string }");
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.NotNull(iface.Body);
+        Assert.Equal(2, iface.Body.Members.Count);
+    }
+
+    [Fact]
+    public void Parses_InterfaceDeclaration_GenericWithBaseTypes()
+    {
+        var tree = Utility.GetAST("interface I<T, U: number> : Base, IDisposable { }");
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.Equal("I", iface.Name.Text);
+        Assert.NotNull(iface.TypeParameters);
+        Assert.Equal(2, iface.TypeParameters.ParameterList.Count);
+        Assert.Equal("T", iface.TypeParameters.ParameterList[0].Name.Text);
+        Assert.Equal("U", iface.TypeParameters.ParameterList[1].Name.Text);
+        Assert.NotNull(iface.TypeParameters.ParameterList[1].ColonTypeClause);
+        Assert.NotNull(iface.ColonTypeListClause);
+        Assert.Equal(2, iface.ColonTypeListClause.Types.Count);
+        Assert.IsType<TypeName>(iface.ColonTypeListClause.Types.First());
+        Assert.IsType<TypeName>(iface.ColonTypeListClause.Types.Last());
+    }
+
     [Fact]
     public void Parses_FunctionType_Basic()
     {
@@ -265,57 +432,57 @@ public class ParserTest
         Assert.NotNull(fnType.Parameters);
         Assert.Single(fnType.Parameters.ParameterList);
     }
-    
-    [Fact]
-public void Parses_FunctionType_WithTypeParameters()
-{
-    var tree = Utility.GetAST("let identity: fn<T>(value: T): T");
-    var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
-    var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
-    
-    Assert.NotNull(fnType.TypeParameters);
-    Assert.Single(fnType.TypeParameters.ParameterList);
-    var tp = fnType.TypeParameters.ParameterList.First();
-    Assert.Equal("T", tp.Name.Text);
-    Assert.Null(tp.ColonTypeClause); // no constraint
-    
-    Assert.NotNull(fnType.Parameters);
-    Assert.Single(fnType.Parameters.ParameterList);
-    var param = fnType.Parameters.ParameterList.First();
-    Assert.Equal("value", param.Name.Text);
-    var paramType = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
-    Assert.Equal("T", paramType.Name.Text);
-    
-    var returnType = Assert.IsType<TypeName>(fnType.ReturnType.Type);
-    Assert.Equal("T", returnType.Name.Text);
-}
 
-[Fact]
-public void Parses_FunctionType_WithTypeParametersAndConstraints()
-{
-    var tree = Utility.GetAST("let wrap: fn<T: number>(item: T): T[]");
-    var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
-    var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
-    
-    Assert.NotNull(fnType.TypeParameters);
-    Assert.Single(fnType.TypeParameters.ParameterList);
-    var tp = fnType.TypeParameters.ParameterList.First();
-    Assert.Equal("T", tp.Name.Text);
-    Assert.NotNull(tp.ColonTypeClause);
-    var constraint = Assert.IsType<PrimitiveType>(tp.ColonTypeClause.Type);
-    Assert.Equal(PrimitiveTypeKind.Number, constraint.Kind);
-    
-    Assert.NotNull(fnType.Parameters);
-    Assert.Single(fnType.Parameters.ParameterList);
-    var param = fnType.Parameters.ParameterList.First();
-    Assert.Equal("item", param.Name.Text);
-    var paramType = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
-    Assert.Equal("T", paramType.Name.Text);
-    
-    var returnType = Assert.IsType<ArrayType>(fnType.ReturnType.Type);
-    var elementType = Assert.IsType<TypeName>(returnType.ElementType);
-    Assert.Equal("T", elementType.Name.Text);
-}
+    [Fact]
+    public void Parses_FunctionType_WithTypeParameters()
+    {
+        var tree = Utility.GetAST("let identity: fn<T>(value: T): T");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+
+        Assert.NotNull(fnType.TypeParameters);
+        Assert.Single(fnType.TypeParameters.ParameterList);
+        var tp = fnType.TypeParameters.ParameterList.First();
+        Assert.Equal("T", tp.Name.Text);
+        Assert.Null(tp.ColonTypeClause); // no constraint
+
+        Assert.NotNull(fnType.Parameters);
+        Assert.Single(fnType.Parameters.ParameterList);
+        var param = fnType.Parameters.ParameterList.First();
+        Assert.Equal("value", param.Name.Text);
+        var paramType = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
+        Assert.Equal("T", paramType.Name.Text);
+
+        var returnType = Assert.IsType<TypeName>(fnType.ReturnType.Type);
+        Assert.Equal("T", returnType.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_FunctionType_WithTypeParametersAndConstraints()
+    {
+        var tree = Utility.GetAST("let wrap: fn<T: number>(item: T): T[]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(varDecl.ColonTypeClause!.Type);
+
+        Assert.NotNull(fnType.TypeParameters);
+        Assert.Single(fnType.TypeParameters.ParameterList);
+        var tp = fnType.TypeParameters.ParameterList.First();
+        Assert.Equal("T", tp.Name.Text);
+        Assert.NotNull(tp.ColonTypeClause);
+        var constraint = Assert.IsType<PrimitiveType>(tp.ColonTypeClause.Type);
+        Assert.Equal(PrimitiveTypeKind.Number, constraint.Kind);
+
+        Assert.NotNull(fnType.Parameters);
+        Assert.Single(fnType.Parameters.ParameterList);
+        var param = fnType.Parameters.ParameterList.First();
+        Assert.Equal("item", param.Name.Text);
+        var paramType = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
+        Assert.Equal("T", paramType.Name.Text);
+
+        var returnType = Assert.IsType<ArrayType>(fnType.ReturnType.Type);
+        var elementType = Assert.IsType<TypeName>(returnType.ElementType);
+        Assert.Equal("T", elementType.Name.Text);
+    }
 
     [Fact]
     public void Parses_DeclareFunctionSignature_Basic()

@@ -247,8 +247,8 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         var parameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
         var constraints = constraintTypes.OfType<InterfaceType>().ToList();
-        var indexerDeclaration = interfaceDeclaration.Members.OfType<IndexerDeclaration>().FirstOrDefault();
-        var propertyDeclarations = interfaceDeclaration.Members.OfType<PropertyDeclaration>();
+        var indexerDeclaration = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
+        var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>() ?? [];
         ObjectIndexer? indexer = null;
 
         if (indexerDeclaration != null)
@@ -686,7 +686,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     private Type GetTypeAtIndexInInterface(Node node, InterfaceType interfaceType, Type indexType)
     {
-        var result = interfaceType.ObjectType.GetTypeAtIndex(indexType);
+        var result = interfaceType.ObjectType.GetTypeAtIndex(indexType, interfaceType);
         var (bodyType, cannotFindReason) = result;
         if (bodyType != null)
             return BindType(node, bodyType.ValueType);

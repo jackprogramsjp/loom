@@ -159,8 +159,8 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
-        var indexer = interfaceDeclaration.Members.OfType<IndexerDeclaration>().FirstOrDefault();
-        var propertyDeclarations = interfaceDeclaration.Members.OfType<PropertyDeclaration>();
+        var indexer = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
+        var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>() ?? [];
         var tableIndexer = indexer != null ? new TableTypeIndexer(Visit(indexer.IndexType), Visit(indexer.ColonTypeClause)) : null;
         var properties = propertyDeclarations.Select(p => new TableTypeProperty(
                     p.MutKeyword == null ? LuauVisibility.Read : null,
@@ -369,10 +369,10 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
     }
 
     public override LuauNode VisitTypeParameters(TypeParameters typeParameters) =>
-        new Luau.AST.TypeParameters(typeParameters.ParameterList.ConvertAll(Visit).Cast<Luau.AST.TypeParameter>().ToList());
+        new Luau.AST.TypeParameters(typeParameters.ParameterList.ConvertAll(VisitTypeParameter));
 
-    public override LuauNode VisitTypeParameter(TypeParameter typeParameter) =>
-        new Luau.AST.TypeParameter(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
+    public override Luau.AST.TypeParameter VisitTypeParameter(TypeParameter typeParameter) =>
+        new(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
 
     public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) =>
         primitiveType is { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None, Parent: ColonTypeClause { Parent: DeclareFunctionSignature or FunctionType } }

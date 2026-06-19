@@ -7,16 +7,19 @@ public class InterfaceDeclaration(
     Token name,
     TypeParameters? typeParameters,
     ColonTypeListClause? colonTypeListClause,
-    Token leftBrace,
-    Token rightBrace,
-    List<InterfaceMember> members
+    InterfaceBody? body
 )
-    : GenericNamedDeclaration([leftBrace, rightBrace], keyword, name, typeParameters, [colonTypeListClause, ..members])
+    : GenericNamedDeclaration(
+        [],
+        keyword,
+        name,
+        typeParameters,
+        colonTypeListClause,
+        body
+    )
 {
     public ColonTypeListClause? ColonTypeListClause { get; } = colonTypeListClause;
-    public Token LeftBrace { get; } = leftBrace;
-    public Token RightBrace { get; } = rightBrace;
-    public List<InterfaceMember> Members { get; } = members;
-    
+    public InterfaceBody? Body { get; } = body;
+
     public override T Accept<T>(Visitor<T> visitor) => visitor.VisitInterfaceDeclaration(this);
 }

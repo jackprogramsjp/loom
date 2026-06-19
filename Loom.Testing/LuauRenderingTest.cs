@@ -347,6 +347,18 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_TableType_WithProperties()
+    {
+        Assert.Equal(
+            "{\n  [string]: number\n  read a: number\n  b: number\n}",
+            new TableType(
+                new TableTypeIndexer(PrimitiveType.String, PrimitiveType.Number),
+                [new TableTypeProperty(LuauVisibility.Read, "a", PrimitiveType.Number), new TableTypeProperty(null, "b", PrimitiveType.Number)]
+            ).Render()
+        );
+    }
+
+    [Fact]
     public void Renders_Dictionary_TableType()
     {
         Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(PrimitiveType.String, PrimitiveType.Number), []).Render());

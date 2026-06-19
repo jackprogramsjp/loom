@@ -384,42 +384,150 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = none; if x != none { -x }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidUnaryOp, "No unary operation for -never.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Cast_Mismatch()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("69 as string");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '69' is not assignable to type 'string'.");
     }
-    
+
+    [Fact]
+    public void ThrowsFor_Interface_ConstraintNotInterface()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I : number { }");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidInterfaceConstraint,
+            "Interfaces may only be constrained by other interfaces."
+        );
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_Empty()
+    {
+        var type = Utility.GetLastStatementType("interface I { }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("I", iface.Name);
+        Assert.Empty(iface.Constraints);
+        Assert.Null(iface.ObjectType.Indexer);
+        Assert.Empty(iface.ObjectType.Properties);
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_WithProperties()
+    {
+        var type = Utility.GetLastStatementType("interface I { x: number, y: string }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.Equal(2, iface.ObjectType.Properties.Count);
+
+        var x = iface.ObjectType.Properties[0];
+        Assert.Equal("x", x.Name);
+        Assert.False(x.IsMutable);
+        Assert.True(x.ValueType.Equals(PrimitiveType.Number));
+
+        var y = iface.ObjectType.Properties[1];
+        Assert.Equal("y", y.Name);
+        Assert.False(y.IsMutable);
+        Assert.True(y.ValueType.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_WithMutableProperty()
+    {
+        var type = Utility.GetLastStatementType("interface I { mut count: number }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        var prop = iface.ObjectType.Properties.Single();
+        Assert.True(prop.IsMutable);
+        Assert.True(prop.ValueType.Equals(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_WithIndexer()
+    {
+        var type = Utility.GetLastStatementType("interface I { [number]: string }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.NotNull(iface.ObjectType.Indexer);
+        Assert.True(iface.ObjectType.Indexer.KeyType.Equals(PrimitiveType.Number));
+        Assert.True(iface.ObjectType.Indexer.ValueType.Equals(PrimitiveType.String));
+        Assert.False(iface.ObjectType.Indexer.IsMutable);
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_WithMutableIndexer()
+    {
+        var type = Utility.GetLastStatementType("interface I { mut [string]: bool }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.True(iface.ObjectType.Indexer!.IsMutable);
+        Assert.True(iface.ObjectType.Indexer.KeyType.Equals(PrimitiveType.String));
+        Assert.True(iface.ObjectType.Indexer.ValueType.Equals(PrimitiveType.Bool));
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_WithConstraint()
+    {
+        var type = Utility.GetLastStatementType("interface A { } interface B : A { }");
+        var ifaceB = Assert.IsType<InterfaceType>(type);
+        Assert.Single(ifaceB.Constraints);
+        Assert.Equal("A", ifaceB.Constraints.First().Name);
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_WithMultipleConstraints()
+    {
+        var type = Utility.GetLastStatementType("interface A { } interface B { } interface C : A, B { }");
+        var ifaceC = Assert.IsType<InterfaceType>(type);
+        Assert.Equal(2, ifaceC.Constraints.Count);
+        Assert.Equal("A", ifaceC.Constraints.First().Name);
+        Assert.Equal("B", ifaceC.Constraints.Last().Name);
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_Generic()
+    {
+        var type = Utility.GetLastStatementType("interface I<T> { value: T }");
+        var generic = Assert.IsType<GenericType>(type);
+        Assert.Single(generic.Parameters);
+        Assert.Equal("T", generic.Parameters.First().Name);
+
+        var iface = Assert.IsType<InterfaceType>(generic.UnderlyingType);
+        Assert.Equal("I", iface.Name);
+
+        var prop = iface.ObjectType.Properties.Single();
+        Assert.Equal("value", prop.Name);
+
+        var typeParam = Assert.IsType<TypeParameter>(prop.ValueType);
+        Assert.Equal("T", typeParam.Name);
+    }
+
     [Fact]
     public void Checks_AsExpression_Chained_Unknown()
     {
         var type = Utility.GetLastStatementType("69 as unknown as number");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_AsExpression_Chained_Never()
     {
         var type = Utility.GetLastStatementType("69 as never as number");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_AsExpression_WithUnknown()
     {
         var type = Utility.GetLastStatementType("69 as unknown");
         Assert.True(type.Equals(PrimitiveType.Unknown), $"Expected 'unknown', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_AsExpression_WithNever()
     {
         var type = Utility.GetLastStatementType("69 as never");
         Assert.True(type.Equals(PrimitiveType.Never), $"Expected 'never', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_AsExpression()
     {
@@ -691,7 +799,7 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_RangeLiteral_StringElementAccess()
     {
@@ -699,7 +807,7 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.String, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_StringElementAccess()
     {
@@ -1113,7 +1221,7 @@ public class TypeCheckerTest
         var type = Utility.GetLastStatementType("let x: number = 42");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_FunctionTypes()
     {

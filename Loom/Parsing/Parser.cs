@@ -69,7 +69,7 @@ public class Parser(LexerResult lexerResult)
 
         if (Match(out var declareKeyword, SyntaxKind.DeclareKeyword))
             return ParseDeclareStatement(declareKeyword);
-        
+
         if (Match(out var interfaceKeyword, SyntaxKind.InterfaceKeyword))
             return ParseInterfaceDeclaration(interfaceKeyword);
 
@@ -80,26 +80,26 @@ public class Parser(LexerResult lexerResult)
         return new ExpressionStatement(expression);
     }
 
-    private Statement ParseInterfaceDeclaration(Token interfaceKeyword)
+    private InterfaceDeclaration ParseInterfaceDeclaration(Token interfaceKeyword)
     {
         var name = ExpectIdentifier("interface name");
         var typeParameters = ParseTypeParameters();
         var colonTypeListClause = ParseColonTypeListClause();
-        var leftBrace = Expect(SyntaxKind.LBrace);
+        var body = ParseInterfaceBody();
+        return new InterfaceDeclaration(interfaceKeyword, name, typeParameters, colonTypeListClause, body);
+    }
+
+    private InterfaceBody? ParseInterfaceBody()
+    {
+        if (!Match(out var leftBrace, SyntaxKind.LBrace))
+            return null;
+
         var members = ParseInterfaceMembers();
         if (members == null)
-            return new NullStatement(leftBrace);
-        
+            return null;
+
         var rightBrace = Expect(SyntaxKind.RBrace);
-        return new InterfaceDeclaration(
-            interfaceKeyword,
-            name,
-            typeParameters,
-            colonTypeListClause,
-            leftBrace,
-            rightBrace,
-            members
-        );
+        return new InterfaceBody(leftBrace, rightBrace, members);
     }
 
     private List<InterfaceMember>? ParseInterfaceMembers()
@@ -107,7 +107,7 @@ public class Parser(LexerResult lexerResult)
         var members = new List<InterfaceMember>();
         while (!IsEof() && Current() is not { Kind: SyntaxKind.RBrace })
         {
-            var member = ParseInterfaceMember(Match(out var mutKeyword) ? mutKeyword : null);
+            var member = ParseInterfaceMember(Match(out var mutKeyword, SyntaxKind.MutKeyword) ? mutKeyword : null);
             if (member == null) return null;
             members.Add(member);
             Match(SyntaxKind.Comma);
@@ -125,7 +125,7 @@ public class Parser(LexerResult lexerResult)
             var colonTypeClause = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(MaybeCurrent())}.");
             return colonTypeClause == null ? null : new IndexerDeclaration(mutKeyword, leftBracket, rightBracket, indexType, colonTypeClause);
         }
-        
+
         var name = ExpectIdentifier("property name");
         var propertyType = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(MaybeCurrent())}.");
         return propertyType == null ? null : new PropertyDeclaration(mutKeyword, name, propertyType);
@@ -355,7 +355,10 @@ public class Parser(LexerResult lexerResult)
 
     private EqualsValueClause? ParseEqualsValueClause() => Match(out var equals, SyntaxKind.Equals) ? new EqualsValueClause(equals, ParseExpression()) : null;
     private ColonTypeClause? ParseColonTypeClause() => Match(out var colon, SyntaxKind.Colon) ? new ColonTypeClause(colon, ParseType()) : null;
-    private ColonTypeListClause? ParseColonTypeListClause() => Match(out var colon, SyntaxKind.Colon) ? new ColonTypeListClause(colon, ParseDelimited(ParseType)) : null;
+
+    private ColonTypeListClause? ParseColonTypeListClause() =>
+        Match(out var colon, SyntaxKind.Colon) ? new ColonTypeListClause(colon, ParseDelimited(ParseType)) : null;
+
     private EqualsTypeClause? ParseEqualsTypeClause() => Match(out var equals, SyntaxKind.Equals) ? new EqualsTypeClause(equals, ParseType()) : null;
     private Expression ParseExpression() => ParseBinaryLevel(0);
 
@@ -601,7 +604,7 @@ public class Parser(LexerResult lexerResult)
     {
         if (Match(out var fnKeyword, SyntaxKind.FnKeyword))
             return ParseFunctionType(fnKeyword);
-        
+
         if (Match(out var leftParen, SyntaxKind.LParen))
         {
             var type = ParseType();

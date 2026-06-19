@@ -1,5 +1,2 @@
-interface Struct<T> {
-    data: T
-}
-
-1 as never as Struct<number>
+let x: (bool | string) & (number | bool) = true
+x

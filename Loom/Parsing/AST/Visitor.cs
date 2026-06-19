@@ -18,9 +18,10 @@ public abstract class Visitor<T>
     public virtual T VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration) =>
         CombineResults([Visit(indexerDeclaration.IndexType), Visit(indexerDeclaration.ColonTypeClause)]);
 
+    public virtual T VisitInterfaceBody(InterfaceBody interfaceBody) => VisitList(interfaceBody.Members);
     public virtual T VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration) =>
         CombineResults(
-            [MaybeVisit(interfaceDeclaration.TypeParameters), MaybeVisit(interfaceDeclaration.ColonTypeListClause), VisitList(interfaceDeclaration.Members)]
+            [MaybeVisit(interfaceDeclaration.TypeParameters), MaybeVisit(interfaceDeclaration.ColonTypeListClause), MaybeVisit(interfaceDeclaration.Body)]
         );
 
     public virtual T VisitFunctionDeclaration(FunctionDeclaration functionDeclaration) =>
@@ -112,4 +113,5 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
+
 }

@@ -161,28 +161,32 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         if (!DeclareType(interfaceDeclaration))
             return false;
 
-        var name = interfaceDeclaration.Name.Text;
-        var indexers = interfaceDeclaration.Members.OfType<IndexerDeclaration>().ToList();
-        if (indexers.Count > 1)
+        if (interfaceDeclaration.Body != null)
         {
-            foreach (var extraIndexer in indexers.Skip(1))
-                _diagnostics.Error(extraIndexer, InternalCodes.DuplicateIndexer, $"Type '{name}' may only have one indexer.");
-
-            return false;
-        }
-
-        var properties = interfaceDeclaration.Members.OfType<PropertyDeclaration>().ToList();
-        var propertyNames = properties.Select(p => p.Name.Text);
-        var duplicates = propertyNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
-        if (duplicates.Count > 0)
-        {
-            foreach (var duplicate in duplicates)
+            var name = interfaceDeclaration.Name.Text;
+            var members = interfaceDeclaration.Body.Members;
+            var indexers = members.OfType<IndexerDeclaration>().ToList();
+            if (indexers.Count > 1)
             {
-                var property = properties.FindLast(p => p.Name.Text == duplicate)!;
-                _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{name}'");
+                foreach (var extraIndexer in indexers.Skip(1))
+                    _diagnostics.Error(extraIndexer, InternalCodes.DuplicateIndexer, $"Type '{name}' may only have one indexer.");
+
+                return false;
             }
 
-            return false;
+            var properties = members.OfType<PropertyDeclaration>().ToList();
+            var propertyNames = properties.Select(p => p.Name.Text);
+            var duplicates = propertyNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+            if (duplicates.Count > 0)
+            {
+                foreach (var duplicate in duplicates)
+                {
+                    var property = properties.FindLast(p => p.Name.Text == duplicate)!;
+                    _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{name}'");
+                }
+
+                return false;
+            }
         }
 
         PushScope();

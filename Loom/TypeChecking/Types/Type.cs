@@ -27,17 +27,16 @@ public abstract class Type
 
     public virtual Type Widen() => this;
 
-    public virtual bool IsAssignableTo(Type other)
-    {
-        return other switch
+    public virtual bool IsAssignableTo(Type other) =>
+        other switch
         {
+            InterfaceType interfaceType => IsAssignableTo(interfaceType.AssignabilityType),
             UnionType union => union.Types.Exists(IsAssignableTo),
             IntersectionType intersection => intersection.Types.TrueForAll(IsAssignableTo),
             PrimitiveType primitive => primitive.Kind == PrimitiveTypeKind.Unknown || this is PrimitiveType thisPrimitive && thisPrimitive.IsAssignableTo(primitive),
             InstantiatedType instantiated => IsAssignableTo(instantiated.Expand()),
-            _ => false
+            _ => Equals(other)
         };
-    }
     
     protected static bool ListEquals<T>(List<T> list, List<T> otherList) where T : Type =>
         list.Count == otherList.Count

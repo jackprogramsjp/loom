@@ -171,10 +171,59 @@ public class ResolverTest
     }
     
     [Fact]
+    public void ThrowsFor_Interface_DuplicateIndexer()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+            "interface I { [number]: string, [string]: bool }"
+        ).Diagnostics;
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DuplicateIndexer,
+            "Type 'I' may only have one indexer."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Interface_DuplicateProperty()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+            "interface I { x: number, x: string }"
+        ).Diagnostics;
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DuplicateName,
+            "Property 'x' already exists on type 'I'"
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Parameter_MissingTypeAndDefault()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+            "fn foo(x) {}"
+        ).Diagnostics;
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MustHaveDefaultOrType,
+            "Parameter must have a declared type or default value to infer from."
+        );
+    }
+    
+    [Fact]
     public void WarnsFor_UnreachableCode()
     {
         var diagnostics = Utility.GetSemanticModel("fn foo { return 42; let x = 1 }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
+    }
+    
+    [Fact]
+    public void Allows_Interface_WithSingleIndexerAndUniqueProperties()
+    {
+        Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                "interface I { [number]: string, count: number, name: string }"
+            )
+        );
     }
     
     [Fact]
@@ -368,6 +417,18 @@ public class ResolverTest
         Assert.Equal("test", symbol.Name);
         Assert.Equal(SymbolKind.Function, symbol.Kind);
         Assert.Equal(functionDeclaration, symbol.Declaration);
+    }
+    
+    [Fact]
+    public void Declares_InterfaceSymbol()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("interface Foo { foo: number }"));
+        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.First());
+        var symbol = model.GetDeclarationSymbol(interfaceDeclaration);
+        Assert.NotNull(symbol);
+        Assert.Equal("Foo", symbol.Name);
+        Assert.Equal(SymbolKind.Type, symbol.Kind);
+        Assert.Equal(interfaceDeclaration, symbol.Declaration);
     }
 
     [Fact]

@@ -15,7 +15,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
-    public (ObjectBodyType?, string) GetTypeAtIndex(Type indexType)
+    public (ObjectBodyType?, string) GetTypeAtIndex(Type indexType, Type? self = null)
     {
         var cannotFindReason = "";
         if (indexType is LiteralType { Value: string name } && Properties.Count > 0)
@@ -24,7 +24,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             if (property != null)
                 return (property, "");
 
-            cannotFindReason = $" Property '{name}' does not exist on type '{this}'.";
+            cannotFindReason = $" Property '{name}' does not exist on type '{self ?? this}'.";
         }
 
         if (Indexer == null)
