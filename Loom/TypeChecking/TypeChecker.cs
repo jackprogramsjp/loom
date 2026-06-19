@@ -290,7 +290,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = Visit(invocation.Expression);
         if (type is not Types.FunctionType functionType)
         {
-            _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, $"Cannot call value of type '{type}'");
+            _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, $"Cannot call value of type '{type}'.");
             return BindType(invocation, Types.PrimitiveType.Never);
         }
 
@@ -339,7 +339,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             case ObjectType or InterfaceType:
                 return GetTypeAtIndex(elementAccess, type, indexType);
             default:
-                _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
+                _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'.");
                 return BindType(elementAccess, Types.PrimitiveType.Never);
         }
     }
@@ -665,10 +665,30 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         else
         {
             if (isEquals)
+            {
                 trueState.NarrowedTypes[address] = literalType;
+                falseState.NarrowedTypes[address] = RemoveType(baseType, literalType);
+            }
             else
+            {
+                trueState.NarrowedTypes[address] = RemoveType(baseType, literalType);
                 falseState.NarrowedTypes[address] = literalType;
+            }
         }
+    }
+    
+    private static Type RemoveType(Type source, Type toRemove)
+    {
+        if (source is not Types.UnionType union)
+            return source;
+
+        var remaining = union.Types.Where(t => !toRemove.IsAssignableTo(t)).ToList();
+        return remaining.Count switch
+        {
+            0 => Types.PrimitiveType.Never,
+            1 => remaining.First(),
+            _ => new Types.UnionType(remaining)
+        };
     }
 
     private TypedFlowAddress? GetFlowAddress(Expression expr) =>
