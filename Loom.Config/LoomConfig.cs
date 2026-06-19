@@ -12,7 +12,7 @@ public sealed class FilesConfig
 public sealed class LoomConfig
 {
     [TomlIgnore] public string ProjectDirectory { get; set; } = "?";
-    
-    public bool NoEmit { get; set; }
+
+    public bool NoEmit { get; set; };
     public FilesConfig Files { get; set; } = new();
 }

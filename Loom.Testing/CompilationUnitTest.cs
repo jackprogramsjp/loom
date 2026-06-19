@@ -9,6 +9,25 @@ namespace Loom.Testing;
 public class CompilationUnitTest
 {
     [Fact]
+    public void Compiles_Project_NoEmit()
+    {
+        var config = GetConfig();
+        config.NoEmit = true;
+        
+        var compilationUnit = new CompilationUnit(config);
+        var result = compilationUnit.Compile();
+        Utility.AssertNoErrors(result);
+        Assert.Single(result.Files);
+
+        var path = config.Files.OutputDirectory;
+        Directory.Delete(path, true);
+        Directory.CreateDirectory(path);
+        
+        var luauFiles = Directory.EnumerateFiles(path);
+        Assert.Empty(luauFiles);
+    }
+    
+    [Fact]
     public void Compiles_Project()
     {
         var config = GetConfig();
