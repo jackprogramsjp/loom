@@ -1,7 +1,5 @@
-interface Record<K, V> {
-    [K]: V;
-    size: number;
+interface Struct<T> {
+    data: T
 }
 
-let x = none as never as Record<string, bool>
-x.size
+1 as never as Struct<number>

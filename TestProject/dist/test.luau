@@ -1,9 +1,4 @@
-type Id<T> = T
-const y: Id<number> = 69
-const _ = y
-type Record<K, V> = {
-  [K]: V
-  read size: K
+type Struct<T> = {
+  read data: T
 }
-const x = ((nil :: never) :: Record<string, boolean>)
-const _ = x.size
+const _ = ((1 :: never) :: Struct<number>)

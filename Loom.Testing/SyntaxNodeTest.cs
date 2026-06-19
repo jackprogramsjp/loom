@@ -50,7 +50,7 @@ public class SyntaxNodeTest
     [Fact]
     public void Node_Span_Empty_WhenNoTokens()
     {
-        var token = new Token(SyntaxKind.Identifier, LocationSpan.Empty(SourceFile.Empty), "");
+        var token = new Token(SyntaxKind.Identifier, LocationSpan.Empty(), "");
         var ident = new Identifier(token);
         Assert.Equal(SourceFile.Empty, ident.Span.File);
         Assert.Equal(0, ident.Span.Length);
