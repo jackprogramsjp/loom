@@ -274,6 +274,30 @@ public class VisitorTraversalTest
             "Parenthesized",
             "Literal"
         );
+    
+    [Fact]
+    public void NullExpression() =>
+        AssertVisitOrder(
+            "=",
+            "ExpressionStatement",
+            "NullExpression"
+        );
+    
+    [Fact]
+    public void NullTypeExpression() =>
+        AssertVisitOrder(
+            "type X = fn(a = 69): void;",
+            "TypeAlias",
+            "EqualsTypeClause",
+            "NullTypeExpression"
+        );
+    
+    [Fact]
+    public void NullStatement() =>
+        AssertVisitOrder(
+            "if x let y = 1",
+            "NullStatement"
+        );
 
     [Fact]
     public void NameOf_VisitsName() =>
@@ -335,6 +359,17 @@ public class VisitorTraversalTest
             "PrimitiveType",
             "PrimitiveType"
         );
+    
+    [Fact]
+    public void IndexedType_VisitsTypes() =>
+        AssertVisitOrder(
+            "let x: Foo[number];",
+            "VariableDeclaration",
+            "ColonTypeClause",
+            "IndexedType",
+            "TypeName",
+            "PrimitiveType"
+        );
 
     [Fact]
     public void FunctionType_VisitsTypes() =>
@@ -374,5 +409,33 @@ public class VisitorTraversalTest
             "TypeArguments",
             "PrimitiveType",
             "Arguments"
+        );
+    
+    [Fact]
+    public void LiteralType_VisitsLiteral() =>
+        AssertVisitOrder(
+            "let x: 42;",
+            "VariableDeclaration",
+            "ColonTypeClause",
+            "LiteralType"
+        );
+
+    [Fact]
+    public void ParenthesizedType_VisitsInnerType() =>
+        AssertVisitOrder(
+            "let x: (number);",
+            "VariableDeclaration",
+            "ColonTypeClause",
+            "ParenthesizedType",
+            "PrimitiveType"
+        );
+
+    [Fact]
+    public void PropertyAccess_VisitsExpression() =>
+        AssertVisitOrder(
+            "\"hello\".length",
+            "ExpressionStatement",
+            "PropertyAccess",
+            "Literal"
         );
 }

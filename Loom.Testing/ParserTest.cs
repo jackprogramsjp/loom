@@ -17,6 +17,45 @@ namespace Loom.Testing;
 public class ParserTest
 {
     [Fact]
+    public void Unfinished_ProducesNull()
+    {
+        var tree = Utility.GetAST("let");
+        Assert.Single(tree.Statements);
+        var declaration = Assert.IsType<VariableDeclaration>(tree.Statements.First());
+        Assert.Null(declaration.ColonTypeClause);
+        Assert.Null(declaration.EqualsValueClause);
+    }
+    
+    [Fact]
+    public void Error_ProducesNullExpression()
+    {
+        var tree = Utility.GetAST("=");
+        Assert.Single(tree.Statements);
+        
+        var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.First());
+        Assert.IsType<NullExpression>(expressionStatement.Expression);
+    }
+    
+    [Fact]
+    public void Error_ProducesNullTypeExpression()
+    {
+        var tree = Utility.GetAST("type X = fn(a = 69): void");
+        Assert.Single(tree.Statements);
+        
+        var alias = Assert.IsType<TypeAlias>(tree.Statements.First());
+        Assert.IsType<NullTypeExpression>(alias.EqualsTypeClause.Type);
+    }
+    
+    [Fact]
+    public void Error_ProducesNullStatement()
+    {
+        var tree = Utility.GetAST("if x let y = 1");
+        Assert.Single(tree.Statements);
+        
+        Assert.IsType<NullStatement>(tree.Statements.First());
+    }
+    
+    [Fact]
     public void ThrowsFor_ExpectedIdentifier()
     {
         var diagnostics = Utility.GetParserDiagnostics("let");
