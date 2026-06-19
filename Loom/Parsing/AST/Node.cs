@@ -37,7 +37,7 @@ public abstract class Node
     public override string ToString() => Span.GetText();
     
     public List<T> GetDescendants<T>() where T : Node => GetDescendants().OfType<T>().ToList();
-    public List<Node> GetDescendants() => Children.SelectMany(c => c.Children).Concat(Children).ToList();
+    public List<Node> GetDescendants() => Children.SelectMany(c => c.GetDescendants()).Concat(Children).ToList();
 
     public T? FirstAncestorOfType<T>()
         where T : Node

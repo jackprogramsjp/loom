@@ -346,8 +346,6 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
-        var targetType = Visit(assignmentOperator.Left);
-        var valueType = Visit(assignmentOperator.Right);
         if (assignmentOperator.Operator.Kind != SyntaxKind.Equals)
             return base.VisitBinaryOperator(assignmentOperator);
 
@@ -407,10 +405,13 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                     };
 
                     _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
+                    return Types.PrimitiveType.Never;
                 }
             }
         }
 
+        var targetType = Visit(assignmentOperator.Left);
+        var valueType = Visit(assignmentOperator.Right);
         semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
         return BindType(assignmentOperator, valueType);
     }
@@ -837,15 +838,16 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (functionDeclaration.ReturnType != null)
             return Visit(functionDeclaration.ReturnType);
 
+        Console.WriteLine(functionDeclaration);
         // TODO: flow analysis
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
             : functionDeclaration.Body
                 .GetDescendants<Return>()
-                .Where(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
-                .Select(Visit)
-                .ToList();
-
+                .FindAll(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
+                .ConvertAll(Visit);
+        
+        foreach (var t in possibleReturnTypes) Console.WriteLine(t);
         return TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
