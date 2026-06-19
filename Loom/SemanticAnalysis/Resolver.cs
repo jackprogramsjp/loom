@@ -4,11 +4,6 @@ using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking;
-using Loom.TypeChecking.Types;
-using FunctionType = Loom.Parsing.AST.FunctionType;
-using LiteralType = Loom.Parsing.AST.LiteralType;
-using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
-using TypeParameter = Loom.Parsing.AST.TypeParameter;
 
 namespace Loom.SemanticAnalysis;
 
@@ -17,22 +12,17 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<NodeId, Symbol> _allDeclarations = [];
     private readonly Dictionary<NodeId, Symbol> _allReferences = [];
-    private readonly Stack<ScopeNode> _scopeNodes = [];
     private readonly Stack<ResolverScope> _scopes = [];
     private readonly Stack<FlowState> _flowStates = [];
     private bool _insideFunction;
 
     public SemanticModel Resolve()
     {
-        var rootScope = new ScopeNode();
-        _scopeNodes.Push(rootScope);
-
         var semanticModel = new SemanticModel(
             parserResult.Tree,
             _diagnostics,
             _allDeclarations,
-            _allReferences,
-            rootScope
+            _allReferences
         );
 
         PushScope();
@@ -349,6 +339,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             return false;
         }
 
+        base.VisitTypeName(typeName);
         _allReferences[typeName.Id] = symbol;
         return true;
     }
@@ -407,7 +398,6 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         lookup[symbol.Name] = symbol;
         scope.Declarations[nodeId] = symbol;
         _allDeclarations[nodeId] = symbol;
-        _scopeNodes.Peek().Symbols.Add(symbol);
         _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
     }
 

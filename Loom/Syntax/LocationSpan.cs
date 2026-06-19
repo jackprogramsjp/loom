@@ -23,7 +23,7 @@ public class LocationSpan
     public Location End { get; }
     public int Length { get; }
 
-    public static LocationSpan Empty(SourceFile file) => new(Location.Empty(file), Location.Empty(file));
+    public static LocationSpan Empty(SourceFile? file = null) => new(Location.Empty(file ?? SourceFile.Empty), Location.Empty(file ?? SourceFile.Empty));
 
     public string GetText() => File.SourceText[Start.Position..End.Position];
     public override string ToString() => $"{File.Name} @ {Start.Line}:{Start.Character} - {End.Line}:{End.Character}";

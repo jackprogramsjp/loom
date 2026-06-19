@@ -1,12 +1,7 @@
-using Loom.Diagnostics;
-using Loom.Parsing.AST;
-
 namespace Loom.TypeChecking.Types;
 
-public class InstantiatedType(GenericType genericType, List<Type> arguments, TypeChecker typeChecker, Node node) : Type
+public class InstantiatedType(GenericType genericType, List<Type> arguments) : Type
 {
-    public Node Node { get; } = node;
-    public TypeChecker Checker { get; } = typeChecker;
     public GenericType GenericType { get; } = genericType;
     public List<Type> Arguments { get; } = arguments;
     private Type? _instantiatedBase;
@@ -28,7 +23,10 @@ public class InstantiatedType(GenericType genericType, List<Type> arguments, Typ
 
         var substitution = new Dictionary<TypeParameter, Type>();
         for (var i = 0; i < GenericType.Parameters.Count; i++)
-            substitution[GenericType.Parameters[i]] = Arguments[i];
+        {
+            var parameter = GenericType.Parameters[i];
+            substitution[parameter] = Arguments.ElementAtOrDefault(i) ?? parameter.DefaultType!;
+        }
 
         var baseType = GenericType.UnderlyingType;
         _instantiatedBase = SubstituteTypeParameters(baseType, substitution);
@@ -39,22 +37,25 @@ public class InstantiatedType(GenericType genericType, List<Type> arguments, Typ
     private Type SubstituteTypeParameters(Type type, Dictionary<TypeParameter, Type> substitution) =>
         type is TypeParameter tp && substitution.TryGetValue(tp, out var substituted)
             ? substituted
-            : TypeSolver.Transform(
-                type,
-                t => t switch
-                {
-                    InterfaceType interfaceType => SubstituteInterfaceType(interfaceType, substitution),
-                    ObjectType objectType => SubstituteObjectType(objectType, substitution),
-                    TypeParameter tp2 when substitution.TryGetValue(tp2, out var s) => s,
-                    _ => t
-                }
-            );
+            : type switch
+            {
+                FunctionType functionType => new FunctionType(
+                    [],
+                    functionType.ParameterTypes.ConvertAll(p => SubstituteTypeParameters(p, substitution)),
+                    SubstituteTypeParameters(functionType.ReturnType, substitution)
+                ),
+                ArrayType arrayType => new ArrayType(SubstituteTypeParameters(arrayType.ElementType, substitution), arrayType.IsMutable),
+                InterfaceType interfaceType => SubstituteInterfaceType(interfaceType, substitution),
+                ObjectType objectType => SubstituteObjectType(objectType, substitution),
+                TypeParameter tp2 when substitution.TryGetValue(tp2, out var s) => s,
+                _ => TypeSolver.Transform(type, t => SubstituteTypeParameters(t, substitution))
+            };
 
     private InterfaceType SubstituteInterfaceType(InterfaceType interfaceType, Dictionary<TypeParameter, Type> substitution)
     {
         var substitutedObject = SubstituteObjectType(interfaceType.ObjectType, substitution);
         var substitutedConstraints = interfaceType.Constraints
-            .Select(c => SubstituteTypeParameters(c, substitution))
+            .ConvertAll(c => SubstituteTypeParameters(c, substitution))
             .OfType<InterfaceType>()
             .ToList();
 
@@ -76,13 +77,7 @@ public class InstantiatedType(GenericType genericType, List<Type> arguments, Typ
         }
 
         var substitutedProperties = objectType.Properties
-            .Select(p => new ObjectProperty(
-                    p.IsMutable,
-                    p.Name,
-                    SubstituteTypeParameters(p.ValueType, substitution)
-                )
-            )
-            .ToList();
+            .ConvertAll(p => new ObjectProperty(p.IsMutable, p.Name, SubstituteTypeParameters(p.ValueType, substitution)));
 
         return new ObjectType(substitutedIndexer, substitutedProperties);
     }

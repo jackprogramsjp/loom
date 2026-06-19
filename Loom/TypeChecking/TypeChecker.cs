@@ -60,8 +60,8 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
-        var type = base.VisitExpressionStatement(expressionStatement);
-        _diagnostics.Info(expressionStatement, $"Solved type '{TypeSimplifier.Simplify(type)}' for expression");
+        var type = TypeSimplifier.Simplify(base.VisitExpressionStatement(expressionStatement));
+        _diagnostics.Info(expressionStatement, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for expression");
         return BindType(expressionStatement, type);
     }
 
@@ -792,7 +792,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             CheckTypeParameterConstraints(node, argument, parameter);
         }
 
-        var instantiated = new InstantiatedType(genericType, arguments, this, node);
+        var instantiated = new InstantiatedType(genericType, arguments);
         return BindType(node, instantiated);
     }
 

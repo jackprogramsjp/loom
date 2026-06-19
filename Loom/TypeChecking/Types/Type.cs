@@ -34,6 +34,7 @@ public abstract class Type
             UnionType union => union.Types.Exists(IsAssignableTo),
             IntersectionType intersection => intersection.Types.TrueForAll(IsAssignableTo),
             PrimitiveType primitive => primitive.Kind == PrimitiveTypeKind.Unknown || this is PrimitiveType thisPrimitive && thisPrimitive.IsAssignableTo(primitive),
+            InstantiatedType instantiated => IsAssignableTo(instantiated.Expand()),
             _ => false
         };
     }

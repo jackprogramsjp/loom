@@ -2,6 +2,7 @@ using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Syntax;
 using Loom.TypeChecking.Types;
+using ArrayType = Loom.TypeChecking.Types.ArrayType;
 using FunctionType = Loom.TypeChecking.Types.FunctionType;
 using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
 using Type = Loom.TypeChecking.Types.Type;
@@ -25,6 +26,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
         TypeSimplifier.Simplify(
             type switch
             {
+                ArrayType arrayType => new ArrayType(fn(arrayType.ElementType), arrayType.IsMutable),
                 InterfaceType interfaceType => new InterfaceType(
                     interfaceType.Name,
                     interfaceType.Constraints.ConvertAll(fn).OfType<InterfaceType>().ToList(),
@@ -48,12 +50,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
                     genericType.Parameters,
                     fn(genericType.UnderlyingType)
                 ),
-                InstantiatedType instantiatedType => new InstantiatedType(
-                    instantiatedType.GenericType,
-                    instantiatedType.Arguments.ConvertAll(fn),
-                    instantiatedType.Checker,
-                    instantiatedType.Node
-                ),
+                InstantiatedType instantiatedType => new InstantiatedType(instantiatedType.GenericType, instantiatedType.Arguments.ConvertAll(fn)),
                 _ => defaultValue ?? type
             }
         );

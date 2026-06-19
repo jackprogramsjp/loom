@@ -1,3 +1,4 @@
+// ReSharper disable VirtualMemberNeverOverridden.Global
 namespace Loom.Parsing.AST;
 
 public abstract class Visitor<T>
@@ -78,7 +79,7 @@ public abstract class Visitor<T>
     public virtual T VisitUnaryOperator(UnaryOperator unaryOperator) => Visit(unaryOperator.Operand);
     public abstract T VisitLiteralType(LiteralType literalType);
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
-    public abstract T VisitTypeName(TypeName typeName);
+    public virtual T VisitTypeName(TypeName typeName) => MaybeVisit(typeName.TypeArguments)!;
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
 
     public virtual T VisitFunctionType(FunctionType functionType) =>
