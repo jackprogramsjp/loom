@@ -6,6 +6,5 @@ public class TableTypeProperty(LuauVisibility? visibility, string name, LuauType
     public string Name { get; } = name;
     public LuauType Type { get; } = type;
     
-    public override string Render(RenderState state) => $"{RenderVisibility()}{Name}: {Type.Render(state)}";
-    private string RenderVisibility() => Visibility == null ? "" : Visibility.ToString() is {} s ? s.ToLower() + " " : "";
+    public override string Render(RenderState state) => $"{RenderState.RenderVisibility(Visibility)}{Name}: {Type.Render(state)}";
 }

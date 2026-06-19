@@ -1,10 +1,11 @@
 namespace Loom.Luau.AST;
 
-public class TableTypeIndexer(LuauType? keyType, LuauType valueType) : LuauType
+public class TableTypeIndexer(LuauVisibility? visibility, LuauType? keyType, LuauType valueType) : LuauType
 {
+    public LuauVisibility? Visibility { get; } = visibility;
     public LuauType? KeyType { get; } = keyType;
     public LuauType ValueType { get; } = valueType;
     
-    public override string Render(RenderState state) => KeyType != null ? $"[{KeyType.Render(state)}]: {ValueType.Render(state)}" : ValueType.Render(state);
+    public override string Render(RenderState state) => KeyType != null ? $"{RenderState.RenderVisibility(Visibility)}[{KeyType.Render(state)}]: {ValueType.Render(state)}" : ValueType.Render(state);
 
 }

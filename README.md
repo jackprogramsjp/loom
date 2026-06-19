@@ -314,12 +314,12 @@ type Person = HasName & HasAge & {
 ```
 ##
 ```ts
-interface Record<K, V> {
+interface ImmutRecord<K, V> {
     [K]: V;
 }
 ```
 ```luau
-type Record<K, V> = { [K]: V }
+type ImmutRecord<K, V> = { read [K]: V }
 ```
 
 ## Planned Features

@@ -44,7 +44,7 @@ public class LuauRenderingTest
     [Fact]
     public void Renders_TypeAlias_Generic()
     {
-        var typeParameters = new TypeParameters([new TypeParameter("T", null)]);
+        var typeParameters = new TypeParameters([new TypeParameter("T")]);
         Assert.Equal("type Id<T> = T", new TypeAlias("Id", typeParameters, new TypeName("T")).Render());
     }
 
@@ -350,9 +350,9 @@ public class LuauRenderingTest
     public void Renders_TableType_WithProperties()
     {
         Assert.Equal(
-            "{\n  [string]: number\n  read a: number\n  b: number\n}",
+            "{\n  read [string]: number\n  read a: number\n  b: number\n}",
             new TableType(
-                new TableTypeIndexer(PrimitiveType.String, PrimitiveType.Number),
+                new TableTypeIndexer(LuauVisibility.Read, PrimitiveType.String, PrimitiveType.Number),
                 [new TableTypeProperty(LuauVisibility.Read, "a", PrimitiveType.Number), new TableTypeProperty(null, "b", PrimitiveType.Number)]
             ).Render()
         );
@@ -361,13 +361,13 @@ public class LuauRenderingTest
     [Fact]
     public void Renders_Dictionary_TableType()
     {
-        Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(PrimitiveType.String, PrimitiveType.Number), []).Render());
+        Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(null, PrimitiveType.String, PrimitiveType.Number), []).Render());
     }
 
     [Fact]
     public void Renders_Array_TableType()
     {
-        Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, PrimitiveType.Number), []).Render());
+        Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, null, PrimitiveType.Number), []).Render());
     }
 
     [Theory]

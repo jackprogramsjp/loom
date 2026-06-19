@@ -1,3 +1,1 @@
-type A = {}
-type B = {}
-type I = A & B & {}
+type ImmutRecord<K, V> = { [K]: V }

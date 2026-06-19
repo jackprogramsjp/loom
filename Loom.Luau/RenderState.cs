@@ -20,6 +20,13 @@ public class RenderState
     public string ParenthesizeIfNeeded(LuauNode node) => RequiresParentheses(node) ? $"({node.Render(this)})" : node.Render(this);
     private static bool RequiresParentheses(LuauNode node) => node is (UnionType or IntersectionType or FunctionType) and not OptionalType;
 
+    public static string RenderVisibility(LuauVisibility? visibility) =>
+        visibility == null
+            ? ""
+            : visibility.ToString() is { } s
+                ? s.ToLower() + " "
+                : "";
+
     public static string Escape(string input) =>
         input
             .Replace("\n", "\\n")
@@ -42,4 +49,5 @@ public class RenderState
     
     private void PushIndent() => _indent += Indent;
     private void PopIndent() => _indent = _indent[..^2];
+
 }
