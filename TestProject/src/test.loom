@@ -1,1 +1,4 @@
-mut a = 0; let x = a = 1
+enum Abc { A }
+
+let y = 1 as never as "A"
+let x = Abc[y]

@@ -333,7 +333,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
             return false;
         }
 
-        if (symbol.Declaration is EnumDeclaration && identifier.Parent is not QualifiedName or ElementAccess)
+        if (symbol.Declaration is EnumDeclaration && identifier.Parent is not (QualifiedName or PropertyAccess or ElementAccess))
         {
             _diagnostics.Error(identifier, InternalCodes.DynamicEnumAccess, "Cannot use enums dynamically because they are compile-time constants.");
             return false;

@@ -1,3 +1,3 @@
-local a = 0
-a = 1
-const x = a
+type Abc = number
+const y = ((1 :: never) :: "A")
+const x = 0
