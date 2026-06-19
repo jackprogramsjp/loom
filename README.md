@@ -289,6 +289,38 @@ type Callback = fn(): void
 ```luau
 type Callback = () -> ()
 ```
+##
+```ts
+interface HasName {
+    name: string;
+}
+interface HasAge {
+    age: number;
+}
+interface Person: HasName, HasAge {
+    job: string;
+}
+```
+```luau
+type HasName = {
+	name: string;
+}
+type HasAge = {
+	age: number;
+}
+type Person = HasName & HasAge & {
+	job: string;
+}
+```
+##
+```ts
+interface Record<K, V> {
+    [K]: V;
+}
+```
+```luau
+type Record<K, V> = { [K]: V }
+```
 
 ## Planned Features
 
