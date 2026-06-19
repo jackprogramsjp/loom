@@ -29,7 +29,9 @@ public static class IntrinsicTypes
 
     private static readonly List<IntrinsicType> _types = [Range];
 
-    public static List<Symbol> GetSymbols(SemanticModel semanticModel) =>
+    public static void Register(SemanticModel model) => Resolver.DeclareGlobal([..GetSymbols(model)]);
+    
+    private static List<Symbol> GetSymbols(SemanticModel semanticModel) =>
         _types.ConvertAll(t =>
                 {
                     semanticModel.TypeSolver.SetType(t.Symbol.Declaration, t.Type);

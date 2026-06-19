@@ -322,11 +322,17 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = Visit(elementAccess.Expression);
         var indexType = Visit(elementAccess.IndexExpression);
         if (type is Types.ArrayType && indexType.IsAssignableTo(IntrinsicTypes.Range.Type))
+        {
+            CheckInvalidElementAccessAssignment(elementAccess, type, indexType);
             return BindType(elementAccess, type);
+        }
 
         var indexIsRangeOrNumber = indexType.IsAssignableTo(IntrinsicTypes.Range.Type) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
         if (indexIsRangeOrNumber && type.IsAssignableTo(Types.PrimitiveType.String))
+        {
+            CheckInvalidElementAccessAssignment(elementAccess, type, indexType);
             return BindType(elementAccess, Types.PrimitiveType.String);
+        }
 
         switch (type)
         {
@@ -345,20 +351,31 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (assignmentOperator.Operator.Kind != SyntaxKind.Equals)
             return base.VisitBinaryOperator(assignmentOperator);
 
-        if (assignmentOperator.Left is ElementAccess access && semanticModel.GetType(access.Expression) is ObjectType objectType)
+        if (assignmentOperator.Left is ElementAccess access)
         {
-            var indexType = semanticModel.GetType(access.IndexExpression);
-            var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
-            if (bodyType is { IsMutable: false })
+            var expressionType = semanticModel.GetType(access.Expression);
+            var objectType = expressionType switch
             {
-                var display = bodyType switch
-                {
-                    ObjectProperty property => $"property '{property.Name}'.",
-                    ObjectIndexer indexer => $"index '{indexer.KeyType}'.",
-                    _ => ""
-                };
+                ObjectType o => o,
+                InterfaceType i => i.ObjectType,
+                _ => null
+            };
 
-                _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
+            if (objectType != null)
+            {
+                var indexType = semanticModel.GetType(access.IndexExpression);
+                var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
+                if (bodyType is { IsMutable: false })
+                {
+                    var display = bodyType switch
+                    {
+                        ObjectProperty property => $"property '{property.Name}'.",
+                        ObjectIndexer indexer => $"index '{indexer.KeyType}'.",
+                        _ => ""
+                    };
+
+                    _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
+                }
             }
         }
 
@@ -447,10 +464,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         var symbol = semanticModel.GetSymbol(identifier);
         if (symbol != null)
-        {
-            var type = semanticModel.GetType(symbol.Declaration);
-            return BindType(identifier, type);
-        }
+            return BindType(identifier, GetDeclarationType(symbol));
 
         _diagnostics.Error(identifier, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
         return BindType(identifier, Types.PrimitiveType.Never);
@@ -481,7 +495,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var symbol = semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
-            var declaredType = semanticModel.TypeSolver.GetType(symbol.Declaration);
+            var declaredType = GetDeclarationType(symbol);
             if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
                 return BindType(typeName, objectType.PropertyUnion());
 
@@ -714,6 +728,12 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
         return BindType(node, Types.PrimitiveType.Never);
     }
+    
+    private void CheckInvalidElementAccessAssignment(ElementAccess elementAccess, Type type, Type indexType)
+    {
+        if (elementAccess.Parent is not AssignmentOperator assignmentOperator) return;
+        _diagnostics.Error(assignmentOperator, InternalCodes.InvalidAccess, $"Cannot assign to element access expression for '{type}[{indexType}]'.");
+    }
 
     private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)
     {
@@ -923,6 +943,9 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         return false;
     }
+
+    private Type GetDeclarationType(Symbol symbol) =>
+        symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != semanticModel.Tree.File.AbsolutePath ? Visit(symbol.Declaration) : semanticModel.GetType(symbol.Declaration);
 
     private T BindType<T>(Node node, T type)
         where T : Type

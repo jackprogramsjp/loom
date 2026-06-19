@@ -1,12 +1,21 @@
 namespace Loom.Syntax;
 
-public class SourceFile(string absolutePath, string? sourceText = null)
+public class SourceFile
 {
     public static readonly SourceFile Empty = new("<anonymous>", string.Empty);
     
-    public string AbsolutePath { get; } = absolutePath;
-    public string Name { get; } = Path.GetFileName(absolutePath);
-    public string SourceText { get; } = sourceText ?? File.ReadAllText(absolutePath);
+    public string AbsolutePath { get; }
+    public string Name { get; }
+    public string SourceText { get; }
+    public bool IsDeclaration { get; }
+    
+    public SourceFile(string absolutePath, string? sourceText = null)
+    {
+        AbsolutePath = absolutePath;
+        Name = Path.GetFileName(absolutePath);
+        SourceText = sourceText ?? File.ReadAllText(absolutePath);
+        IsDeclaration = Name.EndsWith(".d.loom");
+    }
 
     public override string ToString() => Name;
 

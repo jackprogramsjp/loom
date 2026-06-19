@@ -1,0 +1,3 @@
+interface Record<K, V> {
+    mut [K]: V;
+}

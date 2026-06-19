@@ -1,2 +1,2 @@
-let x: (bool | string) & (number | bool) = true
-x
+let x = none as never as Record<string, bool>;
+x["abc"];

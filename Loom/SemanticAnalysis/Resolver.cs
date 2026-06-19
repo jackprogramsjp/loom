@@ -9,12 +9,23 @@ namespace Loom.SemanticAnalysis;
 
 public class Resolver(ParserResult parserResult) : Visitor<bool>
 {
+    private static readonly List<Symbol> _globalDeclarations = [];
+    
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<NodeId, Symbol> _allDeclarations = [];
     private readonly Dictionary<NodeId, Symbol> _allReferences = [];
     private readonly Stack<ResolverScope> _scopes = [];
     private readonly Stack<FlowState> _flowStates = [];
+    private readonly bool _isDeclarationFile = parserResult.Tree.File.IsDeclaration;
     private bool _insideFunction;
+
+    public static void DeclareGlobal(params Symbol[] symbols)
+    {
+        foreach (var symbol in symbols)
+            symbol.IsGlobal = true;
+        
+        _globalDeclarations.AddRange(symbols);
+    }
 
     public SemanticModel Resolve()
     {
@@ -27,8 +38,13 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         PushScope();
         PushFlowState(new FlowState([], []));
-        foreach (var symbol in IntrinsicTypes.GetSymbols(semanticModel))
+        
+        IntrinsicTypes.Register(semanticModel);
+        foreach (var symbol in _globalDeclarations.ToList())
+        {
+            Visit(symbol.Declaration);
             DeclareSymbol(symbol);
+        }
 
         VisitTree(parserResult.Tree);
         PopFlowState();
@@ -350,7 +366,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
     public override bool VisitLiteralType(LiteralType literalType) => true;
     public override bool VisitPrimitiveType(PrimitiveType primitiveType) => true;
-    public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter, typeParameter.Name.Text);
+    public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter);
 
     private bool ResolveStatements(List<Statement> statements) =>
         statements.All(statement =>
@@ -377,12 +393,11 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         DeclareSymbol(symbol);
         return true;
     }
-
-    private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type) => DeclareType(node, node.Name.Text, symbolKind);
-
-    private bool DeclareType(Node node, string name, SymbolKind symbolKind = SymbolKind.Type)
+    
+    private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type)
     {
         var scope = CurrentScope();
+        var name = node.Name.Text;
         if (scope.TypeLookup.ContainsKey(name))
         {
             _diagnostics.Error(node, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
@@ -391,6 +406,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
 
         var symbol = new Symbol(node, symbolKind, name);
         DeclareSymbol(symbol);
+        
         return true;
     }
 
@@ -403,6 +419,8 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         scope.Declarations[nodeId] = symbol;
         _allDeclarations[nodeId] = symbol;
         _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
+        if (_isDeclarationFile)
+            DeclareGlobal(symbol);
     }
 
     private Symbol? LookupValueId(string name) =>

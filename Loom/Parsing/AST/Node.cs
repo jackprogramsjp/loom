@@ -12,6 +12,13 @@ public readonly record struct NodeId(int Value)
 public abstract class Node
 {
     private static int _nextId;
+    
+    public NodeId Id { get; }
+    public List<Node> Children { get; }
+    public List<Token> Tokens { get; }
+    public LocationSpan Span { get; }
+    public SourceFile File { get; }
+    public Node Parent { get; private set; } = null!;
 
     protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children, LocationSpan? span = null)
     {
@@ -21,15 +28,10 @@ public abstract class Node
         Children = SortChildren(children);
         Tokens = SortTokens(theseTokens);
         Span = span ?? DeriveSpan();
+        File = Span.File;
         foreach (var child in Children)
             child.Parent = this;
     }
-
-    public NodeId Id { get; }
-    public List<Node> Children { get; }
-    public List<Token> Tokens { get; }
-    public LocationSpan Span { get; }
-    public Node Parent { get; private set; } = null!;
 
     public abstract T Accept<T>(Visitor<T> visitor);
     public override string ToString() => Span.GetText();
