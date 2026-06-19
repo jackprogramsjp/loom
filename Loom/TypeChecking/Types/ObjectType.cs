@@ -15,12 +15,15 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
+    public ObjectProperty? GetProperty(Type type) => type is LiteralType { Value: string name } && Properties.Count > 0 ? GetProperty(name) : null;
+    public ObjectProperty? GetProperty(string name) => Properties.Find(p => p.Name == name);
+
     public (ObjectBodyType?, string) GetTypeAtIndex(Type indexType, Type? self = null)
     {
         var cannotFindReason = "";
         if (indexType is LiteralType { Value: string name } && Properties.Count > 0)
         {
-            var property = Properties.Find(p => p.Name == name);
+            var property = GetProperty(name);
             if (property != null)
                 return (property, "");
 
@@ -71,7 +74,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     {
         if (base.IsAssignableTo(other))
             return true;
-        
+
         if (other is not ObjectType objectType)
             return false;
 

@@ -404,6 +404,27 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void ThrowsFor_AssignToImmutable_ObjectIndexer()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Record<K, V> { [K]: V }; let x = none as never as Record<string, bool>; x['abc'] = false");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable index 'string'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_AssignToImmutable_ObjectProperty()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Obj { prop: number }; let x = none as never as Obj; x.prop = 69");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable property 'prop'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_AssignToImmutable_Nested_ObjectProperty()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Inner { prop: number } interface Obj { inner: Inner }; let x = none as never as Obj; x.inner.prop = 69");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable property 'prop'.");
+    }
+
+    [Fact]
     public void Checks_InterfaceDeclaration_Empty()
     {
         var type = Utility.GetLastStatementType("interface I { }");

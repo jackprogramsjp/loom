@@ -1,2 +1,12 @@
-let x = none as never as Record<string, bool>;
-x["abc"];
+interface Bar {
+    bar: number
+}
+
+interface Foo {
+    [number]: bool;
+    foo: number;
+}
+
+let x = none as never as Foo
+x.foo = 69
+x[69] = true;

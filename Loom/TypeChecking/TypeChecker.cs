@@ -323,14 +323,14 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var indexType = Visit(elementAccess.IndexExpression);
         if (type is Types.ArrayType && indexType.IsAssignableTo(IntrinsicTypes.Range.Type))
         {
-            CheckInvalidElementAccessAssignment(elementAccess, type, indexType);
+            CheckInvalidAccessAssignment(elementAccess, type, indexType);
             return BindType(elementAccess, type);
         }
 
         var indexIsRangeOrNumber = indexType.IsAssignableTo(IntrinsicTypes.Range.Type) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
         if (indexIsRangeOrNumber && type.IsAssignableTo(Types.PrimitiveType.String))
         {
-            CheckInvalidElementAccessAssignment(elementAccess, type, indexType);
+            CheckInvalidAccessAssignment(elementAccess, type, indexType);
             return BindType(elementAccess, Types.PrimitiveType.String);
         }
 
@@ -351,19 +351,51 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (assignmentOperator.Operator.Kind != SyntaxKind.Equals)
             return base.VisitBinaryOperator(assignmentOperator);
 
-        if (assignmentOperator.Left is ElementAccess access)
+        if (assignmentOperator.Left is ElementAccess or PropertyAccess or QualifiedName)
         {
-            var expressionType = semanticModel.GetType(access.Expression);
+            var expression = assignmentOperator.Left switch
+            {
+                ElementAccess access => access.Expression,
+                PropertyAccess propertyAccess => propertyAccess.Expression,
+                QualifiedName name => name.Identifier,
+                _ => null!
+            };
+            
+            var expressionType = semanticModel.GetType(expression);
+            var indexType = assignmentOperator.Left switch
+            {
+                ElementAccess access => semanticModel.GetType(access.IndexExpression),
+                PropertyAccess propertyAccess => new Types.LiteralType(propertyAccess.Names.First().Name.Text),
+                QualifiedName name => new Types.LiteralType(name.Names.First().Name.Text),
+                _ => null!
+            };
+
             var objectType = expressionType switch
             {
                 ObjectType o => o,
                 InterfaceType i => i.ObjectType,
                 _ => null
             };
+            
+            var names = (assignmentOperator.Left switch
+            {
+                PropertyAccess propertyAccess => propertyAccess.Names,
+                QualifiedName name => name.Names,
+                _ => []
+            }).ToList();
 
             if (objectType != null)
             {
-                var indexType = semanticModel.GetType(access.IndexExpression);
+                if (names.Count > 1)
+                {
+                    foreach (var property in names.SkipLast(1).Select(name => objectType.GetProperty(name.Name.Text)!))
+                    {
+                        objectType = property.ValueType is InterfaceType i ? i.ObjectType : (ObjectType)property.ValueType;
+                    }
+
+                    indexType = new Types.LiteralType(names.Last().Name.Text);
+                }
+                
                 var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
                 if (bodyType is { IsMutable: false })
                 {
@@ -728,8 +760,8 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
         return BindType(node, Types.PrimitiveType.Never);
     }
-    
-    private void CheckInvalidElementAccessAssignment(ElementAccess elementAccess, Type type, Type indexType)
+
+    private void CheckInvalidAccessAssignment(ElementAccess elementAccess, Type type, Type indexType)
     {
         if (elementAccess.Parent is not AssignmentOperator assignmentOperator) return;
         _diagnostics.Error(assignmentOperator, InternalCodes.InvalidAccess, $"Cannot assign to element access expression for '{type}[{indexType}]'.");
@@ -945,7 +977,9 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     }
 
     private Type GetDeclarationType(Symbol symbol) =>
-        symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != semanticModel.Tree.File.AbsolutePath ? Visit(symbol.Declaration) : semanticModel.GetType(symbol.Declaration);
+        symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != semanticModel.Tree.File.AbsolutePath
+            ? Visit(symbol.Declaration)
+            : semanticModel.GetType(symbol.Declaration);
 
     private T BindType<T>(Node node, T type)
         where T : Type
