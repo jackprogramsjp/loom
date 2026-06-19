@@ -321,6 +321,17 @@ interface ImmutRecord<K, V> {
 ```luau
 type ImmutRecord<K, V> = { read [K]: V }
 ```
+##
+```ts
+interface Foo { bar: string }
+type S = Foo["bar"];
+```
+```luau
+type Foo = {
+    bar: string
+}
+type S = index<Foo, "bar">
+```
 
 ## Planned Features
 
