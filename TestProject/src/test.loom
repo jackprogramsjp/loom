@@ -1,1 +1,1 @@
-mut s = 'a'; s += 'b'
+mut a = 0; let x = a = 1

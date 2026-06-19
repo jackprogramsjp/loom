@@ -21,8 +21,10 @@ internal static class Utility
     public static IReadOnlyList<Token> GetTokens(string source) => Tokenize(source).Tokens;
     public static Tree GetAST(string source) => Parse(source).Tree;
     public static Type GetLastStatementType(string source) => TypeCheck(source).ReturnType;
+    public static LuauTree GetLuauAST(string source, bool typeCheck = false) => Generate(source, typeCheck).LuauTree;
 
-    public static LuauTree GetLuauAST(string source, bool typeCheck = false)
+    public static DiagnosticBag GetGeneratorDiagnostics(string source, bool typeCheck = false) => Generate(source).Diagnostics;
+    private static LuauGeneratorResult Generate(string source, bool typeCheck = false)
     {
         var semanticModel = GetSemanticModel(source);
         if (typeCheck)
@@ -31,7 +33,7 @@ internal static class Utility
             typeChecker.Check();
         }
 
-        return new LuauGenerator(semanticModel).Generate().LuauTree;
+        return new LuauGenerator(semanticModel).Generate();
     }
 
     public static DiagnosticBag GetLexerDiagnostics(string source) => Tokenize(source).Diagnostics;

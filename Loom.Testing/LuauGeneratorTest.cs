@@ -1,6 +1,6 @@
+using Loom.Diagnostics;
 using Loom.Luau;
 using Loom.Luau.AST;
-using Loom.Parsing.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;
 using ElementAccess = Loom.Luau.AST.ElementAccess;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
@@ -23,6 +23,13 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class LuauGeneratorTest
 {
+    [Fact]
+    public void ThrowsFor_BitwiseAssignment_NotImplemented()
+    {
+        var diagnostics = Utility.GetGeneratorDiagnostics("mut x = 1; x &= 2");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.NotImplemented, "Luau generation for bitwise assignment operators is not yet supported.");
+    }
+    
     [Theory]
     [InlineData("declare let x: number;")]
     [InlineData("declare mut x: number;")]
@@ -30,6 +37,150 @@ public class LuauGeneratorTest
     public void Generates_Nothing(string source)
     {
         Assert.Empty(Utility.GetLuauAST(source).Statements);
+    }
+
+    [Fact]
+    public void Generates_IfStatement_SingleExpressionThenBranch()
+    {
+        var luauTree = Utility.GetLuauAST("if true return 1");
+        Assert.Single(luauTree.Statements);
+
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        Assert.Single(ifStatement.ThenBranch.Statements);
+        Assert.IsType<Return>(ifStatement.ThenBranch.Statements[0]);
+    }
+
+    [Fact]
+    public void Generates_IfStatement_SingleExpressionElseBranch()
+    {
+        var luauTree = Utility.GetLuauAST("if true { return 1 } else return 0");
+        Assert.Single(luauTree.Statements);
+
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.First());
+        Assert.NotNull(ifStatement.ElseBranch);
+        Assert.Single(ifStatement.ElseBranch.Statements);
+        Assert.IsType<Return>(ifStatement.ElseBranch.Statements[0]);
+    }
+
+    [Fact]
+    public void Generates_InterfaceDeclaration_NoBody()
+    {
+        var luauTree = Utility.GetLuauAST("interface I;", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("I", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var tableType = Assert.IsType<TableType>(typeAlias.Type);
+        Assert.Null(tableType.Indexer);
+        Assert.Empty(tableType.Properties);
+    }
+
+    [Fact]
+    public void Generates_CompoundAssignment()
+    {
+        var luauTree = Utility.GetLuauAST("mut x = 1; x += 2");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
+        var binary = Assert.IsType<BinaryOperator>(exprStmt.Expression);
+        Assert.Equal("x", ((Identifier)binary.Left).Name);
+        Assert.Equal(2, ((NumberLiteral)binary.Right).Value);
+        Assert.Equal("+=", binary.Operator);
+    }
+
+    [Fact]
+    public void Generates_BitwiseAssignment_NotImplemented()
+    {
+        var luauTree = Utility.GetLuauAST("mut x = 1; x &= 2");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var binary = Assert.IsType<BinaryOperator>(variable.Initializer);
+        Assert.Equal("???", binary.Operator);
+        Assert.IsType<Identifier>(binary.Left);
+        Assert.IsType<NumberLiteral>(binary.Right);
+    }
+
+    [Fact]
+    public void Generates_ElementAccess_StringIndex()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { [string]: number } let x = none as never as I; x['key']", typeCheck: true);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var elementAccess = Assert.IsType<ElementAccess>(variable.Initializer);
+        var target = Assert.IsType<Identifier>(elementAccess.Target);
+        Assert.Equal("x", target.Name);
+        var index = Assert.IsType<StringLiteral>(elementAccess.Index);
+        Assert.Equal("key", index.Value);
+    }
+
+    [Fact]
+    public void Generates_PropertyAccessAssignment()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { mut prop: number } let obj = none as never as I; obj.prop = 42", typeCheck: true);
+        Assert.True(luauTree.Statements.Count >= 3);
+        var exprStmt = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var assignment = Assert.IsType<BinaryOperator>(exprStmt.Expression);
+        var left = Assert.IsType<PropertyAccess>(assignment.Left);
+        var right = Assert.IsType<NumberLiteral>(assignment.Right);
+        Assert.Equal("obj", ((Identifier)left.Target).Name);
+        Assert.Equal("prop", left.Names[0]);
+        Assert.Equal(42, right.Value);
+    }
+
+    [Fact]
+    public void Generates_QualifiedNameAssignment()
+    {
+        var luauTree = Utility.GetLuauAST("interface Mod { mut value: number } let mod = none as never as Mod; mod.value = 99", typeCheck: true);
+        Assert.True(luauTree.Statements.Count >= 3);
+        var exprStmt = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var assignment = Assert.IsType<BinaryOperator>(exprStmt.Expression);
+        var left = Assert.IsType<PropertyAccess>(assignment.Left);
+        var right = Assert.IsType<NumberLiteral>(assignment.Right);
+        Assert.Equal("mod", ((Identifier)left.Target).Name);
+        Assert.Equal("value", left.Names[0]);
+        Assert.Equal(99, right.Value);
+    }
+
+    [Fact]
+    public void Generates_IdentifierAssignment()
+    {
+        var luauTree = Utility.GetLuauAST("mut a = 0; let x = a = 1");
+        Assert.Equal(3, luauTree.Statements.Count);
+
+        var aVar = Assert.IsType<LocalVariable>(luauTree.Statements[0]);
+        Assert.Equal("a", aVar.Name);
+
+        var postreq = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
+        var assignment = Assert.IsType<BinaryOperator>(postreq.Expression);
+        Assert.Equal("a", ((Identifier)assignment.Left).Name);
+        var rhs = Assert.IsType<NumberLiteral>(assignment.Right);
+        Assert.Equal(1, rhs.Value);
+
+        var xVar = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
+        Assert.Equal("x", xVar.Name);
+        var init = Assert.IsType<Identifier>(xVar.Initializer);
+        Assert.Equal("a", init.Name);
+    }
+
+    [Fact]
+    public void Generates_FunctionType_WithLiteralReturnType()
+    {
+        var luauTree = Utility.GetLuauAST("type X = fn(): 0");
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(typeAlias.Type);
+        var returnType = Assert.IsType<PrimitiveType>(fnType.ReturnType);
+        Assert.Equal(PrimitiveTypeKind.Number, returnType.Kind);
+    }
+
+    [Fact]
+    public void Generates_VariableDeclaration_WithoutInitializer()
+    {
+        var luauTree = Utility.GetLuauAST("let x: number;");
+        Assert.Single(luauTree.Statements);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
+        Assert.Equal("x", variable.Name);
     }
 
     [Fact]
@@ -93,7 +244,7 @@ public class LuauGeneratorTest
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         Assert.NotNull(tableType.Indexer);
-        
+
         var keyType = Assert.IsType<PrimitiveType>(tableType.Indexer.KeyType);
         var valueType = Assert.IsType<PrimitiveType>(tableType.Indexer.ValueType);
         Assert.Equal(PrimitiveTypeKind.Number, keyType.Kind);
@@ -129,7 +280,7 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST("interface Base {}; interface I : Base { }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
-        
+
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
         var intersection = Assert.IsType<IntersectionType>(typeAlias.Type);
         Assert.Equal(2, intersection.Types.Count);
@@ -147,7 +298,7 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST("interface A {} interface B {} interface I : A, B { }", typeCheck: true);
         Assert.Equal(3, luauTree.Statements.Count);
-        
+
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
         var intersection = Assert.IsType<IntersectionType>(typeAlias.Type);
         Assert.Equal(3, intersection.Types.Count);
@@ -178,7 +329,7 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("interface Repo<T: number = 42> { item: T }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         Assert.Single(typeAlias.TypeParameters.Parameters);
-        
+
         var tp = typeAlias.TypeParameters.Parameters.First();
         Assert.Equal("T", tp.Name);
         Assert.NotNull(tp.DefaultType);
@@ -188,7 +339,7 @@ public class LuauGeneratorTest
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         var prop = tableType.Properties.Single();
         Assert.Equal("item", prop.Name);
-        
+
         var intersection = Assert.IsType<IntersectionType>(prop.Type);
         Assert.Equal(2, intersection.Types.Count);
         Assert.IsType<TypeName>(intersection.Types.First());
@@ -224,7 +375,7 @@ public class LuauGeneratorTest
         Assert.IsType<OptionalType>(functionType.ParameterTypes.Last());
         Assert.IsType<PrimitiveType>(functionType.ReturnType);
     }
-    
+
     [Fact]
     public void Generates_IndexedType()
     {
@@ -241,7 +392,7 @@ public class LuauGeneratorTest
         var self = Assert.IsType<TypeName>(indexTypeFn.TypeArguments.First());
         Assert.Equal("Foo", self.Name);
         Assert.Empty(self.TypeArguments);
-        
+
         var inner = Assert.IsType<PrimitiveType>(indexTypeFn.TypeArguments.Last());
         Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
     }
