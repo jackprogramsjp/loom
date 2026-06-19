@@ -1,3 +1,4 @@
-type Abc = number
-const y = ((1 :: never) :: "A")
-const x = 0
+type Foo = {
+  read foo: string
+}
+const foo = { foo = "bar" }

@@ -285,6 +285,17 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
     public override Type VisitNameOf(NameOf nameOf) => new Types.LiteralType(nameOf.Name.ToString());
 
+    public override Type VisitInterfaceInvocation(InterfaceInvocation node)
+    {
+        var type = Visit(node.Name);
+        var interfaceType = ResolveInterfaceType(node, type);
+        if (interfaceType == null)
+            return BindType(node, Types.PrimitiveType.Never);
+
+        CheckInitializers(node, interfaceType);
+        return BindType(node, interfaceType);
+    }
+
     public override Type VisitInvocation(Invocation invocation)
     {
         var type = Visit(invocation.Expression);
@@ -410,7 +421,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 }
             }
         }
-        
+
         semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
         return BindType(assignmentOperator, valueType);
     }
@@ -676,7 +687,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             }
         }
     }
-    
+
     private static Type RemoveType(Type source, Type toRemove)
     {
         if (source is not Types.UnionType union)
@@ -838,6 +849,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             return Visit(functionDeclaration.ReturnType);
 
         Console.WriteLine(functionDeclaration);
+
         // TODO: flow analysis
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
@@ -845,7 +857,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 .GetDescendants<Return>()
                 .FindAll(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
                 .ConvertAll(Visit);
-        
+
         foreach (var t in possibleReturnTypes) Console.WriteLine(t);
         return TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
@@ -973,6 +985,139 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         }
 
         return substitution;
+    }
+    
+    private InterfaceType? ResolveInterfaceType(InterfaceInvocation node, Type type)
+    {
+        if (type is InterfaceType nonGeneric)
+            return nonGeneric;
+
+        if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
+        {
+            _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
+            return null;
+        }
+
+        var arguments = node.TypeArguments?.ArgumentsList.ConvertAll(Visit) ?? [];
+        if (!CheckGenericArity((Node?)node.TypeArguments ?? node, generic.Parameters, arguments, $"Interface '{generic}'"))
+            return null;
+
+        var resolvedArguments = FillGenericArguments(node, generic.Parameters, arguments);
+        if (resolvedArguments == null)
+            return null;
+
+        for (var i = 0; i < generic.Parameters.Count; i++)
+        {
+            if (generic.Parameters[i].Constraint == null) continue;
+            CheckTypeParameterConstraints(node, resolvedArguments[i], generic.Parameters[i]);
+        }
+
+        var substitution = new Dictionary<Types.TypeParameter, Type>();
+        for (var i = 0; i < generic.Parameters.Count; i++)
+            substitution[generic.Parameters[i]] = resolvedArguments[i];
+
+        var substitutedObject = SubstituteObjectType(underlying.ObjectType, substitution);
+        return new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
+    }
+
+    private void CheckInitializers(InterfaceInvocation node, InterfaceType interfaceType)
+    {
+        var objectType = interfaceType.ObjectType;
+        var providedProperties = new HashSet<string>();
+        foreach (var initializer in node.Body.Initializers)
+        {
+            switch (initializer)
+            {
+                case InterfaceInvocationPropertyInitializer propertyInitializer:
+                {
+                    var name = propertyInitializer.Name.Text;
+                    var property = objectType.GetProperty(name);
+                    if (property == null)
+                    {
+                        _diagnostics.Error(
+                            propertyInitializer,
+                            InternalCodes.InvalidAccess,
+                            $"Property '{name}' does not exist on interface '{interfaceType.Name}'."
+                        );
+
+                        continue;
+                    }
+
+                    var valueType = Visit(propertyInitializer.Expression);
+                    semanticModel.TypeSolver.AddConstraint(valueType, property.ValueType, propertyInitializer.Expression);
+                    providedProperties.Add(name);
+                    break;
+                }
+                case InterfaceInvocationIndexInitializer indexInitializer when objectType.Indexer == null:
+                    _diagnostics.Error(
+                        indexInitializer,
+                        InternalCodes.InvalidAccess,
+                        $"Interface '{interfaceType.Name}' does not have an indexer."
+                    );
+
+                    continue;
+                case InterfaceInvocationIndexInitializer indexInitializer:
+                {
+                    var indexType = Visit(indexInitializer.IndexExpression);
+                    var valueType = Visit(indexInitializer.Expression);
+                    semanticModel.TypeSolver.AddConstraint(indexType, objectType.Indexer.KeyType, indexInitializer.IndexExpression);
+                    semanticModel.TypeSolver.AddConstraint(valueType, objectType.Indexer.ValueType, indexInitializer.Expression);
+                    break;
+                }
+            }
+        }
+
+        foreach (var property in objectType.Properties.Where(property => !providedProperties.Contains(property.Name)))
+            _diagnostics.Error(
+                node.Body,
+                InternalCodes.IncompleteInterfaceInvocation,
+                $"Missing property initializer for '{property.Name}' in interface '{interfaceType.Name}'."
+            );
+    }
+
+    private List<Type>? FillGenericArguments(Node errorNode, List<Types.TypeParameter> parameters, List<Type> given)
+    {
+        var result = new List<Type>();
+        for (var i = 0; i < parameters.Count; i++)
+        {
+            if (i < given.Count)
+            {
+                result.Add(given[i]);
+            }
+            else if (parameters[i].DefaultType != null)
+            {
+                result.Add(parameters[i].DefaultType!);
+            }
+            else
+            {
+                ReportCannotInfer(errorNode, parameters[i]);
+                return null;
+            }
+        }
+
+        return result;
+    }
+
+    private static ObjectType SubstituteObjectType(ObjectType objectType, Dictionary<Types.TypeParameter, Type> substitution)
+    {
+        var newProperties = objectType.Properties.ConvertAll(property => new ObjectProperty(
+                property.IsMutable,
+                property.Name,
+                SubstituteTypeParameters(property.ValueType, substitution)
+            )
+        );
+
+        ObjectIndexer? newIndexer = null;
+        if (objectType.Indexer != null)
+        {
+            newIndexer = new ObjectIndexer(
+                objectType.Indexer.IsMutable,
+                SubstituteTypeParameters(objectType.Indexer.KeyType, substitution),
+                SubstituteTypeParameters(objectType.Indexer.ValueType, substitution)
+            );
+        }
+
+        return new ObjectType(newIndexer, newProperties);
     }
 
     private static List<Type> SubstituteTypeParameters(List<Type> types, Dictionary<Types.TypeParameter, Type> substitution) =>

@@ -1,4 +1,5 @@
-enum Abc { A }
+interface Foo {
+    foo: string
+}
 
-let y = 1 as never as "A"
-let x = Abc[y]
+let foo = Foo { foo: "bar" }

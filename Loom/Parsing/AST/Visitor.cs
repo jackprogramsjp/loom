@@ -1,4 +1,5 @@
 // ReSharper disable VirtualMemberNeverOverridden.Global
+
 namespace Loom.Parsing.AST;
 
 public abstract class Visitor<T>
@@ -13,12 +14,23 @@ public abstract class Visitor<T>
     public virtual T VisitIf(If @if) => CombineResults([Visit(@if.Condition), Visit(@if.ThenBranch), MaybeVisit(@if.ElseBranch)]);
     public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
 
-    public virtual T VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration) => Visit(propertyDeclaration.ColonTypeClause);
+    public virtual T VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) =>
+        CombineResults([Visit(interfaceInvocation.Name), MaybeVisit(interfaceInvocation.TypeArguments), Visit(interfaceInvocation.Body)]);
+
+    public virtual T VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) => VisitList(interfaceInvocationBody.Initializers);
+
+    public virtual T VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
+        CombineResults([Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression)]);
+
+    public virtual T VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
+        Visit(propertyInitializer.Expression);
 
     public virtual T VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration) =>
         CombineResults([Visit(indexerDeclaration.IndexType), Visit(indexerDeclaration.ColonTypeClause)]);
 
+    public virtual T VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration) => Visit(propertyDeclaration.ColonTypeClause);
     public virtual T VisitInterfaceBody(InterfaceBody interfaceBody) => VisitList(interfaceBody.Members);
+
     public virtual T VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration) =>
         CombineResults(
             [MaybeVisit(interfaceDeclaration.TypeParameters), MaybeVisit(interfaceDeclaration.ColonTypeListClause), MaybeVisit(interfaceDeclaration.Body)]

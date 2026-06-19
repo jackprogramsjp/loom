@@ -168,9 +168,10 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
 
     public override bool VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
-        if (!DeclareType(interfaceDeclaration))
+        if (!DeclareType(interfaceDeclaration) || !DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol))
             return false;
-
+        
+        MarkDefinitelyInitialized(valueSymbol);
         if (interfaceDeclaration.Body != null)
         {
             var name = interfaceDeclaration.Name.Text;

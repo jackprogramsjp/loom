@@ -325,6 +325,17 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));
 
+    public override LuauNode VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) => Visit(interfaceInvocation.Body);
+
+    public override LuauNode VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) =>
+        new Table(interfaceInvocationBody.Initializers.ConvertAll(Visit<TableInitializer>));
+
+    public override LuauNode VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
+        new PropertyTableInitializer(propertyInitializer.Name.Text, Visit(propertyInitializer.Expression));
+    
+    public override LuauNode VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
+        new ComputedPropertyTableInitializer(Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression));
+
     public override LuauNode VisitRangeLiteral(RangeLiteral rangeLiteral) =>
         new Table([new PropertyTableInitializer("minimum", Visit(rangeLiteral.Minimum)), new PropertyTableInitializer("maximum", Visit(rangeLiteral.Maximum))]);
 
