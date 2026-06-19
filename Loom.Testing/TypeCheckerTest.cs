@@ -62,12 +62,26 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("type Id<T: number = \"abc\"> = T");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"abc\"' is not assignable to type 'number'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_QualifiedName_InvalidTarget()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo -> 42; foo.abc");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot access property 'abc' on type 'fn(): 42'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_PropertyAccess_InvalidTarget()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("(69).abc");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot access property 'abc' on type '69'.");
+    }
 
     [Fact]
     public void ThrowsFor_ElementAccess_InvalidTarget()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo -> 42; foo[0]");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot index value of type 'fn(): 42'");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot index value of type 'fn(): 42'.");
     }
 
     [Fact]
@@ -384,6 +398,13 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = none; if x != none { -x }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidUnaryOp, "No unary operation for -never.");
     }
+    
+    [Fact]
+    public void ThrowsFor_InvalidCall()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = 1; x()");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidInvocation, "Cannot call value of type '1'.");
+    }
 
     [Fact]
     public void ThrowsFor_Cast_Mismatch()
@@ -439,6 +460,56 @@ public class TypeCheckerTest
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("type X = number['abc']");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Type '\"abc\"' cannot be used to index type 'number'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_ParameterDefaultMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo(a: number = 'oops') {}");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"oops\"' is not assignable to type 'number'.");
+    }
+    
+    [Fact]
+    public void WarnsFor_NullCoalescing_NonOptional()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("1 ?? 2");
+        Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.RedundantCode);
+    }
+    
+    [Fact]
+    public void Checks_InterfaceInheritance_MemberAccess()
+    {
+        var type = Utility.GetLastStatementType( "interface A { x: number } interface B : A { } let b = none as never as B; b.x");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_InterfaceInheritance_IndexerAccess()
+    {
+        var type = Utility.GetLastStatementType("interface A { [string]: number } interface B : A { } let b = none as never as B; b['hello']");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_CompoundAssignment_Add()
+    {
+        var type = Utility.GetLastStatementType("mut x = 1; x += 2");
+        Assert.True(type.IsAssignableTo(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_CompoundAssignment_Concat()
+    {
+        var type = Utility.GetLastStatementType("mut s = 'a'; s += 'b'");
+        Assert.True(type.IsAssignableTo(PrimitiveType.String), $"Expected 'string', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_ReturnTypeInference_BlockMultipleReturns()
+    {
+        var type = Utility.GetLastStatementType("fn abs(x: number) { if x >= 0 { return x } else { return -x } }");
+        var fnType = Assert.IsType<FunctionType>(type);
+        Assert.True(fnType.ReturnType.Equals(PrimitiveType.Number), $"Expected 'number', got '{fnType.ReturnType}'");
     }
     
     [Theory]
@@ -662,9 +733,45 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void Checks_IfStatementTypeNarrowing()
+    public void Narrowing_NonNullable()
     {
         Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics("let x: number? = 69; if x != none x + 420"));
+    }
+    
+    [Fact]
+    public void Narrowing_EqualsLiteral_ThenBranch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number | string = 42; if x == 42 { x + 1 }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Narrowing_EqualsLiteral_ElseBranch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number | string = 42; if x == 42 { } else { x + 1 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidBinaryOp, "No binary operation for 'string' + 'number'.");
+    }
+
+    [Fact]
+    public void Narrowing_NotEqualsLiteral_ThenBranch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number | string = 'hi'; if x != 'hi' { x + 1 }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Narrowing_BooleanLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: bool | number = true; if x == true { x && false }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Narrowing_Chained()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "interface Inner { val: number? } interface Outer { inner: Inner } let obj = none as never as Outer; if obj.inner.val == 10 { obj.inner.val + 1 }");
+        Utility.AssertNoErrors(diagnostics);
     }
 
     [Fact]

@@ -349,6 +349,8 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         if (assignmentOperator.Operator.Kind != SyntaxKind.Equals)
             return base.VisitBinaryOperator(assignmentOperator);
 
+        var targetType = Visit(assignmentOperator.Left);
+        var valueType = Visit(assignmentOperator.Right);
         if (assignmentOperator.Left is ElementAccess or PropertyAccess or QualifiedName)
         {
             var expression = assignmentOperator.Left switch
@@ -405,13 +407,10 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                     };
 
                     _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
-                    return Types.PrimitiveType.Never;
                 }
             }
         }
-
-        var targetType = Visit(assignmentOperator.Left);
-        var valueType = Visit(assignmentOperator.Right);
+        
         semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
         return BindType(assignmentOperator, valueType);
     }
