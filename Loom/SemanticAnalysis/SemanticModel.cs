@@ -9,10 +9,11 @@ public class SemanticModel(Tree tree, DiagnosticBag diagnostics, Dictionary<Node
     : DiagnosedResult(diagnostics)
 {
     public Tree Tree { get; } = tree;
+    public Dictionary<NodeId, Symbol> Declarations { get; } = declarations;
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
 
     public Symbol? GetSymbol(Node node) => references.GetValueOrDefault(node.Id);
-    public Symbol? GetDeclarationSymbol(Node node) => declarations.GetValueOrDefault(node.Id);
+    public Symbol? GetDeclarationSymbol(Node node) => Declarations.GetValueOrDefault(node.Id);
 
     public Symbol? GetDeclaringSymbol(Node node)
     {

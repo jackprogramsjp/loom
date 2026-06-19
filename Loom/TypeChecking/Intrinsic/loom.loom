@@ -1,0 +1,8 @@
+interface Range {
+    minimum: number;
+    maximum: number;
+}
+
+interface Record<K, V> {
+    [K]: V;
+}

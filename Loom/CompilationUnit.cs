@@ -6,20 +6,33 @@ using Loom.Projects;
 using Loom.SemanticAnalysis;
 using Loom.Syntax;
 using Loom.TypeChecking;
+using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom;
 
 public class CompilationUnit(LoomConfig loomConfig)
 {
+    public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(loomConfig.Files.SourceDirectory);
+    public Dictionary<Symbol, Type> Globals { get; } = [];
+    
     public CompilationResult Compile()
     {
-        var sourceFiles = FileManager.LoadDirectory(loomConfig.Files.SourceDirectory);
-        var compiledFiles = sourceFiles.ConvertAll(Compile);
-        var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
-        if (!diagnostics.ContainsErrors())
+        Globals.Clear();
+        var compiledDeclarationFiles = SourceFiles.FindAll(file => file.IsDeclaration).ConvertAll(Compile);
+        foreach (var compiledFile in compiledDeclarationFiles)
         {
-            compiledFiles.ForEach(FileManager.WriteCompiledFile);
+            foreach (var symbol in compiledFile.Tree.Statements.Select(statement => compiledFile.SemanticModel.GetDeclarationSymbol(statement)).OfType<Symbol>())
+            {
+                var type = compiledFile.SemanticModel.GetType(symbol.Declaration);
+                Globals.Add(symbol, type);
+            }
         }
+
+        var compiledConcreteFiles = SourceFiles.FindAll(file => !file.IsDeclaration).ConvertAll(Compile);
+        var compiledFiles = compiledDeclarationFiles.Concat(compiledConcreteFiles).ToList();
+        var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
+        if (!diagnostics.ContainsErrors() && !loomConfig.NoEmit)
+            compiledFiles.ForEach(FileManager.WriteCompiledFile);
 
         return new CompilationResult(compiledFiles, diagnostics);
     }
@@ -33,7 +46,7 @@ public class CompilationUnit(LoomConfig loomConfig)
             var lexerResult = trackDiagnostics(lexer.Tokenize());
             var parser = new Parser(lexerResult);
             var parserResult = trackDiagnostics(parser.Parse());
-            var resolver = new Resolver(parserResult);
+            var resolver = new Resolver(parserResult, this);
             var semanticModel = trackDiagnostics(resolver.Resolve());
             var typeChecker = new TypeChecker(semanticModel);
             var typeCheckerResult = trackDiagnostics(typeChecker.Check());

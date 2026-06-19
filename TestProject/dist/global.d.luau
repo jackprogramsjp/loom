@@ -1,1 +1,3 @@
-type Record<K, V> = { [K]: V }
+type Foo = {
+  read foo: number
+}

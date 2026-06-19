@@ -1,0 +1,1 @@
+declare fn print(msg: unknown): void;

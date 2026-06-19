@@ -851,7 +851,7 @@ public class TypeCheckerTest
     public void Checks_RangeLiteral()
     {
         var type = Utility.GetLastStatementType("1..10");
-        Assert.True(type.Equals(IntrinsicTypes.Range.Type), $"Expected 'Range', got '{type}'");
+        Assert.True(type.Equals(IntrinsicTypes.Range), $"Expected 'Range', got '{type}'");
     }
 
     [Fact]

@@ -7,25 +7,14 @@ using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
 
-public class Resolver(ParserResult parserResult) : Visitor<bool>
+public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit) : Visitor<bool>
 {
-    private static readonly List<Symbol> _globalDeclarations = [];
-    
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<NodeId, Symbol> _allDeclarations = [];
     private readonly Dictionary<NodeId, Symbol> _allReferences = [];
     private readonly Stack<ResolverScope> _scopes = [];
     private readonly Stack<FlowState> _flowStates = [];
-    private readonly bool _isDeclarationFile = parserResult.Tree.File.IsDeclaration;
     private bool _insideFunction;
-
-    public static void DeclareGlobal(params Symbol[] symbols)
-    {
-        foreach (var symbol in symbols)
-            symbol.IsGlobal = true;
-        
-        _globalDeclarations.AddRange(symbols);
-    }
 
     public SemanticModel Resolve()
     {
@@ -39,11 +28,16 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         PushScope();
         PushFlowState(new FlowState([], []));
         
-        IntrinsicTypes.Register(semanticModel);
-        foreach (var symbol in _globalDeclarations.ToList())
+        var intrinsicSymbols = IntrinsicTypes.Register(semanticModel);
+        foreach (var symbol in intrinsicSymbols)
         {
-            Visit(symbol.Declaration);
             DeclareSymbol(symbol);
+        }
+
+        foreach (var (symbol, type) in compilationUnit.Globals)
+        {
+            DeclareSymbol(symbol);
+            semanticModel.TypeSolver.SetType(symbol.Declaration, type);
         }
 
         VisitTree(parserResult.Tree);
@@ -419,8 +413,8 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         scope.Declarations[nodeId] = symbol;
         _allDeclarations[nodeId] = symbol;
         _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
-        if (_isDeclarationFile)
-            DeclareGlobal(symbol);
+        if (parserResult.Tree.File.IsDeclaration)
+            symbol.IsGlobal = true;
     }
 
     private Symbol? LookupValueId(string name) =>
