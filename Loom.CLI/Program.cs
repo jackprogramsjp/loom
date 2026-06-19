@@ -6,7 +6,6 @@ using Loom.Utility;
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 DiagnosticBag.FailFast = true;
 
-var diagnostics = new DiagnosticBag();
 var directory = args.ElementAtOrDefault(0) ?? ".";
 var loomConfig = ConfigReader.LocateFromDirectory(directory);
 if (loomConfig == null)
@@ -21,7 +20,6 @@ return;
 void debugFile(CompiledFile compiledFile, bool tokens = true, bool ast = true, bool rebuilt = true, bool luau = true, bool showDiagnostics = true)
 {
     var astDisplayer = new ASTDisplayer(compiledFile.Tree);
-
     if (tokens)
     {
         Console.WriteLine("Tokens:");
@@ -51,7 +49,7 @@ void debugFile(CompiledFile compiledFile, bool tokens = true, bool ast = true, b
     }
 
     if (!showDiagnostics) return;
-    var compilerDiagnostics = compiledFile.Diagnostics.ToString();
+    var compilerDiagnostics = compiledFile.Diagnostics.WithoutInfo().ToString();
     Console.WriteLine();
     Console.WriteLine("Diagnostics:");
     Console.WriteLine(string.IsNullOrEmpty(compilerDiagnostics) ? "(none)" : compilerDiagnostics);

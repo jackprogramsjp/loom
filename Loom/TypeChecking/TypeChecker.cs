@@ -360,7 +360,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 QualifiedName name => name.Identifier,
                 _ => null!
             };
-            
+
             var expressionType = semanticModel.GetType(expression);
             var indexType = assignmentOperator.Left switch
             {
@@ -376,7 +376,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 InterfaceType i => i.ObjectType,
                 _ => null
             };
-            
+
             var names = (assignmentOperator.Left switch
             {
                 PropertyAccess propertyAccess => propertyAccess.Names,
@@ -395,7 +395,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
                     indexType = new Types.LiteralType(names.Last().Name.Text);
                 }
-                
+
                 var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
                 if (bodyType is { IsMutable: false })
                 {
@@ -764,7 +764,11 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
     private void CheckInvalidAccessAssignment(ElementAccess elementAccess, Type type, Type indexType)
     {
         if (elementAccess.Parent is not AssignmentOperator assignmentOperator) return;
-        _diagnostics.Error(assignmentOperator, InternalCodes.InvalidAccess, $"Cannot assign to element access expression for '{type}[{indexType}]'.");
+        _diagnostics.Error(
+            assignmentOperator,
+            InternalCodes.InvalidAccess,
+            $"Cannot assign to '{type.Widen()}[{indexType.Widen()}]' because the expression will be replaced by a macro."
+        );
     }
 
     private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)

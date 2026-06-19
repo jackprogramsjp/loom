@@ -423,6 +423,16 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Inner { prop: number } interface Obj { inner: Inner }; let x = none as never as Obj; x.inner.prop = 69");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable property 'prop'.");
     }
+    
+    [Theory]
+    [InlineData("let s = \"abcdef\"; s[1..3] = \"abc\"", "string[Range]")]
+    [InlineData("let s = \"abcdef\"; s[1] = \"a\"", "string[number]")]
+    [InlineData("let a = mut [1, 2, 3]; a[1..2] = [69, 420]", "number[mut][Range]")]
+    public void ThrowsFor_AccessMacro_Assignment(string source, string assignType)
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, $"Cannot assign to '{assignType}' because the expression will be replaced by a macro.");
+    }
 
     [Fact]
     public void Checks_InterfaceDeclaration_Empty()

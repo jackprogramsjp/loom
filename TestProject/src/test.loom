@@ -1,12 +1,1 @@
-interface Bar {
-    bar: number
-}
-
-interface Foo {
-    [number]: bool;
-    foo: number;
-}
-
-let x = none as never as Foo
-x.foo = 69
-x[69] = true;
+let a = mut [1, 2, 3]; s[1..2]
