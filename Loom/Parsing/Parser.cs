@@ -6,7 +6,7 @@ using Loom.Syntax;
 
 namespace Loom.Parsing;
 
-public class Parser(LexerResult lexerResult)
+public class Parser
 {
     private record BinaryPrecedenceLevel(bool RightAssociative, Predicate<SyntaxKind> Matches)
     {
@@ -15,7 +15,9 @@ public class Parser(LexerResult lexerResult)
         {
         }
     }
-
+    
+    private delegate Statement StatementParser(Token keyword);
+    private readonly Dictionary<SyntaxKind, StatementParser> _statementParsers;
     private static readonly BinaryPrecedenceLevel[] _binaryPrecedenceLevels =
     [
         new(true, SyntaxFacts.IsAssignmentOperator),
@@ -36,6 +38,25 @@ public class Parser(LexerResult lexerResult)
 
     private readonly DiagnosticBag _diagnostics = new();
     private int _position;
+    private readonly LexerResult _lexerResult;
+
+    public Parser(LexerResult lexerResult)
+    {
+        _lexerResult = lexerResult;
+        _statementParsers = new Dictionary<SyntaxKind, StatementParser>
+        {
+            [SyntaxKind.LBrace]          = ParseBlock,
+            [SyntaxKind.ReturnKeyword]   = token => new Return(token, ParseExpression()),
+            [SyntaxKind.FnKeyword]       = ParseFunctionDeclaration,
+            [SyntaxKind.LetKeyword]      = ParseVariableDeclaration,
+            [SyntaxKind.MutKeyword]      = ParseVariableDeclaration,
+            [SyntaxKind.TypeKeyword]     = ParseTypeAlias,
+            [SyntaxKind.EnumKeyword]     = ParseEnumDeclaration,
+            [SyntaxKind.DeclareKeyword]  = ParseDeclareStatement,
+            [SyntaxKind.InterfaceKeyword]= ParseInterfaceDeclaration,
+            [SyntaxKind.IfKeyword]       = ParseIf,
+        };
+    }
 
     public ParserResult Parse()
     {
@@ -43,38 +64,17 @@ public class Parser(LexerResult lexerResult)
         while (!IsEof())
             statements.Add(ParseStatement());
 
-        var tree = new Tree(lexerResult.File, statements);
+        var tree = new Tree(_lexerResult.File, statements);
         return new ParserResult(tree, _diagnostics);
     }
 
     private Statement ParseStatement()
     {
-        if (Match(out var leftBrace, SyntaxKind.LBrace))
-            return ParseBlock(leftBrace);
-
-        if (Match(out var returnKeyword, SyntaxKind.ReturnKeyword))
-            return new Return(returnKeyword, ParseExpression());
-
-        if (Match(out var fnKeyword, SyntaxKind.FnKeyword))
-            return ParseFunctionDeclaration(fnKeyword);
-
-        if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
-            return ParseVariableDeclaration(variableKeyword);
-
-        if (Match(out var typeKeyword, SyntaxKind.TypeKeyword))
-            return ParseTypeAlias(typeKeyword);
-
-        if (Match(out var enumKeyword, SyntaxKind.EnumKeyword))
-            return ParseEnumDeclaration(enumKeyword);
-
-        if (Match(out var declareKeyword, SyntaxKind.DeclareKeyword))
-            return ParseDeclareStatement(declareKeyword);
-
-        if (Match(out var interfaceKeyword, SyntaxKind.InterfaceKeyword))
-            return ParseInterfaceDeclaration(interfaceKeyword);
-
-        if (Match(out var ifKeyword, SyntaxKind.IfKeyword))
-            return ParseIf(ifKeyword);
+        foreach (var (kind, parse) in _statementParsers)
+        {
+            if (!Match(out var token, kind)) continue;
+            return parse(token);
+        }
 
         var expression = ParseExpression();
         return new ExpressionStatement(expression);
@@ -712,8 +712,8 @@ public class Parser(LexerResult lexerResult)
                 var firstToken = new Token(SyntaxKind.RArrow, firstSpan, ">");
                 var remainderSpan = new LocationSpan(token.Span.Start + 1, token.Span.Length - 1);
                 var remainderToken = new Token(SyntaxKind.RArrow, remainderSpan, token.Text[1..]);
-                lexerResult.Tokens[_position] = firstToken;
-                lexerResult.Tokens.Insert(_position + 1, remainderToken);
+                _lexerResult.Tokens[_position] = firstToken;
+                _lexerResult.Tokens.Insert(_position + 1, remainderToken);
                 Advance();
 
                 closingArrow = firstToken;
@@ -725,8 +725,8 @@ public class Parser(LexerResult lexerResult)
                 var firstToken = new Token(SyntaxKind.RArrow, firstSpan, ">");
                 var remainderSpan = new LocationSpan(token.Span.Start + 1, token.Span.Length - 1);
                 var remainderToken = new Token(SyntaxKind.RArrowRArrow, remainderSpan, token.Text[1..]);
-                lexerResult.Tokens[_position] = firstToken;
-                lexerResult.Tokens.Insert(_position + 1, remainderToken);
+                _lexerResult.Tokens[_position] = firstToken;
+                _lexerResult.Tokens.Insert(_position + 1, remainderToken);
                 Advance();
 
                 closingArrow = firstToken;
@@ -813,7 +813,7 @@ public class Parser(LexerResult lexerResult)
     private Token Current() => Peek(0);
     private Token CurrentOrLast() => !IsEof() ? Current() : Last();
     private Token Last() => Peek(-1);
-    private Token Peek(int offset) => lexerResult.Tokens[_position + offset];
-    private bool IsEof() => _position >= lexerResult.Tokens.Count;
+    private Token Peek(int offset) => _lexerResult.Tokens[_position + offset];
+    private bool IsEof() => _position >= _lexerResult.Tokens.Count;
     private static string SafeTokenText(Token? token) => token != null ? $"'{token.Text}'" : "EOF";
 }

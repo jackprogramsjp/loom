@@ -433,6 +433,23 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, $"Cannot assign to '{assignType}' because the expression will be replaced by a macro.");
     }
+    
+    [Fact]
+    public void ThrowsFor_IndexedType_InvalidTarget()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type X = number['abc']");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Type '\"abc\"' cannot be used to index type 'number'.");
+    }
+    
+    [Theory]
+    [InlineData("interface I { foo: number }; type Foo = I['foo'];")]
+    [InlineData("type Foo = number[][number]")]
+    public void Checks_IndexedType(string source)
+    {
+        var type = Utility.GetLastStatementType(source);
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
 
     [Fact]
     public void Checks_InterfaceDeclaration_Empty()

@@ -240,7 +240,157 @@ public class ParserTest
             "Expected property name, got '123'."
         );
     }
-    
+
+    [Fact]
+    public void Parses_IndexedType_Basic()
+    {
+        var tree = Utility.GetAST("let x: T[K]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var indexed = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+
+        var baseType = Assert.IsType<TypeName>(indexed.Type);
+        Assert.Equal("T", baseType.Name.Text);
+
+        var indexType = Assert.IsType<TypeName>(indexed.IndexType);
+        Assert.Equal("K", indexType.Name.Text);
+
+        Assert.Equal(SyntaxKind.LBracket, indexed.LeftBracket.Kind);
+        Assert.Equal(SyntaxKind.RBracket, indexed.RightBracket.Kind);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_PrimitiveBase()
+    {
+        var tree = Utility.GetAST("let x: number[string]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var indexed = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+        Assert.IsType<PrimitiveType>(indexed.Type);
+        Assert.IsType<PrimitiveType>(indexed.IndexType);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_LiteralIndex()
+    {
+        var tree = Utility.GetAST("let x: T['length']");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var indexed = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+
+        var baseType = Assert.IsType<TypeName>(indexed.Type);
+        Assert.Equal("T", baseType.Name.Text);
+
+        var indexType = Assert.IsType<LiteralType>(indexed.IndexType);
+        Assert.Equal("'length'", indexType.Token.Text);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_UnionIndex()
+    {
+        var tree = Utility.GetAST("let x: T['a' | 'b']");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var indexed = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+
+        var unionIndex = Assert.IsType<UnionType>(indexed.IndexType);
+        Assert.Equal(2, unionIndex.Types.Count);
+        Assert.IsType<LiteralType>(unionIndex.Types.First());
+        Assert.IsType<LiteralType>(unionIndex.Types.Last());
+    }
+
+    [Fact]
+    public void Parses_IndexedType_Chained()
+    {
+        var tree = Utility.GetAST("let x: T[K][V]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var outer = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+
+        var inner = Assert.IsType<IndexedType>(outer.Type);
+        var baseType = Assert.IsType<TypeName>(inner.Type);
+        Assert.Equal("T", baseType.Name.Text);
+
+        var innerIndex = Assert.IsType<TypeName>(inner.IndexType);
+        Assert.Equal("K", innerIndex.Name.Text);
+
+        var outerIndex = Assert.IsType<TypeName>(outer.IndexType);
+        Assert.Equal("V", outerIndex.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_WithPostfixOptional()
+    {
+        var tree = Utility.GetAST("let x: T[K]?");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var optional = Assert.IsType<OptionalType>(varDecl.ColonTypeClause!.Type);
+        var indexed = Assert.IsType<IndexedType>(optional.NonNullableType);
+
+        Assert.IsType<TypeName>(indexed.Type);
+        Assert.IsType<TypeName>(indexed.IndexType);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_WithArray()
+    {
+        var tree = Utility.GetAST("let x: T[K][]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var array = Assert.IsType<ArrayType>(varDecl.ColonTypeClause!.Type);
+        var indexed = Assert.IsType<IndexedType>(array.ElementType);
+
+        Assert.IsType<TypeName>(indexed.Type);
+        Assert.IsType<TypeName>(indexed.IndexType);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_WithComplexBase()
+    {
+        var tree = Utility.GetAST("let x: (A & B)[C | D]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var indexed = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+
+        var parenthesized = Assert.IsType<ParenthesizedType>(indexed.Type);
+        var intersection = Assert.IsType<IntersectionType>(parenthesized.Type);
+        Assert.Equal(2, intersection.Types.Count);
+
+        var unionIndex = Assert.IsType<UnionType>(indexed.IndexType);
+        Assert.Equal(2, unionIndex.Types.Count);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_NestedFunctionType()
+    {
+        var tree = Utility.GetAST("let x: (fn(): T)[K]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var indexed = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+
+        var parenthesized = Assert.IsType<ParenthesizedType>(indexed.Type);
+        Assert.IsType<FunctionType>(parenthesized.Type);
+        Assert.IsType<TypeName>(indexed.IndexType);
+    }
+
+    [Fact]
+    public void Parses_IndexedType_InsideUnion()
+    {
+        var tree = Utility.GetAST("let x: T[K] | number");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var union = Assert.IsType<UnionType>(varDecl.ColonTypeClause!.Type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.IsType<IndexedType>(union.Types.First());
+        Assert.IsType<PrimitiveType>(union.Types.Last());
+    }
+
+    [Fact]
+    public void Parses_IndexedType_GenericBase()
+    {
+        var tree = Utility.GetAST("let x: Array<number>[0]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var indexed = Assert.IsType<IndexedType>(varDecl.ColonTypeClause!.Type);
+
+        var typeName = Assert.IsType<TypeName>(indexed.Type);
+        Assert.Equal("Array", typeName.Name.Text);
+        Assert.NotNull(typeName.TypeArguments);
+        Assert.Single(typeName.TypeArguments.ArgumentsList);
+
+        var indexType = Assert.IsType<LiteralType>(indexed.IndexType);
+        Assert.Equal("0", indexType.Token.Text);
+    }
+
     [Fact]
     public void Parses_InterfaceDeclaration_NoBody()
     {
@@ -279,7 +429,7 @@ public class ParserTest
         var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
         Assert.NotNull(iface.Body);
         Assert.Single(iface.Body.Members);
-        
+
         var prop = Assert.IsType<PropertyDeclaration>(iface.Body.Members.First());
         Assert.Null(prop.MutKeyword);
         Assert.Equal("x", prop.Name.Text);
@@ -292,10 +442,10 @@ public class ParserTest
     {
         var result = Utility.Parse("interface I { mut count: int }");
         Utility.AssertNoErrors(result);
-        
+
         var iface = Assert.IsType<InterfaceDeclaration>(result.Tree.Statements.First());
         Assert.NotNull(iface.Body);
-        
+
         var prop = Assert.IsType<PropertyDeclaration>(iface.Body.Members.First());
         Assert.NotNull(prop.MutKeyword);
         Assert.Equal(SyntaxKind.MutKeyword, prop.MutKeyword.Kind);
@@ -308,7 +458,7 @@ public class ParserTest
         var tree = Utility.GetAST("interface I { [number]: string }");
         var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
         Assert.NotNull(iface.Body);
-        
+
         var idx = Assert.IsType<IndexerDeclaration>(iface.Body.Members.First());
         Assert.Null(idx.MutKeyword);
         Assert.NotNull(idx.IndexType);
@@ -323,7 +473,7 @@ public class ParserTest
         var tree = Utility.GetAST("interface I { mut [string]: number }");
         var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
         Assert.NotNull(iface.Body);
-        
+
         var idx = Assert.IsType<IndexerDeclaration>(iface.Body.Members.First());
         Assert.NotNull(idx.MutKeyword);
     }

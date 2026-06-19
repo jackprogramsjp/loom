@@ -224,6 +224,27 @@ public class LuauGeneratorTest
         Assert.IsType<OptionalType>(functionType.ParameterTypes.Last());
         Assert.IsType<PrimitiveType>(functionType.ReturnType);
     }
+    
+    [Fact]
+    public void Generates_IndexedType()
+    {
+        var luauTree = Utility.GetLuauAST("type Foo = number[]; type X = Foo[number]");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
+        Assert.Empty(alias.TypeParameters.Parameters);
+
+        var indexTypeFn = Assert.IsType<TypeName>(alias.Type);
+        Assert.Equal("index", indexTypeFn.Name);
+        Assert.Equal(2, indexTypeFn.TypeArguments.Count);
+
+        var self = Assert.IsType<TypeName>(indexTypeFn.TypeArguments.First());
+        Assert.Equal("Foo", self.Name);
+        Assert.Empty(self.TypeArguments);
+        
+        var inner = Assert.IsType<PrimitiveType>(indexTypeFn.TypeArguments.Last());
+        Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
+    }
 
     [Fact]
     public void Generates_Array_TableType()

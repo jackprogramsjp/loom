@@ -517,8 +517,19 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             )
         );
 
-    public override Type VisitIndexedType(IndexedType indexedType) =>
-        BindType(indexedType, GetTypeAtIndex(indexedType, Visit(indexedType.Type), Visit(indexedType.IndexType)));
+    public override Type VisitIndexedType(IndexedType indexedType)
+    {
+        var targetType = Visit(indexedType.Type);
+        var indexType = Visit(indexedType.IndexType);
+        if (targetType is not (ObjectType or InterfaceType))
+        {
+            _diagnostics.Error(indexedType, InternalCodes.InvalidAccess, $"Type '{indexType}' cannot be used to index type '{targetType}'.");
+            return BindType(indexedType, Types.PrimitiveType.Never);
+        }
+
+        var type = GetTypeAtIndex(indexedType, targetType, indexType);
+        return BindType(indexedType, type);
+    }
 
     public override Type VisitArrayType(ArrayType arrayType) => BindType(arrayType, new Types.ArrayType(Visit(arrayType.ElementType), arrayType.MutKeyword != null));
     public override Type VisitOptionalType(OptionalType optionalType) => BindType(optionalType, new Types.OptionalType(Visit(optionalType.NonNullableType)));
