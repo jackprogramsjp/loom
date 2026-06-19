@@ -8,53 +8,28 @@ namespace Loom.Parsing;
 
 public class Parser
 {
-    private record BinaryPrecedenceLevel(bool RightAssociative, Predicate<SyntaxKind> Matches)
-    {
-        public BinaryPrecedenceLevel(bool rightAssociative, params SyntaxKind[] kinds)
-            : this(rightAssociative, kinds.Contains)
-        {
-        }
-    }
-    
     private delegate Statement StatementParser(Token keyword);
-    private readonly Dictionary<SyntaxKind, StatementParser> _statementParsers;
-    private static readonly BinaryPrecedenceLevel[] _binaryPrecedenceLevels =
-    [
-        new(true, SyntaxFacts.IsAssignmentOperator),
-        new(true, SyntaxKind.QuestionQuestion),
-        new(false, SyntaxKind.PipePipe),
-        new(false, SyntaxKind.AmpersandAmpersand),
-        new(false, SyntaxKind.Pipe),
-        new(false, SyntaxKind.Tilde),
-        new(false, SyntaxKind.Ampersand),
-        new(false, SyntaxKind.EqualsEquals, SyntaxKind.BangEquals),
-        new(false, SyntaxKind.LArrow, SyntaxKind.LArrowEquals, SyntaxKind.RArrow, SyntaxKind.RArrowEquals),
-        new(false, SyntaxKind.LArrowLArrow, SyntaxKind.RArrowRArrow, SyntaxKind.RArrowRArrowRArrow),
-        new(false, SyntaxKind.Plus, SyntaxKind.Minus),
-        new(false, SyntaxKind.Star, SyntaxKind.Slash, SyntaxKind.SlashSlash, SyntaxKind.Percent),
-        new(true, SyntaxKind.Caret),
-        new(false, SyntaxKind.AsKeyword)
-    ];
-
+    
     private readonly DiagnosticBag _diagnostics = new();
-    private int _position;
+    private readonly Dictionary<SyntaxKind, StatementParser> _statementParsers;
     private readonly LexerResult _lexerResult;
+    private int _position;
 
     public Parser(LexerResult lexerResult)
     {
         _lexerResult = lexerResult;
         _statementParsers = new Dictionary<SyntaxKind, StatementParser>
         {
-            [SyntaxKind.LBrace]          = ParseBlock,
-            [SyntaxKind.ReturnKeyword]   = token => new Return(token, ParseExpression()),
-            [SyntaxKind.FnKeyword]       = ParseFunctionDeclaration,
-            [SyntaxKind.LetKeyword]      = ParseVariableDeclaration,
-            [SyntaxKind.MutKeyword]      = ParseVariableDeclaration,
-            [SyntaxKind.TypeKeyword]     = ParseTypeAlias,
-            [SyntaxKind.EnumKeyword]     = ParseEnumDeclaration,
-            [SyntaxKind.DeclareKeyword]  = ParseDeclareStatement,
-            [SyntaxKind.InterfaceKeyword]= ParseInterfaceDeclaration,
-            [SyntaxKind.IfKeyword]       = ParseIf,
+            [SyntaxKind.LBrace] = ParseBlock,
+            [SyntaxKind.ReturnKeyword] = token => new Return(token, ParseExpression()),
+            [SyntaxKind.FnKeyword] = ParseFunctionDeclaration,
+            [SyntaxKind.LetKeyword] = ParseVariableDeclaration,
+            [SyntaxKind.MutKeyword] = ParseVariableDeclaration,
+            [SyntaxKind.TypeKeyword] = ParseTypeAlias,
+            [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
+            [SyntaxKind.DeclareKeyword] = ParseDeclareStatement,
+            [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
+            [SyntaxKind.IfKeyword] = ParseIf,
         };
     }
 
@@ -211,40 +186,8 @@ public class Parser
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
-        if (returnType == null)
-        {
-            _diagnostics.Error(
-                parameters?.Span ?? typeParameters?.Span ?? name.Span,
-                InternalCodes.MissingDeclareFnReturnType,
-                "Declared function signatures must have a return type."
-            );
-
+        if (!ValidateFunctionSignature("declared function signatures", parameters?.Span ?? typeParameters?.Span ?? name.Span, returnType, parameters))
             return new NullStatement(fnKeyword);
-        }
-
-        var parameterWithDefault = parameters?.ParameterList.Find(p => p.EqualsValueClause != null);
-        if (parameterWithDefault != null)
-        {
-            _diagnostics.Error(
-                parameterWithDefault,
-                InternalCodes.UseOfDeclareFnParameterDefaults,
-                "Parameters may not have default values in declared function signatures."
-            );
-
-            return new NullStatement(fnKeyword);
-        }
-
-        var parameterWithoutType = parameters?.ParameterList.Find(p => p.ColonTypeClause == null);
-        if (parameterWithoutType != null)
-        {
-            _diagnostics.Error(
-                parameterWithoutType,
-                InternalCodes.MissingDeclareFnParameterType,
-                "Parameters must have types in declared function signatures."
-            );
-
-            return new NullStatement(fnKeyword);
-        }
 
         return new DeclareFunctionSignature(fnKeyword, name, typeParameters, parameters, returnType);
     }
@@ -364,10 +307,10 @@ public class Parser
 
     private Expression ParseBinaryLevel(int level)
     {
-        if (level >= _binaryPrecedenceLevels.Length)
+        if (level >= BinaryPrecedenceLevel.Levels.Length)
             return ParseRange();
 
-        var (rightAssociative, matches) = _binaryPrecedenceLevels[level];
+        var (rightAssociative, matches) = BinaryPrecedenceLevel.Levels[level];
         var left = ParseBinaryLevel(level + 1);
         while (Match(out var op, matches))
         {
@@ -575,15 +518,23 @@ public class Parser
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
+        if (!ValidateFunctionSignature("function types", parameters?.Span ?? typeParameters?.Span ?? fnKeyword.Span, returnType, parameters))
+            return new NullTypeExpression(fnKeyword);
+
+        return new FunctionType(fnKeyword, typeParameters, parameters, returnType);
+    }
+
+    private bool ValidateFunctionSignature(string kind, LocationSpan span, [NotNullWhen(true)] ColonTypeClause? returnType, Parameters? parameters)
+    {
         if (returnType == null)
         {
             _diagnostics.Error(
-                parameters?.Span ?? typeParameters?.Span ?? fnKeyword.Span,
+                span,
                 InternalCodes.MissingDeclareFnReturnType,
-                "Function types must have a return type."
+                $"{(kind.Length > 0 ? char.ToUpperInvariant(kind[0]) + kind[1..] : kind)} must have a return type."
             );
 
-            return new NullTypeExpression(fnKeyword);
+            return false;
         }
 
         var parameterWithDefault = parameters?.ParameterList.Find(p => p.EqualsValueClause != null);
@@ -592,25 +543,23 @@ public class Parser
             _diagnostics.Error(
                 parameterWithDefault,
                 InternalCodes.UseOfDeclareFnParameterDefaults,
-                "Parameters may not have default values in function types."
+                $"Parameters may not have default values in {kind}."
             );
 
-            return new NullTypeExpression(fnKeyword);
+            return false;
         }
 
         var parameterWithoutType = parameters?.ParameterList.Find(p => p.ColonTypeClause == null);
-        if (parameterWithoutType != null)
-        {
-            _diagnostics.Error(
-                parameterWithoutType,
-                InternalCodes.MissingDeclareFnParameterType,
-                "Parameters must have types in function types."
-            );
+        if (parameterWithoutType == null)
+            return true;
 
-            return new NullTypeExpression(fnKeyword);
-        }
+        _diagnostics.Error(
+            parameterWithoutType,
+            InternalCodes.MissingDeclareFnParameterType,
+            $"Parameters must have types in {kind}."
+        );
 
-        return new FunctionType(fnKeyword, typeParameters, parameters, returnType);
+        return false;
     }
 
     private TypeExpression ParsePrimaryType()
@@ -680,7 +629,7 @@ public class Parser
             return null;
 
         var arguments = ParseDelimited(ParseType);
-        if (ExpectClosingArrow(out var rightArrow))
+        if (MatchClosingArrow(out var rightArrow))
             return new TypeArguments(leftArrow, rightArrow, arguments);
 
         var token = CurrentOrLast();
@@ -693,48 +642,38 @@ public class Parser
         return null;
     }
 
-    // evil token splitting function
-    private bool ExpectClosingArrow([MaybeNullWhen(false)] out Token closingArrow)
+    private bool MatchClosingArrow([MaybeNullWhen(false)] out Token closingArrow)
     {
         closingArrow = null;
         if (IsEof())
             return false;
-
-        var token = Current();
-        switch (token.Kind)
+        
+        return Current().Kind switch
         {
-            case SyntaxKind.RArrow:
-                closingArrow = Advance();
-                return true;
-            case SyntaxKind.RArrowRArrow:
-            {
-                var firstSpan = new LocationSpan(token.Span.Start, 1);
-                var firstToken = new Token(SyntaxKind.RArrow, firstSpan, ">");
-                var remainderSpan = new LocationSpan(token.Span.Start + 1, token.Span.Length - 1);
-                var remainderToken = new Token(SyntaxKind.RArrow, remainderSpan, token.Text[1..]);
-                _lexerResult.Tokens[_position] = firstToken;
-                _lexerResult.Tokens.Insert(_position + 1, remainderToken);
-                Advance();
+            SyntaxKind.RArrow => (closingArrow = Advance()) != null,
+            SyntaxKind.RArrowRArrow => SplitAndAdvance(1, SyntaxKind.RArrow, out closingArrow),
+            SyntaxKind.RArrowRArrowRArrow => SplitAndAdvance(1, SyntaxKind.RArrowRArrow, out closingArrow),
+            _ => false
+        };
+    }
+    
+    // evil token splitting function
+    private bool SplitAndAdvance(int splitIndex, SyntaxKind remainderKind, out Token closingArrow)
+    {
+        var token = Current();
+        var firstSpan = new LocationSpan(token.Span.Start, splitIndex);
+        closingArrow = new Token(SyntaxKind.RArrow, firstSpan, token.Text[..splitIndex]);
+        
+        var remainder = new Token(
+            remainderKind,
+            new LocationSpan(token.Span.Start + splitIndex, token.Span.Length - splitIndex),
+            token.Text[splitIndex..]
+        );
 
-                closingArrow = firstToken;
-                return true;
-            }
-            case SyntaxKind.RArrowRArrowRArrow:
-            {
-                var firstSpan = new LocationSpan(token.Span.Start, 1);
-                var firstToken = new Token(SyntaxKind.RArrow, firstSpan, ">");
-                var remainderSpan = new LocationSpan(token.Span.Start + 1, token.Span.Length - 1);
-                var remainderToken = new Token(SyntaxKind.RArrowRArrow, remainderSpan, token.Text[1..]);
-                _lexerResult.Tokens[_position] = firstToken;
-                _lexerResult.Tokens.Insert(_position + 1, remainderToken);
-                Advance();
-
-                closingArrow = firstToken;
-                return true;
-            }
-            default:
-                return false;
-        }
+        _lexerResult.Tokens[_position] = closingArrow;
+        _lexerResult.Tokens.Insert(_position + 1, remainder);
+        Advance();
+        return true;
     }
 
     private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
