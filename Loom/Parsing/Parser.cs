@@ -540,9 +540,22 @@ public class Parser(LexerResult lexerResult)
         {
             if (Match(out var leftBracket, SyntaxKind.LBracket))
             {
-                var mutKeyword = Match(out var mutToken, SyntaxKind.MutKeyword) ? mutToken : null;
+                if (Match(out var immediateRightBracket, SyntaxKind.RBracket))
+                {
+                    type = new ArrayType(type, leftBracket, null, immediateRightBracket);
+                    continue;
+                }
+
+                if (Match(out var mutKeyword, SyntaxKind.MutKeyword))
+                {
+                    var arrayRightBracket = Expect(SyntaxKind.RBracket);
+                    type = new ArrayType(type, leftBracket, mutKeyword, arrayRightBracket);
+                    continue;
+                }
+
+                var indexType = ParseType();
                 var rightBracket = Expect(SyntaxKind.RBracket);
-                type = new ArrayType(type, leftBracket, mutKeyword, rightBracket);
+                type = new IndexedType(leftBracket, rightBracket, type, indexType);
             }
             else if (Match(out var question, SyntaxKind.Question))
             {

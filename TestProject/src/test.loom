@@ -1,3 +1,2 @@
-interface ImmutRecord<K, V> {
-    [K]: V;
-}
+type FooType = Foo["foo"];
+1 as never as FooType + 69

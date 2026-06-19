@@ -82,6 +82,7 @@ public abstract class Visitor<T>
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
     public virtual T VisitTypeName(TypeName typeName) => MaybeVisit(typeName.TypeArguments)!;
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
+    public virtual T VisitIndexedType(IndexedType indexedType) => CombineResults([Visit(indexedType.Type), Visit(indexedType.IndexType)]);
 
     public virtual T VisitFunctionType(FunctionType functionType) =>
         CombineResults([MaybeVisit(functionType.TypeParameters), MaybeVisit(functionType.Parameters), Visit(functionType.ReturnType)]);
@@ -113,5 +114,4 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
-
 }

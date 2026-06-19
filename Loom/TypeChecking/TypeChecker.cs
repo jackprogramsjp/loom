@@ -517,6 +517,9 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
             )
         );
 
+    public override Type VisitIndexedType(IndexedType indexedType) =>
+        BindType(indexedType, GetTypeAtIndex(indexedType, Visit(indexedType.Type), Visit(indexedType.IndexType)));
+
     public override Type VisitArrayType(ArrayType arrayType) => BindType(arrayType, new Types.ArrayType(Visit(arrayType.ElementType), arrayType.MutKeyword != null));
     public override Type VisitOptionalType(OptionalType optionalType) => BindType(optionalType, new Types.OptionalType(Visit(optionalType.NonNullableType)));
     public override Type VisitPrimitiveType(PrimitiveType primitiveType) => BindType(primitiveType, new Types.PrimitiveType(primitiveType.Kind));
@@ -722,11 +725,11 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(accessExpression, type);
     }
 
-    private Type GetTypeAtIndex(Expression accessExpression, Type type, Type indexType) =>
+    private Type GetTypeAtIndex(Node node, Type type, Type indexType) =>
         type switch
         {
-            ObjectType objectType => GetTypeAtIndexInObject(accessExpression, objectType, indexType),
-            InterfaceType interfaceType => GetTypeAtIndexInInterface(accessExpression, interfaceType, indexType),
+            ObjectType objectType => GetTypeAtIndexInObject(node, objectType, indexType),
+            InterfaceType interfaceType => GetTypeAtIndexInInterface(node, interfaceType, indexType),
             _ => type
         };
 
