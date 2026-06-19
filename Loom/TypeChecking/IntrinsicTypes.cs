@@ -20,16 +20,17 @@ public static class IntrinsicTypes
         new InterfaceType(
             "Range",
             [],
-            null,
-            [new ObjectProperty(false, "minimum", PrimitiveType.Number), new ObjectProperty(false, "maximum", PrimitiveType.Number)]
+            new ObjectType(
+                null,
+                [new ObjectProperty(false, "minimum", PrimitiveType.Number), new ObjectProperty(false, "maximum", PrimitiveType.Number)]
+            )
         )
     );
 
     private static readonly List<IntrinsicType> _types = [Range];
 
     public static List<Symbol> GetSymbols(SemanticModel semanticModel) =>
-        _types.ConvertAll(
-                t =>
+        _types.ConvertAll(t =>
                 {
                     semanticModel.TypeSolver.SetType(t.Symbol.Declaration, t.Type);
                     return t;

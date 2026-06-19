@@ -6,5 +6,6 @@ public enum SymbolKind : byte
     Function,
     Parameter,
     Type,
-    EnumType
+    EnumType,
+    Property
 }

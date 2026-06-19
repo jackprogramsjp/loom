@@ -22,17 +22,17 @@ public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? 
             _ => (Colors.White, Colors.Gray, "unknown")
         };
 
-        var codePart = string.IsNullOrEmpty(Code) ? "" : $" {Colors.Dim}({Code}){Colors.Reset}{severityColor}";
-        var header = $"{severityColor}{Colors.Bold}{severityLabel}{Colors.Reset}{severityColor}{codePart}:{Colors.Reset} {Colors.Gray}{Message}{Colors.Reset}";
-        var location = $"{Colors.Dim}  ╭─{Colors.Reset} {Colors.Orange}{Span}{Colors.Reset}";
-        var sourceLines = Span.File.SourceText.Split(Environment.NewLine);
         var startLine = Span.Start.Line;
         var endLine = Span.End.Line;
         var startChar = Span.Start.Character;
         var endChar = Span.End.Character;
         var lineDigits = endLine.ToString().Length;
-        var indent = new string(' ', lineDigits);
-        var gutter = $"{Colors.Dim}{indent} │{Colors.Reset}";
+        var gutterIndent = new string(' ', lineDigits);
+        var codePart = string.IsNullOrEmpty(Code) ? "" : $" {Colors.Dim}({Code}){Colors.Reset}{severityColor}";
+        var header = $"{severityColor}{Colors.Bold}{severityLabel}{Colors.Reset}{severityColor}{codePart}:{Colors.Reset} {Colors.Gray}{Message}{Colors.Reset}";
+        var location = $"{Colors.Dim}{gutterIndent} ╭─{Colors.Reset} {Colors.Orange}{Span}{Colors.Reset}";
+        var sourceLines = Span.File.SourceText.Split(Environment.NewLine);
+        var gutter = $"{Colors.Dim}{gutterIndent} │{Colors.Reset}";
         var lines = new List<string>([header, location, gutter]);
         if (startLine - 1 < sourceLines.Length && startLine - 1 > 0)
         {

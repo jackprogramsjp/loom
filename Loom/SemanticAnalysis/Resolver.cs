@@ -142,7 +142,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();
-        
+
         return true;
     }
 
@@ -162,6 +162,42 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             _diagnostics.Error(variableDeclaration, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
             return false;
         }
+
+        return true;
+    }
+
+    public override bool VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
+    {
+        if (!DeclareType(interfaceDeclaration))
+            return false;
+
+        var name = interfaceDeclaration.Name.Text;
+        var indexers = interfaceDeclaration.Members.OfType<IndexerDeclaration>().ToList();
+        if (indexers.Count > 1)
+        {
+            foreach (var extraIndexer in indexers.Skip(1))
+                _diagnostics.Error(extraIndexer, InternalCodes.DuplicateIndexer, $"Type '{name}' may only have one indexer.");
+
+            return false;
+        }
+
+        var properties = interfaceDeclaration.Members.OfType<PropertyDeclaration>().ToList();
+        var propertyNames = properties.Select(p => p.Name.Text);
+        var duplicates = propertyNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        if (duplicates.Count > 0)
+        {
+            foreach (var duplicate in duplicates)
+            {
+                var property = properties.FindLast(p => p.Name.Text == duplicate)!;
+                _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{name}'");
+            }
+
+            return false;
+        }
+
+        PushScope();
+        base.VisitInterfaceDeclaration(interfaceDeclaration);
+        PopScope();
 
         return true;
     }
@@ -208,7 +244,7 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
             .Where(pair => pair.Key == name && pair.Value.Kind == SymbolKind.Parameter)
             .Select(pair => pair.Value)
             .FirstOrDefault();
-        
+
         if (existingSymbol != null)
         {
             _diagnostics.Error(
@@ -318,23 +354,8 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
     }
 
     public override bool VisitLiteralType(LiteralType literalType) => true;
-
     public override bool VisitPrimitiveType(PrimitiveType primitiveType) => true;
-
-    public override bool VisitTypeParameter(TypeParameter typeParameter)
-    {
-        var scope = CurrentScope();
-        var name = typeParameter.Name.Text;
-        if (scope.TypeLookup.ContainsKey(name))
-        {
-            _diagnostics.Error(typeParameter, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
-            return false;
-        }
-
-        var symbol = new Symbol(typeParameter, SymbolKind.Type, name);
-        DeclareSymbol(symbol);
-        return typeParameter.EqualsTypeClause == null || Visit(typeParameter.EqualsTypeClause);
-    }
+    public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter, typeParameter.Name.Text);
 
     private bool ResolveStatements(List<Statement> statements) =>
         statements.All(statement =>
@@ -362,10 +383,11 @@ public class Resolver(ParserResult parserResult) : Visitor<bool>
         return true;
     }
 
-    private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type)
+    private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type) => DeclareType(node, node.Name.Text, symbolKind);
+
+    private bool DeclareType(Node node, string name, SymbolKind symbolKind = SymbolKind.Type)
     {
         var scope = CurrentScope();
-        var name = node.Name.Text;
         if (scope.TypeLookup.ContainsKey(name))
         {
             _diagnostics.Error(node, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");

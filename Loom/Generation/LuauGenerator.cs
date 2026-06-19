@@ -157,6 +157,30 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         );
     }
 
+    public override LuauNode VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
+    {
+        var indexer = interfaceDeclaration.Members.OfType<IndexerDeclaration>().FirstOrDefault();
+        var propertyDeclarations = interfaceDeclaration.Members.OfType<PropertyDeclaration>();
+        var tableIndexer = indexer != null ? new TableTypeIndexer(Visit(indexer.IndexType), Visit(indexer.ColonTypeClause)) : null;
+        var properties = propertyDeclarations.Select(p => new TableTypeProperty(
+                    p.MutKeyword == null ? LuauVisibility.Read : null,
+                    p.Name.Text,
+                    Visit(p.ColonTypeClause)
+                )
+            )
+            .ToList();
+
+        var tableType = new TableType(tableIndexer, properties);
+        var typeParameters = MaybeVisit<Luau.AST.TypeParameters>(interfaceDeclaration.TypeParameters) ?? new Luau.AST.TypeParameters();
+        return new Luau.AST.TypeAlias(
+            interfaceDeclaration.Name.Text,
+            typeParameters,
+            interfaceDeclaration.ColonTypeListClause != null
+                ? new Luau.AST.IntersectionType([..interfaceDeclaration.ColonTypeListClause.Types.ConvertAll(Visit), tableType])
+                : tableType
+        );
+    }
+
     public override LuauNode VisitDeclare(Declare declare) => new NoOpStatement();
 
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
@@ -325,7 +349,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitIntersectionType(IntersectionType intersectionType) => new Luau.AST.IntersectionType(intersectionType.Types.ConvertAll(Visit));
     public override LuauNode VisitUnionType(UnionType unionType) => new Luau.AST.UnionType(unionType.Types.ConvertAll(Visit));
-    public override LuauNode VisitArrayType(ArrayType arrayType) => new TableType(null, Visit(arrayType.ElementType));
+    public override LuauNode VisitArrayType(ArrayType arrayType) => new TableType(new TableTypeIndexer(null, Visit(arrayType.ElementType)), []);
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
     public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
 
@@ -351,7 +375,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         new Luau.AST.TypeParameter(typeParameter.Name.Text, typeParameter.EqualsTypeClause != null ? Visit(typeParameter.EqualsTypeClause.Type) : null);
 
     public override LuauNode VisitPrimitiveType(PrimitiveType primitiveType) =>
-    primitiveType is { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None, Parent: ColonTypeClause { Parent: DeclareFunctionSignature or FunctionType } }
+        primitiveType is { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None, Parent: ColonTypeClause { Parent: DeclareFunctionSignature or FunctionType } }
             ? new UnitType()
             : new Luau.AST.PrimitiveType(MapLuau.PrimitiveTypeKind(primitiveType.Kind));
 

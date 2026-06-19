@@ -1,1 +1,7 @@
-type X = fn: none;
+interface Record<K, V> {
+    [K]: V;
+    size: number;
+}
+
+let x = none as never as Record<string, bool>
+x.size

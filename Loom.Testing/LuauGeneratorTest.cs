@@ -72,9 +72,10 @@ public class LuauGeneratorTest
         Assert.NotNull(variable.DeclaredType);
 
         var table = Assert.IsType<TableType>(variable.DeclaredType);
-        Assert.Null(table.KeyType);
+        Assert.NotNull(table.Indexer);
+        Assert.Null(table.Indexer.KeyType);
 
-        var inner = Assert.IsType<PrimitiveType>(table.ValueType);
+        var inner = Assert.IsType<PrimitiveType>(table.Indexer.ValueType);
         Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
     }
 

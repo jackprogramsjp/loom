@@ -1,9 +1,18 @@
 namespace Loom.Luau.AST;
 
-public class TableType(LuauType? keyType, LuauType valueType) : LuauType
+public class TableType(TableTypeIndexer? indexer, List<TableTypeProperty> properties) : LuauType
 {
-    public LuauType? KeyType { get; } = keyType;
-    public LuauType ValueType { get; } = valueType;
-    
-    public override string Render(RenderState state) => KeyType != null ? $"{{ [{KeyType.Render(state)}]: {ValueType.Render(state)} }}" : $"{{ {ValueType.Render(state)} }}";
+    public TableTypeIndexer? Indexer { get; } = indexer;
+    public List<TableTypeProperty> Properties { get; } = properties;
+
+    public override string Render(RenderState state) =>
+        Properties.Count > 0
+            ? state.IndentedLine("{")
+            + state.Block(() => (Indexer != null ? state.IndentedLine(Indexer.Render(state)) : "")
+                + string.Join("", state.RenderList(Properties).ConvertAll(state.IndentedLine))
+            )
+            + state.Indented("}")
+            : Indexer != null
+                ? $"{{ {Indexer.Render(state)} }}"
+                : "{}";
 }

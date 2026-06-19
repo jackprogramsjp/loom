@@ -22,23 +22,41 @@ public class TypeSolver(DiagnosticBag diagnostics)
     private int _nextVariableId;
 
     public static Type Transform(Type type, Converter<Type, Type> fn, Type? defaultValue = null) =>
-        TypeSimplifier.Simplify(type switch
-        {
-            InstantiatedType instantiatedType => new InstantiatedType(
-                instantiatedType.Generic,
-                instantiatedType.Arguments.ConvertAll(fn),
-                instantiatedType.Checker,
-                instantiatedType.Node
-            ),
-            IntersectionType intersectionType => new IntersectionType(intersectionType.Types.ConvertAll(fn)),
-            UnionType unionType => new UnionType(unionType.Types.ConvertAll(fn)),
-            FunctionType functionType => new FunctionType(
-                functionType.TypeParameters,
-                functionType.ParameterTypes.ConvertAll(fn),
-                fn(functionType.ReturnType)
-            ),
-            _ => defaultValue ?? type
-        });
+        TypeSimplifier.Simplify(
+            type switch
+            {
+                InterfaceType interfaceType => new InterfaceType(
+                    interfaceType.Name,
+                    interfaceType.Constraints.ConvertAll(fn).OfType<InterfaceType>().ToList(),
+                    (ObjectType)fn(interfaceType.ObjectType)
+                ),
+                ObjectType objectType => new ObjectType(
+                    objectType.Indexer != null
+                        ? new ObjectIndexer(objectType.Indexer.IsMutable, fn(objectType.Indexer.KeyType), fn(objectType.Indexer.ValueType))
+                        : null,
+                    objectType.Properties.ConvertAll(p => new ObjectProperty(p.IsMutable, p.Name, fn(p.ValueType)))
+                ),
+                IntersectionType intersectionType => new IntersectionType(intersectionType.Types.ConvertAll(fn)),
+                UnionType unionType => new UnionType(unionType.Types.ConvertAll(fn)),
+                FunctionType functionType => new FunctionType(
+                    functionType.TypeParameters,
+                    functionType.ParameterTypes.ConvertAll(fn),
+                    fn(functionType.ReturnType)
+                ),
+                GenericType genericType => new GenericType(
+                    genericType.Declaration,
+                    genericType.Parameters,
+                    fn(genericType.UnderlyingType)
+                ),
+                InstantiatedType instantiatedType => new InstantiatedType(
+                    instantiatedType.GenericType,
+                    instantiatedType.Arguments.ConvertAll(fn),
+                    instantiatedType.Checker,
+                    instantiatedType.Node
+                ),
+                _ => defaultValue ?? type
+            }
+        );
 
     public void SetType(Node node, Type type) => _nodeTypes[node.Id] = type;
 
@@ -89,6 +107,10 @@ public class TypeSolver(DiagnosticBag diagnostics)
             (InstantiatedType i, GenericType g) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
             (GenericType g, InstantiatedType i) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
             (FunctionType f1, FunctionType f2) => UnifyFunctionTypes(f1, f2, span, out updated),
+            (ObjectType o1, ObjectType o2) => UnifyObjectTypes(o1, o2, span, out updated),
+            (ObjectType o, InterfaceType i) => UnifyObjectWithInterface(o, i, span, out updated),
+            (InterfaceType i, ObjectType o) => UnifyObjectWithInterface(o, i, span, out updated),
+            (InterfaceType i1, InterfaceType i2) => UnifyInterfaceTypes(i1, i2, span, out updated),
 
             _ when a.IsAssignableTo(b) => true,
             _ => ReportTypeMismatch(a, b, span)
@@ -122,7 +144,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
     private bool UnifyInstantiatedPair(InstantiatedType a, InstantiatedType b, LocationSpan span, out bool updated)
     {
         updated = false;
-        if (!a.Generic.Equals(b.Generic) || a.Arguments.Count != b.Arguments.Count)
+        if (!a.GenericType.Equals(b.GenericType) || a.Arguments.Count != b.Arguments.Count)
             return ReportTypeMismatch(a, b, span);
 
         var success = true;
@@ -144,7 +166,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
         out bool updated)
     {
         updated = false;
-        if (!instantiated.Generic.Equals(generic) || instantiated.Arguments.Count != generic.Parameters.Count)
+        if (!instantiated.GenericType.Equals(generic) || instantiated.Arguments.Count != generic.Parameters.Count)
             return ReportTypeMismatch(instantiated, generic, span);
 
         var success = true;
@@ -156,6 +178,93 @@ public class TypeSolver(DiagnosticBag diagnostics)
             else if (argUpdated)
                 updated = true;
         }
+
+        return success;
+    }
+
+    private bool UnifyObjectTypes(ObjectType a, ObjectType b, LocationSpan span, out bool updated)
+    {
+        updated = false;
+        var success = true;
+
+        if (a.Indexer != null && b.Indexer != null)
+        {
+            if (!TryUnify(a.Indexer.KeyType, b.Indexer.KeyType, span, out var keyUpdated))
+                success = false;
+            else if (keyUpdated)
+                updated = true;
+
+            if (!TryUnify(a.Indexer.ValueType, b.Indexer.ValueType, span, out var valueUpdated))
+                success = false;
+            else if (valueUpdated)
+                updated = true;
+
+            if (a.Indexer.IsMutable != b.Indexer.IsMutable)
+            {
+                if (!ReportTypeMismatch(a, b, span))
+                    success = false;
+            }
+        }
+        else if (a.Indexer != null || b.Indexer != null)
+        {
+            if (!ReportTypeMismatch(a, b, span))
+                success = false;
+        }
+
+        var aProps = a.Properties.ToDictionary(p => p.Name);
+        var bProps = b.Properties.ToDictionary(p => p.Name);
+        var allPropertyNames = aProps.Keys.Union(bProps.Keys).ToList();
+        foreach (var name in allPropertyNames)
+        {
+            if (!aProps.TryGetValue(name, out var propA) || !bProps.TryGetValue(name, out var propB)) continue;
+
+            if (!TryUnify(propA.ValueType, propB.ValueType, span, out var propUpdated))
+                success = false;
+            else if (propUpdated)
+                updated = true;
+
+            if (propA.IsMutable == propB.IsMutable) continue;
+            if (!ReportTypeMismatch(a, b, span))
+                success = false;
+        }
+
+        return success;
+    }
+
+    private bool UnifyObjectWithInterface(ObjectType objectType, InterfaceType interfaceType, LocationSpan span, out bool updated)
+    {
+        updated = false;
+        var interfaceObject = interfaceType.ObjectType;
+        return UnifyObjectTypes(objectType, interfaceObject, span, out updated);
+    }
+
+    private bool UnifyInterfaceTypes(InterfaceType a, InterfaceType b, LocationSpan span, out bool updated)
+    {
+        updated = false;
+        var success = true;
+
+        var aConstraints = a.Constraints;
+        var bConstraints = b.Constraints;
+        if (aConstraints.Count != bConstraints.Count)
+        {
+            if (!ReportTypeMismatch(a, b, span))
+                success = false;
+        }
+        else
+        {
+            for (var i = 0; i < aConstraints.Count; i++)
+            {
+                if (!TryUnify(aConstraints[i], bConstraints[i], span, out var constraintUpdated))
+                    success = false;
+                else if (constraintUpdated)
+                    updated = true;
+            }
+        }
+
+        if (!TryUnify(a.ObjectType, b.ObjectType, span, out var objectUpdated))
+            success = false;
+        else if (objectUpdated)
+            updated = true;
 
         return success;
     }
@@ -194,6 +303,9 @@ public class TypeSolver(DiagnosticBag diagnostics)
         type switch
         {
             TypeVariable tv => tv.Id == variable.Id,
+            InterfaceType i => i.Constraints.Any(t => OccursIn(variable, t)) || OccursIn(variable, i.ObjectType),
+            ObjectType obj => obj.Indexer != null && (OccursIn(variable, obj.Indexer.KeyType) || OccursIn(variable, obj.Indexer.ValueType))
+                || obj.Properties.Any(p => OccursIn(variable, p.ValueType)),
             InstantiatedType inst => inst.Arguments.Any(a => OccursIn(variable, a)),
             IntersectionType inter => inter.Types.Any(t => OccursIn(variable, t)),
             UnionType union => union.Types.Any(t => OccursIn(variable, t)),

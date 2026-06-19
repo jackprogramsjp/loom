@@ -3,7 +3,7 @@ using Loom.Syntax;
 namespace Loom.Parsing.AST;
 
 public class TypeAlias(Token keyword, Token name, TypeParameters? typeParameters, EqualsTypeClause equalsTypeClause)
-    : GenericNamedDeclaration(keyword, name, typeParameters, equalsTypeClause)
+    : GenericNamedDeclaration([], keyword, name, typeParameters, equalsTypeClause)
 {
     public EqualsTypeClause EqualsTypeClause { get; } = equalsTypeClause;
 

@@ -12,6 +12,16 @@ public abstract class Visitor<T>
     public virtual T VisitIf(If @if) => CombineResults([Visit(@if.Condition), Visit(@if.ThenBranch), MaybeVisit(@if.ElseBranch)]);
     public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
 
+    public virtual T VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration) => Visit(propertyDeclaration.ColonTypeClause);
+
+    public virtual T VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration) =>
+        CombineResults([Visit(indexerDeclaration.IndexType), Visit(indexerDeclaration.ColonTypeClause)]);
+
+    public virtual T VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration) =>
+        CombineResults(
+            [MaybeVisit(interfaceDeclaration.TypeParameters), MaybeVisit(interfaceDeclaration.ColonTypeListClause), VisitList(interfaceDeclaration.Members)]
+        );
+
     public virtual T VisitFunctionDeclaration(FunctionDeclaration functionDeclaration) =>
         CombineResults(
             [
@@ -70,7 +80,10 @@ public abstract class Visitor<T>
     public abstract T VisitPrimitiveType(PrimitiveType primitiveType);
     public abstract T VisitTypeName(TypeName typeName);
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
-    public virtual T VisitFunctionType(FunctionType functionType) => CombineResults([MaybeVisit(functionType.TypeParameters), MaybeVisit(functionType.Parameters), Visit(functionType.ReturnType)]);
+
+    public virtual T VisitFunctionType(FunctionType functionType) =>
+        CombineResults([MaybeVisit(functionType.TypeParameters), MaybeVisit(functionType.Parameters), Visit(functionType.ReturnType)]);
+
     public virtual T VisitArrayType(ArrayType arrayType) => Visit(arrayType.ElementType);
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
     public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
@@ -78,6 +91,7 @@ public abstract class Visitor<T>
     public virtual T VisitTypeParameter(TypeParameter typeParameter) => MaybeVisit(typeParameter.EqualsTypeClause)!;
     public virtual T VisitTypeParameters(TypeParameters typeParameters) => VisitList(typeParameters.ParameterList);
     public virtual T VisitTypeArguments(TypeArguments typeArguments) => VisitList(typeArguments.ArgumentsList);
+    public virtual T VisitColonTypeListClause(ColonTypeListClause colonTypeListClause) => VisitList(colonTypeListClause.Types);
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
     public virtual T VisitEqualsTypeClause(EqualsTypeClause equalsTypeClause) => Visit(equalsTypeClause.Type);
     public virtual T VisitEqualsValueClause(EqualsValueClause equalsValueClause) => Visit(equalsValueClause.Value);
@@ -97,5 +111,4 @@ public abstract class Visitor<T>
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
-
 }

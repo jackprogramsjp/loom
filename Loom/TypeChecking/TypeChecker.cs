@@ -230,6 +230,49 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         return BindType(enumDeclaration, new ObjectType(null, properties));
     }
 
+    public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
+    {
+        var name = interfaceDeclaration.Name.Text;
+        var constraintTypes = interfaceDeclaration.ColonTypeListClause?.Types.ConvertAll(Visit) ?? [];
+        if (constraintTypes.Any(constraintType => constraintType is not InterfaceType))
+        {
+            _diagnostics.Error(
+                interfaceDeclaration.ColonTypeListClause!,
+                InternalCodes.InvalidInterfaceConstraint,
+                "Interfaces may only be constrained by other interfaces."
+            );
+
+            return Types.PrimitiveType.Never;
+        }
+
+        var parameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
+        var constraints = constraintTypes.OfType<InterfaceType>().ToList();
+        var indexerDeclaration = interfaceDeclaration.Members.OfType<IndexerDeclaration>().FirstOrDefault();
+        var propertyDeclarations = interfaceDeclaration.Members.OfType<PropertyDeclaration>();
+        ObjectIndexer? indexer = null;
+
+        if (indexerDeclaration != null)
+        {
+            var isMutable = indexerDeclaration.MutKeyword != null;
+            var indexType = Visit(indexerDeclaration.IndexType);
+            var valueType = Visit(indexerDeclaration.ColonTypeClause);
+            indexer = new ObjectIndexer(isMutable, indexType, valueType);
+        }
+
+        var properties =
+            from declaration in propertyDeclarations
+            let isMutable = declaration.MutKeyword != null
+            let valueType = Visit(declaration.ColonTypeClause)
+            select new ObjectProperty(isMutable, declaration.Name.Text, valueType);
+
+        var interfaceType = new InterfaceType(name, constraints, new ObjectType(indexer, properties.ToList()));
+        if (parameters == null)
+            return BindType(interfaceDeclaration, interfaceType);
+
+        var genericType = new GenericType(interfaceDeclaration, parameters, interfaceType);
+        return BindType(interfaceDeclaration, genericType);
+    }
+
     public override Type VisitAsExpression(AsExpression asExpression)
     {
         var expressionType = Visit(asExpression.Expression);
@@ -278,20 +321,21 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         var type = Visit(elementAccess.Expression);
         var indexType = Visit(elementAccess.IndexExpression);
-        if (type is ObjectType objectType)
-        {
-            if (type is Types.ArrayType && indexType.IsAssignableTo(IntrinsicTypes.Range.Type))
-                return type;
-
-            return GetTypeAtIndexInObject(elementAccess.IndexExpression, objectType, indexType);
-        }
+        if (type is Types.ArrayType && indexType.IsAssignableTo(IntrinsicTypes.Range.Type))
+            return BindType(elementAccess, type);
 
         var indexIsRangeOrNumber = indexType.IsAssignableTo(IntrinsicTypes.Range.Type) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
         if (indexIsRangeOrNumber && type.IsAssignableTo(Types.PrimitiveType.String))
-            return Types.PrimitiveType.String;
+            return BindType(elementAccess, Types.PrimitiveType.String);
 
-        _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
-        return BindType(elementAccess, Types.PrimitiveType.Never);
+        switch (type)
+        {
+            case ObjectType or InterfaceType:
+                return GetTypeAtIndex(elementAccess, type, indexType);
+            default:
+                _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'");
+                return BindType(elementAccess, Types.PrimitiveType.Never);
+        }
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -331,7 +375,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         {
             semanticModel.TypeSolver.AddConstraint(leftType, rule.LeftType, binaryOperator.Left);
             semanticModel.TypeSolver.AddConstraint(rightType, rule.RightType, binaryOperator.Right);
-            return rule.ReturnType;
+            return BindType(binaryOperator, rule.ReturnType);
         }
 
         if (binaryOperator.Operator.Kind is SyntaxKind.QuestionQuestion or SyntaxKind.QuestionQuestionEquals)
@@ -345,7 +389,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                 );
             }
 
-            return TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]).NonNullable());
+            return BindType(binaryOperator, TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]).NonNullable()));
         }
 
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
@@ -391,7 +435,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var elementType = TypeSimplifier.Simplify(new Types.UnionType(expressionTypes));
         var isMutable = arrayLiteral.MutKeyword != null;
         var type = new Types.ArrayType(elementType, isMutable);
-        return isMutable ? type.Widen() : type;
+        return BindType(arrayLiteral, isMutable ? type.Widen() : type);
     }
 
     public override Type VisitLiteral(Literal literal) => BindType(literal, new Types.LiteralType(literal.Value));
@@ -437,9 +481,9 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var symbol = semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
-            var declaredType = semanticModel.GetType(symbol.Declaration);
+            var declaredType = semanticModel.TypeSolver.GetType(symbol.Declaration);
             if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
-                return objectType.PropertyUnion();
+                return BindType(typeName, objectType.PropertyUnion());
 
             if (declaredType is GenericType genericType)
                 return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);
@@ -619,24 +663,53 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = Visit(targetExpression);
         foreach (var dotName in names)
         {
-            if (type is not ObjectType objectType)
+            if (type is not (ObjectType or InterfaceType))
             {
                 _diagnostics.Error(accessExpression, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
                 return BindType(accessExpression, Types.PrimitiveType.Never);
             }
 
             var indexType = new Types.LiteralType(dotName.Name.Text);
-            type = GetTypeAtIndexInObject(accessExpression, objectType, indexType);
+            type = GetTypeAtIndex(accessExpression, type, indexType);
         }
 
         return BindType(accessExpression, type);
+    }
+
+    private Type GetTypeAtIndex(Expression accessExpression, Type type, Type indexType) =>
+        type switch
+        {
+            ObjectType objectType => GetTypeAtIndexInObject(accessExpression, objectType, indexType),
+            InterfaceType interfaceType => GetTypeAtIndexInInterface(accessExpression, interfaceType, indexType),
+            _ => type
+        };
+
+    private Type GetTypeAtIndexInInterface(Node node, InterfaceType interfaceType, Type indexType)
+    {
+        var result = interfaceType.ObjectType.GetTypeAtIndex(indexType);
+        var (bodyType, cannotFindReason) = result;
+        if (bodyType != null)
+            return BindType(node, bodyType.ValueType);
+
+        var type = interfaceType.Constraints.Count > 0
+            ? interfaceType.Constraints.ConvertAll(t => GetTypeAtIndexInInterface(node, t, indexType)).Find(Type.IsNotNever) ?? Types.PrimitiveType.Never
+            : Types.PrimitiveType.Never;
+
+        if (Type.IsNever(type))
+            _diagnostics.Error(
+                node,
+                InternalCodes.InvalidAccess,
+                $"Expression of type '{indexType}' cannot be used to index type '{interfaceType}'.{cannotFindReason}"
+            );
+
+        return BindType(node, type);
     }
 
     private Type GetTypeAtIndexInObject(Node node, ObjectType objectType, Type indexType)
     {
         var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
         if (bodyType != null)
-            return bodyType.ValueType;
+            return BindType(node, bodyType.ValueType);
 
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
         return BindType(node, Types.PrimitiveType.Never);

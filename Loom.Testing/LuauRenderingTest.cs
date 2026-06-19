@@ -349,13 +349,13 @@ public class LuauRenderingTest
     [Fact]
     public void Renders_Dictionary_TableType()
     {
-        Assert.Equal("{ [string]: number }", new TableType(PrimitiveType.String, PrimitiveType.Number).Render());
+        Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(PrimitiveType.String, PrimitiveType.Number), []).Render());
     }
 
     [Fact]
     public void Renders_Array_TableType()
     {
-        Assert.Equal("{ number }", new TableType(null, PrimitiveType.Number).Render());
+        Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, PrimitiveType.Number), []).Render());
     }
 
     [Theory]

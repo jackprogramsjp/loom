@@ -3,7 +3,7 @@ using Loom.Syntax;
 namespace Loom.Parsing.AST;
 
 public class TypeName(Token name, TypeArguments? typeArguments = null)
-    : TypeExpression([name], [])
+    : TypeExpression([name, ..typeArguments?.Tokens ?? []], [typeArguments])
 {
     public Token Name { get; } = name;
     public TypeArguments? TypeArguments { get; } = typeArguments;

@@ -18,6 +18,7 @@ public static class InternalCodes
     public const string MissingDeclareFnParameterType = "L208";
     public const string ExpectedDeclarationSignature = "L209";
     public const string DeclarationOutsideOfBlock = "L210";
+    public const string ExpectedInterfaceMemberType = "L211";
 
     public const string CannotFindName = "L301";
     public const string DuplicateName = "L302";
@@ -47,5 +48,6 @@ public static class InternalCodes
     public const string UseOfMaybeUninitialized = "L327";
     public const string ReturnOutsideFunction = "L328";
     public const string UnreachableCode = "L329";
-    public const string InvalidVoidType = "L330";
+    public const string DuplicateIndexer = "L330";
+    public const string InvalidInterfaceConstraint = "L331";
 }
