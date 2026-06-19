@@ -406,7 +406,7 @@ public class TypeCheckerTest
     [Fact]
     public void ThrowsFor_AssignToImmutable_ObjectIndexer()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Record<K, V> { [K]: V }; let x = none as never as Record<string, bool>; x['abc'] = false");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface ImmutRecord<K, V> { [K]: V }; let x = none as never as ImmutRecord<string, bool>; x['abc'] = false");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable index 'string'.");
     }
 

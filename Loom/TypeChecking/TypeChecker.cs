@@ -396,7 +396,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
                     indexType = new Types.LiteralType(names.Last().Name.Text);
                 }
 
-                var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
+                var (bodyType, _) = objectType.GetTypeAtIndex(indexType, expressionType);
                 if (bodyType is { IsMutable: false })
                 {
                     var display = bodyType switch
