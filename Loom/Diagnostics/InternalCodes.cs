@@ -50,4 +50,5 @@ public static class InternalCodes
     public const string UnreachableCode = "L329";
     public const string DuplicateIndexer = "L330";
     public const string InvalidInterfaceConstraint = "L331";
+    public const string RuntimeInDeclarationFile = "L332";
 }

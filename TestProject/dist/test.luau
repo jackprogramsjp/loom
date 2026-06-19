@@ -1,2 +1,3 @@
-const a = ((nil :: never) :: Foo)
-const _ = a.foo
+type A = {}
+type B = {}
+type I = A & B & {}

@@ -368,7 +368,11 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
                 if (CurrentFlowState().IsUnreachable)
                     _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
 
-                return Visit(statement);
+                if (!parserResult.Tree.File.IsDeclaration || statement is Declare or InterfaceDeclaration or TypeAlias)
+                    return Visit(statement);
+
+                _diagnostics.Error(statement, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
+                return false;
             }
         );
 
