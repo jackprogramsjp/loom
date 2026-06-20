@@ -303,13 +303,13 @@ interface Person: HasName, HasAge {
 ```
 ```luau
 type HasName = {
-	name: string;
+	read name: string;
 }
 type HasAge = {
-	age: number;
+	read age: number;
 }
 type Person = HasName & HasAge & {
-	job: string;
+	read job: string;
 }
 ```
 ##
@@ -328,9 +328,27 @@ type S = Foo["bar"];
 ```
 ```luau
 type Foo = {
-    bar: string
+    read bar: string
 }
 type S = index<Foo, "bar">
+```
+##
+```ts
+interface Person {
+    name: string;
+    mut age: number;
+}
+
+let runic = new Person { name: "Runic", age: 21 };
+runic.age = 69;
+```
+```luau
+type Person = {
+	read name: string,
+	age: number
+}
+const runic = { name = "Runic", age = 21 }
+runic.age = 69
 ```
 
 ## Planned Features

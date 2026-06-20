@@ -1,1 +1,6 @@
-let x = 1; new x {}
+interface Person {
+    name: string;
+    age: number;
+}
+
+let runic = new Person { name: "Runic", age: 21 };

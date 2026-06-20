@@ -1,4 +1,5 @@
-type I = {
-  read x: number
+type Person = {
+  read name: string
+  read age: number
 }
-const _ = ({ x = 1 }).x
+const runic = { name = "Runic", age = 21 }
