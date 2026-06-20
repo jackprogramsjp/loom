@@ -29,6 +29,23 @@ public class VisitorTraversalTest
 
     [Fact]
     public void ExpressionStatement_VisitsExpression() => AssertVisitOrder("42", "ExpressionStatement", "Literal");
+    
+    [Fact]
+    public void InterfaceInvocation_VisitsTypeArgumentsAndBody() =>
+        AssertVisitOrder(
+            "new Foo::<number> { foo: 69, [69]: true }",
+            "ExpressionStatement",
+            "InterfaceInvocation",
+            "Identifier",
+            "TypeArguments",
+            "PrimitiveType",
+            "InterfaceInvocationBody",
+            "InterfaceInvocationPropertyInitializer",
+            "Literal",
+            "InterfaceInvocationIndexInitializer",
+            "Literal",
+            "Literal"
+        );
 
     [Fact]
     public void Interface_VisitsConstraintsAndMembers() =>
@@ -80,6 +97,23 @@ public class VisitorTraversalTest
             "Block",
             "ExpressionStatement",
             "Literal",
+            "ExpressionStatement",
+            "Literal"
+        );
+    
+    [Fact]
+    public void Break() => AssertVisitOrder("break", "Break");
+    
+    [Fact]
+    public void Continue() => AssertVisitOrder("continue", "Continue");
+    
+    [Fact]
+    public void While_VisitsChildren() =>
+        AssertVisitOrder(
+            "while true { 1 }",
+            "While",
+            "Literal",
+            "Block",
             "ExpressionStatement",
             "Literal"
         );
