@@ -1,6 +1,9 @@
-interface Person {
-    name: string;
-    age: number;
+declare fn print(msg: unknown): void;
+
+mut i = 0;
+while i < 10 {
+    i += 1
+    continue
 }
 
-let runic = new Person { name: "Runic", age: 21 };
+print(i)

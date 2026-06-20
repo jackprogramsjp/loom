@@ -7,14 +7,15 @@ using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
 
-public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit) : Visitor<bool>
+public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
+    : Visitor<bool>(true)
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<NodeId, Symbol> _allDeclarations = [];
     private readonly Dictionary<NodeId, Symbol> _allReferences = [];
     private readonly Stack<ResolverScope> _scopes = [];
     private readonly Stack<FlowState> _flowStates = [];
-    private bool _insideFunction;
+    private ResolverContext _context = ResolverContext.None;
 
     public SemanticModel Resolve()
     {
@@ -27,7 +28,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
 
         PushScope();
         PushFlowState(new FlowState([], []));
-        
+
         var intrinsicSymbols = IntrinsicTypes.Register(semanticModel);
         foreach (var symbol in intrinsicSymbols)
         {
@@ -65,17 +66,38 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         return result;
     }
 
+    public override bool VisitWhile(While @while)
+    {
+        Visit(@while.Condition);
+        var beforeLoop = new FlowState(CurrentFlowState());
+        var lastContext = _context;
+        _context = ResolverContext.Loop;
+        var bodyState = PushFlowAndVisitBranch(@while.Body, beforeLoop);
+        _context = lastContext;
+        
+        if (bodyState == null)
+            return false;
+
+        var definitely = new HashSet<Symbol>(beforeLoop.DefinitelyInitialized.Concat(bodyState.DefinitelyInitialized.Intersect(beforeLoop.DefinitelyInitialized)));
+        var maybe = new HashSet<Symbol>(beforeLoop.MaybeInitialized);
+        maybe.UnionWith(bodyState.MaybeInitialized);
+
+        PopFlowState();
+        _flowStates.Push(new FlowState(definitely, maybe, beforeLoop.IsUnreachable));
+        return true;
+    }
+
     public override bool VisitIf(If @if)
     {
         Visit(@if.Condition);
         var beforeIf = new FlowState(CurrentFlowState());
-        var thenState = PushAndVisitBranch(@if.ThenBranch, beforeIf);
+        var thenState = PushFlowAndVisitBranch(@if.ThenBranch, beforeIf);
         if (thenState == null) return false;
 
         FlowState elseState;
         if (@if.ElseBranch != null)
         {
-            var state = PushAndVisitBranch(@if.ElseBranch.Branch, beforeIf);
+            var state = PushFlowAndVisitBranch(@if.ElseBranch.Branch, beforeIf);
             if (state == null) return false;
             elseState = state;
         }
@@ -93,10 +115,34 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         _flowStates.Push(new FlowState(definitely, maybe, beforeIf.IsUnreachable || thenState.IsUnreachable && elseState.IsUnreachable));
         return true;
     }
+    
+    public override bool VisitContinue(Continue @continue)
+    {
+        if (_context == ResolverContext.Loop)
+        {
+            CurrentFlowState().IsUnreachable = true;
+            return base.VisitContinue(@continue);
+        }
+
+        _diagnostics.Error(@continue, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
+        return false;
+    }
+
+    public override bool VisitBreak(Break @break)
+    {
+        if (_context == ResolverContext.Loop)
+        {
+            CurrentFlowState().IsUnreachable = true;
+            return base.VisitBreak(@break);
+        }
+
+        _diagnostics.Error(@break, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
+        return false;
+    }
 
     public override bool VisitReturn(Return @return)
     {
-        if (_insideFunction)
+        if (_context == ResolverContext.Function)
         {
             CurrentFlowState().IsUnreachable = true;
             return base.VisitReturn(@return);
@@ -122,12 +168,12 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         MarkDefinitelyInitialized(symbol);
         PushScope();
 
-        var wasInsideFunction = _insideFunction;
-        _insideFunction = true;
+        var lastContext = _context;
+        _context = ResolverContext.Function;
         PushInheritedFlowState();
         base.VisitFunctionDeclaration(functionDeclaration);
         PopFlowState();
-        _insideFunction = wasInsideFunction;
+        _context = lastContext;
 
         PopScope();
 
@@ -170,7 +216,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
     {
         if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol) || !DeclareType(interfaceDeclaration))
             return false;
-        
+
         MarkDefinitelyInitialized(valueSymbol);
         if (interfaceDeclaration.Body != null)
         {
@@ -278,7 +324,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
     {
         if (!DeclareVariable(enumDeclaration, SymbolKind.Variable, out var symbol) || !DeclareType(enumDeclaration, SymbolKind.EnumType))
             return false;
-        
+
         MarkDefinitelyInitialized(symbol);
         return true;
     }
@@ -389,7 +435,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         DeclareSymbol(symbol);
         return true;
     }
-    
+
     private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type)
     {
         var scope = CurrentScope();
@@ -402,7 +448,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
 
         var symbol = new Symbol(node, symbolKind, name);
         DeclareSymbol(symbol);
-        
+
         return true;
     }
 
@@ -474,7 +520,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
     /// Visits a branch with a fresh inherited state copied from <paramref name="inherited"/>,
     /// then pops that state and returns its final content (or null if visit failed).
     /// </summary>
-    private FlowState? PushAndVisitBranch(Node node, FlowState inherited)
+    private FlowState? PushFlowAndVisitBranch(Node node, FlowState inherited)
     {
         PushFlowState(new FlowState(inherited));
         var ok = Visit(node);

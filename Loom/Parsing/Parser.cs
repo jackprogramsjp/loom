@@ -30,6 +30,9 @@ public class Parser
             [SyntaxKind.DeclareKeyword] = ParseDeclareStatement,
             [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.IfKeyword] = ParseIf,
+            [SyntaxKind.WhileKeyword] = ParseWhile,
+            [SyntaxKind.BreakKeyword] = ParseBreak,
+            [SyntaxKind.ContinueKeyword] = ParseContinue,
         };
     }
 
@@ -115,6 +118,19 @@ public class Parser
         var token = CurrentOrLast();
         _diagnostics.Error(token, InternalCodes.ExpectedInterfaceMemberType, message);
         return null;
+    }
+
+    private Break ParseBreak(Token keyword) => new(keyword);
+    private Continue ParseContinue(Token keyword) => new(keyword);
+    
+    private Statement ParseWhile(Token keyword)
+    {
+        var condition = ParseExpression();
+        var body = ParseStatement();
+        if (!AssertDeclarationInsideOfBlock(body))
+            return new NullStatement(keyword);
+
+        return new While(keyword, condition, body);
     }
 
     private Statement ParseIf(Token keyword)

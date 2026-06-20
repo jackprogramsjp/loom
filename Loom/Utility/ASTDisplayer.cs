@@ -4,7 +4,7 @@ using Loom.Syntax;
 
 namespace Loom.Utility;
 
-public class ASTDisplayer(Tree ast) : Visitor<string>
+public class ASTDisplayer(Tree ast)
 {
     private int _indent;
     private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id", "File", "Keyword"];
@@ -14,15 +14,7 @@ public class ASTDisplayer(Tree ast) : Visitor<string>
         var content = DisplayNode(ast);
         Console.WriteLine(content);
     }
-
-    protected override string Visit(Node node) => node.Accept(this);
-    public override string VisitLiteral(Literal literal) => $"Literal({literal})";
-    public override string VisitIdentifier(Identifier identifier) => $"Identifier({identifier})";
-    public override string VisitTypeName(TypeName typeName) => $"TypeName({typeName})";
-    public override string VisitLiteralType(LiteralType literalType) => $"LiteralType({literalType})";
-
-    public override string VisitPrimitiveType(PrimitiveType primitiveType) => $"PrimitiveType({primitiveType})";
-
+    
     private string DisplayNode(object node)
     {
         var type = node.GetType();

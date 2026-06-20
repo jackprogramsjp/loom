@@ -1,5 +1,7 @@
-type Person = {
-  read name: string
-  read age: number
-}
-const runic = { name = "Runic", age = 21 }
+local i = 0
+while i < 10 do
+  i += 1
+  continue
+  i += 2
+end
+print(i)

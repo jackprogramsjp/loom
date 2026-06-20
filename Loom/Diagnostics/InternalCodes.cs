@@ -52,4 +52,6 @@ public static class InternalCodes
     public const string InvalidInterfaceConstraint = "L331";
     public const string RuntimeInDeclarationFile = "L332";
     public const string IncompleteInterfaceInvocation = "L333";
+    public const string BreakOutsideLoop = "L334";
+    public const string ContinueOutsideLoop = "L335";
 }

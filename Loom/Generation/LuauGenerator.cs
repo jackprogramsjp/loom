@@ -9,6 +9,8 @@ using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
+using Break = Loom.Parsing.AST.Break;
+using Continue = Loom.Parsing.AST.Continue;
 using ElementAccess = Loom.Parsing.AST.ElementAccess;
 using Expression = Loom.Parsing.AST.Expression;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
@@ -54,7 +56,8 @@ internal class LuauScope(LuauScope? parent = null)
         _temporaryIds.TryGetValue(name, out temporaryId) || Parent != null && Parent.TryGetId(name, out temporaryId);
 }
 
-public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
+public class LuauGenerator(SemanticModel semanticModel)
+    : Visitor<LuauNode>(new NoOpStatement())
 {
     private readonly DiagnosticBag _diagnostics = new();
     private LuauScope _scope = new();
@@ -67,12 +70,15 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     protected override LuauNode Visit(Node node) => node.Accept(this);
     public override LuauTree VisitTree(Tree tree) => new(GenerateStatements(tree.Statements));
+    public override LuauNode VisitBreak(Break @break) => new Luau.AST.Break();
+    public override LuauNode VisitContinue(Continue @continue) => new Luau.AST.Continue();
+    public override LuauNode VisitWhile(While @while) => new WhileStatement(Visit(@while.Condition), GenerateChunk(@while.Body));
 
     public override IfStatement VisitIf(If @if)
     {
         var condition = Visit(@if.Condition);
-        var thenBranch = @if.ThenBranch is Block thenBlock ? VisitBlock(thenBlock) : new Chunk([Visit(@if.ThenBranch)]);
-        var elseBranch = @if.ElseBranch != null ? @if.ElseBranch.Branch is Block elseBlock ? VisitBlock(elseBlock) : new Chunk([Visit(@if.ElseBranch)]) : null;
+        var thenBranch = GenerateChunk(@if.ThenBranch);
+        var elseBranch = @if.ElseBranch != null ? GenerateChunk(@if.ElseBranch.Branch) : null;
         var elseIfBranches = new List<ElseIfBranch>();
         if (@if.ElseBranch is not { Branch: If elseIf })
             return new IfStatement(condition, thenBranch, elseIfBranches, elseBranch);
@@ -332,7 +338,7 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
 
     public override LuauNode VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
         new PropertyTableInitializer(propertyInitializer.Name.Text, Visit(propertyInitializer.Expression));
-    
+
     public override LuauNode VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
         new ComputedPropertyTableInitializer(Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression));
 
@@ -438,6 +444,8 @@ public class LuauGenerator(SemanticModel semanticModel) : Visitor<LuauNode>
         constantType = literal.Value is string s ? new StringLiteral(s) : new NumberLiteral(Convert.ToDouble(literal.Value));
         return true;
     }
+
+    private Chunk GenerateChunk(Statement statement) => statement is Block block ? VisitBlock(block) : new Chunk([Visit(statement)]);
 
     private List<LuauStatement> GenerateStatements(List<Statement> statements)
     {

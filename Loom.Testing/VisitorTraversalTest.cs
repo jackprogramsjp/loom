@@ -5,7 +5,7 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class VisitorTraversalTest
 {
-    private sealed class RecordingVisitor : Visitor<bool>
+    private sealed class RecordingVisitor() : Visitor<bool>(true)
     {
         public List<string> Log { get; } = [];
 
@@ -17,11 +17,6 @@ public class VisitorTraversalTest
             Log.Add(name);
             return visitChildren();
         }
-
-        public override bool VisitLiteralType(LiteralType lt) => true;
-        public override bool VisitPrimitiveType(PrimitiveType pt) => true;
-        public override bool VisitLiteral(Literal lit) => true;
-        public override bool VisitIdentifier(Identifier id) => true;
     }
 
     private static void AssertVisitOrder(string source, params string[] expectedOrder)

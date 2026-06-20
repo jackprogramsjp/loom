@@ -17,7 +17,8 @@ using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom.TypeChecking;
 
-public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
+public sealed class TypeChecker(SemanticModel semanticModel)
+    : Visitor<Type>(Types.PrimitiveType.Never)
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Stack<TypedFlowState> _flowStates = [];
@@ -31,13 +32,6 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var diagnostics = DiagnosticBag.Concat([semanticModel.TypeSolver.Diagnostics, _diagnostics]);
         return new TypeCheckerResult(type, diagnostics);
     }
-
-    public void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
-        _diagnostics.Error(
-            node,
-            InternalCodes.CannotInferType,
-            $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
-        );
 
     protected override Type Visit(Node node) => node.Accept(this);
 
@@ -63,6 +57,15 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         var type = TypeSimplifier.Simplify(base.VisitExpressionStatement(expressionStatement));
         _diagnostics.Info(expressionStatement, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for expression");
         return BindType(expressionStatement, type);
+    }
+
+    public override Type VisitWhile(While @while)
+    {
+        var conditionType = Visit(@while.Condition);
+        semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
+
+        var (trueState, _) = ComputeBranchStates(@while.Condition);
+        return VisitWithFlowState(@while.Body, trueState);
     }
 
     public override Type VisitIf(If @if)
@@ -986,7 +989,7 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
 
         return substitution;
     }
-    
+
     private InterfaceType? ResolveInterfaceType(InterfaceInvocation node, Type type)
     {
         if (type is InterfaceType nonGeneric)
@@ -1171,6 +1174,13 @@ public sealed class TypeChecker(SemanticModel semanticModel) : Visitor<Type>
         semanticModel.TypeSolver.SetType(node, type);
         return type;
     }
+    
+    private void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
+        _diagnostics.Error(
+            node,
+            InternalCodes.CannotInferType,
+            $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
+        );
 
     private static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {
