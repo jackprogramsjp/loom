@@ -9,7 +9,7 @@ namespace Loom.Parsing;
 public class Parser
 {
     private delegate Statement StatementParser(Token keyword);
-
+    
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<SyntaxKind, StatementParser> _statementParsers;
     private readonly LexerResult _lexerResult;
@@ -362,50 +362,40 @@ public class Parser
             : new PropertyAccess(expression, names);
     }
 
-    private Expression ParseUnary() =>
-        Match(out var op, SyntaxFacts.IsUnaryOperator)
-            ? new UnaryOperator(op, ParseUnary())
-            : ParsePostfix();
+    private Expression ParseUnary()
+    {
+        if (!Match(out var newKeyword, SyntaxKind.NewKeyword))
+            return Match(out var op, SyntaxFacts.IsUnaryOperator)
+                ? new UnaryOperator(op, ParseUnary())
+                : ParsePostfix();
 
+        var name = new Identifier(ExpectIdentifier());
+        var typeArguments = ParseTypeArguments(forInvocation: true);
+        var leftBrace = Expect(SyntaxKind.LBrace);
+        var initializers = new List<InterfaceInvocationInitializer>();
+        if (!Match(out var rightBrace, SyntaxKind.RBrace))
+        {
+            initializers.AddRange(ParseDelimited(ParseInterfaceInvocationInitializer));
+            rightBrace = Expect(SyntaxKind.RBrace);
+        }
+
+        var body = new InterfaceInvocationBody(leftBrace, rightBrace, initializers);
+        return new InterfaceInvocation(newKeyword, name, typeArguments, body);
+    }
+    
     private Expression ParsePostfix()
     {
         var expression = ParsePrimary();
         while (!IsEof())
         {
-            if (Current() is { Kind: SyntaxKind.LParen or SyntaxKind.LBrace or SyntaxKind.ColonColonLArrow })
+            if (Current() is { Kind: SyntaxKind.LParen  or SyntaxKind.ColonColonLArrow })
             {
                 var typeArguments = ParseTypeArguments(forInvocation: true);
-                if (Match(out var leftParen, SyntaxKind.LParen))
-                {
-                    var arguments = ParseArguments(leftParen);
-                    expression = new Invocation(expression, typeArguments, arguments);
-                }
-                else if (expression is Name name)
-                {
-                    var leftBrace = Expect(SyntaxKind.LBrace);
-                    var initializers = new List<InterfaceInvocationInitializer>();
-                    if (!Match(out var rightBrace, SyntaxKind.RBrace))
-                    {
-                        initializers.AddRange(ParseDelimited(ParseInterfaceInvocationInitializer));
-                        rightBrace = Expect(SyntaxKind.RBrace);
-                    }
-
-                    var body = new InterfaceInvocationBody(leftBrace, rightBrace, initializers);
-                    expression = new InterfaceInvocation(name, typeArguments, body);
-                }
-                else
-                {
-                    _diagnostics.Error(
-                        CurrentOrLast().Span,
-                        InternalCodes.UnexpectedToken,
-                        $"Expected function or interface invocation, got {SafeTokenText(MaybeCurrent())}"
-                    );
-
-                    break;
-                }
+                var leftParen = Expect(SyntaxKind.LParen);
+                var arguments = ParseArguments(leftParen);
+                expression = new Invocation(expression, typeArguments, arguments);
             }
-
-            if (Match(out var leftBracket, SyntaxKind.LBracket))
+            else if (Match(out var leftBracket, SyntaxKind.LBracket))
             {
                 var indexExpression = ParseExpression();
                 var rightBracket = Expect(SyntaxKind.RBracket);
@@ -429,7 +419,7 @@ public class Parser
             var expression = ParseExpression();
             return new InterfaceInvocationPropertyInitializer(name, colon, expression);
         }
-
+        
         var leftBracket = Expect(SyntaxKind.LBracket, "property name or index initializer");
         var indexExpression = ParseExpression();
         var rightBracket = Expect(SyntaxKind.RBracket);
@@ -690,7 +680,7 @@ public class Parser
         closingArrow = null;
         if (IsEof())
             return false;
-
+        
         return Current().Kind switch
         {
             SyntaxKind.RArrow => (closingArrow = Advance()) != null,
@@ -699,14 +689,14 @@ public class Parser
             _ => false
         };
     }
-
+    
     // evil token splitting function
     private bool SplitAndAdvance(int splitIndex, SyntaxKind remainderKind, out Token closingArrow)
     {
         var token = Current();
         var firstSpan = new LocationSpan(token.Span.Start, splitIndex);
         closingArrow = new Token(SyntaxKind.RArrow, firstSpan, token.Text[..splitIndex]);
-
+        
         var remainder = new Token(
             remainderKind,
             new LocationSpan(token.Span.Start + splitIndex, token.Span.Length - splitIndex),
@@ -760,7 +750,6 @@ public class Parser
 
     private Token ExpectIdentifier(string expected = "identifier") => Expect(SyntaxKind.Identifier, expected);
     private Token Expect(SyntaxKind kind, string expected) => Expect(kind, token => $"Expected {expected}, got {SafeTokenText(token)}.");
-
     private Token Expect(SyntaxKind kind, Func<Token?, string>? message = null)
     {
         if (IsEof())

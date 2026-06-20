@@ -1,8 +1,11 @@
+using Loom.Syntax;
+
 namespace Loom.Parsing.AST;
 
-public class InterfaceInvocation(Name name, TypeArguments? typeArguments, InterfaceInvocationBody body)
+public class InterfaceInvocation(Token keyword, Name name, TypeArguments? typeArguments, InterfaceInvocationBody body)
     : Expression([..name.Tokens, ..typeArguments?.Tokens ?? [], ..body.Tokens], [name, typeArguments, body])
 {
+    public Token Keyword { get; } = keyword;
     public Name Name { get; } = name;
     public TypeArguments? TypeArguments { get; } = typeArguments;
     public InterfaceInvocationBody Body { get; } = body;

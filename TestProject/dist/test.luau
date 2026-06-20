@@ -1,4 +1,4 @@
-type Foo = {
-  read foo: string
+type I = {
+  read x: number
 }
-const foo = { foo = "bar" }
+const _ = ({ x = 1 }).x

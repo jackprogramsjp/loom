@@ -332,6 +332,7 @@ public class ResolverTest
 
     [Theory]
     [InlineData("Range")]
+    [InlineData("Record<string, bool>")]
     public void Declares_IntrinsicType_Symbols(string name)
     {
         Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));

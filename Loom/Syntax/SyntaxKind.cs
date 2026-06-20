@@ -85,6 +85,7 @@ public enum SyntaxKind : ushort
     NameOfKeyword,
     DeclareKeyword,
     AsKeyword,
+    NewKeyword,
 
-    Identifier
+    Identifier,
 }

@@ -1,5 +1,1 @@
-interface Foo {
-    foo: string
-}
-
-let foo = Foo { foo: "bar" }
+let x = 1; new x {}

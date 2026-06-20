@@ -168,7 +168,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
 
     public override bool VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
-        if (!DeclareType(interfaceDeclaration) || !DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol))
+        if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol) || !DeclareType(interfaceDeclaration))
             return false;
         
         MarkDefinitelyInitialized(valueSymbol);
@@ -276,12 +276,9 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
 
     public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration)
     {
-        if (!DeclareVariable(enumDeclaration, SymbolKind.Variable, out var symbol))
+        if (!DeclareVariable(enumDeclaration, SymbolKind.Variable, out var symbol) || !DeclareType(enumDeclaration, SymbolKind.EnumType))
             return false;
-
-        if (!DeclareType(enumDeclaration, SymbolKind.EnumType))
-            return false;
-
+        
         MarkDefinitelyInitialized(symbol);
         return true;
     }

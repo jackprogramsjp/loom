@@ -86,10 +86,10 @@ public class SyntaxNodeTest
         var block = new Block(lbrace, rbrace, [varDecl]);
 
         var descendants = block.GetDescendants();
-        Assert.Equal(2, descendants.Count);
+        Assert.Equal(3, descendants.Count);
         Assert.Contains(varDecl, descendants);
         Assert.Contains(init, descendants);
-        Assert.DoesNotContain(lit, descendants);
+        Assert.Contains(lit, descendants);
     }
 
     [Fact]

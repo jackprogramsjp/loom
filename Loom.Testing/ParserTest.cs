@@ -25,36 +25,36 @@ public class ParserTest
         Assert.Null(declaration.ColonTypeClause);
         Assert.Null(declaration.EqualsValueClause);
     }
-    
+
     [Fact]
     public void Error_ProducesNullExpression()
     {
         var tree = Utility.GetAST("=");
         Assert.Single(tree.Statements);
-        
+
         var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.First());
         Assert.IsType<NullExpression>(expressionStatement.Expression);
     }
-    
+
     [Fact]
     public void Error_ProducesNullTypeExpression()
     {
         var tree = Utility.GetAST("type X = fn(a = 69): void");
         Assert.Single(tree.Statements);
-        
+
         var alias = Assert.IsType<TypeAlias>(tree.Statements.First());
         Assert.IsType<NullTypeExpression>(alias.EqualsTypeClause.Type);
     }
-    
+
     [Fact]
     public void Error_ProducesNullStatement()
     {
         var tree = Utility.GetAST("if x let y = 1");
         Assert.Single(tree.Statements);
-        
+
         Assert.IsType<NullStatement>(tree.Statements.First());
     }
-    
+
     [Fact]
     public void ThrowsFor_ExpectedIdentifier()
     {
@@ -278,6 +278,151 @@ public class ParserTest
             InternalCodes.UnexpectedToken,
             "Expected property name, got '123'."
         );
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_EmptyBody()
+    {
+        var tree = Utility.GetAST("new Foo {}");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
+        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
+        Assert.Null(invocation.TypeArguments);
+        Assert.NotNull(invocation.Body);
+        Assert.Empty(invocation.Body.Initializers);
+        Assert.Equal(SyntaxKind.LBrace, invocation.Body.LeftBrace.Kind);
+        Assert.Equal(SyntaxKind.RBrace, invocation.Body.RightBrace.Kind);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_WithPropertyInitializer()
+    {
+        var tree = Utility.GetAST("new Foo { bar: 42 }");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
+        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
+        Assert.Null(invocation.TypeArguments);
+
+        var body = invocation.Body;
+        Assert.Single(body.Initializers);
+        var init = Assert.IsType<InterfaceInvocationPropertyInitializer>(body.Initializers[0]);
+        Assert.Equal("bar", init.Name.Text);
+        Assert.IsType<Literal>(init.Expression);
+        Assert.Equal(42L, ((Literal)init.Expression).Value);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_WithIndexInitializer()
+    {
+        var tree = Utility.GetAST("new Foo { [0]: 'hello' }");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
+        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
+        Assert.Null(invocation.TypeArguments);
+
+        var body = invocation.Body;
+        Assert.Single(body.Initializers);
+        var init = Assert.IsType<InterfaceInvocationIndexInitializer>(body.Initializers[0]);
+        Assert.Equal(SyntaxKind.LBracket, init.LeftBracket.Kind);
+        Assert.Equal(SyntaxKind.RBracket, init.RightBracket.Kind);
+        var indexExpr = Assert.IsType<Literal>(init.IndexExpression);
+        Assert.Equal(0L, indexExpr.Value);
+        var valueExpr = Assert.IsType<Literal>(init.Expression);
+        Assert.Equal("hello", valueExpr.Value);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_MultipleInitializers()
+    {
+        var tree = Utility.GetAST("new Foo { x: 1, y: 2, [3]: 4 }");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
+        var body = invocation.Body;
+        Assert.Equal(3, body.Initializers.Count);
+
+        var first = Assert.IsType<InterfaceInvocationPropertyInitializer>(body.Initializers[0]);
+        Assert.Equal("x", first.Name.Text);
+
+        var second = Assert.IsType<InterfaceInvocationPropertyInitializer>(body.Initializers[1]);
+        Assert.Equal("y", second.Name.Text);
+
+        var third = Assert.IsType<InterfaceInvocationIndexInitializer>(body.Initializers[2]);
+        Assert.Equal(3L, ((Literal)third.IndexExpression).Value);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_WithTypeArguments()
+    {
+        var tree = Utility.GetAST("new Foo::<number, string> { prop: 1 }");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
+        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
+        Assert.NotNull(invocation.TypeArguments);
+        Assert.Equal(2, invocation.TypeArguments.ArgumentsList.Count);
+        Assert.IsType<PrimitiveType>(invocation.TypeArguments.ArgumentsList[0]);
+        Assert.IsType<PrimitiveType>(invocation.TypeArguments.ArgumentsList[1]);
+
+        var body = invocation.Body;
+        Assert.Single(body.Initializers);
+        Assert.IsType<InterfaceInvocationPropertyInitializer>(body.Initializers[0]);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_WithoutTypeArguments()
+    {
+        var tree = Utility.GetAST("new Foo { prop: 1 }");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
+        Assert.Null(invocation.TypeArguments);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_Chained()
+    {
+        var tree = Utility.GetAST("new Foo { x: 1 }.bar");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var propAccess = Assert.IsType<PropertyAccess>(exprStmt.Expression);
+        var invocation = Assert.IsType<InterfaceInvocation>(propAccess.Expression);
+        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_AsArgument()
+    {
+        var tree = Utility.GetAST("create(new Foo { x: 1 })");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var call = Assert.IsType<Invocation>(exprStmt.Expression);
+        Assert.Single(call.Arguments.ArgumentList);
+        var invocation = Assert.IsType<InterfaceInvocation>(call.Arguments.ArgumentList[0]);
+        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_InsideAssignment()
+    {
+        var tree = Utility.GetAST("let x = new Foo { a: 1 }");
+        Assert.Single(tree.Statements);
+
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        Assert.NotNull(varDecl.EqualsValueClause);
+        var invocation = Assert.IsType<InterfaceInvocation>(varDecl.EqualsValueClause.Value);
+        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
     }
 
     [Fact]

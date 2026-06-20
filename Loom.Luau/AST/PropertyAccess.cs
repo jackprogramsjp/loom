@@ -6,5 +6,6 @@ public class PropertyAccess(LuauExpression target, List<string> names) : LuauExp
     public LuauExpression Target { get; } = target;
     public List<string> Names { get; } = names;
 
-    public override string Render(RenderState state) => Target.Render(state) + (Names.Count > 1 ? '.' : "") + string.Join('.', Names[..^1]) + Operator + Names.Last();
+    public override string Render(RenderState state) =>
+        state.ParenthesizeIfNeeded(Target) + (Names.Count > 1 ? '.' : "") + string.Join('.', Names[..^1]) + Operator + Names.Last();
 }

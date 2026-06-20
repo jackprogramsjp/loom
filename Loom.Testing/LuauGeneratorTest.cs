@@ -29,7 +29,7 @@ public class LuauGeneratorTest
         var diagnostics = Utility.GetGeneratorDiagnostics("mut x = 1; x &= 2");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.NotImplemented, "Luau generation for bitwise assignment operators is not yet supported.");
     }
-    
+
     [Theory]
     [InlineData("declare let x: number;")]
     [InlineData("declare mut x: number;")]
@@ -37,6 +37,78 @@ public class LuauGeneratorTest
     public void Generates_Nothing(string source)
     {
         Assert.Empty(Utility.GetLuauAST(source).Statements);
+    }
+
+    [Fact]
+    public void Generates_InterfaceInvocation_EmptyBody()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { } new I {}", typeCheck: true);
+        Assert.True(luauTree.Statements.Count >= 2);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var table = Assert.IsType<Table>(variable.Initializer);
+        Assert.Empty(table.Initializers);
+    }
+
+    [Fact]
+    public void Generates_InterfaceInvocation_PropertyInitializer()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { x: number } new I { x: 1 }", typeCheck: true);
+        Assert.True(luauTree.Statements.Count >= 2);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var table = Assert.IsType<Table>(variable.Initializer);
+        Assert.Single(table.Initializers);
+        var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
+        Assert.Equal("x", propInit.PropertyName);
+        var value = Assert.IsType<NumberLiteral>(propInit.Value);
+        Assert.Equal(1, value.Value);
+    }
+
+    [Fact]
+    public void Generates_InterfaceInvocation_IndexInitializer()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { [number]: string } new I { [0]: 'hello' }", typeCheck: true);
+        Assert.True(luauTree.Statements.Count >= 2);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var table = Assert.IsType<Table>(variable.Initializer);
+        Assert.Single(table.Initializers);
+        var indexInit = Assert.IsType<ComputedPropertyTableInitializer>(table.Initializers[0]);
+        var indexValue = Assert.IsType<NumberLiteral>(indexInit.Key);
+        Assert.Equal(0, indexValue.Value);
+        var value = Assert.IsType<StringLiteral>(indexInit.Value);
+        Assert.Equal("hello", value.Value);
+    }
+
+    [Fact]
+    public void Generates_InterfaceInvocation_MixedInitializers()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { x: number, [string]: bool } new I { x: 1, ['key']: true }", typeCheck: true);
+        Assert.True(luauTree.Statements.Count >= 2);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var table = Assert.IsType<Table>(variable.Initializer);
+        Assert.Equal(2, table.Initializers.Count);
+        var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
+        Assert.Equal("x", propInit.PropertyName);
+        var indexInit = Assert.IsType<ComputedPropertyTableInitializer>(table.Initializers[1]);
+        var key = Assert.IsType<StringLiteral>(indexInit.Key);
+        Assert.Equal("key", key.Value);
+        var val = Assert.IsType<BooleanLiteral>(indexInit.Value);
+        Assert.True(val.Value);
+    }
+
+    [Fact]
+    public void Generates_InterfaceInvocation_ChainedProperty()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { x: number } let _ = new I { x: 1 }.x", typeCheck: true);
+        Assert.True(luauTree.Statements.Count >= 2);
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var propAccess = Assert.IsType<PropertyAccess>(variable.Initializer);
+        Assert.Equal("x", propAccess.Names[0]);
+        
+        var table = Assert.IsType<Table>(propAccess.Target);
+        Assert.Single(table.Initializers);
+        var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
+        Assert.Equal("x", propInit.PropertyName);
     }
 
     [Fact]

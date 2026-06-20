@@ -5,5 +5,5 @@ public class ElementAccess(LuauExpression target, LuauExpression index) : LuauEx
     public LuauExpression Target { get; } = target;
     public LuauExpression Index { get; } = index;
 
-    public override string Render(RenderState state) => $"{Target.Render(state)}[{Index.Render(state)}]";
+    public override string Render(RenderState state) => $"{state.ParenthesizeIfNeeded(Target)}[{Index.Render(state)}]";
 }

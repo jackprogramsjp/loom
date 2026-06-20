@@ -18,7 +18,7 @@ public class RenderState
     public string Indented(string text) => _indent + text;
     
     public string ParenthesizeIfNeeded(LuauNode node) => RequiresParentheses(node) ? $"({node.Render(this)})" : node.Render(this);
-    private static bool RequiresParentheses(LuauNode node) => node is (UnionType or IntersectionType or FunctionType) and not OptionalType;
+    private static bool RequiresParentheses(LuauNode node) => node is (UnionType or IntersectionType or FunctionType or Table) and not OptionalType;
 
     public static string RenderVisibility(LuauVisibility? visibility) =>
         visibility == null

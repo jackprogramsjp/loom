@@ -62,14 +62,14 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("type Id<T: number = \"abc\"> = T");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"abc\"' is not assignable to type 'number'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_QualifiedName_InvalidTarget()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo -> 42; foo.abc");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Cannot access property 'abc' on type 'fn(): 42'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_PropertyAccess_InvalidTarget()
     {
@@ -398,7 +398,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = none; if x != none { -x }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidUnaryOp, "No unary operation for -never.");
     }
-    
+
     [Fact]
     public void ThrowsFor_InvalidCall()
     {
@@ -427,7 +427,10 @@ public class TypeCheckerTest
     [Fact]
     public void ThrowsFor_AssignToImmutable_ObjectIndexer()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface ImmutRecord<K, V> { [K]: V }; let x = none as never as ImmutRecord<string, bool>; x['abc'] = false");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "interface ImmutRecord<K, V> { [K]: V }; let x = none as never as ImmutRecord<string, bool>; x['abc'] = false"
+        );
+
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable index 'string'.");
     }
 
@@ -437,14 +440,17 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Obj { prop: number }; let x = none as never as Obj; x.prop = 69");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable property 'prop'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_AssignToImmutable_Nested_ObjectProperty()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Inner { prop: number } interface Obj { inner: Inner }; let x = none as never as Obj; x.inner.prop = 69");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "interface Inner { prop: number } interface Obj { inner: Inner }; let x = none as never as Obj; x.inner.prop = 69"
+        );
+
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable property 'prop'.");
     }
-    
+
     [Theory]
     [InlineData("let s = \"abcdef\"; s[1..3] = \"abc\"", "string[Range]")]
     [InlineData("let s = \"abcdef\"; s[1] = \"a\"", "string[number]")]
@@ -454,21 +460,77 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, $"Cannot assign to '{assignType}' because the expression will be replaced by a macro.");
     }
-    
+
     [Fact]
     public void ThrowsFor_IndexedType_InvalidTarget()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("type X = number['abc']");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Type '\"abc\"' cannot be used to index type 'number'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_ParameterDefaultMismatch()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo(a: number = 'oops') {}");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"oops\"' is not assignable to type 'number'.");
     }
-    
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_NotAnInterface()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = 1; new x {}");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidInvocation, "Type '1' is not an interface.");
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_PropertyNotFound()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { x: number } new I { foo: 1 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Property 'foo' does not exist on interface 'I'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_PropertyTypeMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { x: number } new I { x: 'abc' }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"abc\"' is not assignable to type 'number'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_IndexerRequired()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { } new I { [0]: 1 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAccess, "Interface 'I' does not have an indexer.");
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_IndexerTypeMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { [number]: string } new I { ['text']: 1 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"text\"' is not assignable to type 'number'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_MissingPropertyInitializer()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { x: number, y: number } new I { x: 1 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.IncompleteInterfaceInvocation, "Missing property initializer for 'y' in interface 'I'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_GenericWrongArity()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I<T> { value: T } new I::<number, string> { value: 1 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.GenericArity, "Interface 'I<T>' expects 1 type argument, but 2 were provided.");
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_GenericConstraintViolation()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I<T: number> { value: T } new I::<string> { value: 'x' }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation, "Type 'string' does not satisfy constraint 'number' for type parameter 'T'.");
+    }
+
     [Fact]
     public void WarnsFor_NullCoalescing_NonOptional()
     {
@@ -477,9 +539,52 @@ public class TypeCheckerTest
     }
     
     [Fact]
+    public void Checks_InterfaceInvocation_ChainedPropertyAccess()
+    {
+        var type = Utility.GetLastStatementType("interface I { x: number } new I { x: 1 }.x");
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+    
+    [Fact]
+    public void Checks_InterfaceInvocation_NonGeneric_PropertyInitializers()
+    {
+        var type = Utility.GetLastStatementType("interface I { x: number, y: string } new I { x: 42, y: 'hello' }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("I", iface.Name);
+    }
+
+    [Fact]
+    public void Checks_InterfaceInvocation_NonGeneric_IndexInitializer()
+    {
+        var type = Utility.GetLastStatementType("interface I { [string]: number } new I { ['key']: 42 }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("I", iface.Name);
+    }
+
+    [Fact]
+    public void Checks_InterfaceInvocation_Generic_ExplicitTypeArgs()
+    {
+        var type = Utility.GetLastStatementType("interface I<T> { value: T } new I::<number> { value: 42 }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("I", iface.Name);
+        var prop = iface.ObjectType.Properties.Single();
+        Assert.True(prop.ValueType.Equals(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_InterfaceInvocation_Generic_DefaultTypeArgs()
+    {
+        var result = Utility.TypeCheck("interface I<T = number> { value: T } new I { value: 42 }");
+        Utility.AssertNoErrors(result);
+        
+        var iface = Assert.IsType<InterfaceType>(result.ReturnType);
+        Assert.Equal("I", iface.Name);
+    }
+
+    [Fact]
     public void Checks_InterfaceInheritance_MemberAccess()
     {
-        var type = Utility.GetLastStatementType( "interface A { x: number } interface B : A { } let b = none as never as B; b.x");
+        var type = Utility.GetLastStatementType("interface A { x: number } interface B : A { } let b = none as never as B; b.x");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
 
@@ -489,7 +594,7 @@ public class TypeCheckerTest
         var type = Utility.GetLastStatementType("interface A { [string]: number } interface B : A { } let b = none as never as B; b['hello']");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_CompoundAssignment_Add()
     {
@@ -511,7 +616,7 @@ public class TypeCheckerTest
         var fnType = Assert.IsType<FunctionType>(type);
         Assert.True(fnType.ReturnType.Equals(PrimitiveType.Number), $"Expected 'number', got '{fnType.ReturnType}'");
     }
-    
+
     [Theory]
     [InlineData("interface I { foo: number }; type Foo = I['foo'];")]
     [InlineData("type Foo = number[][number]")]
@@ -737,7 +842,7 @@ public class TypeCheckerTest
     {
         Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics("let x: number? = 69; if x != none x + 420"));
     }
-    
+
     [Fact]
     public void Narrowing_EqualsLiteral_ThenBranch()
     {
@@ -770,7 +875,9 @@ public class TypeCheckerTest
     public void Narrowing_Chained()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
-            "interface Inner { val: number? } interface Outer { inner: Inner } let obj = none as never as Outer; if obj.inner.val == 10 { obj.inner.val + 1 }");
+            "interface Inner { val: number? } interface Outer { inner: Inner } let obj = none as never as Outer; if obj.inner.val == 10 { obj.inner.val + 1 }"
+        );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
