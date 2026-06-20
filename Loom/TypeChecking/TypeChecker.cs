@@ -850,9 +850,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     {
         if (functionDeclaration.ReturnType != null)
             return Visit(functionDeclaration.ReturnType);
-
-        Console.WriteLine(functionDeclaration);
-
+        
         // TODO: flow analysis
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
@@ -861,7 +859,6 @@ public sealed class TypeChecker(SemanticModel semanticModel)
                 .FindAll(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
                 .ConvertAll(Visit);
 
-        foreach (var t in possibleReturnTypes) Console.WriteLine(t);
         return TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
