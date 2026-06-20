@@ -350,6 +350,21 @@ type Person = {
 const runic = { name = "Runic", age = 21 }
 runic.age = 69
 ```
+##
+```rs
+mut i = 0;
+while i < 10
+    i += 1;
+    
+print(i)
+```
+```luau
+local i = 0
+while i < 10 do
+    i += 1
+end
+print(i)
+```
 
 ## Planned Features
 

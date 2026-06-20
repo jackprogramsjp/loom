@@ -1,9 +1,1 @@
-declare fn print(msg: unknown): void;
-
-mut i = 0;
-while i < 10 {
-    i += 1
-    continue
-}
-
-print(i)
+print("abc")

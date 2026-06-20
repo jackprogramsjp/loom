@@ -48,7 +48,7 @@ public class LexerTest
         var tokens = Utility.GetTokens(source);
         Assert.Single(tokens);
 
-        var token = tokens.First();
+        var token = tokens[0];
         Assert.Equal(expected, token.Kind);
     }
 
@@ -77,7 +77,7 @@ public class LexerTest
         var tokens = Utility.GetTokens(source);
         Assert.Single(tokens);
 
-        var token = tokens.First();
+        var token = tokens[0];
         Assert.Equal(SyntaxKind.NumberLiteral, token.Kind);
     }
 
@@ -89,7 +89,7 @@ public class LexerTest
         var tokens = Utility.GetTokens(source);
         Assert.Single(tokens);
 
-        var token = tokens.First();
+        var token = tokens[0];
         Assert.Equal(SyntaxKind.StringLiteral, token.Kind);
     }
 
@@ -103,7 +103,7 @@ public class LexerTest
         var tokens = Utility.GetTokens(source);
         Assert.Single(tokens);
 
-        var token = tokens.First();
+        var token = tokens[0];
         Assert.Equal(SyntaxKind.Identifier, token.Kind);
     }
 
