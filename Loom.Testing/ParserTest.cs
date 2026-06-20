@@ -147,6 +147,18 @@ public class ParserTest
             "surround with '{' and '}'"
         );
     }
+    
+    [Fact]
+    public void ThrowsFor_DeclarationOutsideOfBlock_InWhileBody()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("while true let x = 1");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        );
+    }
 
     [Fact]
     public void ThrowsFor_DeclareFunction_MissingReturnType()
@@ -278,6 +290,71 @@ public class ParserTest
             InternalCodes.UnexpectedToken,
             "Expected property name, got '123'."
         );
+    }
+
+    [Fact]
+    public void Parses_WhileLoop_WithBlockBody()
+    {
+        var tree = Utility.GetAST("while x > 0 { return x }");
+        Assert.Single(tree.Statements);
+
+        var whileStmt = Assert.IsType<While>(tree.Statements.First());
+        Assert.Equal(SyntaxKind.WhileKeyword, whileStmt.Keyword.Kind);
+
+        var condition = Assert.IsType<BinaryOperator>(whileStmt.Condition);
+        Assert.Equal(SyntaxKind.RArrow, condition.Operator.Kind);
+
+        var body = Assert.IsType<Block>(whileStmt.Body);
+        Assert.Single(body.Statements);
+        Assert.IsType<Return>(body.Statements.First());
+    }
+
+    [Fact]
+    public void Parses_WhileLoop_WithExpressionBody()
+    {
+        var tree = Utility.GetAST("while true break");
+        Assert.Single(tree.Statements);
+
+        var whileStmt = Assert.IsType<While>(tree.Statements.First());
+        var condition = Assert.IsType<Literal>(whileStmt.Condition);
+        Assert.Equal(true, condition.Value);
+
+        var body = Assert.IsType<Break>(whileStmt.Body);
+        Assert.Equal(SyntaxKind.BreakKeyword, body.Keyword.Kind);
+    }
+
+    [Fact]
+    public void Parses_WhileLoop_WithNestedBlock()
+    {
+        var tree = Utility.GetAST("while a { while b { continue } }");
+        Assert.Single(tree.Statements);
+
+        var outerWhile = Assert.IsType<While>(tree.Statements.First());
+        var outerBody = Assert.IsType<Block>(outerWhile.Body);
+        var innerWhile = Assert.IsType<While>(outerBody.Statements.First());
+        var innerBody = Assert.IsType<Block>(innerWhile.Body);
+        var continueStmt = Assert.IsType<Continue>(innerBody.Statements.First());
+        Assert.Equal(SyntaxKind.ContinueKeyword, continueStmt.Keyword.Kind);
+    }
+
+    [Fact]
+    public void Parses_BreakStatement()
+    {
+        var tree = Utility.GetAST("while true { break }");
+        var whileStmt = Assert.IsType<While>(tree.Statements.Single());
+        var block = Assert.IsType<Block>(whileStmt.Body);
+        var breakStmt = Assert.IsType<Break>(block.Statements.First());
+        Assert.Equal(SyntaxKind.BreakKeyword, breakStmt.Keyword.Kind);
+    }
+
+    [Fact]
+    public void Parses_ContinueStatement()
+    {
+        var tree = Utility.GetAST("while true { continue }");
+        var whileStmt = Assert.IsType<While>(tree.Statements.Single());
+        var block = Assert.IsType<Block>(whileStmt.Body);
+        var continueStmt = Assert.IsType<Continue>(block.Statements.First());
+        Assert.Equal(SyntaxKind.ContinueKeyword, continueStmt.Keyword.Kind);
     }
 
     [Fact]

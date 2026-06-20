@@ -40,6 +40,82 @@ public class LuauGeneratorTest
     }
 
     [Fact]
+    public void Generates_WhileLoop_WithBlockBody()
+    {
+        var luauTree = Utility.GetLuauAST("while true { break }");
+        Assert.Single(luauTree.Statements);
+
+        var whileStatement = Assert.IsType<WhileStatement>(luauTree.Statements.First());
+        var condition = Assert.IsType<BooleanLiteral>(whileStatement.Condition);
+        Assert.True(condition.Value);
+
+        var body = whileStatement.Body;
+        Assert.Single(body.Statements);
+        Assert.IsType<Break>(body.Statements.First());
+    }
+
+    [Fact]
+    public void Generates_WhileLoop_WithExpressionBody()
+    {
+        var luauTree = Utility.GetLuauAST("while true continue");
+        Assert.Single(luauTree.Statements);
+
+        var whileStatement = Assert.IsType<WhileStatement>(luauTree.Statements.First());
+        var body = whileStatement.Body;
+        Assert.Single(body.Statements);
+        Assert.IsType<Continue>(body.Statements.First());
+    }
+
+    [Fact]
+    public void Generates_Break()
+    {
+        var luauTree = Utility.GetLuauAST("while true { break }");
+        var whileStatement = Assert.IsType<WhileStatement>(luauTree.Statements.First());
+        var block = whileStatement.Body;
+        var breakStmt = Assert.IsType<Break>(block.Statements.First());
+        Assert.Equal("break", breakStmt.Render());
+    }
+
+    [Fact]
+    public void Generates_Continue()
+    {
+        var luauTree = Utility.GetLuauAST("while true { continue }");
+        var whileStatement = Assert.IsType<WhileStatement>(luauTree.Statements.First());
+        var block = whileStatement.Body;
+        var continueStmt = Assert.IsType<Continue>(block.Statements.First());
+        Assert.Equal("continue", continueStmt.Render());
+    }
+
+    [Fact]
+    public void Generates_NestedWhileLoops_WithBreakAndContinue()
+    {
+        var luauTree = Utility.GetLuauAST(
+            """
+                    while a {
+                        while b {
+                            break
+                        }
+                        continue
+                    }
+            """
+        );
+
+        Assert.Single(luauTree.Statements);
+
+        var outerWhile = Assert.IsType<WhileStatement>(luauTree.Statements.First());
+        var outerBody = outerWhile.Body;
+        Assert.Equal(2, outerBody.Statements.Count);
+
+        var innerWhile = Assert.IsType<WhileStatement>(outerBody.Statements.First());
+        var innerBody = innerWhile.Body;
+        Assert.Single(innerBody.Statements);
+        Assert.IsType<Break>(innerBody.Statements.First());
+
+        var outerContinue = Assert.IsType<Luau.AST.Continue>(outerBody.Statements[1]);
+        Assert.Equal("continue", outerContinue.Render());
+    }
+
+    [Fact]
     public void Generates_InterfaceInvocation_EmptyBody()
     {
         var luauTree = Utility.GetLuauAST("interface I { } new I {}", typeCheck: true);
@@ -100,11 +176,11 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST("interface I { x: number } let _ = new I { x: 1 }.x", typeCheck: true);
         Assert.True(luauTree.Statements.Count >= 2);
-        
+
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         var propAccess = Assert.IsType<PropertyAccess>(variable.Initializer);
         Assert.Equal("x", propAccess.Names[0]);
-        
+
         var table = Assert.IsType<Table>(propAccess.Target);
         Assert.Single(table.Initializers);
         var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);

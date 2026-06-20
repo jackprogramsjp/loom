@@ -530,12 +530,60 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I<T: number> { value: T } new I::<string> { value: 'x' }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation, "Type 'string' does not satisfy constraint 'number' for type parameter 'T'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_WhileLoop_NonBooleanCondition()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("while 1 { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '1' is not assignable to type 'bool'.");
+    }
 
     [Fact]
     public void WarnsFor_NullCoalescing_NonOptional()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("1 ?? 2");
         Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.RedundantCode);
+    }
+    
+    [Fact]
+    public void Checks_Narrowing_While_NonNullable()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "let x: number? = 69; while x != none { x + 420; break; }"
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_While_EqualsLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "let x: number | string = 42; while x == 42 { x + 1; break; }"
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_While_NotEqualsLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "let x: number | string = 'hi'; while x != 'hi' { x + 1; break; }"
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_WhileLoop_WithBreak()
+    {
+        var result = Utility.TypeCheck("while true { break }");
+        Utility.AssertNoErrors(result);
+    }
+
+    [Fact]
+    public void Checks_WhileLoop_WithContinue()
+    {
+        var result = Utility.TypeCheck("while true { continue }");
+        Utility.AssertNoErrors(result);
     }
     
     [Fact]

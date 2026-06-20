@@ -210,10 +210,83 @@ public class ResolverTest
     }
     
     [Fact]
-    public void WarnsFor_UnreachableCode()
+    public void ThrowsFor_VariableInitializedInWhile_IsNotDefinitelyInitializedAfterLoop()
     {
-        var diagnostics = Utility.GetSemanticModel("fn foo { return 42; let x = 1 }").Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("mut x: number; while true { x = 1; break; } x;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_BreakOutsideLoop()
+    {
+        var diagnostics = Utility.GetSemanticModel("break").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ContinueOutsideLoop()
+    {
+        var diagnostics = Utility.GetSemanticModel("continue").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
+    }
+
+    [Fact]
+    public void ThrowsFor_BreakInsideFunctionInsideLoop()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+            "while true { fn inner() { break } }"
+        ).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ContinueInsideFunctionInsideLoop()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+            "while true { fn inner() { continue } }"
+        ).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
+    }
+    
+    [Theory]
+    [InlineData("fn foo { return 42; let x = 1 }")]
+    [InlineData("while true { break; let unreachable = 1; }")]
+    [InlineData("while true { continue; let unreachable = 1; }")]
+    public void WarnsFor_UnreachableCode(string source)
+    {
+        var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
+    }
+    
+    [Fact]
+    public void Allows_BreakInsideWhile()
+    {
+        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { break }"));
+    }
+
+    [Fact]
+    public void Allows_ContinueInsideWhile()
+    {
+        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { continue }"));
+    }
+
+    [Fact]
+    public void Allows_BreakInsideIfInsideWhile()
+    {
+        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { if true { break } }"));
+    }
+
+    [Fact]
+    public void Allows_ContinueInsideIfInsideWhile()
+    {
+        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { if true { continue } }"));
+    }
+
+    [Fact]
+    public void VariableInitializedBeforeWhile_IsDefinitelyInitializedAfter()
+    {
+        var model = Utility.GetSemanticModel("let x = 1; while true { break } x;");
+        Utility.AssertNoErrors(model);
     }
     
     [Fact]

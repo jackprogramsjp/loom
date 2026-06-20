@@ -16,6 +16,30 @@ public class LuauRenderingTest
         var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
         Assert.Equal("(x :: number)", typeCast.Render());
     }
+    
+    [Fact]
+    public void Renders_Continue()
+    {
+        Assert.Equal("continue", new Continue().Render());
+    }
+    
+    [Fact]
+    public void Renders_Break()
+    {
+        Assert.Equal("break", new Break().Render());
+    }
+    
+    [Fact]
+    public void Renders_WhileStatement()
+    {
+        Assert.Equal(
+            "while a do\n  x += 1\nend",
+            new WhileStatement(
+                new Identifier("a"),
+                new Chunk([new ExpressionStatement(new BinaryOperator(new Identifier("x"), "+=", new NumberLiteral(1)))])
+            ).Render()
+        );
+    }
 
     [Fact]
     public void Renders_IfStatement()
