@@ -29,10 +29,12 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         PushScope();
         PushFlowState(new FlowState([], []));
 
-        var intrinsicSymbols = IntrinsicTypes.Register(semanticModel);
+        var intrinsicSymbols = Intrinsics.Register(semanticModel);
         foreach (var symbol in intrinsicSymbols)
         {
             DeclareSymbol(symbol);
+            if (symbol.Kind is not (SymbolKind.Type or SymbolKind.EnumType))
+                MarkDefinitelyInitialized(symbol);
         }
 
         foreach (var (symbol, type) in compilationUnit.Globals)

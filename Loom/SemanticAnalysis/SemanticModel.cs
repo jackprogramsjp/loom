@@ -13,7 +13,7 @@ public class SemanticModel(Tree tree, DiagnosticBag diagnostics, Dictionary<Node
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
 
     public Symbol? GetSymbol(Node node) => references.GetValueOrDefault(node.Id);
-    public Symbol? GetDeclarationSymbol(Node node) => Declarations.GetValueOrDefault(node.Id);
+    public Symbol? GetDeclarationSymbol(Node node) => node is Declare declare ? GetDeclarationSymbol(declare.Signature) : Declarations.GetValueOrDefault(node.Id);
 
     public Symbol? GetDeclaringSymbol(Node node)
     {

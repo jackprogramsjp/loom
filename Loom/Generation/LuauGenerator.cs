@@ -219,7 +219,7 @@ public class LuauGenerator(SemanticModel semanticModel)
         var target = Visit(elementAccess.Expression);
         var targetType = semanticModel.GetType(elementAccess.Expression);
         var indexType = semanticModel.GetType(elementAccess.IndexExpression);
-        if (!indexType.Equals(IntrinsicTypes.Range))
+        if (!indexType.Equals(Intrinsics.RangeType))
         {
             if (TryGetEnumConstant(elementAccess, out var enumValue))
                 return enumValue;

@@ -7,11 +7,11 @@ using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 
 namespace Loom.TypeChecking;
 
-public static class IntrinsicTypes
+public static class Intrinsics
 {
     private static bool _compilingIntrinsic;
 
-    public static readonly InterfaceType Range = new(
+    public static readonly InterfaceType RangeType = new(
         "Range",
         [],
         new ObjectType(

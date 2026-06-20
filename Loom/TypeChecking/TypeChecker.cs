@@ -335,13 +335,13 @@ public sealed class TypeChecker(SemanticModel semanticModel)
 
         var type = Visit(elementAccess.Expression);
         var indexType = Visit(elementAccess.IndexExpression);
-        if (type is Types.ArrayType && indexType.IsAssignableTo(IntrinsicTypes.Range))
+        if (type is Types.ArrayType && indexType.IsAssignableTo(Intrinsics.RangeType))
         {
             CheckInvalidAccessAssignment(elementAccess, type, indexType);
             return BindType(elementAccess, type);
         }
 
-        var indexIsRangeOrNumber = indexType.IsAssignableTo(IntrinsicTypes.Range) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
+        var indexIsRangeOrNumber = indexType.IsAssignableTo(Intrinsics.RangeType) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
         if (indexIsRangeOrNumber && type.IsAssignableTo(Types.PrimitiveType.String))
         {
             CheckInvalidAccessAssignment(elementAccess, type, indexType);
@@ -488,7 +488,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         semanticModel.TypeSolver.AddConstraint(minimumType, Types.PrimitiveType.Number, rangeLiteral.Minimum);
         semanticModel.TypeSolver.AddConstraint(maximumType, Types.PrimitiveType.Number, rangeLiteral.Maximum);
 
-        return BindType(rangeLiteral, IntrinsicTypes.Range);
+        return BindType(rangeLiteral, Intrinsics.RangeType);
     }
 
     public override Type VisitArrayLiteral(ArrayLiteral arrayLiteral)
