@@ -293,6 +293,181 @@ public class ParserTest
     }
 
     [Fact]
+    public void Parses_BareBlockStatement()
+    {
+        var tree = Utility.GetAST("{ let x = 1; }");
+        Assert.Single(tree.Statements);
+
+        var block = Assert.IsType<Block>(tree.Statements.First());
+        Assert.Single(block.Statements);
+        Assert.IsType<VariableDeclaration>(block.Statements[0]);
+        Assert.Equal(SyntaxKind.LBrace, block.LeftBrace.Kind);
+        Assert.Equal(SyntaxKind.RBrace, block.RightBrace.Kind);
+    }
+
+    [Fact]
+    public void Parses_TopLevelReturnStatement()
+    {
+        var tree = Utility.GetAST("return 42");
+        Assert.Single(tree.Statements);
+
+        var ret = Assert.IsType<Return>(tree.Statements.First());
+        Assert.Equal(SyntaxKind.ReturnKeyword, ret.Keyword.Kind);
+        var expr = Assert.IsType<Literal>(ret.Expression);
+        Assert.Equal(42L, expr.Value);
+    }
+
+    [Fact]
+    public void Parses_TopLevelBreakStatement()
+    {
+        var tree = Utility.GetAST("break");
+        Assert.Single(tree.Statements);
+        Assert.IsType<Break>(tree.Statements.First());
+    }
+
+    [Fact]
+    public void Parses_TopLevelContinueStatement()
+    {
+        var tree = Utility.GetAST("continue");
+        Assert.Single(tree.Statements);
+        Assert.IsType<Continue>(tree.Statements.First());
+    }
+
+    [Fact]
+    public void Parses_QualifiedName_Chained()
+    {
+        var tree = Utility.GetAST("a.b.c");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.First());
+        var qualifiedName = Assert.IsType<QualifiedName>(exprStmt.Expression);
+        Assert.Equal("a", qualifiedName.Identifier.Name.Text);
+        Assert.Equal(2, qualifiedName.Names.Count);
+        Assert.Equal("b", qualifiedName.Names[0].Name.Text);
+        Assert.Equal("c", qualifiedName.Names[1].Name.Text);
+    }
+
+    [Fact]
+    public void Parses_InterfaceInvocation_IndexInitializerWithExpression()
+    {
+        var tree = Utility.GetAST("new Foo { [x + 1]: 42 }");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
+        var init = Assert.IsType<InterfaceInvocationIndexInitializer>(invocation.Body.Initializers.Single());
+
+        var indexExpr = Assert.IsType<BinaryOperator>(init.IndexExpression);
+        Assert.Equal(SyntaxKind.Plus, indexExpr.Operator.Kind);
+        Assert.IsType<Identifier>(indexExpr.Left);
+        Assert.Equal(1L, Assert.IsType<Literal>(indexExpr.Right).Value);
+        Assert.Equal(42L, Assert.IsType<Literal>(init.Expression).Value);
+    }
+
+    [Fact]
+    public void Parses_TypeAlias_NestedGeneric()
+    {
+        var tree = Utility.GetAST("type X = List<Option<number>>");
+        Assert.Single(tree.Statements);
+
+        var alias = Assert.IsType<TypeAlias>(tree.Statements.First());
+        var outerType = Assert.IsType<TypeName>(alias.EqualsTypeClause.Type);
+        Assert.Equal("List", outerType.Name.Text);
+        Assert.NotNull(outerType.TypeArguments);
+        Assert.Single(outerType.TypeArguments.ArgumentsList);
+
+        var innerType = Assert.IsType<TypeName>(outerType.TypeArguments.ArgumentsList[0]);
+        Assert.Equal("Option", innerType.Name.Text);
+        Assert.NotNull(innerType.TypeArguments);
+        Assert.Single(innerType.TypeArguments.ArgumentsList);
+
+        var primitive = Assert.IsType<PrimitiveType>(innerType.TypeArguments.ArgumentsList[0]);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Parses_FunctionDeclaration_TypeParameterWithDefault()
+    {
+        var tree = Utility.GetAST("fn wrap<T = number>(x: T): T { return x; }");
+        Assert.Single(tree.Statements);
+
+        var fn = Assert.IsType<FunctionDeclaration>(tree.Statements.Single());
+        Assert.NotNull(fn.TypeParameters);
+        Assert.Single(fn.TypeParameters.ParameterList);
+
+        var tp = fn.TypeParameters.ParameterList[0];
+        Assert.Equal("T", tp.Name.Text);
+        Assert.NotNull(tp.EqualsTypeClause);
+        Assert.IsType<PrimitiveType>(tp.EqualsTypeClause.Type);
+    }
+
+    [Fact]
+    public void Parses_UnionType_MultipleElements()
+    {
+        var tree = Utility.GetAST("let x: A | B | C");
+        var union = Assert.IsType<UnionType>(((VariableDeclaration)tree.Statements.Single()).ColonTypeClause!.Type);
+        Assert.Equal(3, union.Types.Count);
+        Assert.Equal(2, union.Pipes.Count);
+        Assert.All(union.Types, t => Assert.IsType<TypeName>(t));
+    }
+
+    [Fact]
+    public void Parses_IntersectionType_MultipleElements()
+    {
+        var tree = Utility.GetAST("let x: A & B & C");
+        var intersection = Assert.IsType<IntersectionType>(((VariableDeclaration)tree.Statements.Single()).ColonTypeClause!.Type);
+        Assert.Equal(3, intersection.Types.Count);
+        Assert.Equal(2, intersection.Ampersands.Count);
+        Assert.All(intersection.Types, t => Assert.IsType<TypeName>(t));
+    }
+
+    [Fact]
+    public void Parses_FunctionType_EmptyParens()
+    {
+        var tree = Utility.GetAST("type Fn = fn(): void");
+        var alias = Assert.IsType<TypeAlias>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(alias.EqualsTypeClause.Type);
+        Assert.NotNull(fnType.Parameters);
+        Assert.Empty(fnType.Parameters.ParameterList);
+        Assert.IsType<PrimitiveType>(fnType.ReturnType.Type);
+    }
+
+    [Fact]
+    public void Parses_FunctionType_TypeParametersWithEmptyParens()
+    {
+        var tree = Utility.GetAST("type Fn = fn<T>(): T");
+        var alias = Assert.IsType<TypeAlias>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(alias.EqualsTypeClause.Type);
+
+        Assert.NotNull(fnType.TypeParameters);
+        Assert.Single(fnType.TypeParameters.ParameterList);
+        Assert.Equal("T", fnType.TypeParameters.ParameterList[0].Name.Text);
+
+        Assert.NotNull(fnType.Parameters);
+        Assert.Empty(fnType.Parameters.ParameterList);
+
+        var returnType = Assert.IsType<TypeName>(fnType.ReturnType.Type);
+        Assert.Equal("T", returnType.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_FunctionType_OnlyTypeParameters()
+    {
+        var tree = Utility.GetAST("type Fn = fn<T>: T");
+        var alias = Assert.IsType<TypeAlias>(tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(alias.EqualsTypeClause.Type);
+
+        Assert.NotNull(fnType.TypeParameters);
+        Assert.Single(fnType.TypeParameters.ParameterList);
+        Assert.Equal("T", fnType.TypeParameters.ParameterList[0].Name.Text);
+
+        Assert.Null(fnType.Parameters);
+
+        var returnType = Assert.IsType<TypeName>(fnType.ReturnType.Type);
+        Assert.Equal("T", returnType.Name.Text);
+    }
+
+    [Fact]
     public void Parses_WhileLoop_WithBlockBody()
     {
         var tree = Utility.GetAST("while x > 0 { return x }");
