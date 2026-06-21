@@ -1,9 +1,3 @@
-declare interface Foo {
-    foo: number;
+declare sealed interface Foo {
+    foo: number
 }
-
-type X = Foo["foo"];
-
-let x: X = 1;
-
-let foo = new Foo { foo: 69 }

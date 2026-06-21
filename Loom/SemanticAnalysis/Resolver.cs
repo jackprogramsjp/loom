@@ -316,7 +316,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             case InterfaceSymbol:
                 _diagnostics.Error(
                     interfaceInvocation,
-                    InternalCodes.InvokedDeclaredInterface,
+                    InternalCodes.InvokeDeclaredInterface,
                     $"Cannot invoke interface '{name}' because it was declared as type."
                 );
 

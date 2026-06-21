@@ -147,7 +147,7 @@ public class ParserTest
             "surround with '{' and '}'"
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_DeclarationOutsideOfBlock_InWhileBody()
     {
@@ -652,7 +652,7 @@ public class ParserTest
         var indexType = Assert.IsType<LiteralType>(indexed.IndexType);
         Assert.Equal("0", indexType.Token.Text);
     }
-    
+
     [Fact]
     public void Parses_Sealed_InterfaceDeclaration()
     {
@@ -670,6 +670,22 @@ public class ParserTest
     }
 
     [Fact]
+    public void Parses_Declare_InterfaceDeclaration()
+    {
+        var tree = Utility.GetAST("declare interface I;");
+        Assert.Single(tree.Statements);
+
+        var declare = Assert.IsType<Declare>(tree.Statements.First());
+        var iface = Assert.IsType<InterfaceDeclaration>(declare.Signature);
+        Assert.Equal("I", iface.Name.Text);
+        Assert.Null(iface.SealedKeyword);
+        Assert.Null(iface.TypeParameters);
+        Assert.Null(iface.ColonTypeListClause);
+        Assert.Null(iface.Body);
+        Assert.Equal(SyntaxKind.InterfaceKeyword, iface.Keyword.Kind);
+    }
+
+    [Fact]
     public void Parses_InterfaceDeclaration_NoBody()
     {
         var tree = Utility.GetAST("interface I;");
@@ -683,7 +699,7 @@ public class ParserTest
         Assert.Null(iface.Body);
         Assert.Equal(SyntaxKind.InterfaceKeyword, iface.Keyword.Kind);
     }
-    
+
     [Fact]
     public void Parses_InterfaceDeclaration_NoBody_WithExtras()
     {
@@ -1998,10 +2014,7 @@ public class ParserTest
     [InlineData("a as number < b")]
     [InlineData("a as bool == b as bool")]
     [InlineData("a as unknown as number + 1")]
-    public void Parses_AsExpression_Precedence(string source)
-    {
-        Utility.AssertNoErrors(Utility.Parse(source));
-    }
+    public void Parses_AsExpression_Precedence(string source) => Utility.AssertNoErrors(Utility.Parse(source));
 
     [Theory]
     [InlineData("a + b", SyntaxKind.Plus)]

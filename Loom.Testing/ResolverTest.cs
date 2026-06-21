@@ -20,7 +20,8 @@ public class ResolverTest
     [Theory]
     [InlineData("mut x: number; if true x = 69; x;")]
     [InlineData("mut x: number; if true x = 69 else if true x = 420; x;")]
-    [InlineData("""
+    [InlineData(
+        """
                     mut x: number;
                     if outer {
                         if inner {
@@ -30,7 +31,8 @@ public class ResolverTest
                         x = 0;
                     }
                     x;
-        """)]
+        """
+    )]
     public void ThrowsFor_UseOfMaybeUninitialized(string source)
     {
         var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
@@ -50,28 +52,28 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("let x = 1; let x = 2;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'x' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateFunction()
     {
         var diagnostics = Utility.GetSemanticModel("fn foo() {} fn foo() {}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'foo' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateEnum()
     {
         var diagnostics = Utility.GetSemanticModel("enum Abc {} enum Abc{}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateEnumTypeName()
     {
         var diagnostics = Utility.GetSemanticModel("type Abc = number[] enum Abc{}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateParameter()
     {
@@ -120,7 +122,7 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("return 42;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ReturnOutsideFunction, "Return statements can only be used inside of functions.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateDeclareVariable()
     {
@@ -141,7 +143,7 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("declare fn f(x: number, x: string): void;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Parameter 'x' is already declared for this function.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DeclareVariableConflictsWithFunction()
     {
@@ -169,7 +171,7 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("{ declare let x: number; } x;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find name 'x'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Interface_DuplicateIndexer()
     {
@@ -202,14 +204,14 @@ public class ResolverTest
             "Parameter must have a declared type or default value to infer from."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_VariableInitializedInWhile_IsNotDefinitelyInitializedAfterLoop()
     {
         var diagnostics = Utility.GetSemanticModel("mut x: number; while true { x = 1; break; } x;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
     }
-    
+
     [Fact]
     public void ThrowsFor_BreakOutsideLoop()
     {
@@ -237,14 +239,14 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("while true { fn inner() { continue } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Sealed_Inheritance()
     {
         var diagnostics = Utility.GetSemanticModel("sealed interface A; interface B: A;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InheritFromSealed, $"Cannot constrain interface 'B' with sealed interface 'A'.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InheritFromSealed, "Cannot constrain interface 'B' with sealed interface 'A'.");
     }
-    
+
     [Theory]
     [InlineData("interface I : number;")]
     [InlineData("interface I : 69;")]
@@ -254,7 +256,14 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.NonInterfaceConstraint, "Interfaces may only be constrained by other interfaces.");
     }
-    
+
+    [Fact]
+    public void ThrowsFor_DeclaredInterface_Invocation()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare interface A; let a = new A {}").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvokeDeclaredInterface, "Cannot invoke interface 'A' because it was declared as type.");
+    }
+
     [Theory]
     [InlineData("fn foo { return 42; let x = 1 }")]
     [InlineData("while true { break; let unreachable = 1; }")]
@@ -264,30 +273,21 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
     }
-    
-    [Fact]
-    public void Allows_BreakInsideWhile()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { break }"));
-    }
 
     [Fact]
-    public void Allows_ContinueInsideWhile()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { continue }"));
-    }
+    public void Allows_NonSealedInterfaceConstraints() => Utility.AssertNoErrors(Utility.GetSemanticModel("interface A; interface B: A;"));
 
     [Fact]
-    public void Allows_BreakInsideIfInsideWhile()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { if true { break } }"));
-    }
+    public void Allows_BreakInsideWhile() => Utility.AssertNoErrors(Utility.GetSemanticModel("while true { break }"));
 
     [Fact]
-    public void Allows_ContinueInsideIfInsideWhile()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("while true { if true { continue } }"));
-    }
+    public void Allows_ContinueInsideWhile() => Utility.AssertNoErrors(Utility.GetSemanticModel("while true { continue }"));
+
+    [Fact]
+    public void Allows_BreakInsideIfInsideWhile() => Utility.AssertNoErrors(Utility.GetSemanticModel("while true { if true { break } }"));
+
+    [Fact]
+    public void Allows_ContinueInsideIfInsideWhile() => Utility.AssertNoErrors(Utility.GetSemanticModel("while true { if true { continue } }"));
 
     [Fact]
     public void VariableInitializedBeforeWhile_IsDefinitelyInitializedAfter()
@@ -295,24 +295,18 @@ public class ResolverTest
         var model = Utility.GetSemanticModel("let x = 1; while true { break } x;");
         Utility.AssertNoErrors(model);
     }
-    
+
     [Fact]
-    public void Allows_Interface_WithSingleIndexerAndUniqueProperties()
-    {
-        Utility.AssertNoErrors(
-            Utility.GetSemanticModel(
-                "interface I { [number]: string, count: number, name: string }"
-            )
-        );
-    }
-    
+    public void Allows_Interface_WithSingleIndexerAndUniqueProperties() =>
+        Utility.AssertNoErrors(Utility.GetSemanticModel("interface I { [number]: string, count: number, name: string }"));
+
     [Fact]
     public void Allows_SameParameterName_ChainedFnTypes()
     {
         var model = Utility.GetSemanticModel("type X = fn(x: number): void & fn(x: string): bool");
         Utility.AssertNoErrors(model);
     }
-    
+
     [Fact]
     public void Allows_UsageOfDeclaredVariable()
     {
@@ -333,28 +327,18 @@ public class ResolverTest
         var model = Utility.GetSemanticModel("declare mut counter: number; counter = 1;");
         Utility.AssertNoErrors(model);
     }
-    
-    [Fact]
-    public void Allows_NestedScopes_WithSameVariableNames()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 42; { let x = 69; x; } x;"));
-    }
-    
-    [Fact]
-    public void Allows_ReturnStatementInNestedFunction()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("fn outer() { fn inner() { return 42; } return 0; }"));
-    }
-    
-    [Fact]
-    public void Allows_ReturnStatementInsideFunction()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("fn test() { return 42; }"));
-    }
 
     [Fact]
-    public void Allows_MultipleInitializations_AcrossBranches()
-    {
+    public void Allows_NestedScopes_WithSameVariableNames() => Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 42; { let x = 69; x; } x;"));
+
+    [Fact]
+    public void Allows_ReturnStatementInNestedFunction() => Utility.AssertNoErrors(Utility.GetSemanticModel("fn outer() { fn inner() { return 42; } return 0; }"));
+
+    [Fact]
+    public void Allows_ReturnStatementInsideFunction() => Utility.AssertNoErrors(Utility.GetSemanticModel("fn test() { return 42; }"));
+
+    [Fact]
+    public void Allows_MultipleInitializations_AcrossBranches() =>
         Utility.AssertNoErrors(
             Utility.GetSemanticModel(
                 """
@@ -372,51 +356,33 @@ public class ResolverTest
                 """
             )
         );
-    }
 
     [Fact]
-    public void Allows_VariableInitializedInOuterScope_ToBeUsedInInnerScope()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("let x = true; if x { x }"));
-    }
+    public void Allows_VariableInitializedInOuterScope_ToBeUsedInInnerScope() => Utility.AssertNoErrors(Utility.GetSemanticModel("let x = true; if x { x }"));
 
     [Fact]
-    public void Allows_VariableInitializedBeforeIf_ToBeUsedAfterIf()
-    {
+    public void Allows_VariableInitializedBeforeIf_ToBeUsedAfterIf() =>
         Utility.AssertNoErrors(Utility.GetSemanticModel("let condition = true; let x = 42; if condition { } x;"));
-    }
 
     [Fact]
-    public void Allows_VariableInitializedInBothIfBranches_ToBeUsedAfterIf()
-    {
+    public void Allows_VariableInitializedInBothIfBranches_ToBeUsedAfterIf() =>
         Utility.AssertNoErrors(Utility.GetSemanticModel("let condition = true; mut x: number; if condition { x = 42 } else { x = 0 } x;"));
-    }
 
     [Fact]
-    public void Allows_VariableInitializedInThenBranch_UsedInsideThenBranch()
-    {
+    public void Allows_VariableInitializedInThenBranch_UsedInsideThenBranch() =>
         Utility.AssertNoErrors(Utility.GetSemanticModel("let condition = true; mut x: number; if condition { x = 42; x; }"));
-    }
 
     [Fact]
-    public void Allows_VariableFromOuterScope_ToBeReassignedInInnerScope()
-    {
+    public void Allows_VariableFromOuterScope_ToBeReassignedInInnerScope() =>
         Utility.AssertNoErrors(Utility.GetSemanticModel("let condition = true; mut x = 1; if condition { x = 2; } x;"));
-    }
 
     [Fact]
-    public void TracksInitialization_ThroughNestedBlocks()
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel("mut x: number; { x = 42; } x;"));
-    }
+    public void TracksInitialization_ThroughNestedBlocks() => Utility.AssertNoErrors(Utility.GetSemanticModel("mut x: number; { x = 42; } x;"));
 
     [Theory]
     [InlineData("Range")]
     [InlineData("Record<string, bool>")]
-    public void Declares_IntrinsicType_Symbols(string name)
-    {
-        Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
-    }
+    public void Declares_IntrinsicType_Symbols(string name) => Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
 
     [Fact]
     public void Declares_VariableSymbol()
@@ -444,7 +410,7 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Variable, declarationSymbol.Kind);
         Assert.Equal(variableDeclaration, declarationSymbol.Declaration);
     }
-    
+
     [Fact]
     public void Declares_Enum_VariableSymbol()
     {
@@ -460,7 +426,7 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Variable, symbol.Kind);
         Assert.Equal(declaration, symbol.Declaration);
     }
-    
+
     [Fact]
     public void Declares_EnumTypeSymbol()
     {
@@ -472,14 +438,14 @@ public class ResolverTest
         Assert.Equal(SymbolKind.EnumType, symbol.Kind);
         Assert.Equal(enumDeclaration, symbol.Declaration);
     }
-    
+
     [Fact]
     public void Declares_ParameterSymbol()
     {
         var model = Utility.GetSemanticModel("fn test(x: number) { }");
         var functionDeclaration = Assert.IsType<FunctionDeclaration>(model.Tree.Statements.First());
         Assert.NotNull(functionDeclaration.Parameters);
-        
+
         var parameter = functionDeclaration.Parameters!.ParameterList.First();
         var symbol = model.GetDeclarationSymbol(parameter);
         Assert.NotNull(symbol);
@@ -499,21 +465,28 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Function, symbol.Kind);
         Assert.Equal(functionDeclaration, symbol.Declaration);
     }
-    
+
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Declares_InterfaceSymbol(bool isSealed)
+    [InlineData("sealed interface Foo { foo: number }", true)]
+    [InlineData("interface Foo { foo: number }")]
+    [InlineData("declare sealed interface Foo { foo: number }", true, typeof(Declare))]
+    [InlineData("declare interface Foo { foo: number }", false, typeof(Declare))]
+    public void Declares_InterfaceSymbol(string source, bool isSealed = false, Type? declarationType = null)
     {
-        var model = Utility.AssertNoErrors(Utility.GetSemanticModel((isSealed ? "sealed " : "") + "interface Foo { foo: number }"));
-        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.First());
-        var symbol = model.GetDeclarationSymbol(interfaceDeclaration);
-        Assert.NotNull(symbol);
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel(source));
+        var statement = model.Tree.Statements.First();
+        Assert.IsType(declarationType ?? typeof(InterfaceDeclaration), statement);
+
+        if (declarationType == typeof(Declare))
+            statement = ((Declare)statement).Signature;
         
+        var symbol = model.GetDeclarationSymbol(statement);
+        Assert.NotNull(symbol);
+
         var interfaceSymbol = Assert.IsType<InterfaceSymbol>(symbol);
         Assert.Equal("Foo", interfaceSymbol.Name);
         Assert.Equal(SymbolKind.Interface, interfaceSymbol.Kind);
-        Assert.Equal(interfaceDeclaration, interfaceSymbol.Declaration);
+        Assert.Equal(statement, interfaceSymbol.Declaration);
         Assert.Equal(isSealed, interfaceSymbol.IsSealed);
         Assert.False(interfaceSymbol.IsIntrinsic);
         Assert.False(interfaceSymbol.IsMutable);
@@ -537,7 +510,7 @@ public class ResolverTest
         var model = Utility.GetSemanticModel("type Container<T> = T");
         var typeAlias = Assert.IsType<TypeAlias>(model.Tree.Statements.First());
         Assert.NotNull(typeAlias.TypeParameters);
-        
+
         var typeParameter = typeAlias.TypeParameters.ParameterList.First();
         var symbol = model.GetDeclarationSymbol(typeParameter);
         Assert.NotNull(symbol);
@@ -545,7 +518,7 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Type, symbol.Kind);
         Assert.Equal(typeParameter, symbol.Declaration);
     }
-    
+
     [Fact]
     public void Declares_DeclareVariableSymbol()
     {
@@ -588,7 +561,7 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Function, symbol.Kind);
         Assert.Equal(sig, symbol.Declaration);
     }
-    
+
     [Fact]
     public void Declares_DeclareFunction_InsideBlock()
     {

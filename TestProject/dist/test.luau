@@ -1,2 +1,3 @@
-type X = index<Foo, "foo">
-const x: X = 1
+type Foo = {
+  read foo: number
+}

@@ -9,7 +9,7 @@ namespace Loom.Parsing;
 public sealed class Parser
 {
     private delegate Statement StatementParser(Token keyword);
-    
+
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<SyntaxKind, StatementParser> _statementParsers;
     private readonly LexerResult _lexerResult;
@@ -68,7 +68,14 @@ public sealed class Parser
         var typeParameters = ParseTypeParameters();
         var colonTypeListClause = ParseColonTypeListClause();
         var body = ParseInterfaceBody();
-        return new InterfaceDeclaration(sealedKeyword, interfaceKeyword, name, typeParameters, colonTypeListClause, body);
+        return new InterfaceDeclaration(
+            sealedKeyword,
+            interfaceKeyword,
+            name,
+            typeParameters,
+            colonTypeListClause,
+            body
+        );
     }
 
     private InterfaceBody? ParseInterfaceBody()
@@ -126,7 +133,7 @@ public sealed class Parser
 
     private Break ParseBreak(Token keyword) => new(keyword);
     private Continue ParseContinue(Token keyword) => new(keyword);
-    
+
     private Statement ParseWhile(Token keyword)
     {
         var condition = ParseExpression();
@@ -165,10 +172,15 @@ public sealed class Parser
         if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
             return ParseDeclareVariableSignature(variableKeyword);
 
-        if (Match(out var interfaceKeyword, SyntaxKind.InterfaceKeyword))
+        if (Match(out var interfaceKeyword, SyntaxKind.InterfaceKeyword, SyntaxKind.SealedKeyword))
             return ParseInterfaceDeclaration(interfaceKeyword);
 
-        _diagnostics.Error(declareKeyword, InternalCodes.ExpectedDeclarationSignature, $"Expected declaration signature, got {SafeTokenText(MaybeCurrent())}.");
+        _diagnostics.Error(
+            MaybeCurrent() ?? declareKeyword,
+            InternalCodes.ExpectedDeclarationSignature,
+            $"Expected declaration signature, got {SafeTokenText(MaybeCurrent())}."
+        );
+
         return new NullStatement(declareKeyword);
     }
 
@@ -390,13 +402,13 @@ public sealed class Parser
         var body = new InterfaceInvocationBody(leftBrace, rightBrace, initializers);
         return new InterfaceInvocation(newKeyword, name, typeArguments, body);
     }
-    
+
     private Expression ParsePostfix()
     {
         var expression = ParsePrimary();
         while (!IsEof())
         {
-            if (Current() is { Kind: SyntaxKind.LParen  or SyntaxKind.ColonColonLArrow })
+            if (Current() is { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
             {
                 var typeArguments = ParseTypeArguments(forInvocation: true);
                 var leftParen = Expect(SyntaxKind.LParen);
@@ -427,7 +439,7 @@ public sealed class Parser
             var expression = ParseExpression();
             return new InterfaceInvocationPropertyInitializer(name, colon, expression);
         }
-        
+
         var leftBracket = Expect(SyntaxKind.LBracket, "property name or index initializer");
         var indexExpression = ParseExpression();
         var rightBracket = Expect(SyntaxKind.RBracket);
@@ -682,7 +694,7 @@ public sealed class Parser
 
         return null;
     }
-    
+
     private bool AssertDeclarationInsideOfBlock(Statement statement)
     {
         if (statement is not NamedDeclaration namedDeclaration)
@@ -703,7 +715,7 @@ public sealed class Parser
         closingArrow = null;
         if (IsEof())
             return false;
-        
+
         return Current().Kind switch
         {
             SyntaxKind.RArrow => (closingArrow = Advance()) != null,
@@ -712,14 +724,14 @@ public sealed class Parser
             _ => false
         };
     }
-    
+
     // evil token splitting function
     private bool SplitAndAdvance(int splitIndex, SyntaxKind remainderKind, out Token closingArrow)
     {
         var token = Current();
         var firstSpan = new LocationSpan(token.Span.Start, splitIndex);
         closingArrow = new Token(SyntaxKind.RArrow, firstSpan, token.Text[..splitIndex]);
-        
+
         var remainder = new Token(
             remainderKind,
             new LocationSpan(token.Span.Start + splitIndex, token.Span.Length - splitIndex),
@@ -773,6 +785,7 @@ public sealed class Parser
 
     private Token ExpectIdentifier(string expected = "identifier") => Expect(SyntaxKind.Identifier, expected);
     private Token Expect(SyntaxKind kind, string expected) => Expect(kind, token => $"Expected {expected}, got {SafeTokenText(token)}.");
+
     private Token Expect(SyntaxKind kind, Func<Token?, string>? message = null)
     {
         if (IsEof())

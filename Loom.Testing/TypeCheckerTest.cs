@@ -663,6 +663,17 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
+    
+    [Fact]
+    public void Checks_Declared_InterfaceDeclaration()
+    {
+        var type = Utility.GetLastStatementType("declare interface I { }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("I", iface.Name);
+        Assert.Empty(iface.Constraints);
+        Assert.Null(iface.ObjectType.Indexer);
+        Assert.Empty(iface.ObjectType.Properties);
+    }
 
     [Fact]
     public void Checks_InterfaceDeclaration_Empty()

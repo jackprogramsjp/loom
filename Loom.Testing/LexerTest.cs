@@ -124,8 +124,8 @@ public class LexerTest
         var tokens = Utility.GetTokens("true false");
         Assert.Equal(2, tokens.Count);
 
-        var first = tokens.First();
-        var second = tokens.Last();
+        var first = tokens[0];
+        var second = tokens[^1];
         var firstStart = first.Span.Start;
         var firstEnd = first.Span.End;
         var secondStart = second.Span.Start;
@@ -149,7 +149,7 @@ public class LexerTest
         var tokens = Utility.GetTokens("true");
         Assert.Single(tokens);
 
-        var token = tokens.First();
+        var token = tokens[0];
         var start = token.Span.Start;
         var end = token.Span.End;
         Assert.Equal(start.Line, end.Line);

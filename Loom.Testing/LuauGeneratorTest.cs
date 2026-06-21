@@ -209,6 +209,21 @@ public class LuauGeneratorTest
         Assert.Single(ifStatement.ElseBranch.Statements);
         Assert.IsType<Return>(ifStatement.ElseBranch.Statements[0]);
     }
+    
+    [Fact]
+    public void Generates_Declared_InterfaceDeclaration()
+    {
+        var luauTree = Utility.GetLuauAST("declare interface I;", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("I", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var tableType = Assert.IsType<TableType>(typeAlias.Type);
+        Assert.Null(tableType.Indexer);
+        Assert.Empty(tableType.Properties);
+    }
 
     [Fact]
     public void Generates_InterfaceDeclaration_NoBody()

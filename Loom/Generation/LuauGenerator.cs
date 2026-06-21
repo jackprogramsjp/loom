@@ -169,7 +169,7 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
         );
     }
 
-    public override LuauNode VisitDeclare(Declare declare) => new NoOpStatement();
+    public override LuauNode VisitDeclare(Declare declare) => declare.Signature is InterfaceDeclaration ? Visit(declare.Signature) : new NoOpStatement();
 
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
