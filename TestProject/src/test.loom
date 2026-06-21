@@ -1,1 +1,7 @@
-print("abc")
+sealed interface A {
+    foo: number;
+}
+
+interface B: A {
+    bar: string
+}

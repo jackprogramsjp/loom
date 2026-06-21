@@ -2,7 +2,7 @@ using Loom.Parsing.AST;
 
 namespace Loom.TypeChecking.Types;
 
-public class GenericType(GenericNamedDeclaration declaration, List<TypeParameter> parameters, Type underlyingType) : Type
+public sealed class GenericType(GenericNamedDeclaration declaration, List<TypeParameter> parameters, Type underlyingType) : Type
 {
     public GenericNamedDeclaration Declaration { get; } = declaration;
     public List<TypeParameter> Parameters { get; } = parameters;

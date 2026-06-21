@@ -1,6 +1,6 @@
 namespace Loom.Syntax;
 
-public class LocationSpan
+public sealed class LocationSpan
 {
     public LocationSpan(Location start, Location end)
     {

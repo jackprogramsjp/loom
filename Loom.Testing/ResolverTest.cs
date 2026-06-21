@@ -493,16 +493,23 @@ public class ResolverTest
         Assert.Equal(functionDeclaration, symbol.Declaration);
     }
     
-    [Fact]
-    public void Declares_InterfaceSymbol()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Declares_InterfaceSymbol(bool isSealed)
     {
-        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("interface Foo { foo: number }"));
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel((isSealed ? "sealed " : "") + "interface Foo { foo: number }"));
         var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.First());
         var symbol = model.GetDeclarationSymbol(interfaceDeclaration);
         Assert.NotNull(symbol);
-        Assert.Equal("Foo", symbol.Name);
-        Assert.Equal(SymbolKind.Type, symbol.Kind);
-        Assert.Equal(interfaceDeclaration, symbol.Declaration);
+        
+        var interfaceSymbol = Assert.IsType<InterfaceSymbol>(symbol);
+        Assert.Equal("Foo", interfaceSymbol.Name);
+        Assert.Equal(SymbolKind.Interface, interfaceSymbol.Kind);
+        Assert.Equal(interfaceDeclaration, interfaceSymbol.Declaration);
+        Assert.Equal(isSealed, interfaceSymbol.IsSealed);
+        Assert.False(interfaceSymbol.IsIntrinsic);
+        Assert.False(interfaceSymbol.IsMutable);
     }
 
     [Fact]

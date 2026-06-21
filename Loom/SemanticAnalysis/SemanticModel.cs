@@ -5,7 +5,7 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.SemanticAnalysis;
 
-public class SemanticModel(Tree tree, DiagnosticBag diagnostics, Dictionary<NodeId, Symbol> declarations, Dictionary<NodeId, Symbol> references)
+public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, Dictionary<NodeId, Symbol> declarations, Dictionary<NodeId, Symbol> references)
     : DiagnosedResult(diagnostics)
 {
     public Tree Tree { get; } = tree;

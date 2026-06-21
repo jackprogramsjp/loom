@@ -4,7 +4,7 @@ using Loom.Syntax;
 
 namespace Loom.Lexing;
 
-public class Lexer(SourceFile file)
+public sealed class Lexer(SourceFile file)
 {
     private readonly DiagnosticBag _diagnostics = new();
     private int _character, _position;

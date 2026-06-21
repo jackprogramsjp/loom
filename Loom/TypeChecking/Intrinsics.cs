@@ -1,5 +1,3 @@
-using System.Reflection;
-using Loom.Parsing.AST;
 using Loom.Projects;
 using Loom.SemanticAnalysis;
 using Loom.TypeChecking.Types;

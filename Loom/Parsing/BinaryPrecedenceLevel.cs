@@ -2,7 +2,7 @@ using Loom.Syntax;
 
 namespace Loom.Parsing;
 
-internal record BinaryPrecedenceLevel(bool RightAssociative, Predicate<SyntaxKind> Matches)
+internal sealed record BinaryPrecedenceLevel(bool RightAssociative, Predicate<SyntaxKind> Matches)
 {
     public static readonly BinaryPrecedenceLevel[] Levels =
     [

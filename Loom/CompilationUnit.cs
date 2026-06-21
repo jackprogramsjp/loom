@@ -10,7 +10,7 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom;
 
-public class CompilationUnit(LoomConfig loomConfig)
+public sealed class CompilationUnit(LoomConfig loomConfig)
 {
     public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(loomConfig.Files.SourceDirectory);
     public Dictionary<Symbol, Type> Globals { get; } = [];

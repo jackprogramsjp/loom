@@ -1,6 +1,6 @@
 namespace Loom.TypeChecking.Types;
 
-public class InstantiatedType(GenericType genericType, List<Type> arguments) : Type
+public sealed class InstantiatedType(GenericType genericType, List<Type> arguments) : Type
 {
     public GenericType GenericType { get; } = genericType;
     public List<Type> Arguments { get; } = arguments;

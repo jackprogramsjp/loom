@@ -1,6 +1,6 @@
 namespace Loom.Syntax;
 
-public class Location(SourceFile file, int character, int line, int position)
+public sealed class Location(SourceFile file, int character, int line, int position)
 {
     public SourceFile File { get; } = file;
     public int Character { get; } = character;

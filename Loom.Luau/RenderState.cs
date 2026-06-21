@@ -2,7 +2,7 @@ using Loom.Luau.AST;
 
 namespace Loom.Luau;
 
-public class RenderState
+public sealed class RenderState
 {
     public static string Indent { get; set; } = "  ";
     public static char StringDelimiter { get; set; } = '"';

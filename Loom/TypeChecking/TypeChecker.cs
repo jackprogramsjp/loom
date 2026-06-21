@@ -237,17 +237,6 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     {
         var name = interfaceDeclaration.Name.Text;
         var constraintTypes = interfaceDeclaration.ColonTypeListClause?.Types.ConvertAll(Visit) ?? [];
-        if (constraintTypes.Any(constraintType => constraintType is not InterfaceType))
-        {
-            _diagnostics.Error(
-                interfaceDeclaration.ColonTypeListClause!,
-                InternalCodes.InvalidInterfaceConstraint,
-                "Interfaces may only be constrained by other interfaces."
-            );
-
-            return Types.PrimitiveType.Never;
-        }
-
         var parameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
         var constraints = constraintTypes.OfType<InterfaceType>().ToList();
         var indexerDeclaration = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();

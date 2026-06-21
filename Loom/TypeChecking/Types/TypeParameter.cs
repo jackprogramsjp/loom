@@ -1,6 +1,6 @@
 namespace Loom.TypeChecking.Types;
 
-public class TypeParameter(string name, Type? constraint = null, Type? defaultType = null) : Type
+public sealed class TypeParameter(string name, Type? constraint = null, Type? defaultType = null) : Type
 {
     public string Name { get; } = name;
     public Type? Constraint { get; } = constraint;

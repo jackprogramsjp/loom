@@ -6,7 +6,7 @@ using Loom.Syntax;
 
 namespace Loom.Parsing;
 
-public class Parser
+public sealed class Parser
 {
     private delegate Statement StatementParser(Token keyword);
     
@@ -29,6 +29,7 @@ public class Parser
             [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
             [SyntaxKind.DeclareKeyword] = ParseDeclareStatement,
             [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
+            [SyntaxKind.SealedKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.IfKeyword] = ParseIf,
             [SyntaxKind.WhileKeyword] = ParseWhile,
             [SyntaxKind.BreakKeyword] = ParseBreak,
@@ -58,13 +59,16 @@ public class Parser
         return new ExpressionStatement(expression);
     }
 
-    private InterfaceDeclaration ParseInterfaceDeclaration(Token interfaceKeyword)
+    private InterfaceDeclaration ParseInterfaceDeclaration(Token keyword)
     {
+        var isSealed = keyword.Kind == SyntaxKind.SealedKeyword;
+        var interfaceKeyword = isSealed ? Expect(SyntaxKind.InterfaceKeyword) : keyword;
+        var sealedKeyword = isSealed ? keyword : null;
         var name = ExpectIdentifier("interface name");
         var typeParameters = ParseTypeParameters();
         var colonTypeListClause = ParseColonTypeListClause();
         var body = ParseInterfaceBody();
-        return new InterfaceDeclaration(interfaceKeyword, name, typeParameters, colonTypeListClause, body);
+        return new InterfaceDeclaration(sealedKeyword, interfaceKeyword, name, typeParameters, colonTypeListClause, body);
     }
 
     private InterfaceBody? ParseInterfaceBody()

@@ -2,7 +2,7 @@ using Loom.Syntax;
 
 namespace Loom.Lexing;
 
-public class LexerRule(LexerRuleKind kind, SyntaxKind syntax, string pattern)
+public sealed class LexerRule(LexerRuleKind kind, SyntaxKind syntax, string pattern)
 {
     public LexerRuleKind Kind { get; } = kind;
     public SyntaxKind Syntax { get; } = syntax;

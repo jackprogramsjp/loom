@@ -7,7 +7,7 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom;
 
-public class CompiledFile
+public sealed class CompiledFile
 {
     public required string Path { get; init; }
     public required DiagnosticBag Diagnostics { get; init; }

@@ -1,6 +1,6 @@
 namespace Loom.TypeChecking.Types;
 
-public class InterfaceType(string name, List<InterfaceType> constraints, ObjectType objectType)
+public sealed class InterfaceType(string name, List<InterfaceType> constraints, ObjectType objectType)
     : Type
 {
     public string Name { get; } = name;

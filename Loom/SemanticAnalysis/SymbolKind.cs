@@ -7,5 +7,5 @@ public enum SymbolKind : byte
     Parameter,
     Type,
     EnumType,
-    Property
+    Interface
 }

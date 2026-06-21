@@ -2,9 +2,7 @@ using Loom.Syntax;
 
 namespace Loom.TypeChecking;
 
-public class UnaryOperatorRule(SyntaxKind operatorKind, Types.Type operandType, Types.Type? returnType = null)
+internal sealed record UnaryOperatorRule(SyntaxKind OperatorKind, Types.Type OperandType, Types.Type? ReturnType = null)
 {
-    public SyntaxKind OperatorKind { get; } = operatorKind;
-    public Types.Type OperandType { get; } = operandType;
-    public Types.Type ReturnType { get; } = returnType ?? operandType;
+    public Types.Type ReturnType { get; } = ReturnType ?? OperandType;
 }

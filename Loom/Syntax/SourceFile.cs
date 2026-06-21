@@ -1,6 +1,6 @@
 namespace Loom.Syntax;
 
-public class SourceFile
+public sealed class SourceFile
 {
     public static readonly SourceFile Empty = new("<anonymous>", string.Empty);
     

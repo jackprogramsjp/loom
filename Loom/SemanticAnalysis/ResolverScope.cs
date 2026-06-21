@@ -2,7 +2,7 @@ using Loom.Parsing.AST;
 
 namespace Loom.SemanticAnalysis;
 
-public class ResolverScope
+internal sealed record ResolverScope
 {
     public Dictionary<NodeId, Symbol> Declarations { get; } = [];
     public Dictionary<NodeId, Symbol> References { get; } = [];

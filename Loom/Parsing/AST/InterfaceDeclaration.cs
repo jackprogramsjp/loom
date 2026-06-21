@@ -3,6 +3,7 @@ using Loom.Syntax;
 namespace Loom.Parsing.AST;
 
 public class InterfaceDeclaration(
+    Token? sealedKeyword,
     Token keyword,
     Token name,
     TypeParameters? typeParameters,
@@ -10,7 +11,7 @@ public class InterfaceDeclaration(
     InterfaceBody? body
 )
     : GenericNamedDeclaration(
-        [],
+        sealedKeyword != null ? [sealedKeyword] : [],
         keyword,
         name,
         typeParameters,
@@ -18,6 +19,7 @@ public class InterfaceDeclaration(
         body
     )
 {
+    public Token? SealedKeyword { get; } = sealedKeyword;
     public ColonTypeListClause? ColonTypeListClause { get; } = colonTypeListClause;
     public InterfaceBody? Body { get; } = body;
 

@@ -1,13 +1,8 @@
 namespace Loom.TypeChecking.Types;
 
-public class IntersectionType : Type
+public sealed class IntersectionType(List<Type> types) : Type
 {
-    public List<Type> Types { get; }
-
-    public IntersectionType(List<Type> types)
-    {
-        Types = types;
-    }
+    public List<Type> Types { get; } = types;
 
     public override bool Equals(Type? other) => other is IntersectionType intersection && ListEquals(Types, intersection.Types);
 

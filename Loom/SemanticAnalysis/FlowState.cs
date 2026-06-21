@@ -1,6 +1,6 @@
 namespace Loom.SemanticAnalysis;
 
-internal record FlowState(HashSet<Symbol> DefinitelyInitialized, HashSet<Symbol> MaybeInitialized, bool IsUnreachable = false)
+internal sealed record FlowState(HashSet<Symbol> DefinitelyInitialized, HashSet<Symbol> MaybeInitialized, bool IsUnreachable = false)
 {
     public bool IsUnreachable { get; set; } = IsUnreachable;
 

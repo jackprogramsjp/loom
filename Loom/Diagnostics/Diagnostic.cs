@@ -1,10 +1,9 @@
-using System.Text;
 using Loom.Syntax;
 using Loom.Utility;
 
 namespace Loom.Diagnostics;
 
-public class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? code, string message, string? hint)
+public sealed class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? code, string message, string? hint)
 {
     public LocationSpan Span { get; } = span;
     public DiagnosticSeverity Severity { get; } = severity;

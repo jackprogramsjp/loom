@@ -1,6 +1,6 @@
 namespace Loom.Syntax;
 
-public class Token
+public sealed class Token
 {
     public Token(SyntaxKind kind, LocationSpan span, string? text = null)
     {

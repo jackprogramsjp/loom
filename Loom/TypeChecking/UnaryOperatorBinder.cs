@@ -5,7 +5,7 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.TypeChecking;
 
-public static class UnaryOperatorBinder
+internal static class UnaryOperatorBinder
 {
     private static readonly HashSet<UnaryOperatorRule> _rules =
     [

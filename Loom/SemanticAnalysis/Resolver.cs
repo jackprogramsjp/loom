@@ -7,7 +7,7 @@ using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
 
-public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
+public sealed class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
     : Visitor<bool>(true)
 {
     private readonly DiagnosticBag _diagnostics = new();
@@ -19,30 +19,11 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
 
     public SemanticModel Resolve()
     {
-        var semanticModel = new SemanticModel(
-            parserResult.Tree,
-            _diagnostics,
-            _allDeclarations,
-            _allReferences
-        );
-
+        var semanticModel = new SemanticModel(parserResult.Tree, _diagnostics, _allDeclarations, _allReferences);
         PushScope();
         PushFlowState(new FlowState([], []));
-
-        var intrinsicSymbols = Intrinsics.Register(semanticModel);
-        foreach (var symbol in intrinsicSymbols)
-        {
-            DeclareSymbol(symbol);
-            if (symbol.Kind is not (SymbolKind.Type or SymbolKind.EnumType))
-                MarkDefinitelyInitialized(symbol);
-        }
-
-        foreach (var (symbol, type) in compilationUnit.Globals)
-        {
-            DeclareSymbol(symbol);
-            semanticModel.TypeSolver.SetType(symbol.Declaration, type);
-        }
-
+        DeclareIntrinsicSymbols(semanticModel);
+        DeclareGlobalSymbols(semanticModel);
         VisitTree(parserResult.Tree);
         PopFlowState();
         PopScope();
@@ -76,7 +57,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         _context = ResolverContext.Loop;
         var bodyState = PushFlowAndVisitBranch(@while.Body, beforeLoop);
         _context = lastContext;
-        
+
         if (bodyState == null)
             return false;
 
@@ -117,7 +98,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         _flowStates.Push(new FlowState(definitely, maybe, beforeIf.IsUnreachable || thenState.IsUnreachable && elseState.IsUnreachable));
         return true;
     }
-    
+
     public override bool VisitContinue(Continue @continue)
     {
         if (_context == ResolverContext.Loop)
@@ -216,37 +197,26 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
 
     public override bool VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
-        if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol) || !DeclareType(interfaceDeclaration))
+        if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol))
             return false;
 
-        MarkDefinitelyInitialized(valueSymbol);
-        if (interfaceDeclaration.Body != null)
+        var scope = CurrentScope();
+        var name = valueSymbol.Name;
+        if (scope.TypeLookup.ContainsKey(name))
         {
-            var name = interfaceDeclaration.Name.Text;
-            var members = interfaceDeclaration.Body.Members;
-            var indexers = members.OfType<IndexerDeclaration>().ToList();
-            if (indexers.Count > 1)
-            {
-                foreach (var extraIndexer in indexers.Skip(1))
-                    _diagnostics.Error(extraIndexer, InternalCodes.DuplicateIndexer, $"Type '{name}' may only have one indexer.");
-
-                return false;
-            }
-
-            var properties = members.OfType<PropertyDeclaration>().ToList();
-            var propertyNames = properties.Select(p => p.Name.Text);
-            var duplicates = propertyNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
-            if (duplicates.Count > 0)
-            {
-                foreach (var duplicate in duplicates)
-                {
-                    var property = properties.FindLast(p => p.Name.Text == duplicate)!;
-                    _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{name}'");
-                }
-
-                return false;
-            }
+            _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"Interface '{name}' is already declared in this scope.");
+            return false;
         }
+
+        var isSealed = interfaceDeclaration.SealedKeyword != null;
+        var symbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed);
+        DeclareSymbol(symbol);
+        MarkDefinitelyInitialized(valueSymbol);
+        if (!ResolveInterfaceBody(interfaceDeclaration.Body, name))
+            return false;
+
+        if (!ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
+            return false;
 
         PushScope();
         base.VisitInterfaceDeclaration(interfaceDeclaration);
@@ -339,7 +309,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
             return base.VisitAssignmentOperator(assignmentOperator);
 
         var name = identifier.Name.Text;
-        var symbol = LookupValueId(name);
+        var symbol = LookupValueSymbol(name);
         if (symbol == null)
             return base.VisitAssignmentOperator(assignmentOperator);
 
@@ -362,14 +332,14 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
     public override bool VisitIdentifier(Identifier identifier)
     {
         var name = identifier.Name.Text;
-        var symbol = LookupValueId(name);
+        var symbol = LookupValueSymbol(name);
         if (symbol == null)
         {
             _diagnostics.Error(identifier, InternalCodes.CannotFindName, $"Cannot find name '{name}'.");
             return false;
         }
 
-        if (symbol.Kind is SymbolKind.Variable or SymbolKind.Parameter or SymbolKind.Function && !IsDefinitelyInitialized(symbol))
+        if (symbol.IsValueSymbol && !IsDefinitelyInitialized(symbol))
         {
             if (IsMaybeInitialized(symbol))
                 _diagnostics.Error(identifier, InternalCodes.UseOfMaybeUninitialized, $"Variable '{name}' might not be initialized on this path.");
@@ -392,7 +362,7 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
     public override bool VisitTypeName(TypeName typeName)
     {
         var name = typeName.Name.Text;
-        var symbol = LookupSymbol(name, SymbolKind.Type) ?? LookupSymbol(name, SymbolKind.EnumType);
+        var symbol = LookupTypeSymbol(name);
         if (symbol == null)
         {
             _diagnostics.Error(typeName, InternalCodes.CannotFindName, $"Cannot find type '{name}'.");
@@ -407,6 +377,61 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
     public override bool VisitLiteralType(LiteralType literalType) => true;
     public override bool VisitPrimitiveType(PrimitiveType primitiveType) => true;
     public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter);
+    
+    private bool ResolveInterfaceBody(InterfaceBody? body, string name)
+    {
+        if (body == null)
+            return true;
+
+        var indexers = body.Members.OfType<IndexerDeclaration>().ToList();
+        if (indexers.Count > 1)
+        {
+            foreach (var extraIndexer in indexers.Skip(1))
+                _diagnostics.Error(extraIndexer, InternalCodes.DuplicateIndexer, $"Type '{name}' may only have one indexer.");
+
+            return false;
+        }
+
+        var properties = body.Members.OfType<PropertyDeclaration>().ToList();
+        var propertyNames = properties.Select(p => p.Name.Text);
+        var duplicates = propertyNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        if (duplicates.Count <= 0)
+            return true;
+
+        foreach (var duplicate in duplicates)
+        {
+            var property = properties.FindLast(p => p.Name.Text == duplicate)!;
+            _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{name}'");
+        }
+
+        return false;
+    }
+
+    private bool ResolveInterfaceConstraints(ColonTypeListClause? colonTypeListClause, InterfaceSymbol symbol)
+    {
+        if (colonTypeListClause == null)
+            return true;
+        
+        foreach (var constraint in colonTypeListClause.Types)
+        {
+            if (constraint is not TypeName typeName)
+                return ReportInvalidInterfaceConstraint(constraint);
+                
+            var constraintSymbol = LookupTypeSymbol(typeName.Name.Text);
+            if (constraintSymbol is not InterfaceSymbol interfaceSymbol)
+                return ReportInvalidInterfaceConstraint(constraint);
+
+            if (!interfaceSymbol.IsSealed) continue;
+            _diagnostics.Error(
+                constraint,
+                InternalCodes.InheritFromSealed,
+                $"Cannot constrain interface '{symbol.Name}' with sealed interface '{interfaceSymbol.Name}'"
+            );
+            return false;
+        }
+
+        return true;
+    }
 
     private bool ResolveStatements(List<Statement> statements) =>
         statements.All(statement =>
@@ -466,8 +491,13 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         if (parserResult.Tree.File.IsDeclaration)
             symbol.IsGlobal = true;
     }
+    
+    private Symbol? LookupTypeSymbol(string name) =>
+        LookupSymbol(name, SymbolKind.Type)
+        ?? LookupSymbol(name, SymbolKind.EnumType)
+        ?? LookupSymbol(name, SymbolKind.Interface);
 
-    private Symbol? LookupValueId(string name) =>
+    private Symbol? LookupValueSymbol(string name) =>
         LookupSymbol(name, SymbolKind.Variable)
         ?? LookupSymbol(name, SymbolKind.Function)
         ?? LookupSymbol(name, SymbolKind.Parameter);
@@ -485,11 +515,11 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
     }
 
     private static Dictionary<string, Symbol> GetLookup(SymbolKind kind, ResolverScope scope) =>
-        kind is SymbolKind.Type or SymbolKind.EnumType ? scope.TypeLookup : scope.VariableLookup;
+        Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
     private void MarkDefinitelyInitialized(Symbol symbol)
     {
-        if (symbol.Kind is SymbolKind.Type or SymbolKind.EnumType)
+        if (!symbol.IsValueSymbol)
         {
             _diagnostics.CompilerError(symbol.Declaration, "Attempt to mark symbol as initialized - but symbol is not a value symbol");
             return;
@@ -528,6 +558,37 @@ public class Resolver(ParserResult parserResult, CompilationUnit compilationUnit
         var ok = Visit(node);
         var state = PopFlowState();
         return ok ? state : null;
+    }
+    
+    private bool ReportInvalidInterfaceConstraint(TypeExpression constraint)
+    {
+        _diagnostics.Error(
+            constraint,
+            InternalCodes.InvalidInterfaceConstraint,
+            "Interfaces may only be constrained by other interfaces."
+        );
+
+        return false;
+    }
+    
+    private void DeclareGlobalSymbols(SemanticModel semanticModel)
+    {
+        foreach (var (symbol, type) in compilationUnit.Globals)
+        {
+            DeclareSymbol(symbol);
+            semanticModel.TypeSolver.SetType(symbol.Declaration, type);
+        }
+    }
+
+    private void DeclareIntrinsicSymbols(SemanticModel semanticModel)
+    {
+        var intrinsicSymbols = Intrinsics.Register(semanticModel);
+        foreach (var symbol in intrinsicSymbols)
+        {
+            DeclareSymbol(symbol);
+            if (symbol.IsValueSymbol)
+                MarkDefinitelyInitialized(symbol);
+        }
     }
 
     private void PushFlowState(FlowState state) => _flowStates.Push(state);

@@ -54,4 +54,5 @@ public static class InternalCodes
     public const string IncompleteInterfaceInvocation = "L333";
     public const string BreakOutsideLoop = "L334";
     public const string ContinueOutsideLoop = "L335";
+    public const string InheritFromSealed = "L336";
 }

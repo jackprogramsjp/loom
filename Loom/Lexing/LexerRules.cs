@@ -11,7 +11,7 @@ public static class LexerRules
     private const string FloatScientific = $"({Float}[eE]{Int})";
     private const string Float = $@"({Int}\.{Int}|\.{Int}|{Int}\.{Int})";
     private const string IntScientific = $"({Int}[eE]{Int})";
-    private const string HexInt = $"(0[xX][a-fA-F0-9_]+)";
+    private const string HexInt = "(0[xX][a-fA-F0-9_]+)";
     private const string BinaryInt = "(0[bB][01_]+)";
     private const string OctalInt = "(0[oO][0-7_]+)";
     private const string Number = $"({HexInt}|{BinaryInt}|{OctalInt}|{FloatScientific}|{IntScientific}|{Float}|{Int})";

@@ -3,7 +3,7 @@ using Loom.Syntax;
 
 namespace Loom.Diagnostics;
 
-public class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
+public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
 {
     public static bool FailFast { get; set; } = true;
     public static DiagnosticBag Concat(List<DiagnosticBag> bags) => new(bags.SelectMany(bag => bag.Set).ToHashSet());
