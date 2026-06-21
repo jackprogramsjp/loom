@@ -1081,7 +1081,7 @@ public class ParserTest
         Assert.Single(fnType.TypeParameters.ParameterList);
         var tp = fnType.TypeParameters.ParameterList.First();
         Assert.Equal("T", tp.Name.Text);
-        Assert.Null(tp.ColonTypeClause); // no constraint
+        Assert.Null(tp.ColonTypeClause);
 
         Assert.NotNull(fnType.Parameters);
         Assert.Single(fnType.Parameters.ParameterList);

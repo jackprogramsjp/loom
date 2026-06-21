@@ -69,11 +69,12 @@ public class TypesTest
         var interfaceCoord = new InterfaceType("Coord", [], objectType);
         Assert.True(interfacePoint.IsAssignableTo(interfaceCoord));
         Assert.True(interfaceCoord.IsAssignableTo(interfacePoint));
-        
+
         var object3D = new ObjectType(
             null,
             [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", Number), new ObjectProperty(false, "z", Number)]
         );
+
         var interfacePoint3D = new InterfaceType("Point3D", [], object3D);
         Assert.True(interfacePoint3D.IsAssignableTo(interfacePoint));
         Assert.False(interfacePoint.IsAssignableTo(interfacePoint3D));
@@ -556,6 +557,87 @@ public class TypesTest
     }
 
     [Fact]
+    public void TypeVariable_Equality_SameId()
+    {
+        var a = new TypeVariable(1);
+        var b = new TypeVariable(1);
+        var c = new TypeVariable(2);
+
+        Assert.True(a.Equals(a));
+        Assert.True(a.Equals(b));
+        Assert.True(b.Equals(a));
+        Assert.False(a.Equals(c));
+        Assert.False(b.Equals(c));
+        Assert.False(c.Equals(a));
+    }
+
+    [Fact]
+    public void TypeVariable_Equality_WithOtherTypes()
+    {
+        var tv = new TypeVariable(0);
+        Assert.False(tv.Equals(Number));
+        Assert.False(tv.Equals(new LiteralType(42)));
+        Assert.False(tv.Equals(null));
+    }
+
+    [Fact]
+    public void TypeVariable_AsTypeArgument_InFunctionType_DoesNotBreakEquality()
+    {
+        var fn1 = new FunctionType([new TypeParameter("T")], [Number], Bool);
+        var fn2 = new FunctionType([new TypeParameter("T")], [Number], Bool);
+        var fn3 = new FunctionType([new TypeParameter("U")], [String], Bool);
+
+        Assert.True(fn1.Equals(fn2));
+        Assert.False(fn1.Equals(fn3));
+    }
+
+    [Fact]
+    public void TypeParameter_Equality_SameName()
+    {
+        var a = new TypeParameter("T");
+        var b = new TypeParameter("T");
+        var c = new TypeParameter("U");
+
+        Assert.True(a.Equals(b));
+        Assert.True(a.Equals(c));
+    }
+
+    [Fact]
+    public void TypeParameter_Equality_WithConstraints()
+    {
+        var a = new TypeParameter("T", Number);
+        var b = new TypeParameter("T", Number);
+        var c = new TypeParameter("T", String);
+
+        Assert.True(a.Equals(b));
+        Assert.False(a.Equals(c));
+    }
+
+    [Fact]
+    public void TypeParameter_Equality_WithDefaults()
+    {
+        var a = new TypeParameter("T", null, new LiteralType(0));
+        var b = new TypeParameter("T", null, new LiteralType(0));
+        var c = new TypeParameter("T", null, new LiteralType(1));
+
+        Assert.True(a.Equals(b));
+        Assert.False(a.Equals(c));
+    }
+
+    [Fact]
+    public void TypeParameter_Equality_WithConstraintAndDefault()
+    {
+        var a = new TypeParameter("T", Number, new LiteralType(42));
+        var b = new TypeParameter("T", Number, new LiteralType(42));
+        var c = new TypeParameter("T", Number, new LiteralType(0));
+        var d = new TypeParameter("T", String, new LiteralType(42));
+
+        Assert.True(a.Equals(b));
+        Assert.False(a.Equals(c));
+        Assert.False(a.Equals(d));
+    }
+
+    [Fact]
     public void InterfaceType_Equality_DifferentNames()
     {
         var obj = new ObjectType(null, [new ObjectProperty(false, "x", Number)]);
@@ -975,6 +1057,14 @@ public class TypesTest
         var nonNullable = union.NonNullable();
         Assert.False(Type.IsOptional(nonNullable));
         Assert.Same(Number, nonNullable);
+    }
+
+    [Fact]
+    public void TypeVariable_ToString()
+    {
+        Assert.Equal("T0", new TypeVariable(0).ToString());
+        Assert.Equal("T1", new TypeVariable(1).ToString());
+        Assert.Equal("T42", new TypeVariable(42).ToString());
     }
 
     [Fact]
