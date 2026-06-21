@@ -48,6 +48,7 @@ type Union<A, B> = A | B
 const x: Union<boolean, string> = false
 ```
 ##
+Loom supports extended number literals that let you do boilerplate math to convert to a specific unit instantaneously.
 ```rs
 let a = 10s;
 let b = 100ms;
@@ -93,6 +94,7 @@ x = y
 const z = x
 ```
 ##
+Loom supports shorthand function bodies that return single expressions.
 ```rs
 fn one -> 1;
 ```
@@ -131,6 +133,7 @@ let arr: number[] = [1, 2, 3];
 const arr: { number } = {1, 2, 3}
 ```
 ##
+Arrays are immutable by default, but can be declared as mutable.
 ```rs
 let arr: number[mut] = mut [1, 2, 3];
 ```
@@ -138,8 +141,9 @@ let arr: number[mut] = mut [1, 2, 3];
 const arr: { number } = {1, 2, 3}
 ```
 ##
+Assignments are expressions in loom.
 ```rs
-let arr: number[mut] = mut [1, 2, 3];
+let arr = mut [1, 2, 3];
 let x = arr[1] = 69;
 ```
 ```luau
@@ -148,6 +152,7 @@ const x = 69
 arr[1] = x
 ```
 ##
+The `nameof` operator can be used to read the tokens of `Name` expressions as a string.
 ```rs
 let abc = 69;
 let name = nameof(abc)
@@ -157,6 +162,7 @@ const abc = 69;
 const name = "abc"
 ```
 ##
+Ranges are constructs that represent a minimum and a maximum number.
 ```rs
 let range = 1..10;
 ```
@@ -164,6 +170,7 @@ let range = 1..10;
 const range = { minimum = 1, maximum = 10 }
 ```
 ##
+They can be used to slice arrays.
 ```rs
 let range = 1..3;
 let arr = [1, 2, 3, 4, 5];
@@ -186,6 +193,7 @@ const _length = #arr
 const slice = table.move(arr, math.clamp(1, 1, _length), math.clamp(3, 1, _length), 1, {})
 ```
 ##
+As well as strings.
 ```rs
 let s = "abcdef";
 let slice = s[1..3];
@@ -220,6 +228,7 @@ const range = { minimum = 1, maximum = 10 }
 const name = "range.minimum"
 ```
 ##
+Enums are named compile-time constants.
 ```rs
 enum Abc { A, B = 69, C }
 let a = Abc.A;
@@ -233,6 +242,7 @@ const b = 69
 const c = 70
 ```
 ##
+They can also be used with strings.
 ```rs
 enum Tag: string {
     Lava = "lava",
@@ -260,6 +270,7 @@ elseif 69 == 69 then
 end
 ```
 ##
+Declare statements allow you to declare types for symbols that may not exist in your file but you know exist in your environment.
 ```rs
 declare fn print(msg: unknown): void;
 print("hello, world!");
@@ -322,6 +333,7 @@ interface ImmutRecord<K, V> {
 type ImmutRecord<K, V> = { read [K]: V }
 ```
 ##
+In this example `S` resolves to `number`.
 ```ts
 interface Foo { bar: string }
 type S = Foo["bar"];
