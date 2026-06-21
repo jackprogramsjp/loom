@@ -651,6 +651,22 @@ public class ParserTest
         var indexType = Assert.IsType<LiteralType>(indexed.IndexType);
         Assert.Equal("0", indexType.Token.Text);
     }
+    
+    [Fact]
+    public void Parses_Sealed_InterfaceDeclaration()
+    {
+        var tree = Utility.GetAST("sealed interface I;");
+        Assert.Single(tree.Statements);
+
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.Equal("I", iface.Name.Text);
+        Assert.NotNull(iface.SealedKeyword);
+        Assert.Null(iface.TypeParameters);
+        Assert.Null(iface.ColonTypeListClause);
+        Assert.Null(iface.Body);
+        Assert.Equal(SyntaxKind.InterfaceKeyword, iface.Keyword.Kind);
+        Assert.Equal(SyntaxKind.SealedKeyword, iface.SealedKeyword.Kind);
+    }
 
     [Fact]
     public void Parses_InterfaceDeclaration_NoBody()
@@ -660,8 +676,26 @@ public class ParserTest
 
         var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
         Assert.Equal("I", iface.Name.Text);
+        Assert.Null(iface.SealedKeyword);
         Assert.Null(iface.TypeParameters);
         Assert.Null(iface.ColonTypeListClause);
+        Assert.Null(iface.Body);
+        Assert.Equal(SyntaxKind.InterfaceKeyword, iface.Keyword.Kind);
+    }
+    
+    [Fact]
+    public void Parses_InterfaceDeclaration_NoBody_WithExtras()
+    {
+        var tree = Utility.GetAST("interface I<T, U>: A, B;");
+        Assert.Single(tree.Statements);
+
+        var iface = Assert.IsType<InterfaceDeclaration>(tree.Statements.First());
+        Assert.Equal("I", iface.Name.Text);
+        Assert.Null(iface.SealedKeyword);
+        Assert.NotNull(iface.TypeParameters);
+        Assert.Equal(2, iface.TypeParameters.ParameterList.Count);
+        Assert.NotNull(iface.ColonTypeListClause);
+        Assert.Equal(2, iface.ColonTypeListClause.Types.Count);
         Assert.Null(iface.Body);
         Assert.Equal(SyntaxKind.InterfaceKeyword, iface.Keyword.Kind);
     }

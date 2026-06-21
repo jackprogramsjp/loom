@@ -49,7 +49,7 @@ public static class InternalCodes
     public const string ReturnOutsideFunction = "L328";
     public const string UnreachableCode = "L329";
     public const string DuplicateIndexer = "L330";
-    public const string InvalidInterfaceConstraint = "L331";
+    public const string NonInterfaceConstraint = "L331";
     public const string RuntimeInDeclarationFile = "L332";
     public const string IncompleteInterfaceInvocation = "L333";
     public const string BreakOutsideLoop = "L334";

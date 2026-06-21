@@ -414,17 +414,6 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void ThrowsFor_Interface_ConstraintNotInterface()
-    {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I : number { }");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.InvalidInterfaceConstraint,
-            "Interfaces may only be constrained by other interfaces."
-        );
-    }
-
-    [Fact]
     public void ThrowsFor_AssignToImmutable_ObjectIndexer()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(

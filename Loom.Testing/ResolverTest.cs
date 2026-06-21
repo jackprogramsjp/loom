@@ -173,9 +173,7 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_Interface_DuplicateIndexer()
     {
-        var diagnostics = Utility.GetSemanticModel(
-            "interface I { [number]: string, [string]: bool }"
-        ).Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("interface I { [number]: string, [string]: bool }").Diagnostics;
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.DuplicateIndexer,
@@ -186,9 +184,7 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_Interface_DuplicateProperty()
     {
-        var diagnostics = Utility.GetSemanticModel(
-            "interface I { x: number, x: string }"
-        ).Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("interface I { x: number, x: string }").Diagnostics;
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.DuplicateName,
@@ -199,9 +195,7 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_Parameter_MissingTypeAndDefault()
     {
-        var diagnostics = Utility.GetSemanticModel(
-            "fn foo(x) {}"
-        ).Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("fn foo(x) {}").Diagnostics;
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.MustHaveDefaultOrType,
@@ -233,19 +227,32 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_BreakInsideFunctionInsideLoop()
     {
-        var diagnostics = Utility.GetSemanticModel(
-            "while true { fn inner() { break } }"
-        ).Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("while true { fn inner() { break } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
     }
 
     [Fact]
     public void ThrowsFor_ContinueInsideFunctionInsideLoop()
     {
-        var diagnostics = Utility.GetSemanticModel(
-            "while true { fn inner() { continue } }"
-        ).Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("while true { fn inner() { continue } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_Sealed_Inheritance()
+    {
+        var diagnostics = Utility.GetSemanticModel("sealed interface A; interface B: A;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InheritFromSealed, $"Cannot constrain interface 'B' with sealed interface 'A'.");
+    }
+    
+    [Theory]
+    [InlineData("interface I : number;")]
+    [InlineData("interface I : 69;")]
+    [InlineData("type A = number; interface I : A;")]
+    public void ThrowsFor_Interface_ConstraintNotInterface(string source)
+    {
+        var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.NonInterfaceConstraint, "Interfaces may only be constrained by other interfaces.");
     }
     
     [Theory]

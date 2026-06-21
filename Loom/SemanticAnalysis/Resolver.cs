@@ -415,17 +415,17 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         foreach (var constraint in colonTypeListClause.Types)
         {
             if (constraint is not TypeName typeName)
-                return ReportInvalidInterfaceConstraint(constraint);
+                return ReportNonInterfaceConstraint(constraint);
                 
             var constraintSymbol = LookupTypeSymbol(typeName.Name.Text);
             if (constraintSymbol is not InterfaceSymbol interfaceSymbol)
-                return ReportInvalidInterfaceConstraint(constraint);
+                return ReportNonInterfaceConstraint(constraint);
 
             if (!interfaceSymbol.IsSealed) continue;
             _diagnostics.Error(
                 constraint,
                 InternalCodes.InheritFromSealed,
-                $"Cannot constrain interface '{symbol.Name}' with sealed interface '{interfaceSymbol.Name}'"
+                $"Cannot constrain interface '{symbol.Name}' with sealed interface '{interfaceSymbol.Name}'."
             );
             return false;
         }
@@ -560,11 +560,11 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return ok ? state : null;
     }
     
-    private bool ReportInvalidInterfaceConstraint(TypeExpression constraint)
+    private bool ReportNonInterfaceConstraint(TypeExpression constraint)
     {
         _diagnostics.Error(
             constraint,
-            InternalCodes.InvalidInterfaceConstraint,
+            InternalCodes.NonInterfaceConstraint,
             "Interfaces may only be constrained by other interfaces."
         );
 
