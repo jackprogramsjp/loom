@@ -148,21 +148,6 @@ public sealed class Parser
         return new If(keyword, condition, thenBranch, elseBranch);
     }
 
-    private bool AssertDeclarationInsideOfBlock(Statement statement)
-    {
-        if (statement is not NamedDeclaration namedDeclaration)
-            return true;
-
-        _diagnostics.Error(
-            namedDeclaration,
-            InternalCodes.DeclarationOutsideOfBlock,
-            "Declarations can only be declared inside of a block.",
-            "surround with '{' and '}'"
-        );
-
-        return false;
-    }
-
     private Statement ParseDeclareStatement(Token declareKeyword)
     {
         var statement = ParseDeclareSignature(declareKeyword);
@@ -179,6 +164,9 @@ public sealed class Parser
 
         if (Match(out var variableKeyword, SyntaxKind.LetKeyword, SyntaxKind.MutKeyword))
             return ParseDeclareVariableSignature(variableKeyword);
+
+        if (Match(out var interfaceKeyword, SyntaxKind.InterfaceKeyword))
+            return ParseInterfaceDeclaration(interfaceKeyword);
 
         _diagnostics.Error(declareKeyword, InternalCodes.ExpectedDeclarationSignature, $"Expected declaration signature, got {SafeTokenText(MaybeCurrent())}.");
         return new NullStatement(declareKeyword);
@@ -693,6 +681,21 @@ public sealed class Parser
         );
 
         return null;
+    }
+    
+    private bool AssertDeclarationInsideOfBlock(Statement statement)
+    {
+        if (statement is not NamedDeclaration namedDeclaration)
+            return true;
+
+        _diagnostics.Error(
+            namedDeclaration,
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        );
+
+        return false;
     }
 
     private bool MatchClosingArrow([MaybeNullWhen(false)] out Token closingArrow)

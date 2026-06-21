@@ -365,10 +365,11 @@ public class ParserTest
 
         var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
         var invocation = Assert.IsType<InterfaceInvocation>(exprStmt.Expression);
-        Assert.Equal("Foo", ((Identifier)invocation.Name).Name.Text);
+        Assert.Equal("Foo", invocation.Name.Token.Text);
         Assert.Null(invocation.TypeArguments);
         Assert.NotNull(invocation.Body);
         Assert.Empty(invocation.Body.Initializers);
+        Assert.Equal(SyntaxKind.NewKeyword, invocation.Keyword.Kind);
         Assert.Equal(SyntaxKind.LBrace, invocation.Body.LeftBrace.Kind);
         Assert.Equal(SyntaxKind.RBrace, invocation.Body.RightBrace.Kind);
     }

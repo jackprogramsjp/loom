@@ -1,7 +1,9 @@
-sealed interface A {
+declare interface Foo {
     foo: number;
 }
 
-interface B: A {
-    bar: string
-}
+type X = Foo["foo"];
+
+let x: X = 1;
+
+let foo = new Foo { foo: 69 }

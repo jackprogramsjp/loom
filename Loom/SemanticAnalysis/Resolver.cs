@@ -200,19 +200,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol))
             return false;
 
-        var scope = CurrentScope();
-        var name = valueSymbol.Name;
-        if (scope.TypeLookup.ContainsKey(name))
-        {
-            _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"Interface '{name}' is already declared in this scope.");
-            return false;
-        }
-
         var isSealed = interfaceDeclaration.SealedKeyword != null;
-        var symbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed);
-        DeclareSymbol(symbol);
+        if (!DeclareInterface(interfaceDeclaration, isSealed, out var symbol))
+            return false;
+
         MarkDefinitelyInitialized(valueSymbol);
-        if (!ResolveInterfaceBody(interfaceDeclaration.Body, name))
+        if (!ResolveInterfaceBody(interfaceDeclaration.Body, valueSymbol.Name))
             return false;
 
         if (!ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
@@ -229,15 +222,25 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         var symbolKind = declare.Signature switch
         {
+            InterfaceDeclaration => SymbolKind.Interface,
             DeclareFunctionSignature => SymbolKind.Function,
             _ => SymbolKind.Variable
         };
 
-        var isMutable = declare.Signature is DeclareVariableSignature { Keyword.Kind: SyntaxKind.MutKeyword };
-        if (!DeclareVariable(declare.Signature, symbolKind, out var symbol, isMutable))
-            return false;
+        if (Symbol.IsValueKind(symbolKind))
+        {
+            var isMutable = declare.Signature is DeclareVariableSignature { Keyword.Kind: SyntaxKind.MutKeyword };
+            if (!DeclareVariable(declare.Signature, symbolKind, out var symbol, isMutable))
+                return false;
 
-        MarkDefinitelyInitialized(symbol);
+            MarkDefinitelyInitialized(symbol);
+        }
+        else if (declare.Signature is InterfaceDeclaration interfaceDeclaration)
+        {
+            var isSealed = interfaceDeclaration.SealedKeyword != null;
+            return DeclareInterface(interfaceDeclaration, isSealed, out _);
+        }
+
         return base.VisitDeclare(declare);
     }
 
@@ -301,7 +304,27 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    public override bool VisitLiteral(Literal literal) => true;
+    public override bool VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
+    {
+        var name = interfaceInvocation.Name.Token.Text;
+        var symbol = LookupValueSymbol(name) ?? LookupTypeSymbol(name);
+        switch (symbol)
+        {
+            case null:
+                _diagnostics.Error(interfaceInvocation.Name, InternalCodes.CannotFindSymbol, $"Cannot find interface symbol '{name}'.");
+                return false;
+            case InterfaceSymbol:
+                _diagnostics.Error(
+                    interfaceInvocation,
+                    InternalCodes.InvokedDeclaredInterface,
+                    $"Cannot invoke interface '{name}' because it was declared as type."
+                );
+
+                return false;
+        }
+        
+        return base.VisitInterfaceInvocation(interfaceInvocation);
+    }
 
     public override bool VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
@@ -374,10 +397,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    public override bool VisitLiteralType(LiteralType literalType) => true;
-    public override bool VisitPrimitiveType(PrimitiveType primitiveType) => true;
     public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter);
-    
+
     private bool ResolveInterfaceBody(InterfaceBody? body, string name)
     {
         if (body == null)
@@ -411,12 +432,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         if (colonTypeListClause == null)
             return true;
-        
+
         foreach (var constraint in colonTypeListClause.Types)
         {
             if (constraint is not TypeName typeName)
                 return ReportNonInterfaceConstraint(constraint);
-                
+
             var constraintSymbol = LookupTypeSymbol(typeName.Name.Text);
             if (constraintSymbol is not InterfaceSymbol interfaceSymbol)
                 return ReportNonInterfaceConstraint(constraint);
@@ -427,6 +448,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                 InternalCodes.InheritFromSealed,
                 $"Cannot constrain interface '{symbol.Name}' with sealed interface '{interfaceSymbol.Name}'."
             );
+
             return false;
         }
 
@@ -446,6 +468,23 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                 return false;
             }
         );
+
+    private bool DeclareInterface(InterfaceDeclaration interfaceDeclaration, bool isSealed, [MaybeNullWhen(false)] out InterfaceSymbol interfaceSymbol)
+    {
+        interfaceSymbol = null;
+        var scope = CurrentScope();
+        var name = interfaceDeclaration.Name.Text;
+        if (scope.TypeLookup.ContainsKey(name))
+        {
+            _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"Interface '{name}' is already declared in this scope.");
+            return false;
+        }
+
+        interfaceSymbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed);
+        DeclareSymbol(interfaceSymbol);
+
+        return true;
+    }
 
     private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
     {
@@ -491,7 +530,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (parserResult.Tree.File.IsDeclaration)
             symbol.IsGlobal = true;
     }
-    
+
     private Symbol? LookupTypeSymbol(string name) =>
         LookupSymbol(name, SymbolKind.Type)
         ?? LookupSymbol(name, SymbolKind.EnumType)
@@ -514,8 +553,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return null;
     }
 
-    private static Dictionary<string, Symbol> GetLookup(SymbolKind kind, ResolverScope scope) =>
-        Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
+    private static Dictionary<string, Symbol> GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
     private void MarkDefinitelyInitialized(Symbol symbol)
     {
@@ -559,7 +597,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var state = PopFlowState();
         return ok ? state : null;
     }
-    
+
     private bool ReportNonInterfaceConstraint(TypeExpression constraint)
     {
         _diagnostics.Error(
@@ -570,7 +608,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
         return false;
     }
-    
+
     private void DeclareGlobalSymbols(SemanticModel semanticModel)
     {
         foreach (var (symbol, type) in compilationUnit.Globals)

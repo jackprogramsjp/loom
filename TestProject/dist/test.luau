@@ -1,6 +1,2 @@
-type A = {
-  read foo: number
-}
-type B = A & {
-  read bar: string
-}
+type X = index<Foo, "foo">
+const x: X = 1

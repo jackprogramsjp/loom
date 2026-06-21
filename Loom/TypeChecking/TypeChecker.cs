@@ -138,6 +138,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     {
         var type = declare.Signature switch
         {
+            InterfaceDeclaration interfaceDeclaration => Visit(interfaceDeclaration),
             DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause),
             DeclareFunctionSignature functionSignature => new Types.FunctionType(
                 functionSignature.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [],

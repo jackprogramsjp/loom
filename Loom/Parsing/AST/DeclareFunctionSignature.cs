@@ -10,7 +10,7 @@ public class DeclareFunctionSignature(
     ColonTypeClause returnType,
     params Node?[] extraChildren
 )
-    : GenericDeclareSignature(keyword, name, typeParameters, [parameters, returnType, ..extraChildren])
+    : GenericNamedDeclaration([], keyword, name, typeParameters, [parameters, returnType, ..extraChildren])
 {
     public Parameters? Parameters { get; } = parameters;
     public ColonTypeClause ReturnType { get; } = returnType;
