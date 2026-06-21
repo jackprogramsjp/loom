@@ -365,6 +365,26 @@ while i < 10 do
 end
 print(i)
 ```
+##
+In this example Foo is only a type and cannot be instantiated.
+```ts
+declare interface Foo { bar: string }
+```
+```luau
+type Foo = {
+    read bar: string
+}
+```
+##
+In this example Foo cannot be used as a constraint to other interfaces.
+```cs
+sealed interface Foo { bar: string }
+```
+```luau
+type Foo = {
+    read bar: string
+}
+```
 
 ## Planned Features
 

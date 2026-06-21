@@ -2,8 +2,11 @@ using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
+using ArrayType = Loom.TypeChecking.Types.ArrayType;
+using FunctionType = Loom.TypeChecking.Types.FunctionType;
 using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
 using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
+using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
 using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.Testing;
@@ -12,6 +15,221 @@ namespace Loom.Testing;
 public class TypeSolverTest
 {
     private static DiagnosticBag CreateDiagnostics() => new();
+
+    [Fact]
+    public void Unify_InfiniteType_OccursCheck()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var node = Identifier("x");
+        var variable = solver.GetType(node);
+        var infinite = new ArrayType(variable, false);
+        solver.AddConstraint(variable, infinite, Utility.Span);
+
+        var success = solver.SolveConstraints();
+        Assert.False(success, "Should reject infinite type X = X[]");
+        Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.InfiniteType);
+    }
+
+    [Fact]
+    public void Unify_InfiniteType_ThroughFunction()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var node = Identifier("f");
+        var variable = solver.GetType(node);
+        var infiniteFn = new FunctionType([], [variable], variable);
+        solver.AddConstraint(variable, infiniteFn, Utility.Span);
+
+        var success = solver.SolveConstraints();
+        Assert.False(success, "Should reject infinite type X = fn(X): X");
+        Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.InfiniteType);
+    }
+
+    [Fact]
+    public void Unify_FunctionTypes_Identical()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var fn1 = new FunctionType([], [PrimitiveType.Number], PrimitiveType.String);
+        var fn2 = new FunctionType([], [PrimitiveType.Number], PrimitiveType.String);
+        solver.AddConstraint(fn1, fn2, Utility.Span);
+
+        Assert.True(solver.SolveConstraints());
+    }
+
+    [Fact]
+    public void Unify_FunctionTypes_DifferentArity()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var fn1 = new FunctionType([], [PrimitiveType.Number], PrimitiveType.String);
+        var fn2 = new FunctionType([], [PrimitiveType.Number, PrimitiveType.Bool], PrimitiveType.String);
+        solver.AddConstraint(fn1, fn2, Utility.Span);
+
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_FunctionTypes_DifferentReturn()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var fn1 = new FunctionType([], [PrimitiveType.Number], PrimitiveType.String);
+        var fn2 = new FunctionType([], [PrimitiveType.Number], PrimitiveType.Bool);
+        solver.AddConstraint(fn1, fn2, Utility.Span);
+
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_FunctionTypes_WithTypeParameters()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var tp1 = new TypeParameter("T");
+        var tp2 = new TypeParameter("U");
+        var fn1 = new FunctionType([tp1], [tp1], tp1);
+        var fn2 = new FunctionType([tp2], [tp2], tp2);
+
+        solver.AddConstraint(fn1, fn2, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_SameStructure()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var obj1 = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.Number), new ObjectProperty(true, "y", PrimitiveType.String)]);
+        var obj2 = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.Number), new ObjectProperty(true, "y", PrimitiveType.String)]);
+
+        solver.AddConstraint(obj1, obj2, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_PropertyTypeMismatch()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var obj1 = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.Number)]);
+        var obj2 = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.String)]);
+
+        solver.AddConstraint(obj1, obj2, Utility.Span);
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_MutabilityMismatch()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var obj1 = new ObjectType(null, [new ObjectProperty(true, "x", PrimitiveType.Number)]);
+        var obj2 = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.Number)]);
+
+        solver.AddConstraint(obj1, obj2, Utility.Span);
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_WithIndexer_Same()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var obj1 = new ObjectType(new ObjectIndexer(true, PrimitiveType.String, PrimitiveType.Number), []);
+        var obj2 = new ObjectType(new ObjectIndexer(true, PrimitiveType.String, PrimitiveType.Number), []);
+
+        solver.AddConstraint(obj1, obj2, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_WithIndexer_KeyMismatch()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var obj1 = new ObjectType(new ObjectIndexer(true, PrimitiveType.String, PrimitiveType.Number), []);
+        var obj2 = new ObjectType(new ObjectIndexer(true, PrimitiveType.Number, PrimitiveType.Number), []);
+
+        solver.AddConstraint(obj1, obj2, Utility.Span);
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_WithIndexer_MutabilityMismatch()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var obj1 = new ObjectType(new ObjectIndexer(true, PrimitiveType.String, PrimitiveType.Number), []);
+        var obj2 = new ObjectType(new ObjectIndexer(false, PrimitiveType.String, PrimitiveType.Number), []);
+
+        solver.AddConstraint(obj1, obj2, Utility.Span);
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_ObjectWithInterface_Compatible()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var interfaceObj = new ObjectType(null, [new ObjectProperty(false, "name", PrimitiveType.String)]);
+        var interfaceType = new InterfaceType("Named", [], interfaceObj);
+        var obj = new ObjectType(null, [new ObjectProperty(false, "name", PrimitiveType.String)]);
+
+        solver.AddConstraint(obj, interfaceType, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+    }
+
+    [Fact]
+    public void Unify_InterfaceTypes_Same()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var a = new InterfaceType("A", [], new ObjectType(null, []));
+        var b = new InterfaceType("A", [], new ObjectType(null, []));
+
+        solver.AddConstraint(a, b, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+    }
+
+    [Fact]
+    public void Unify_InterfaceTypes_DifferentConstraints()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var baseA = new InterfaceType("Base", [], new ObjectType(null, []));
+        var a = new InterfaceType("A", [baseA], new ObjectType(null, []));
+        var b = new InterfaceType("A", [], new ObjectType(null, []));
+
+        solver.AddConstraint(a, b, Utility.Span);
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_InstantiatedTypes_Same()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var generic = new GenericType(
+            new TypeAlias(null!, null!, null!, null!),
+            [new TypeParameter("T")],
+            PrimitiveType.Never
+        );
+
+        var inst1 = new InstantiatedType(generic, [PrimitiveType.Number]);
+        var inst2 = new InstantiatedType(generic, [PrimitiveType.Number]);
+
+        solver.AddConstraint(inst1, inst2, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+    }
 
     [Fact]
     public void Unify_TwoVariables_SetEqual()
@@ -100,8 +318,8 @@ public class TypeSolverTest
 
         var success = solver.SolveConstraints();
         Assert.True(success);
-        Assert.True(solver.GetType(nodeX).Equals(PrimitiveType.Number),$"Expected 'number', got '{solver.GetType(nodeX)}'");
-        Assert.True(solver.GetType(nodeZ).Equals(PrimitiveType.Number),$"Expected 'number', got '{solver.GetType(nodeZ)}'");
+        Assert.True(solver.GetType(nodeX).Equals(PrimitiveType.Number), $"Expected 'number', got '{solver.GetType(nodeX)}'");
+        Assert.True(solver.GetType(nodeZ).Equals(PrimitiveType.Number), $"Expected 'number', got '{solver.GetType(nodeZ)}'");
     }
 
     [Fact]
@@ -177,7 +395,7 @@ public class TypeSolverTest
         var success2 = solver2.SolveConstraints();
         Assert.True(success2, "Mutual variable binding should unify them without error");
     }
-    
+
     [Fact]
     public void SetType_OverwritesVariable()
     {
@@ -189,8 +407,10 @@ public class TypeSolverTest
         Assert.IsType<TypeVariable>(variable);
 
         solver.SetType(node, PrimitiveType.Bool);
-        Assert.True(solver.GetType(node).Equals(PrimitiveType.Bool),
-            "SetType should replace the variable with the given type");
+        Assert.True(
+            solver.GetType(node).Equals(PrimitiveType.Bool),
+            "SetType should replace the variable with the given type"
+        );
     }
 
     [Fact]
@@ -228,6 +448,6 @@ public class TypeSolverTest
         var success = solver.SolveConstraints();
         Assert.True(success);
     }
-    
+
     private static Identifier Identifier(string name) => new(Utility.IdentifierToken(name));
 }

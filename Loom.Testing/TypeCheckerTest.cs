@@ -7,6 +7,7 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class TypeCheckerTest
 {
+    #region ThrowsFor
     [Fact]
     public void ThrowsFor_Variable_DeclaredType_Mismatch()
     {
@@ -519,13 +520,32 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I<T: number> { value: T } new I::<string> { value: 'x' }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation, "Type 'string' does not satisfy constraint 'number' for type parameter 'T'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_WhileLoop_NonBooleanCondition()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("while 1 { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '1' is not assignable to type 'bool'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_FunctionTypeParameterDefault_ConstraintViolation()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo<T: number = 'hello'>() {}");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type 'number'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_IndexedType_MissingProperty()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum E { A, B } type X = E[\"nonexistent\"]");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidAccess,
+            "Type '\"nonexistent\"' cannot be used to index type '0 | 1'."
+        );
+    }
+    #endregion ThrowsFor
 
     [Fact]
     public void WarnsFor_NullCoalescing_NonOptional()
@@ -534,30 +554,119 @@ public class TypeCheckerTest
         Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.RedundantCode);
     }
     
+    #region Checks
+    [Fact]
+    public void Checks_NullCoalescing_TwoOptionalOperands()
+    {
+        var type = Utility.GetLastStatementType("let a: number? = 1; let b: string? = 'hi'; a ?? b");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
+    public void Checks_GenericFunctionCall_ZeroArgumentsExplicit()
+    {
+        const string source = """
+            fn nothing<T>() -> 42
+            nothing::<number>()
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_DeclareGenericInterface()
+    {
+        var type = Utility.GetLastStatementType("declare interface Box<T> { value: T }");
+        var generic = Assert.IsType<GenericType>(type);
+        Assert.Single(generic.Parameters);
+        Assert.Equal("T", generic.Parameters[0].Name);
+    }
+
+    [Fact]
+    public void Checks_Function_ExplicitReturnTypeOverridesInference()
+    {
+        var type = Utility.GetLastStatementType("fn double(x: number): number -> x * 2");
+        var functionType = Assert.IsType<FunctionType>(type);
+        Assert.True(functionType.ReturnType.Equals(PrimitiveType.Number), $"Expected 'number', got '{functionType.ReturnType}'");
+    }
+
+    [Fact]
+    public void Checks_AssignmentToMutableInterfaceProperty()
+    {
+        const string source = """
+            interface Mutable { mut value: number }
+            let x = none as never as Mutable
+            x.value = 42
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var assignmentType = result.ReturnType;
+        var literal = Assert.IsType<LiteralType>(assignmentType);
+        Assert.Equal(42L, literal.Value);
+    }
+    
+    [Fact]
+    public void Checks_TypeAlias_PartialTypeArguments()
+    {
+        const string source = """
+            type Pair<T, U = number> = T
+            type X = Pair<string>
+            let x: X = "hello"
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.String), $"Expected 'string', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_FunctionType_WithTypeParameterDefault()
+    {
+        var type = Utility.GetLastStatementType("let f: fn<T = number>(x: T): T;");
+        var functionType = Assert.IsType<FunctionType>(type);
+        Assert.Single(functionType.TypeParameters);
+        var tp = functionType.TypeParameters[0];
+        Assert.Equal("T", tp.Name);
+        Assert.NotNull(tp.DefaultType);
+        Assert.True(tp.DefaultType.Equals(PrimitiveType.Number), $"Expected default 'number', got '{tp.DefaultType}'");
+    }
+
+    [Fact]
+    public void Checks_InterfaceDeclaration_GenericWithDefault()
+    {
+        var type = Utility.GetLastStatementType("interface I<T = number> { value: T }");
+        var generic = Assert.IsType<GenericType>(type);
+        Assert.Single(generic.Parameters);
+        var tp = generic.Parameters[0];
+        Assert.Equal("T", tp.Name);
+        Assert.NotNull(tp.DefaultType);
+        Assert.True(tp.DefaultType.Equals(PrimitiveType.Number), $"Expected default 'number', got '{tp.DefaultType}'");
+    }
+    
     [Fact]
     public void Checks_Narrowing_While_NonNullable()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(
-            "let x: number? = 69; while x != none { x + 420; break; }"
-        );
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number? = 69; while x != none { x + 420; break; }");
         Utility.AssertNoErrors(diagnostics);
     }
 
     [Fact]
     public void Checks_Narrowing_While_EqualsLiteral()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(
-            "let x: number | string = 42; while x == 42 { x + 1; break; }"
-        );
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number | string = 42; while x == 42 { x + 1; break; }");
         Utility.AssertNoErrors(diagnostics);
     }
 
     [Fact]
     public void Checks_Narrowing_While_NotEqualsLiteral()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(
-            "let x: number | string = 'hi'; while x != 'hi' { x + 1; break; }"
-        );
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x: number | string = 'hi'; while x != 'hi' { x + 1; break; }");
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -574,14 +683,14 @@ public class TypeCheckerTest
         var result = Utility.TypeCheck("while true { continue }");
         Utility.AssertNoErrors(result);
     }
-    
+
     [Fact]
     public void Checks_InterfaceInvocation_ChainedPropertyAccess()
     {
         var type = Utility.GetLastStatementType("interface I { x: number } new I { x: 1 }.x");
         Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
     }
-    
+
     [Fact]
     public void Checks_InterfaceInvocation_NonGeneric_PropertyInitializers()
     {
@@ -613,7 +722,7 @@ public class TypeCheckerTest
     {
         var result = Utility.TypeCheck("interface I<T = number> { value: T } new I { value: 42 }");
         Utility.AssertNoErrors(result);
-        
+
         var iface = Assert.IsType<InterfaceType>(result.ReturnType);
         Assert.Equal("I", iface.Name);
     }
@@ -663,7 +772,7 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_Declared_InterfaceDeclaration()
     {
@@ -886,10 +995,7 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void Narrowing_NonNullable()
-    {
-        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics("let x: number? = 69; if x != none x + 420"));
-    }
+    public void Narrowing_NonNullable() => Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics("let x: number? = 69; if x != none x + 420"));
 
     [Fact]
     public void Narrowing_EqualsLiteral_ThenBranch()
@@ -1715,4 +1821,5 @@ public class TypeCheckerTest
         var falseLiteral = Assert.IsType<LiteralType>(falseType);
         Assert.Equal(false, falseLiteral.Value);
     }
+    #endregion Checks
 }
