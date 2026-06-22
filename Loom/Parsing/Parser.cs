@@ -510,7 +510,7 @@ public sealed class Parser
         }
         else
         {
-            _diagnostics.Error(currentOrLast, InternalCodes.UnexpectedToken, "Unexpected token.");
+            _diagnostics.Error(currentOrLast, InternalCodes.UnexpectedToken, $"Expected expression, got {SafeTokenText(MaybeCurrent())}.");
             _position++;
         }
 

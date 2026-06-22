@@ -1,1 +1,7 @@
-after 500ms print("done")
+mut x: number;
+
+after 500ms {
+    x = 69;
+}
+
+print(x)

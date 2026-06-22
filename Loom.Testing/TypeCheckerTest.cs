@@ -529,6 +529,13 @@ public class TypeCheckerTest
     }
     
     [Fact]
+    public void ThrowsFor_After_NonNumberDuration()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("after true { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'true' is not assignable to type 'number'.");
+    }
+    
+    [Fact]
     public void ThrowsFor_FunctionTypeParameterDefault_ConstraintViolation()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo<T: number = 'hello'>() {}");

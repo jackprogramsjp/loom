@@ -7,6 +7,7 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class ResolverTest
 {
+    #region ThrowsFor
     [Theory]
     [InlineData("mut x; x;")]
     [InlineData("mut x: number; { let x = 42; }; x;")]
@@ -264,6 +265,42 @@ public class ResolverTest
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvokeDeclaredInterface, "Cannot invoke interface 'A' because it was declared as type.");
     }
 
+    [Fact]
+    public void ThrowsFor_ReturnInsideAfterBody_OutsideFunction()
+    {
+        var diagnostics = Utility.GetSemanticModel("after 1s { return 42; }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ReturnOutsideFunction, "Return statements can only be used inside of functions.");
+    }
+
+    [Fact]
+    public void ThrowsFor_AfterCondition_UsesUndefinedVariable()
+    {
+        var diagnostics = Utility.GetSemanticModel("after unknown { }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find name 'unknown'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_VariableInitializedInAfterBody_UsedAfter()
+    {
+        var diagnostics = Utility.GetSemanticModel("mut x: number; after 1s { x = 42; } x;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
+    }
+
+    [Fact]
+    public void ThrowsFor_VariableDeclaredInAfterBody_UsedOutside()
+    {
+        var diagnostics = Utility.GetSemanticModel("after 1s { let x = 42; } x;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find name 'x'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ContinueInsideAfter()
+    {
+        var diagnostics = Utility.GetSemanticModel("after 1s { continue }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
+    }
+    #endregion ThrowsFor
+
     [Theory]
     [InlineData("fn foo { return 42; let x = 1 }")]
     [InlineData("while true { break; let unreachable = 1; }")]
@@ -273,6 +310,25 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
     }
+
+    #region Allows
+    [Fact]
+    public void Allows_VariableInitializedBeforeAfter_UsedAfter() => Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; after 1s { } x;"));
+
+    [Fact]
+    public void Allows_ReturnInsideAfterBody_WhenInsideFunction() => Utility.AssertNoErrors(Utility.GetSemanticModel("fn test() { after 1s { return 42; } }"));
+
+    [Fact]
+    public void Allows_AfterInsideIf() => Utility.AssertNoErrors(Utility.GetSemanticModel("if true { after 1s { } }"));
+
+    [Fact]
+    public void Allows_AfterInsideWhile() => Utility.AssertNoErrors(Utility.GetSemanticModel("while true { after 1s { } }"));
+
+    [Fact]
+    public void Allows_AfterBody_WithShadowedVariable() => Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; after 1s { let x = 2; x; } x;"));
+
+    [Fact]
+    public void Allows_After_WithEmptyBlock() => Utility.AssertNoErrors(Utility.GetSemanticModel("after 1s { }"));
 
     [Fact]
     public void Allows_NonSealedInterfaceConstraints() => Utility.AssertNoErrors(Utility.GetSemanticModel("interface A; interface B: A;"));
@@ -375,10 +431,12 @@ public class ResolverTest
     [Fact]
     public void Allows_VariableFromOuterScope_ToBeReassignedInInnerScope() =>
         Utility.AssertNoErrors(Utility.GetSemanticModel("let condition = true; mut x = 1; if condition { x = 2; } x;"));
+    #endregion Allows
 
     [Fact]
     public void TracksInitialization_ThroughNestedBlocks() => Utility.AssertNoErrors(Utility.GetSemanticModel("mut x: number; { x = 42; } x;"));
 
+    #region Declares
     [Theory]
     [InlineData("Range")]
     [InlineData("Record<string, bool>")]
@@ -479,7 +537,7 @@ public class ResolverTest
 
         if (declarationType == typeof(Declare))
             statement = ((Declare)statement).Signature;
-        
+
         var symbol = model.GetDeclarationSymbol(statement);
         Assert.NotNull(symbol);
 
@@ -568,4 +626,5 @@ public class ResolverTest
         var model = Utility.GetSemanticModel("{ declare fn helper(): string; helper; }");
         Utility.AssertNoErrors(model);
     }
+    #endregion Declares
 }

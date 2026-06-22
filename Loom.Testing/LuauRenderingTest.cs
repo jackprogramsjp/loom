@@ -18,20 +18,13 @@ public class LuauRenderingTest
     }
     
     [Fact]
-    public void Renders_Continue()
-    {
-        Assert.Equal("continue", new Continue().Render());
-    }
-    
+    public void Renders_Continue() => Assert.Equal("continue", new Continue().Render());
+
     [Fact]
-    public void Renders_Break()
-    {
-        Assert.Equal("break", new Break().Render());
-    }
-    
+    public void Renders_Break() => Assert.Equal("break", new Break().Render());
+
     [Fact]
-    public void Renders_WhileStatement()
-    {
+    public void Renders_WhileStatement() =>
         Assert.Equal(
             "while a do\n  x += 1\nend",
             new WhileStatement(
@@ -39,7 +32,6 @@ public class LuauRenderingTest
                 new Chunk([new ExpressionStatement(new BinaryOperator(new Identifier("x"), "+=", new NumberLiteral(1)))])
             ).Render()
         );
-    }
 
     [Fact]
     public void Renders_IfStatement()
@@ -73,11 +65,23 @@ public class LuauRenderingTest
     }
 
     [Fact]
-    public void Renders_TypeAlias()
-    {
-        Assert.Equal("type A = boolean", new TypeAlias("A", new TypeParameters(), PrimitiveType.Boolean).Render());
-    }
+    public void Renders_TypeAlias() => Assert.Equal("type A = boolean", new TypeAlias("A", new TypeParameters(), PrimitiveType.Boolean).Render());
 
+    [Fact]
+    public void Renders_AnonymousFunction()
+    {
+        var parameters = new List<Parameter> { new("a", PrimitiveType.Number), new("b", new TypeName("T")) };
+        var typeParameter = new TypeParameter("T", PrimitiveType.Number) { OfFunction = true };
+        var fn = new AnonymousFunction(
+            new TypeParameters([typeParameter]),
+            parameters,
+            PrimitiveType.Number,
+            new Chunk([new Return(new BinaryOperator(new Identifier("a"), "+", new Identifier("b")))])
+        );
+
+        Assert.Equal("function<T>(a: number, b: T): number\n  return a + b\nend", fn.Render());
+    }
+    
     [Fact]
     public void Renders_Function()
     {
@@ -286,58 +290,36 @@ public class LuauRenderingTest
     }
 
     [Fact]
-    public void Renders_ExpressionStatement()
-    {
-        Assert.Equal("1", new ExpressionStatement(new NumberLiteral(1)).Render());
-    }
+    public void Renders_ExpressionStatement() => Assert.Equal("1", new ExpressionStatement(new NumberLiteral(1)).Render());
 
     [Fact]
-    public void Renders_OptionalType_RequiresParens()
-    {
-        Assert.Equal("(string | boolean)?", new OptionalType(new UnionType([PrimitiveType.String, PrimitiveType.Boolean])).Render());
-    }
+    public void Renders_OptionalType_RequiresParens() => Assert.Equal("(string | boolean)?", new OptionalType(new UnionType([PrimitiveType.String, PrimitiveType.Boolean])).Render());
 
     [Fact]
-    public void Renders_OptionalType()
-    {
-        Assert.Equal("number?", new OptionalType(PrimitiveType.Number).Render());
-    }
+    public void Renders_OptionalType() => Assert.Equal("number?", new OptionalType(PrimitiveType.Number).Render());
 
     [Fact]
-    public void Renders_FunctionType_WithTypeParameters()
-    {
+    public void Renders_FunctionType_WithTypeParameters() =>
         Assert.Equal(
             "<T>(number, T) -> T",
             new FunctionType(new TypeParameters([new TypeParameter("T")]), [PrimitiveType.Number, new TypeName("T")], new TypeName("T")).Render()
         );
-    }
 
     [Fact]
-    public void Renders_FunctionType()
-    {
+    public void Renders_FunctionType() =>
         Assert.Equal(
             "(number, boolean?) -> ()",
             new FunctionType(new TypeParameters(), [PrimitiveType.Number, new OptionalType(PrimitiveType.Boolean)], new UnitType()).Render()
         );
-    }
 
     [Fact]
-    public void Renders_UnionType_WithRequiredParens()
-    {
-        Assert.Equal("number | (() -> ())", new UnionType([PrimitiveType.Number, new FunctionType(new TypeParameters(), [], new UnitType())]).Render());
-    }
+    public void Renders_UnionType_WithRequiredParens() => Assert.Equal("number | (() -> ())", new UnionType([PrimitiveType.Number, new FunctionType(new TypeParameters(), [], new UnitType())]).Render());
 
     [Fact]
-    public void Renders_UnionType()
-    {
-        Assert.Equal("number | string | boolean", new UnionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean]).Render());
-    }
+    public void Renders_UnionType() => Assert.Equal("number | string | boolean", new UnionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean]).Render());
 
     [Fact]
-    public void Renders_IntersectionType()
-    {
-        Assert.Equal("number & string & boolean", new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean,]).Render());
-    }
+    public void Renders_IntersectionType() => Assert.Equal("number & string & boolean", new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean,]).Render());
 
     [Theory]
     [InlineData(PrimitiveTypeKind.Number)]
@@ -347,32 +329,19 @@ public class LuauRenderingTest
     [InlineData(PrimitiveTypeKind.Unknown)]
     [InlineData(PrimitiveTypeKind.Any)]
     [InlineData(PrimitiveTypeKind.Nil)]
-    public void Renders_PrimitiveType(PrimitiveTypeKind kind)
-    {
-        Assert.Equal(kind.ToString().ToLower(), new PrimitiveType(kind).Render());
-    }
+    public void Renders_PrimitiveType(PrimitiveTypeKind kind) => Assert.Equal(kind.ToString().ToLower(), new PrimitiveType(kind).Render());
 
     [Fact]
-    public void Renders_TypeName_Generic()
-    {
-        Assert.Equal("Id<number, boolean>", new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean]).Render());
-    }
+    public void Renders_TypeName_Generic() => Assert.Equal("Id<number, boolean>", new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean]).Render());
 
     [Fact]
-    public void Renders_TypeName()
-    {
-        Assert.Equal("Hello", new TypeName("Hello").Render());
-    }
+    public void Renders_TypeName() => Assert.Equal("Hello", new TypeName("Hello").Render());
 
     [Fact]
-    public void Renders_StringLiteralType()
-    {
-        Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteralType("abc").Render());
-    }
+    public void Renders_StringLiteralType() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteralType("abc").Render());
 
     [Fact]
-    public void Renders_TableType_WithProperties()
-    {
+    public void Renders_TableType_WithProperties() =>
         Assert.Equal(
             "{\n  read [string]: number\n  read a: number\n  b: number\n}",
             new TableType(
@@ -380,51 +349,29 @@ public class LuauRenderingTest
                 [new TableTypeProperty(LuauVisibility.Read, "a", PrimitiveType.Number), new TableTypeProperty(null, "b", PrimitiveType.Number)]
             ).Render()
         );
-    }
 
     [Fact]
-    public void Renders_Dictionary_TableType()
-    {
-        Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(null, PrimitiveType.String, PrimitiveType.Number), []).Render());
-    }
+    public void Renders_Dictionary_TableType() => Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(null, PrimitiveType.String, PrimitiveType.Number), []).Render());
 
     [Fact]
-    public void Renders_Array_TableType()
-    {
-        Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, null, PrimitiveType.Number), []).Render());
-    }
+    public void Renders_Array_TableType() => Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, null, PrimitiveType.Number), []).Render());
 
     [Theory]
     [InlineData(true, "true")]
     [InlineData(false, "false")]
-    public void Renders_BooleanLiteralType(bool value, string expected)
-    {
-        Assert.Equal(expected, new BooleanLiteralType(value).Render());
-    }
+    public void Renders_BooleanLiteralType(bool value, string expected) => Assert.Equal(expected, new BooleanLiteralType(value).Render());
 
     [Fact]
-    public void Renders_ParenthesizedType()
-    {
-        Assert.Equal("(number)", new ParenthesizedType(new PrimitiveType(PrimitiveTypeKind.Number)).Render());
-    }
+    public void Renders_ParenthesizedType() => Assert.Equal("(number)", new ParenthesizedType(new PrimitiveType(PrimitiveTypeKind.Number)).Render());
 
     [Fact]
-    public void Renders_UnitType()
-    {
-        Assert.Equal("()", new UnitType().Render());
-    }
+    public void Renders_UnitType() => Assert.Equal("()", new UnitType().Render());
 
     [Fact]
-    public void Renders_Parenthesized()
-    {
-        Assert.Equal("(69)", new Parenthesized(new NumberLiteral(69)).Render());
-    }
+    public void Renders_Parenthesized() => Assert.Equal("(69)", new Parenthesized(new NumberLiteral(69)).Render());
 
     [Fact]
-    public void Renders_Identifier()
-    {
-        Assert.Equal("abc", new Identifier("abc").Render());
-    }
+    public void Renders_Identifier() => Assert.Equal("abc", new Identifier("abc").Render());
 
     [Theory]
     [InlineData("+")]
@@ -455,38 +402,23 @@ public class LuauRenderingTest
     }
 
     [Fact]
-    public void Renders_MultilineStringLiteral()
-    {
-        Assert.Equal("[[abc\ndef]]", new StringLiteral("abc\ndef").Render());
-    }
+    public void Renders_MultilineStringLiteral() => Assert.Equal("[[abc\ndef]]", new StringLiteral("abc\ndef").Render());
 
     [Fact]
-    public void Renders_StringLiteral()
-    {
-        Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteral("abc").Render());
-    }
+    public void Renders_StringLiteral() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteral("abc").Render());
 
     [Theory]
     [InlineData(12, "12")]
     [InlineData(69.420, "69.42")]
     [InlineData(1e3, "1000")]
     [InlineData(0xFF, "255")]
-    public void Renders_NumberLiteral(double value, string expected)
-    {
-        Assert.Equal(expected, new NumberLiteral(value).Render());
-    }
+    public void Renders_NumberLiteral(double value, string expected) => Assert.Equal(expected, new NumberLiteral(value).Render());
 
     [Theory]
     [InlineData(true, "true")]
     [InlineData(false, "false")]
-    public void Renders_BooleanLiteral(bool value, string expected)
-    {
-        Assert.Equal(expected, new BooleanLiteral(value).Render());
-    }
+    public void Renders_BooleanLiteral(bool value, string expected) => Assert.Equal(expected, new BooleanLiteral(value).Render());
 
     [Fact]
-    public void Renders_NilLiteral()
-    {
-        Assert.Equal("nil", new NilLiteral().Render());
-    }
+    public void Renders_NilLiteral() => Assert.Equal("nil", new NilLiteral().Render());
 }

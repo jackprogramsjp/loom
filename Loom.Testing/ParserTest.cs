@@ -52,7 +52,8 @@ public class ParserTest
         var tree = Utility.GetAST("if x let y = 1");
         Assert.Single(tree.Statements);
 
-        Assert.IsType<NullStatement>(tree.Statements.First());
+        var @if = Assert.IsType<If>(tree.Statements.First());
+        Assert.IsType<NullStatement>(@if.ThenBranch);
     }
 
     [Fact]
@@ -80,7 +81,7 @@ public class ParserTest
     public void ThrowsFor_UnexpectedToken()
     {
         var diagnostics = Utility.GetParserDiagnostics("if )");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Unexpected token.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got ')'.");
     }
 
     [Fact]
@@ -290,6 +291,94 @@ public class ParserTest
             InternalCodes.UnexpectedToken,
             "Expected property name, got '123'."
         );
+    }
+    
+    [Fact]
+    public void ThrowsFor_AfterBody_WithDeclarationOutsideBlock()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("after 10ms let x = 1");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_After_WithMissingCondition()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("after { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '{'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_After_WithMissingBody()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("after 5s");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+    }
+    
+    [Fact]
+    public void Parses_AfterStatement_WithExpressionBody()
+    {
+        var tree = Utility.GetAST("after 5s doSomething()");
+        Assert.Single(tree.Statements);
+
+        var after = Assert.IsType<After>(tree.Statements.First());
+        var condition = Assert.IsType<Literal>(after.Duration);
+        Assert.Equal(5L, condition.Value);
+
+        var body = Assert.IsType<ExpressionStatement>(after.Body);
+        var invocation = Assert.IsType<Invocation>(body.Expression);
+        var ident = Assert.IsType<Identifier>(invocation.Expression);
+        Assert.Equal("doSomething", ident.Name.Text);
+    }
+    
+    [Fact]
+    public void Parses_AfterStatement_WithNestedIf()
+    {
+        var tree = Utility.GetAST("after 2s { if condition { break } }");
+        Assert.Single(tree.Statements);
+        
+        var after = Assert.IsType<After>(tree.Statements.First());
+        var block = Assert.IsType<Block>(after.Body);
+        Assert.Single(block.Statements);
+        
+        var ifStmt = Assert.IsType<If>(block.Statements.First());
+        var thenBlock = Assert.IsType<Block>(ifStmt.ThenBranch);
+        Assert.Single(thenBlock.Statements);
+        Assert.IsType<Break>(thenBlock.Statements.First());
+    }
+    
+    [Fact]
+    public void Parses_AfterBody_WithDeclarationInsideBlock()
+    {
+        var tree = Utility.GetAST("after 10ms { let x = 1 }");
+        var after = Assert.IsType<After>(tree.Statements.First());
+        var block = Assert.IsType<Block>(after.Body);
+        Assert.IsType<VariableDeclaration>(block.Statements.First());
+    }
+    
+    [Fact]
+    public void Parses_AfterStatement_InsideIfElse()
+    {
+        var tree = Utility.GetAST("if true { after 1s foo() } else { after 2s bar() }");
+        var ifStmt = Assert.IsType<If>(tree.Statements.First());
+        var thenBlock = Assert.IsType<Block>(ifStmt.ThenBranch);
+        Assert.IsType<After>(thenBlock.Statements.First());
+        var elseBlock = Assert.IsType<Block>(ifStmt.ElseBranch!.Branch);
+        Assert.IsType<After>(elseBlock.Statements.First());
+    }
+    
+    [Fact]
+    public void Parses_AfterStatement_WithTimeLiteral()
+    {
+        var tree = Utility.GetAST("after 2.5s { }");
+        var after = Assert.IsType<After>(tree.Statements.First());
+        Assert.Equal(SyntaxKind.AfterKeyword, after.Keyword.Kind);
+        
+        var literal = Assert.IsType<Literal>(after.Duration);
+        Assert.Equal(2.5d, literal.Value);
     }
 
     [Fact]
