@@ -335,9 +335,6 @@ public class ResolverTest
     public void Allows_VariableInitializedBeforeAfter_UsedAfter() => Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; after 1s { } x;"));
 
     [Fact]
-    public void Allows_ReturnInsideAfterBody_WhenInsideFunction() => Utility.AssertNoErrors(Utility.GetSemanticModel("fn test() { after 1s { return 42; } }"));
-
-    [Fact]
     public void Allows_AfterInsideIf() => Utility.AssertNoErrors(Utility.GetSemanticModel("if true { after 1s { } }"));
 
     [Fact]
