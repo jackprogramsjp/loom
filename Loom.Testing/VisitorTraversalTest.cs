@@ -336,6 +336,8 @@ public class VisitorTraversalTest
     public void NullStatement() =>
         AssertVisitOrder(
             "if x let y = 1",
+            "If",
+            "Identifier",
             "NullStatement"
         );
 
