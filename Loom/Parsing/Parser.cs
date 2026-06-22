@@ -31,6 +31,7 @@ public sealed class Parser
             [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.SealedKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.IfKeyword] = ParseIf,
+            [SyntaxKind.AfterKeyword] = ParseAfter,
             [SyntaxKind.WhileKeyword] = ParseWhile,
             [SyntaxKind.BreakKeyword] = ParseBreak,
             [SyntaxKind.ContinueKeyword] = ParseContinue,
@@ -131,28 +132,35 @@ public sealed class Parser
         return null;
     }
 
-    private Break ParseBreak(Token keyword) => new(keyword);
-    private Continue ParseContinue(Token keyword) => new(keyword);
-
-    private Statement ParseWhile(Token keyword)
+    private After ParseAfter(Token keyword)
     {
         var condition = ParseExpression();
-        var body = ParseStatement();
-        if (!AssertDeclarationInsideOfBlock(body))
-            return new NullStatement(keyword);
+        var body = ParseControlFlowBody(keyword);
+        return new After(keyword, condition, body);
+    }
 
+    private static Break ParseBreak(Token keyword) => new(keyword);
+    private static Continue ParseContinue(Token keyword) => new(keyword);
+
+    private While ParseWhile(Token keyword)
+    {
+        var condition = ParseExpression();
+        var body = ParseControlFlowBody(keyword);
         return new While(keyword, condition, body);
     }
 
-    private Statement ParseIf(Token keyword)
+    private If ParseIf(Token keyword)
     {
         var condition = ParseExpression();
-        var thenBranch = ParseStatement();
-        var elseBranch = Match(out var elseKeyword, SyntaxKind.ElseKeyword) ? new ElseBranch(elseKeyword, ParseStatement()) : null;
-        if (!AssertDeclarationInsideOfBlock(thenBranch) || elseBranch != null && !AssertDeclarationInsideOfBlock(elseBranch.Branch))
-            return new NullStatement(keyword);
-
+        var thenBranch = ParseControlFlowBody(keyword);
+        var elseBranch = Match(out var elseKeyword, SyntaxKind.ElseKeyword) ? new ElseBranch(elseKeyword, ParseControlFlowBody(keyword)) : null;
         return new If(keyword, condition, thenBranch, elseBranch);
+    }
+    
+    private Statement ParseControlFlowBody(Token keyword)
+    {
+        var statement = ParseStatement();
+        return AssertDeclarationInsideOfBlock(statement) ? statement : new NullStatement(keyword);
     }
 
     private Statement ParseDeclareStatement(Token declareKeyword)

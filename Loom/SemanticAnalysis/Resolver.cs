@@ -49,6 +49,23 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return result;
     }
 
+    public override bool VisitAfter(After after)
+    {
+        Visit(after.Duration);
+        var before = new FlowState(CurrentFlowState());
+        var bodyState = PushFlowAndVisitBranch(after.Body, before);
+        if (bodyState == null)
+            return false;
+        
+        var definitely = new HashSet<Symbol>(before.DefinitelyInitialized);
+        var maybe = new HashSet<Symbol>(before.MaybeInitialized.Concat(bodyState.DefinitelyInitialized.Intersect(before.DefinitelyInitialized)));
+        maybe.UnionWith(bodyState.MaybeInitialized);
+        
+        PopFlowState();
+        _flowStates.Push(new FlowState(definitely, maybe, before.IsUnreachable));
+        return true;
+    }
+
     public override bool VisitWhile(While @while)
     {
         Visit(@while.Condition);

@@ -53,6 +53,11 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
     public override LuauNode VisitContinue(Continue @continue) => new Luau.AST.Continue();
     public override LuauNode VisitWhile(While @while) => new WhileStatement(Visit(@while.Condition), GenerateChunk(@while.Body));
 
+    public override LuauNode VisitAfter(After after) =>
+        new Luau.AST.ExpressionStatement(
+            LuauFactory.TaskCall("delay", [Visit(after.Duration), new AnonymousFunction(null, [], new UnitType(), GenerateChunk(after.Body))])
+        );
+
     public override IfStatement VisitIf(If @if)
     {
         var condition = Visit(@if.Condition);

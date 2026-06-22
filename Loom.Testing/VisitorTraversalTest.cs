@@ -108,6 +108,17 @@ public class VisitorTraversalTest
     public void Continue() => AssertVisitOrder("continue", "Continue");
     
     [Fact]
+    public void After_VisitsChildren() =>
+        AssertVisitOrder(
+            "after 5s { 1 }",
+            "After",
+            "Literal",
+            "Block",
+            "ExpressionStatement",
+            "Literal"
+        );
+    
+    [Fact]
     public void While_VisitsChildren() =>
         AssertVisitOrder(
             "while true { 1 }",

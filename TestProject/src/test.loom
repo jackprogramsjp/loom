@@ -1,3 +1,1 @@
-declare sealed interface Foo {
-    foo: number
-}
+after 500ms print("done")

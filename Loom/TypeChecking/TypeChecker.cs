@@ -58,6 +58,14 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         _diagnostics.Info(expressionStatement, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for expression");
         return BindType(expressionStatement, type);
     }
+    
+    public override Type VisitAfter(After after)
+    {
+        var durationType = Visit(after.Duration);
+        semanticModel.TypeSolver.AddConstraint(durationType, Types.PrimitiveType.Number, after.Duration);
+
+        return Visit(after.Body);
+    }
 
     public override Type VisitWhile(While @while)
     {
@@ -577,7 +585,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     private Type VisitWithFlowState(Node node, TypedFlowState state)
     {
         _flowStates.Push(state);
-        var type = Visit(node);
+        var type = Visit(node); 
         _flowStates.Pop();
 
         return type;
