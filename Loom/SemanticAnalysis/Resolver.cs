@@ -43,7 +43,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var result = ResolveStatements(block.Statements);
         MergeFlowState(blockState, target: parentState);
         PopFlowState();
-        PushFlowState(parentState);
         PopScope();
 
         return result;
