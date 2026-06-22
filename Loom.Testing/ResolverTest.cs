@@ -299,6 +299,20 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("after 1s { continue }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
     }
+    
+    [Fact]
+    public void ThrowsFor_BreakInsideAfter()
+    {
+        var diagnostics = Utility.GetSemanticModel("after 1s { break }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_ReturnInsideAfter()
+    {
+        var diagnostics = Utility.GetSemanticModel("fn abc { after 1s { return 69 } }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ReturnInAfter, "Cannot return a value from an 'after' statement body.");
+    }
     #endregion ThrowsFor
 
     [Theory]
@@ -312,6 +326,11 @@ public class ResolverTest
     }
 
     #region Allows
+    [Theory]
+    [InlineData("fn abc { return 69 }")]
+    [InlineData("fn abc { if true { return 69 } }")]
+    public void Allows_Fn_Return(string source) => Utility.AssertNoErrors(Utility.GetSemanticModel(source));
+    
     [Fact]
     public void Allows_VariableInitializedBeforeAfter_UsedAfter() => Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; after 1s { } x;"));
 
