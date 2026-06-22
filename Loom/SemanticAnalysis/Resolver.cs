@@ -145,7 +145,13 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (_context == ResolverContext.Function)
         {
             CurrentFlowState().IsUnreachable = true;
-            return base.VisitReturn(@return);
+
+            var after = @return.FirstAncestorOfType<After>();
+            if (after == null || @return.FirstAncestorOfType<FunctionDeclaration>()?.FirstAncestorOfType<After>() == after)
+                return base.VisitReturn(@return);
+
+            _diagnostics.Error(@return, InternalCodes.ReturnInAfter, "Cannot return a value from an 'after' statement body.");
+            return false;
         }
 
         _diagnostics.Error(@return, InternalCodes.ReturnOutsideFunction, "Return statements can only be used inside of functions.");

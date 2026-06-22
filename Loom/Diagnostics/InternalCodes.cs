@@ -56,4 +56,5 @@ public static class InternalCodes
     public const string ContinueOutsideLoop = "L335";
     public const string InheritFromSealed = "L336";
     public const string InvokeDeclaredInterface = "L337";
+    public const string ReturnInAfter = "L338";
 }

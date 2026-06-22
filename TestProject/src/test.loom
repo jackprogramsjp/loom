@@ -1,7 +1,7 @@
-mut x: number;
-
-after 500ms {
-    x = 69;
+fn a {
+    after 1s {
+        if true {
+            return 69;
+        }
+    }
 }
-
-print(x)

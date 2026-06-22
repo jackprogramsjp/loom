@@ -1,3 +1,5 @@
-task.delay(0.5, function(): ()
-  print("done")
-end)
+const function a()
+  task.delay(1, function(): ()
+    return 69
+  end)
+end
