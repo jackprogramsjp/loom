@@ -398,14 +398,16 @@ type Foo = {
 }
 ```
 ##
-In this example Foo cannot be used as a constraint to other interfaces.
+After statements are a shorthand to `task.delay`.
 ```cs
-sealed interface Foo { bar: string }
+after 100ms {
+    print("done!");
+}
 ```
 ```luau
-type Foo = {
-    read bar: string
-}
+task.delay(0.1, function(): ()
+    print("done!")
+end)
 ```
 
 ## Planned Features
