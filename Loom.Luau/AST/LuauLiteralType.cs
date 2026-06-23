@@ -6,10 +6,8 @@ public abstract class LuauLiteralType<T>(T value)
     : PrimitiveType(
         value switch
         {
-            long or int or double => PrimitiveTypeKind.Number,
             string => PrimitiveTypeKind.String,
             bool => PrimitiveTypeKind.Boolean,
-            null => PrimitiveTypeKind.Nil,
             _ => PrimitiveTypeKind.Never
         }
     )

@@ -16,9 +16,11 @@ public sealed class RenderState
     public string IndentedLine(LuauNode node) => IndentedLine(node.Render(this));
     public string IndentedLine(string text) => Indented(text) + '\n';
     public string Indented(string text) => _indent + text;
-    
+
     public string ParenthesizeIfNeeded(LuauNode node) => RequiresParentheses(node) ? $"({node.Render(this)})" : node.Render(this);
-    private static bool RequiresParentheses(LuauNode node) => node is (UnionType or IntersectionType or FunctionType or Table) and not OptionalType;
+
+    private static bool RequiresParentheses(LuauNode node) =>
+        node is (UnionType or IntersectionType or FunctionType or Table or BinaryOperator or UnaryOperator or IfExpression) and not OptionalType;
 
     public static string RenderVisibility(LuauVisibility? visibility) =>
         visibility == null
@@ -43,11 +45,10 @@ public sealed class RenderState
         PushIndent();
         var result = callback();
         PopIndent();
-        
+
         return result;
     }
-    
+
     private void PushIndent() => _indent += Indent;
     private void PopIndent() => _indent = _indent[..^2];
-
 }

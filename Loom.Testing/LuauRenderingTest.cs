@@ -80,6 +80,55 @@ public class LuauRenderingTest
     public void Renders_TypeAlias() => Assert.Equal("type A = boolean", new TypeAlias("A", new TypeParameters(), PrimitiveType.Boolean).Render());
 
     [Fact]
+    public void Renders_ForStatement()
+    {
+        var statement = new ForStatement(
+            ["k", "v"],
+            new Call(new Identifier("pairs"), [new Identifier("t")]),
+            new Chunk([new ExpressionStatement(new Call(new Identifier("print"), [new Identifier("k"), new Identifier("v")]))])
+        );
+
+        Assert.Equal(
+            "for k, v in pairs(t) do\n  print(k, v)\nend",
+            statement.Render()
+        );
+    }
+
+    [Fact]
+    public void Renders_NumericForStatement_WithStep()
+    {
+        var statement = new NumericForStatement(
+            "i",
+            new NumberLiteral(1),
+            new NumberLiteral(10),
+            new NumberLiteral(2),
+            new Chunk([new ExpressionStatement(new Call(new Identifier("print"), [new Identifier("i")]))])
+        );
+
+        Assert.Equal(
+            "for i = 1, 10, 2 do\n  print(i)\nend",
+            statement.Render()
+        );
+    }
+
+    [Fact]
+    public void Renders_NumericForStatement_WithoutStep()
+    {
+        var statement = new NumericForStatement(
+            "i",
+            new NumberLiteral(1),
+            new NumberLiteral(5),
+            null,
+            new Chunk([new ExpressionStatement(new Call(new Identifier("print"), [new Identifier("i")]))])
+        );
+
+        Assert.Equal(
+            "for i = 1, 5 do\n  print(i)\nend",
+            statement.Render()
+        );
+    }
+
+    [Fact]
     public void Renders_AnonymousFunction()
     {
         var parameters = new List<Parameter> { new("a", PrimitiveType.Number), new("b", new TypeName("T")) };
@@ -225,6 +274,63 @@ public class LuauRenderingTest
         var call = new Call(new Identifier("abc"), [new StringLiteral("foo")]);
         Assert.Equal("abc()", emptyCall.Render());
         Assert.Equal("abc(\"foo\")", call.Render());
+    }
+    
+    [Fact]
+    public void Renders_PropertyAccess_SingleName_DefaultDot()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["prop"]);
+        Assert.Equal("obj.prop", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_MultipleNames_DefaultDot()
+    {
+        var access = new PropertyAccess(
+            new Identifier("obj"),
+            ["a", "b", "c"]
+        );
+        Assert.Equal("obj.a.b.c", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_SingleName_ColonOperator()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["method"])
+        {
+            Operator = ':'
+        };
+        Assert.Equal("obj:method", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_MultipleNames_ColonOperator()
+    {
+        var access = new PropertyAccess(
+            new Identifier("abc"),
+            ["foo", "bar"]
+        ) { Operator = ':' };
+        Assert.Equal("abc.foo:bar", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_ParenthesizesTarget_WhenNeeded()
+    {
+        var target = new BinaryOperator(
+            new Identifier("a"),
+            "+",
+            new Identifier("b")
+        );
+        var access = new PropertyAccess(target, ["length"]);
+        Assert.Equal("(a + b).length", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_Chained_OnPropertyAccess()
+    {
+        var inner = new PropertyAccess(new Identifier("a"), ["b", "c"]);
+        var outer = new PropertyAccess(inner, ["d"]);
+        Assert.Equal("a.b.c.d", outer.Render());
     }
 
     [Fact]
@@ -419,7 +525,46 @@ public class LuauRenderingTest
     }
 
     [Fact]
-    public void Renders_MultilineStringLiteral() => Assert.Equal("[[abc\ndef]]", new StringLiteral("abc\ndef").Render());
+    public void Renders_MultilineString_NoSpecialSequences()
+    {
+        var literal = new StringLiteral("abc\ndef");
+        Assert.Equal("[[abc\ndef]]", literal.Render());
+    }
+
+    [Fact]
+    public void Renders_MultilineString_ContainsClosingBrackets()
+    {
+        var literal = new StringLiteral("line1\nline2]]still here");
+        Assert.Equal("[=[line1\nline2]]still here]=]", literal.Render());
+    }
+
+    [Fact]
+    public void Renders_MultilineString_EndsWithBracket()
+    {
+        var literal = new StringLiteral("data\n]");
+        Assert.Equal("[=[data\n]]=]", literal.Render());
+    }
+
+    [Fact]
+    public void Renders_MultilineString_ContainsEqualsBracketAndEndsWithBracket()
+    {
+        var literal = new StringLiteral("a\n]=]b]");
+        Assert.Equal("[==[a\n]=]b]]==]", literal.Render());
+    }
+
+    [Fact]
+    public void Renders_MultilineString_OnlyClosingBracket()
+    {
+        var literal = new StringLiteral("]\n");
+        Assert.Equal("[[]\n]]", literal.Render());
+    }
+
+    [Fact]
+    public void Renders_MultilineString_ComplexNestedBrackets()
+    {
+        var literal = new StringLiteral("start\n]==]middle]==]]\nend");
+        Assert.Equal("[=[start\n]==]middle]==]]\nend]=]", literal.Render());
+    }
 
     [Fact]
     public void Renders_StringLiteral() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteral("abc").Render());
