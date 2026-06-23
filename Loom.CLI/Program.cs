@@ -3,7 +3,8 @@ using Loom.Diagnostics;
 using Loom.Projects;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
-DiagnosticBag.FailFast = false;
+
+// DiagnosticBag.FailFast = false;
 
 var directory = args.ElementAtOrDefault(0) ?? ".";
 var loomConfig = ConfigReader.LocateFromDirectory(directory);
@@ -12,4 +13,8 @@ if (loomConfig == null)
 
 var compilationUnit = new CompilationUnit(loomConfig);
 var result = compilationUnit.Compile();
-result.Files.ForEach(f => f.WriteDebugInfo(tokens: false, ast: true, debugDiagnostics: false));
+var debugInfo = result.Files
+    .FindAll(f => !f.SourceFile.IsDeclaration)
+    .ConvertAll(f => f.GetDebugInfo(tokens: false, ast: true, rebuilt: false, debugDiagnostics: false));
+
+Console.WriteLine(string.Join(Environment.NewLine, debugInfo));

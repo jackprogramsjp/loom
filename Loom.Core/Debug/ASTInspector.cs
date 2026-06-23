@@ -4,18 +4,14 @@ using Loom.Text;
 
 namespace Loom.Debug;
 
-internal class ASTDisplayer(Tree ast)
+internal static class ASTInspector
 {
-    private int _indent;
+    private static int _indent;
     private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id", "File", "Keyword"];
 
-    public void Display()
-    {
-        var content = DisplayNode(ast);
-        Console.WriteLine(content);
-    }
+    public static string Inspect(Tree tree) => string.Join(Environment.NewLine, tree.Statements.ConvertAll(Inspect));
     
-    private string DisplayNode(object node)
+    private static string Inspect(object node)
     {
         var type = node.GetType();
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -43,7 +39,7 @@ internal class ASTDisplayer(Tree ast)
         return type.Name + "(\n" + string.Join('\n', members) + "\n" + Indented(")");
     }
 
-    private string FormatValue(object? value)
+    private static string FormatValue(object? value)
     {
         switch (value)
         {
@@ -54,13 +50,11 @@ internal class ASTDisplayer(Tree ast)
             case Token token:
                 return $"Token({token.Kind}, \"{token.Text}\")";
             case Node node:
-            {
-                return DisplayNode(node);
-            }
+                return Inspect(node);
             case IEnumerable<object> nodes:
             {
                 _indent++;
-                var items = nodes.Select(n => Indented(DisplayNode(n))).ToList();
+                var items = nodes.Select(n => Indented(Inspect(n))).ToList();
                 _indent--;
                 return items.Count == 0
                     ? "[]"
@@ -72,5 +66,5 @@ internal class ASTDisplayer(Tree ast)
         }
     }
 
-    private string Indented(string content) => new string(' ', 2 * _indent) + content;
+    private static string Indented(string content) => new string(' ', 2 * _indent) + content;
 }

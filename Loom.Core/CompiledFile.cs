@@ -1,16 +1,17 @@
+using System.Text;
 using Loom.Debug;
 using Loom.Diagnostics;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Text;
-using Loom.Utility;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom;
 
-public sealed class CompiledFile
+public sealed class CompiledFile(SourceFile sourceFile)
 {
+    public SourceFile SourceFile { get; } = sourceFile;
     public required string Path { get; init; }
     public required DiagnosticBag Diagnostics { get; init; }
     public required string RenderedLuau { get; init; }
@@ -20,41 +21,61 @@ public sealed class CompiledFile
     public required Tree Tree { get; init; }
     public required IReadOnlyList<Token> Tokens { get; init; }
 
-    public void WriteDebugInfo(bool tokens = true, bool ast = true, bool rebuilt = true, bool luau = true, bool showDiagnostics = true, bool debugDiagnostics = true)
+    public string GetDebugInfo(
+        bool tokens = true,
+        bool ast = true,
+        bool rebuilt = true,
+        bool luau = true,
+        bool showDiagnostics = true,
+        bool debugDiagnostics = true)
     {
-        var astDisplayer = new ASTDisplayer(Tree);
+        var sb = new StringBuilder();
+
         if (tokens)
         {
-            Console.WriteLine("Tokens:");
+            appendHeader("Tokens");
             foreach (var token in Tokens)
-                Console.WriteLine(token.ToString());
+                sb.AppendLine(token.ToString());
+            sb.AppendLine();
         }
 
         if (ast)
         {
-            Console.WriteLine();
-            Console.WriteLine("AST:");
-            astDisplayer.Display();
+            appendHeader("AST");
+            sb.AppendLine(ASTInspector.Inspect(Tree));
+            sb.AppendLine();
         }
 
         if (rebuilt)
         {
-            Console.WriteLine();
-            Console.WriteLine("Rebuilt program:");
-            Console.WriteLine(Tree.ToString());
+            appendHeader("Rebuilt program");
+            sb.AppendLine(Tree.ToString());
+            sb.AppendLine();
         }
 
         if (luau)
         {
-            Console.WriteLine();
-            Console.WriteLine("Compiled Luau program:");
-            Console.WriteLine(RenderedLuau);
+            appendHeader("Compiled Luau program");
+            sb.AppendLine(RenderedLuau);
+            sb.AppendLine();
         }
 
-        if (!showDiagnostics) return;
-        var compilerDiagnostics = (debugDiagnostics ? Diagnostics : Diagnostics.WithoutInfo()).ToString();
-        Console.WriteLine();
-        Console.WriteLine("Diagnostics:");
-        Console.WriteLine(string.IsNullOrEmpty(compilerDiagnostics) ? "(none)" : compilerDiagnostics);
+        if (showDiagnostics)
+        {
+            appendHeader("Diagnostics");
+            var compilerDiagnostics = (debugDiagnostics ? Diagnostics : Diagnostics.WithoutInfo()).ToString();
+            sb.AppendLine(string.IsNullOrEmpty(compilerDiagnostics) ? "(none)" : compilerDiagnostics);
+            sb.AppendLine();
+        }
+
+        return sb.ToString().TrimEnd();
+
+        void appendHeader(string title)
+        {
+            var line = new string('─', Math.Min(title.Length + 12, 60));
+            sb.AppendLine(line);
+            sb.AppendLine($"  {title}");
+            sb.AppendLine(line);
+        }
     }
 }

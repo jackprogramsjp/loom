@@ -34,7 +34,7 @@ public sealed class Compiler(CompilationUnit unit, SourceFile file)
                 )
                 .Replace(FileManager.LoomExtension, ".luau");
 
-            return new CompiledFile
+            return new CompiledFile(file)
             {
                 Path = compiledFilePath,
                 Diagnostics = diagnostics,
