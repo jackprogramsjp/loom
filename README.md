@@ -31,6 +31,7 @@
 - Event declarations
 - Full module system (imports/exports)
 - Error handling using the result pattern
+- Roblox type generator
 
 ---
 
