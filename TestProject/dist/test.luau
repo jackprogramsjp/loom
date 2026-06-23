@@ -1,6 +1,4 @@
-type Foo = {
-  foo: number
+type math = {
+  read abs: (number) -> number
 }
-const myFoo = { foo = 69 }
-myFoo.foo = 420
-print(myFoo)
+print(math.abs(69))

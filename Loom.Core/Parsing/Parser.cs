@@ -365,27 +365,12 @@ public sealed class Parser(LexerResult lexerResult)
 
     private Expression ParseRange()
     {
-        var expression = ParseNamedAccess();
+        var expression = ParseUnary();
         if (!Match(out var dotDot, SyntaxKind.DotDot))
             return expression;
 
-        var maximum = ParseNamedAccess();
+        var maximum = ParseUnary();
         return new RangeLiteral(dotDot, expression, maximum);
-    }
-
-    private Expression ParseNamedAccess()
-    {
-        var expression = ParseUnary();
-        var names = new List<DotName>();
-        while (Match(out var dot, SyntaxKind.Dot))
-            names.Add(new DotName(dot, Expect(SyntaxKind.Identifier)));
-
-        if (names.Count <= 0)
-            return expression;
-
-        return expression is Identifier identifier
-            ? new QualifiedName(identifier, names)
-            : new PropertyAccess(expression, names);
     }
 
     private Expression ParseUnary()
@@ -411,7 +396,7 @@ public sealed class Parser(LexerResult lexerResult)
 
     private Expression ParsePostfix()
     {
-        var expression = ParsePrimary();
+        var expression = ParseNamedAccess();
         while (!IsEof())
         {
             if (Current() is { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
@@ -462,6 +447,21 @@ public sealed class Parser(LexerResult lexerResult)
         var argumentList = ParseDelimited(ParseExpression);
         var rightParen = Expect(SyntaxKind.RParen);
         return new Arguments(leftParen, rightParen, argumentList);
+    }
+    
+    private Expression ParseNamedAccess()
+    {
+        var expression = ParsePrimary();
+        var names = new List<DotName>();
+        while (Match(out var dot, SyntaxKind.Dot))
+            names.Add(new DotName(dot, Expect(SyntaxKind.Identifier)));
+
+        if (names.Count <= 0)
+            return expression;
+
+        return expression is Identifier identifier
+            ? new QualifiedName(identifier, names)
+            : new PropertyAccess(expression, names);
     }
 
     private Expression ParsePrimary()

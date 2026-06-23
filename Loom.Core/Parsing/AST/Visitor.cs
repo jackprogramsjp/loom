@@ -4,7 +4,7 @@ namespace Loom.Parsing.AST;
 
 public abstract class Visitor<T>(T defaultValue)
 {
-    private T DefaultValue { get; } = defaultValue;
+    protected T DefaultValue { get; } = defaultValue;
 
     protected abstract T Visit(Node node);
 
@@ -18,11 +18,11 @@ public abstract class Visitor<T>(T defaultValue)
     public virtual T VisitBreak(Break @break) => DefaultValue;
     public virtual T VisitContinue(Continue @continue) => DefaultValue;
     public virtual T VisitWhile(While @while) => CombineResults([Visit(@while.Condition), Visit(@while.Body)]);
-    public virtual T VisitIf(If @if) => CombineResults([Visit(@if.Condition), Visit(@if.ThenBranch), MaybeVisit(@if.ElseBranch)]);
+    public virtual T VisitIf(If @if) => CombineResults([Visit(@if.Condition), Visit(@if.ThenBranch), MaybeVisit(@if.ElseBranch) ?? DefaultValue]);
     public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
 
     public virtual T VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) =>
-        CombineResults([Visit(interfaceInvocation.Name), MaybeVisit(interfaceInvocation.TypeArguments), Visit(interfaceInvocation.Body)]);
+        CombineResults([Visit(interfaceInvocation.Name), MaybeVisit(interfaceInvocation.TypeArguments) ?? DefaultValue, Visit(interfaceInvocation.Body)]);
 
     public virtual T VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) => VisitList(interfaceInvocationBody.Initializers);
 
@@ -40,15 +40,19 @@ public abstract class Visitor<T>(T defaultValue)
 
     public virtual T VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration) =>
         CombineResults(
-            [MaybeVisit(interfaceDeclaration.TypeParameters), MaybeVisit(interfaceDeclaration.ColonTypeListClause), MaybeVisit(interfaceDeclaration.Body)]
+            [
+                MaybeVisit(interfaceDeclaration.TypeParameters) ?? DefaultValue,
+                MaybeVisit(interfaceDeclaration.ColonTypeListClause) ?? DefaultValue,
+                MaybeVisit(interfaceDeclaration.Body) ?? DefaultValue
+            ]
         );
 
     public virtual T VisitFunctionDeclaration(FunctionDeclaration functionDeclaration) =>
         CombineResults(
             [
-                MaybeVisit(functionDeclaration.TypeParameters),
-                MaybeVisit(functionDeclaration.Parameters),
-                MaybeVisit(functionDeclaration.ReturnType),
+                MaybeVisit(functionDeclaration.TypeParameters) ?? DefaultValue,
+                MaybeVisit(functionDeclaration.Parameters) ?? DefaultValue,
+                MaybeVisit(functionDeclaration.ReturnType) ?? DefaultValue,
                 Visit(functionDeclaration.Body)
             ]
         );
@@ -60,18 +64,26 @@ public abstract class Visitor<T>(T defaultValue)
 
     public virtual T VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature) =>
         CombineResults(
-            [MaybeVisit(declareFunctionSignature.TypeParameters), MaybeVisit(declareFunctionSignature.Parameters), Visit(declareFunctionSignature.ReturnType)]
+            [
+                MaybeVisit(declareFunctionSignature.TypeParameters) ?? DefaultValue,
+                MaybeVisit(declareFunctionSignature.Parameters) ?? DefaultValue,
+                Visit(declareFunctionSignature.ReturnType)
+            ]
         );
 
-    public virtual T VisitTypeAlias(TypeAlias typeAlias) => CombineResults([MaybeVisit(typeAlias.TypeParameters), Visit(typeAlias.EqualsTypeClause)]);
+    public virtual T VisitTypeAlias(TypeAlias typeAlias) =>
+        CombineResults([MaybeVisit(typeAlias.TypeParameters) ?? DefaultValue, Visit(typeAlias.EqualsTypeClause)]);
 
     public virtual T VisitVariableDeclaration(VariableDeclaration variableDeclaration) =>
-        CombineResults([MaybeVisit(variableDeclaration.ColonTypeClause), MaybeVisit(variableDeclaration.EqualsValueClause)]);
+        CombineResults([MaybeVisit(variableDeclaration.ColonTypeClause) ?? DefaultValue, MaybeVisit(variableDeclaration.EqualsValueClause) ?? DefaultValue]);
 
     public virtual T VisitEnumDeclaration(EnumDeclaration enumDeclaration) => VisitList(enumDeclaration.Members);
     public virtual T VisitEnumMember(EnumMember enumMember) => MaybeVisit(enumMember.EqualsValueClause) ?? DefaultValue;
     public virtual T VisitParameters(Parameters parameters) => VisitList(parameters.ParameterList);
-    public virtual T VisitParameter(Parameter parameter) => CombineResults([MaybeVisit(parameter.ColonTypeClause), MaybeVisit(parameter.EqualsValueClause)]);
+
+    public virtual T VisitParameter(Parameter parameter) =>
+        CombineResults([MaybeVisit(parameter.ColonTypeClause) ?? DefaultValue, MaybeVisit(parameter.EqualsValueClause) ?? DefaultValue]);
+
     public virtual T VisitBlock(Block block) => VisitList(block.Statements);
     public virtual T VisitExpressionStatement(ExpressionStatement expressionStatement) => Visit(expressionStatement.Expression);
     public virtual T VisitReturn(Return @return) => Visit(@return.Expression);
@@ -86,7 +98,7 @@ public abstract class Visitor<T>(T defaultValue)
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
 
     public virtual T VisitInvocation(Invocation invocation) =>
-        CombineResults([Visit(invocation.Expression), MaybeVisit(invocation.TypeArguments), Visit(invocation.Arguments)]);
+        CombineResults([Visit(invocation.Expression), MaybeVisit(invocation.TypeArguments) ?? DefaultValue, Visit(invocation.Arguments)]);
 
     public virtual T VisitQualifiedName(QualifiedName qualifiedName) => Visit(qualifiedName.Identifier);
     public virtual T VisitPropertyAccess(PropertyAccess propertyAccess) => Visit(propertyAccess.Expression);
@@ -106,7 +118,9 @@ public abstract class Visitor<T>(T defaultValue)
     public virtual T VisitIndexedType(IndexedType indexedType) => CombineResults([Visit(indexedType.Type), Visit(indexedType.IndexType)]);
 
     public virtual T VisitFunctionType(FunctionType functionType) =>
-        CombineResults([MaybeVisit(functionType.TypeParameters), MaybeVisit(functionType.Parameters), Visit(functionType.ReturnType)]);
+        CombineResults(
+            [MaybeVisit(functionType.TypeParameters) ?? DefaultValue, MaybeVisit(functionType.Parameters) ?? DefaultValue, Visit(functionType.ReturnType)]
+        );
 
     public virtual T VisitArrayType(ArrayType arrayType) => Visit(arrayType.ElementType);
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
@@ -130,7 +144,7 @@ public abstract class Visitor<T>(T defaultValue)
         where TResult : T =>
         node is null ? default : Visit<TResult>(node);
 
-    protected T? MaybeVisit(Node? node) => node is null ? default : Visit(node);
+    protected T? MaybeVisit(Node? node, T? defaultValue = default) => node is null ? defaultValue : Visit(node);
 
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>

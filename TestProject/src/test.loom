@@ -1,1 +1,7 @@
-let r = 1..10; for let i in r { }
+declare sealed interface math {
+    abs: fn(n: number): number;
+}
+
+declare let math: math;
+
+print(math.abs(69))

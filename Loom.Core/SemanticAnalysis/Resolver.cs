@@ -271,14 +271,15 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         _context = ResolverContext.Declaration;
 
         bool result;
-        if (declare.Signature is not InterfaceDeclaration interfaceDeclaration)
-        {
-            result = base.VisitDeclare(declare);
-        }
-        else
+        if (declare.Signature is InterfaceDeclaration interfaceDeclaration)
         {
             var isSealed = interfaceDeclaration.SealedKeyword != null;
             result = DeclareInterface(interfaceDeclaration, isSealed, out _);
+            result &= base.VisitInterfaceDeclaration(interfaceDeclaration);
+        }
+        else
+        {
+            result = Visit(declare.Signature);
         }
 
         _context = lastContext;
@@ -316,7 +317,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             return false;
 
         MarkDefinitelyInitialized(symbol);
-        return true;
+        return base.VisitDeclareVariableSignature(declareVariableSignature);
     }
 
     public override bool VisitFunctionType(FunctionType functionType)
@@ -528,8 +529,11 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (CurrentFlowState().IsUnreachable)
             _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
 
-        if (!parserResult.Tree.File.IsDeclaration || statement is Declare or InterfaceDeclaration or TypeAlias)
-            return Visit(statement);
+        if (!parserResult.Tree.File.IsDeclaration || statement is Declare or TypeAlias)
+        {
+            Visit(statement);
+            return true;
+        }
 
         _diagnostics.Error(statement, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
         return false;
