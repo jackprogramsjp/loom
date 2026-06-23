@@ -2,13 +2,6 @@ using Loom.Text;
 
 namespace Loom.Parsing.AST;
 
-public readonly record struct NodeId(int Value)
-{
-    public static readonly Dictionary<NodeId, Node> Map = [];
-
-    public override string ToString() => $"#{Value}";
-}
-
 public abstract class Node
 {
     private static int _nextId;
@@ -32,7 +25,7 @@ public abstract class Node
         foreach (var child in Children)
             child.Parent = this;
     }
-
+    
     public abstract T Accept<T>(Visitor<T> visitor);
     public override string ToString() => Span.GetText();
 
