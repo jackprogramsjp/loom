@@ -466,6 +466,15 @@ for n in 10, 1, -1 do
     print(n)
 end
 ```
+##
+```ts
+let condition = true
+let value = condition ? 69 : none;
+```
+```luau
+const condition = true
+const value = if condition then 69 else nil
+```
 
 ---
 
