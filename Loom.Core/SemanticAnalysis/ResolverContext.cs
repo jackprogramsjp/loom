@@ -4,5 +4,6 @@ public enum ResolverContext : byte
 {
     None,
     Function,
-    Loop
+    Loop,
+    Declaration
 }

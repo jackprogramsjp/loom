@@ -195,17 +195,6 @@ public class ParserTest
     }
 
     [Fact]
-    public void ThrowsFor_DeclareVariable_MissingType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("declare let x");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.MissingDeclareVariableType,
-            "Declared variable signatures must have a type."
-        );
-    }
-
-    [Fact]
     public void ThrowsFor_Declare_InvalidSignature()
     {
         var diagnostics = Utility.GetParserDiagnostics("declare 123");
@@ -292,7 +281,7 @@ public class ParserTest
             "Expected property name, got '123'."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_AfterBody_WithDeclarationOutsideBlock()
     {
@@ -303,14 +292,14 @@ public class ParserTest
             "Declarations can only be declared inside of a block."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_After_WithMissingCondition()
     {
         var diagnostics = Utility.GetParserDiagnostics("after { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '{'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_After_WithMissingBody()
     {
@@ -318,6 +307,86 @@ public class ParserTest
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Unexpected end of file.");
     }
     
+    [Fact]
+    public void ThrowsFor_ForLoop_MissingVariableKeyword()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("for var x in items { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected variable signature, got 'var'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ForLoop_MissingInKeyword()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("for let x items { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected 'in', got 'items'.");
+    }
+
+    [Fact]
+    public void Parses_ForLoop_WithLetAndBlockBody()
+    {
+        var tree = Utility.GetAST("for let x in items { print(x) }");
+        Assert.Single(tree.Statements);
+        var forStmt = Assert.IsType<For>(tree.Statements.First());
+        Assert.Equal(SyntaxKind.ForKeyword, forStmt.Keyword.Kind);
+        Assert.Equal("x", forStmt.Declaration.Name.Text);
+        Assert.Equal(SyntaxKind.LetKeyword, forStmt.Declaration.Keyword.Kind);
+        Assert.Null(forStmt.Declaration.ColonTypeClause);
+        Assert.Equal(SyntaxKind.InKeyword, forStmt.InKeyword.Kind);
+        Assert.IsType<Identifier>(forStmt.CollectionExpression);
+        var body = Assert.IsType<Block>(forStmt.Body);
+        Assert.Single(body.Statements);
+        Assert.IsType<ExpressionStatement>(body.Statements.First());
+    }
+
+    [Fact]
+    public void Parses_ForLoop_WithMutAndExpressionBody()
+    {
+        var tree = Utility.GetAST("for mut x in items break");
+        Assert.Single(tree.Statements);
+        var forStmt = Assert.IsType<For>(tree.Statements.First());
+        Assert.Equal(SyntaxKind.ForKeyword, forStmt.Keyword.Kind);
+        Assert.Equal("x", forStmt.Declaration.Name.Text);
+        Assert.Equal(SyntaxKind.MutKeyword, forStmt.Declaration.Keyword.Kind);
+        Assert.Null(forStmt.Declaration.ColonTypeClause);
+        Assert.Equal(SyntaxKind.InKeyword, forStmt.InKeyword.Kind);
+        Assert.IsType<Identifier>(forStmt.CollectionExpression);
+        Assert.IsType<Break>(forStmt.Body);
+    }
+
+    [Fact]
+    public void Parses_ForLoop_WithTypeAnnotation()
+    {
+        var tree = Utility.GetAST("for let x: number in list { }");
+        var forStmt = Assert.IsType<For>(tree.Statements.First());
+        Assert.Equal("x", forStmt.Declaration.Name.Text);
+        Assert.NotNull(forStmt.Declaration.ColonTypeClause);
+        Assert.IsType<PrimitiveType>(forStmt.Declaration.ColonTypeClause.Type);
+        Assert.Equal(
+            PrimitiveTypeKind.Number,
+            ((PrimitiveType)forStmt.Declaration.ColonTypeClause.Type).Kind
+        );
+    }
+
+    [Fact]
+    public void Parses_ForLoop_WithComplexExpression()
+    {
+        var tree = Utility.GetAST("for let x in getItems() { }");
+        var forStmt = Assert.IsType<For>(tree.Statements.First());
+        var expr = Assert.IsType<Invocation>(forStmt.CollectionExpression);
+        Assert.Equal("getItems", ((Identifier)expr.Expression).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_NestedForLoops()
+    {
+        var tree = Utility.GetAST("for let x in xs { for mut y in ys { use(x, y) } }");
+        var outer = Assert.IsType<For>(tree.Statements.First());
+        var outerBody = Assert.IsType<Block>(outer.Body);
+        var inner = Assert.IsType<For>(outerBody.Statements.First());
+        var innerBody = Assert.IsType<Block>(inner.Body);
+        Assert.IsType<ExpressionStatement>(innerBody.Statements.First());
+    }
+
     [Fact]
     public void Parses_AfterStatement_WithExpressionBody()
     {
@@ -333,23 +402,23 @@ public class ParserTest
         var ident = Assert.IsType<Identifier>(invocation.Expression);
         Assert.Equal("doSomething", ident.Name.Text);
     }
-    
+
     [Fact]
     public void Parses_AfterStatement_WithNestedIf()
     {
         var tree = Utility.GetAST("after 2s { if condition { break } }");
         Assert.Single(tree.Statements);
-        
+
         var after = Assert.IsType<After>(tree.Statements.First());
         var block = Assert.IsType<Block>(after.Body);
         Assert.Single(block.Statements);
-        
+
         var ifStmt = Assert.IsType<If>(block.Statements.First());
         var thenBlock = Assert.IsType<Block>(ifStmt.ThenBranch);
         Assert.Single(thenBlock.Statements);
         Assert.IsType<Break>(thenBlock.Statements.First());
     }
-    
+
     [Fact]
     public void Parses_AfterBody_WithDeclarationInsideBlock()
     {
@@ -358,7 +427,7 @@ public class ParserTest
         var block = Assert.IsType<Block>(after.Body);
         Assert.IsType<VariableDeclaration>(block.Statements.First());
     }
-    
+
     [Fact]
     public void Parses_AfterStatement_InsideIfElse()
     {
@@ -369,14 +438,14 @@ public class ParserTest
         var elseBlock = Assert.IsType<Block>(ifStmt.ElseBranch!.Branch);
         Assert.IsType<After>(elseBlock.Statements.First());
     }
-    
+
     [Fact]
     public void Parses_AfterStatement_WithTimeLiteral()
     {
         var tree = Utility.GetAST("after 2.5s { }");
         var after = Assert.IsType<After>(tree.Statements.First());
         Assert.Equal(SyntaxKind.AfterKeyword, after.Keyword.Kind);
-        
+
         var literal = Assert.IsType<Literal>(after.Duration);
         Assert.Equal(2.5d, literal.Value);
     }

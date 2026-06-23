@@ -65,7 +65,8 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var collectionType = Visit(@for.CollectionExpression);
         semanticModel.TypeSolver.AddConstraint(collectionType, ObjectType.Empty, @for.CollectionExpression);
 
-        BindType(@for.Declaration, collectionType);
+        var elementType = collectionType.Equals(Intrinsics.RangeType) ? Types.PrimitiveType.Number : GetObjectValueType(collectionType);
+        BindType(@for.Declaration, elementType);
         return Visit(@for.Body);
     }
 
@@ -595,7 +596,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     private Type VisitWithFlowState(Node node, TypedFlowState state)
     {
         _flowStates.Push(state);
-        var type = Visit(node); 
+        var type = Visit(node);
         _flowStates.Pop();
 
         return type;
@@ -854,11 +855,20 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         }
     }
 
+    private static Type GetObjectValueType(Type type) =>
+        type switch
+        {
+            Types.ArrayType array => array.ElementType,
+            InterfaceType interfaceType => GetObjectValueType(interfaceType.ObjectType),
+            ObjectType objectType => objectType.ValueType(),
+            _ => Types.PrimitiveType.Never
+        };
+
     private Type GetReturnType(FunctionDeclaration functionDeclaration)
     {
         if (functionDeclaration.ReturnType != null)
             return Visit(functionDeclaration.ReturnType);
-        
+
         // TODO: flow analysis
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
@@ -1179,7 +1189,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         semanticModel.TypeSolver.SetType(node, type);
         return type;
     }
-    
+
     private void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
         _diagnostics.Error(
             node,

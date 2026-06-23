@@ -37,6 +37,158 @@ public class LuauGeneratorTest
     public void Generates_Nothing(string source) => Assert.Empty(Utility.GetLuauAST(source).Statements);
 
     [Fact]
+    public void Generates_ForLoop_OverArray()
+    {
+        var luauTree = Utility.GetLuauAST("for let x in [1, 2, 3] { }", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+        var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
+        Assert.Single(forStmt.Names);
+        Assert.Equal("x", forStmt.Names.First());
+        var collection = Assert.IsType<Table>(forStmt.Expression);
+        Assert.Equal(3, collection.Initializers.Count);
+        Assert.Empty(forStmt.Body.Statements);
+    }
+
+    [Fact]
+    public void Generates_ForLoop_OverArray_WithBlockBody()
+    {
+        var luauTree = Utility.GetLuauAST("for let x in [1] { let y = x; }", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+        var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
+        Assert.Single(forStmt.Body.Statements);
+        var constVar = Assert.IsType<ConstVariable>(forStmt.Body.Statements.First());
+        Assert.Equal("y", constVar.Name);
+    }
+
+    [Fact]
+    public void Generates_ForLoop_OverArray_WithBreak()
+    {
+        var luauTree = Utility.GetLuauAST("for let x in [1] { break }", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+        
+        var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
+        Assert.Single(forStmt.Body.Statements);
+        Assert.IsType<Break>(forStmt.Body.Statements.First());
+    }
+
+    [Fact]
+    public void Generates_ForLoop_OverArray_WithContinue()
+    {
+        var luauTree = Utility.GetLuauAST("for let x in [1] { continue }", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+
+        var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
+        Assert.Single(forStmt.Body.Statements);
+        Assert.IsType<Continue>(forStmt.Body.Statements.First());
+    }
+
+    [Fact]
+    public void Generates_ForLoop_OverRangeLiteral()
+    {
+        var luauTree = Utility.GetLuauAST("for let i in 0..5 { }", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+
+        var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
+        Assert.Equal("i", numericFor.Name);
+        
+        var start = Assert.IsType<NumberLiteral>(numericFor.Start);
+        var end = Assert.IsType<NumberLiteral>(numericFor.End);
+        Assert.Equal(0, start.Value);
+        Assert.Equal(5, end.Value);
+        Assert.Null(numericFor.IncrementBy);
+        Assert.Empty(numericFor.Body.Statements);
+    }
+
+    [Fact]
+    public void Generates_ForLoop_OverRangeLiteral_Descending()
+    {
+        var luauTree = Utility.GetLuauAST("for let i in 5..0 { }", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+
+        var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
+        Assert.Equal("i", numericFor.Name);
+        
+        var start = Assert.IsType<NumberLiteral>(numericFor.Start);
+        var end = Assert.IsType<NumberLiteral>(numericFor.End);
+        Assert.Equal(5, start.Value);
+        Assert.Equal(0, end.Value);
+
+        var inc = Assert.IsType<UnaryOperator>(numericFor.IncrementBy);
+        Assert.Equal("-", inc.Operator);
+        var one = Assert.IsType<NumberLiteral>(inc.Operand);
+        Assert.Equal(1, one.Value);
+    }
+
+    [Fact]
+    public void Generates_ForLoop_OverRangeLiteral_ComplexStep()
+    {
+        var luauTree = Utility.GetLuauAST("let a = 1; let b = 10; for let i in a..b { }", typeCheck: true);
+        Assert.Equal(3, luauTree.Statements.Count);
+
+        var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.Last());
+        Assert.Equal("i", numericFor.Name);
+        Assert.IsType<Identifier>(numericFor.Start);
+        Assert.IsType<Identifier>(numericFor.End);
+
+        var ifExpr = Assert.IsType<IfExpression>(numericFor.IncrementBy);
+        Assert.IsType<BinaryOperator>(ifExpr.Condition);
+        var neg = Assert.IsType<UnaryOperator>(ifExpr.ThenBranch);
+        Assert.Equal("-", neg.Operator);
+        var pos = Assert.IsType<NumberLiteral>(ifExpr.ElseBranch);
+        Assert.Equal(1, pos.Value);
+    }
+
+    [Fact]
+    public void Generates_ForLoop_OverRangeVariable()
+    {
+        var luauTree = Utility.GetLuauAST("let r = 1..10; for let i in r { }", typeCheck: true);
+        Assert.Equal(2, luauTree.Statements.Count);
+        
+        var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.Last());
+        Assert.Equal("i", numericFor.Name);
+        var start = Assert.IsType<PropertyAccess>(numericFor.Start);
+        var end = Assert.IsType<PropertyAccess>(numericFor.End);
+        Assert.Equal("r", ((Identifier)start.Target).Name);
+        Assert.Equal("minimum", start.Names.First());
+        Assert.Equal("r", ((Identifier)end.Target).Name);
+        Assert.Equal("maximum", end.Names.First());
+
+        var ifExpression =  Assert.IsType<IfExpression>(numericFor.IncrementBy);
+        Assert.Empty(ifExpression.ElseIfBranches);
+        Assert.NotNull(ifExpression.ElseBranch);
+        
+        var condition = Assert.IsType<BinaryOperator>(ifExpression.Condition);
+        Assert.Equal("<", condition.Operator);
+        Assert.IsType<PropertyAccess>(condition.Left);
+        Assert.IsType<PropertyAccess>(condition.Right);
+
+        var negativeOne = Assert.IsType<UnaryOperator>(ifExpression.ThenBranch);
+        Assert.IsType<NumberLiteral>(negativeOne.Operand);
+        Assert.IsType<NumberLiteral>(ifExpression.ElseBranch);
+    }
+
+    [Fact]
+    public void Generates_ForLoop_Nested()
+    {
+        const string source = """
+                    let xs = [1, 2]
+                    for let x in xs {
+                        for let y in xs { }
+                    }
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+        Assert.Equal(2, luauTree.Statements.Count);
+        
+        var outerFor = Assert.IsType<ForStatement>(luauTree.Statements.Last());
+        var innerFor = Assert.IsType<ForStatement>(outerFor.Body.Statements.First());
+        Assert.Equal("y", innerFor.Names.First());
+        
+        var identifier = Assert.IsType<Identifier>(innerFor.Expression);
+        Assert.Equal("xs", identifier.Name);
+    }
+
+    [Fact]
     public void Generates_AfterStatement_WithExpressionBody()
     {
         var luauTree = Utility.GetLuauAST("after 1s foo()");

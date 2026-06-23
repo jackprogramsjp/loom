@@ -108,6 +108,20 @@ public class VisitorTraversalTest
     public void Continue() => AssertVisitOrder("continue", "Continue");
     
     [Fact]
+    public void For_VisitsChildren() =>
+        AssertVisitOrder(
+            "for let x in 1..10 { 1 }",
+            "For",
+            "DeclareVariableSignature",
+            "RangeLiteral",
+            "Literal",
+            "Literal",
+            "Block",
+            "ExpressionStatement",
+            "Literal"
+        );
+    
+    [Fact]
     public void After_VisitsChildren() =>
         AssertVisitOrder(
             "after 5s { 1 }",

@@ -1,8 +1,3 @@
-type Data = {
-  read name: string
-  read age: number
-  read dob: string
-}
-for v in { name = "Runic", age = 21, dob = "11/23/04" } do
-  print(v)
+const r = { minimum = 1, maximum = 10 }
+for i = r.minimum, r.maximum, if r.maximum < r.minimum then -1 else 1 do
 end

@@ -15,6 +15,21 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public ObjectIndexer? Indexer { get; } = indexer;
     public List<ObjectProperty> Properties { get; } = properties;
 
+    public Type ValueType()
+    {
+        var propertyValueType = PropertyUnion();
+        if (Indexer == null)
+            return propertyValueType;
+
+        var types = new List<Type> { Indexer.ValueType };
+        if (propertyValueType is UnionType propertyUnion)
+            types.AddRange(propertyUnion.Types);
+        else
+            types.Add(propertyValueType);
+
+        return TypeSimplifier.Simplify(new UnionType(types));
+    }
+    
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
     public ObjectProperty? GetProperty(Type type) => type is LiteralType { Value: string name } && Properties.Count > 0 ? GetProperty(name) : null;

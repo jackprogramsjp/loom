@@ -55,16 +55,16 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var bodyState = PushFlowAndVisitBranch(after.Body, before);
         if (bodyState == null)
             return false;
-        
+
         var definitely = new HashSet<Symbol>(before.DefinitelyInitialized);
         var maybe = new HashSet<Symbol>(before.MaybeInitialized.Concat(bodyState.DefinitelyInitialized.Intersect(before.DefinitelyInitialized)));
         maybe.UnionWith(bodyState.MaybeInitialized);
-        
+
         PopFlowState();
         _flowStates.Push(new FlowState(definitely, maybe, before.IsUnreachable));
         return true;
     }
-    
+
     public override bool VisitFor(For @for)
     {
         PushScope();
@@ -86,7 +86,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         PopFlowState();
         _flowStates.Push(new FlowState(definitely, maybe, beforeLoop.IsUnreachable));
         PopScope();
-        
+
         return true;
     }
 
@@ -267,11 +267,22 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitDeclare(Declare declare)
     {
-        if (declare.Signature is not InterfaceDeclaration interfaceDeclaration)
-            return base.VisitDeclare(declare);
+        var lastContext = _context;
+        _context = ResolverContext.Declaration;
 
-        var isSealed = interfaceDeclaration.SealedKeyword != null;
-        return DeclareInterface(interfaceDeclaration, isSealed, out _);
+        bool result;
+        if (declare.Signature is not InterfaceDeclaration interfaceDeclaration)
+        {
+            result = base.VisitDeclare(declare);
+        }
+        else
+        {
+            var isSealed = interfaceDeclaration.SealedKeyword != null;
+            result = DeclareInterface(interfaceDeclaration, isSealed, out _);
+        }
+
+        _context = lastContext;
+        return result;
     }
 
     public override bool VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature)
@@ -299,7 +310,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
             return false;
         }
-        
+
         var isMutable = declareVariableSignature.Keyword.Kind == SyntaxKind.MutKeyword;
         if (!DeclareVariable(declareVariableSignature, SymbolKind.Variable, out var symbol, isMutable))
             return false;
@@ -377,7 +388,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
                 return false;
         }
-        
+
         return base.VisitInterfaceInvocation(interfaceInvocation);
     }
 
@@ -511,6 +522,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     }
 
     private bool ResolveStatements(List<Statement> statements) => statements.All(ResolveStatement);
+
     private bool ResolveStatement(Statement statement)
     {
         if (CurrentFlowState().IsUnreachable)

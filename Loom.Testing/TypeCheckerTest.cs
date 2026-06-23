@@ -563,6 +563,37 @@ public class TypeCheckerTest
     
     #region Checks
     [Fact]
+    public void Checks_ForLoop_OverArray_BreakInside()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in [1, 2] { break }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_ForLoop_OverArray_ContinueInside()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in [1, 2] { continue }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_ForLoop_OverArray_Nested()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let matrix = [[1, 2], [3, 4]]; for let row in matrix { for let elem in row { elem } }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+    
+    [Theory]
+    [InlineData("for let x in [1, 2, 3] { x }")]
+    [InlineData("for let x in 1..10 { x }")]
+    public void Checks_ForLoop_ElementType(string source)
+    {
+        var type = Utility.GetLastStatementType(source);
+        var element = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, element.Kind);
+    }
+    
+    [Fact]
     public void Checks_NullCoalescing_TwoOptionalOperands()
     {
         var type = Utility.GetLastStatementType("let a: number? = 1; let b: string? = 'hi'; a ?? b");

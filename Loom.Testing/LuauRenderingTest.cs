@@ -16,7 +16,7 @@ public class LuauRenderingTest
         var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
         Assert.Equal("(x :: number)", typeCast.Render());
     }
-    
+
     [Fact]
     public void Renders_Continue() => Assert.Equal("continue", new Continue().Render());
 
@@ -51,6 +51,18 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_IfExpression() =>
+        Assert.Equal(
+            "if a then 1 elseif b then 2 elseif c then 3 else 69",
+            new IfExpression(
+                new Identifier("a"),
+                new NumberLiteral(1),
+                [new ElseIfExpressionBranch(new Identifier("b"), new NumberLiteral(2)), new ElseIfExpressionBranch(new Identifier("c"), new NumberLiteral(3))],
+                new NumberLiteral(69)
+            ).Render()
+        );
+
+    [Fact]
     public void Renders_TypeAlias_GenericWithDefault()
     {
         var typeParameters = new TypeParameters([new TypeParameter("T", PrimitiveType.Number)]);
@@ -81,7 +93,7 @@ public class LuauRenderingTest
 
         Assert.Equal("function<T>(a: number, b: T): number\n  return a + b\nend", fn.Render());
     }
-    
+
     [Fact]
     public void Renders_Function()
     {
@@ -293,7 +305,8 @@ public class LuauRenderingTest
     public void Renders_ExpressionStatement() => Assert.Equal("1", new ExpressionStatement(new NumberLiteral(1)).Render());
 
     [Fact]
-    public void Renders_OptionalType_RequiresParens() => Assert.Equal("(string | boolean)?", new OptionalType(new UnionType([PrimitiveType.String, PrimitiveType.Boolean])).Render());
+    public void Renders_OptionalType_RequiresParens() =>
+        Assert.Equal("(string | boolean)?", new OptionalType(new UnionType([PrimitiveType.String, PrimitiveType.Boolean])).Render());
 
     [Fact]
     public void Renders_OptionalType() => Assert.Equal("number?", new OptionalType(PrimitiveType.Number).Render());
@@ -313,13 +326,16 @@ public class LuauRenderingTest
         );
 
     [Fact]
-    public void Renders_UnionType_WithRequiredParens() => Assert.Equal("number | (() -> ())", new UnionType([PrimitiveType.Number, new FunctionType(new TypeParameters(), [], new UnitType())]).Render());
+    public void Renders_UnionType_WithRequiredParens() =>
+        Assert.Equal("number | (() -> ())", new UnionType([PrimitiveType.Number, new FunctionType(new TypeParameters(), [], new UnitType())]).Render());
 
     [Fact]
-    public void Renders_UnionType() => Assert.Equal("number | string | boolean", new UnionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean]).Render());
+    public void Renders_UnionType() =>
+        Assert.Equal("number | string | boolean", new UnionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean]).Render());
 
     [Fact]
-    public void Renders_IntersectionType() => Assert.Equal("number & string & boolean", new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean,]).Render());
+    public void Renders_IntersectionType() =>
+        Assert.Equal("number & string & boolean", new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean,]).Render());
 
     [Theory]
     [InlineData(PrimitiveTypeKind.Number)]
@@ -351,7 +367,8 @@ public class LuauRenderingTest
         );
 
     [Fact]
-    public void Renders_Dictionary_TableType() => Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(null, PrimitiveType.String, PrimitiveType.Number), []).Render());
+    public void Renders_Dictionary_TableType() =>
+        Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(null, PrimitiveType.String, PrimitiveType.Number), []).Render());
 
     [Fact]
     public void Renders_Array_TableType() => Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, null, PrimitiveType.Number), []).Render());

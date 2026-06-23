@@ -24,6 +24,7 @@
 
 ## Upcoming Features
 - Ternary operator
+- `keyof`
 - `typeof`
 - Implementors for interfaces
 - Private visibility for interface fields & methods

@@ -1207,11 +1207,7 @@ public class TypesTest
     }
 
     [Fact]
-    public void ObjectType_ToString_Empty()
-    {
-        var empty = ObjectType.Empty;
-        Assert.Equal("{}", empty.ToString());
-    }
+    public void ObjectType_ToString_Empty() => Assert.Equal("object", ObjectType.Empty.ToString());
 
     [Fact]
     public void ObjectType_ToString_WithProperties()

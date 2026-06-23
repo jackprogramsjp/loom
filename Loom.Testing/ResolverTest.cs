@@ -317,10 +317,45 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_VariableInitializedInForBody_UsedAfter()
     {
-        var diagnostics = Utility.GetSemanticModel("mut x: number; for let x : 1..10 { x = 42; } x;").Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("mut x: number; for let _ in 1..10 { x = 42; } x;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
     }
+    
+    [Fact]
+    public void ThrowsFor_DeclareVariable_MissingType()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare let x").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.MissingDeclareVariableType, "Declared variable signatures must have a type.");
+    }
     #endregion ThrowsFor
+    
+    [Fact]
+    public void ThrowsFor_ForLoop_NonObjectCollection_Number()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in 42 { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '42' is not assignable to type 'object'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ForLoop_NonObjectCollection_Bool()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in true { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'true' is not assignable to type 'object'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ForLoop_NonObjectCollection_String()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in \"abc\" { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"abc\"' is not assignable to type 'object'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ForLoop_NonObjectCollection_Optional()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Foo {}; let a: Foo? = new Foo {}; for let x in a { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'Foo?' is not assignable to type 'object'.");
+    }
 
     [Theory]
     [InlineData("fn foo { return 42; let x = 1 }")]
@@ -355,6 +390,12 @@ public class ResolverTest
 
     [Fact]
     public void Allows_NonSealedInterfaceConstraints() => Utility.AssertNoErrors(Utility.GetSemanticModel("interface A; interface B: A;"));
+    
+    [Fact]
+    public void Allows_BreakInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for let x in 1..10 { break }"));
+    
+    [Fact]
+    public void Allows_ContinueInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for let x in 1..10 { continue }"));
 
     [Fact]
     public void Allows_BreakInsideWhile() => Utility.AssertNoErrors(Utility.GetSemanticModel("while true { break }"));
