@@ -6,38 +6,10 @@ using Loom.Text;
 
 namespace Loom.Parsing;
 
-public sealed class Parser
+public sealed class Parser(LexerResult lexerResult)
 {
-    private delegate Statement StatementParser(Token keyword);
-
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly Dictionary<SyntaxKind, StatementParser> _statementParsers;
-    private readonly LexerResult _lexerResult;
     private int _position;
-
-    public Parser(LexerResult lexerResult)
-    {
-        _lexerResult = lexerResult;
-        _statementParsers = new Dictionary<SyntaxKind, StatementParser>
-        {
-            [SyntaxKind.LBrace] = ParseBlock,
-            [SyntaxKind.ReturnKeyword] = token => new Return(token, ParseExpression()),
-            [SyntaxKind.FnKeyword] = ParseFunctionDeclaration,
-            [SyntaxKind.LetKeyword] = ParseVariableDeclaration,
-            [SyntaxKind.MutKeyword] = ParseVariableDeclaration,
-            [SyntaxKind.TypeKeyword] = ParseTypeAlias,
-            [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
-            [SyntaxKind.DeclareKeyword] = ParseDeclareStatement,
-            [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
-            [SyntaxKind.SealedKeyword] = ParseInterfaceDeclaration,
-            [SyntaxKind.IfKeyword] = ParseIf,
-            [SyntaxKind.ForKeyword] = ParseFor,
-            [SyntaxKind.AfterKeyword] = ParseAfter,
-            [SyntaxKind.WhileKeyword] = ParseWhile,
-            [SyntaxKind.BreakKeyword] = ParseBreak,
-            [SyntaxKind.ContinueKeyword] = ParseContinue,
-        };
-    }
 
     public ParserResult Parse()
     {
@@ -45,20 +17,41 @@ public sealed class Parser
         while (!IsEof())
             statements.Add(ParseStatement());
 
-        var tree = new Tree(_lexerResult.File, statements);
+        var tree = new Tree(lexerResult.File, statements);
         return new ParserResult(tree, _diagnostics);
     }
 
     private Statement ParseStatement()
     {
-        foreach (var (kind, parse) in _statementParsers)
-        {
-            if (!Match(out var token, kind)) continue;
-            return parse(token);
-        }
+        if (IsEof())
+            return new ExpressionStatement(ParseExpression());
 
-        var expression = ParseExpression();
-        return new ExpressionStatement(expression);
+        var token = Advance();
+        var statement = token.Kind switch
+        {
+            SyntaxKind.LBrace => ParseBlock(token),
+            SyntaxKind.ReturnKeyword => new Return(token, ParseExpression()),
+            SyntaxKind.FnKeyword => ParseFunctionDeclaration(token),
+            SyntaxKind.LetKeyword or SyntaxKind.MutKeyword => ParseVariableDeclaration(token),
+            SyntaxKind.TypeKeyword => ParseTypeAlias(token),
+            SyntaxKind.EnumKeyword => ParseEnumDeclaration(token),
+            SyntaxKind.DeclareKeyword => ParseDeclareStatement(token),
+            SyntaxKind.InterfaceKeyword or SyntaxKind.SealedKeyword => ParseInterfaceDeclaration(token),
+            SyntaxKind.IfKeyword => ParseIf(token),
+            SyntaxKind.ForKeyword => ParseFor(token),
+            SyntaxKind.AfterKeyword => ParseAfter(token),
+            SyntaxKind.WhileKeyword => ParseWhile(token),
+            SyntaxKind.BreakKeyword => ParseBreak(token),
+            SyntaxKind.ContinueKeyword => ParseContinue(token),
+            _ => null
+        };
+
+        if (statement != null)
+            return statement;
+            
+        _position--;
+
+        return new ExpressionStatement(ParseExpression());
     }
 
     private InterfaceDeclaration ParseInterfaceDeclaration(Token keyword)
@@ -170,7 +163,7 @@ public sealed class Parser
         var elseBranch = Match(out var elseKeyword, SyntaxKind.ElseKeyword) ? new ElseBranch(elseKeyword, ParseControlFlowBody(keyword)) : null;
         return new If(keyword, condition, thenBranch, elseBranch);
     }
-    
+
     private Statement ParseControlFlowBody(Token keyword)
     {
         var statement = ParseStatement();
@@ -751,8 +744,8 @@ public sealed class Parser
             token.Text[splitIndex..]
         );
 
-        _lexerResult.Tokens[_position] = closingArrow;
-        _lexerResult.Tokens.Insert(_position + 1, remainder);
+        lexerResult.Tokens[_position] = closingArrow;
+        lexerResult.Tokens.Insert(_position + 1, remainder);
         Advance();
         return true;
     }
@@ -777,8 +770,21 @@ public sealed class Parser
 
     private bool Match([MaybeNullWhen(false)] out Token token, params SyntaxKind[] kinds) => Match(out token, kinds.Contains);
     private bool Match(SyntaxKind kind) => Match(out _, kind);
-    private bool Match(params SyntaxKind[] kinds) => Match(out _, kinds);
-    private bool Match([MaybeNullWhen(false)] out Token token, SyntaxKind kind) => Match(out token, otherKind => otherKind == kind);
+    private bool Match([MaybeNullWhen(false)] out Token token, SyntaxKind kind)
+    {
+        if (IsEof())
+        {
+            token = null;
+            return false;
+        }
+
+        token = Current();
+        var match = kind == token.Kind;
+        if (match)
+            Advance();
+
+        return match;
+    }
 
     private bool Match([MaybeNullWhen(false)] out Token token, Predicate<SyntaxKind> predicate)
     {
@@ -834,7 +840,7 @@ public sealed class Parser
     private Token Current() => Peek(0);
     private Token CurrentOrLast() => !IsEof() ? Current() : Last();
     private Token Last() => Peek(-1);
-    private Token Peek(int offset) => _lexerResult.Tokens[_position + offset];
-    private bool IsEof() => _position >= _lexerResult.Tokens.Count;
+    private Token Peek(int offset) => lexerResult.Tokens[_position + offset];
+    private bool IsEof() => _position >= lexerResult.Tokens.Count;
     private static string SafeTokenText(Token? token) => token != null ? $"'{token.Text}'" : "EOF";
 }

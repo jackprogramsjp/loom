@@ -3,14 +3,8 @@ using Loom.Utility;
 
 namespace Loom.Diagnostics;
 
-public sealed class Diagnostic(LocationSpan span, DiagnosticSeverity severity, string? code, string message, string? hint)
+public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {
-    public LocationSpan Span { get; } = span;
-    public DiagnosticSeverity Severity { get; } = severity;
-    public string? Code { get; } = code;
-    public string Message { get; } = message;
-    public string? Hint { get; } = hint;
-
     public override string ToString()
     {
         var (severityColor, underlineColor, severityLabel) = Severity switch
