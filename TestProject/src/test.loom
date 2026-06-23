@@ -1,1 +1,7 @@
-let r = 1..10; for let i in r { }
+interface Foo {
+    mut foo: number;
+}
+
+let myFoo = new Foo { foo: 69 };
+myFoo.foo = 420;
+print(myFoo);

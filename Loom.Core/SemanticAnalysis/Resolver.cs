@@ -592,7 +592,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         lookup[symbol.Name] = symbol;
         scope.Declarations[nodeId] = symbol;
         _allDeclarations[nodeId] = symbol;
-        _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
+        _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
         if (parserResult.Tree.File.IsDeclaration)
             symbol.IsGlobal = true;
     }
@@ -623,7 +623,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private void MarkDefinitelyInitialized(Symbol symbol)
     {
-        if (!symbol.IsValueSymbol)
+        if (symbol.IsTypeSymbol)
         {
             _diagnostics.CompilerError(symbol.Declaration, "Attempt to mark symbol as initialized - but symbol is not a value symbol");
             return;

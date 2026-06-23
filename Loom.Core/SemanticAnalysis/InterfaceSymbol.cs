@@ -6,5 +6,5 @@ public sealed class InterfaceSymbol(InterfaceDeclaration declaration, string nam
     : Symbol(declaration, SymbolKind.Interface, name, false, isIntrinsic)
 {
     public bool IsSealed { get; } = isSealed;
-    public override string ToString() => $"InterfaceSymbol({Name}, IsSealed: {IsSealed} )";
+    public override string ToString() => $"InterfaceSymbol({Name}, IsSealed: {IsSealed})";
 }

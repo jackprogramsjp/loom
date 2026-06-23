@@ -58,7 +58,6 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
     {
         var type = TypeSimplifier.Simplify(base.VisitExpressionStatement(expressionStatement));
-        _diagnostics.Info(expressionStatement, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for expression");
         return BindType(expressionStatement, type);
     }
 
@@ -109,7 +108,6 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var functionType = BindType(functionDeclaration, new Types.FunctionType(typeParameters, parameterTypes, returnType));
         Visit(functionDeclaration.Body);
 
-        _diagnostics.Info(functionDeclaration, $"Solved type '{TypeSimplifier.Simplify(functionType)}' for function");
         return BindType(functionDeclaration, functionType);
     }
 
@@ -1190,6 +1188,9 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         where T : Type
     {
         semanticModel.TypeSolver.SetType(node, type);
+        if (node is not (Tree or ExpressionStatement))
+            _diagnostics.Debug(node, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for {node.GetType().Name}");
+        
         return type;
     }
 

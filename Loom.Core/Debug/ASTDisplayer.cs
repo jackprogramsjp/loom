@@ -2,9 +2,9 @@ using System.Reflection;
 using Loom.Parsing.AST;
 using Loom.Text;
 
-namespace Loom.Utility;
+namespace Loom.Debug;
 
-public class ASTDisplayer(Tree ast)
+internal class ASTDisplayer(Tree ast)
 {
     private int _indent;
     private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id", "File", "Keyword"];
