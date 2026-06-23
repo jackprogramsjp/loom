@@ -42,8 +42,8 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("for let x in [1, 2, 3] { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
-        Assert.Single(forStmt.Names);
-        Assert.Equal("x", forStmt.Names.First());
+        Assert.Equal(2, forStmt.Names.Count);
+        Assert.Equal("x", forStmt.Names.Last());
         var collection = Assert.IsType<Table>(forStmt.Expression);
         Assert.Equal(3, collection.Initializers.Count);
         Assert.Empty(forStmt.Body.Statements);
@@ -181,8 +181,12 @@ public class LuauGeneratorTest
         Assert.Equal(2, luauTree.Statements.Count);
         
         var outerFor = Assert.IsType<ForStatement>(luauTree.Statements.Last());
+        Assert.Equal(2, outerFor.Names.Count);
+        Assert.Equal("x", outerFor.Names.Last());
+        
         var innerFor = Assert.IsType<ForStatement>(outerFor.Body.Statements.First());
-        Assert.Equal("y", innerFor.Names.First());
+        Assert.Equal(2, innerFor.Names.Count);
+        Assert.Equal("y", innerFor.Names.Last());
         
         var identifier = Assert.IsType<Identifier>(innerFor.Expression);
         Assert.Equal("xs", identifier.Name);

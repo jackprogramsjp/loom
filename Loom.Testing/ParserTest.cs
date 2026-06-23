@@ -490,6 +490,22 @@ public class ParserTest
         Assert.Single(tree.Statements);
         Assert.IsType<Continue>(tree.Statements.First());
     }
+    
+    [Fact]
+    public void Parses_QualifiedName_Invocation()
+    {
+        var tree = Utility.GetAST("a.b()");
+        Assert.Single(tree.Statements);
+
+        var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.First());
+        var invocation = Assert.IsType<Invocation>(exprStmt.Expression);
+        Assert.Empty(invocation.Arguments.ArgumentList);
+        
+        var qualifiedName = Assert.IsType<QualifiedName>(invocation.Expression);
+        Assert.Equal("a", qualifiedName.Identifier.Name.Text);
+        Assert.Single(qualifiedName.Names);
+        Assert.Equal("b", qualifiedName.Names.First().Name.Text);
+    }
 
     [Fact]
     public void Parses_QualifiedName_Chained()

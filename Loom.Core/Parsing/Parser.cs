@@ -373,13 +373,8 @@ public sealed class Parser(LexerResult lexerResult)
         return new RangeLiteral(dotDot, expression, maximum);
     }
 
-    private Expression ParseUnary()
+    private InterfaceInvocation ParseInterfaceInvocation(Token keyword)
     {
-        if (!Match(out var newKeyword, SyntaxKind.NewKeyword))
-            return Match(out var op, SyntaxFacts.IsUnaryOperator)
-                ? new UnaryOperator(op, ParseUnary())
-                : ParsePostfix();
-
         var name = new Identifier(ExpectIdentifier());
         var typeArguments = ParseTypeArguments(forInvocation: true);
         var leftBrace = Expect(SyntaxKind.LBrace);
@@ -391,8 +386,13 @@ public sealed class Parser(LexerResult lexerResult)
         }
 
         var body = new InterfaceInvocationBody(leftBrace, rightBrace, initializers);
-        return new InterfaceInvocation(newKeyword, name, typeArguments, body);
+        return new InterfaceInvocation(keyword, name, typeArguments, body);
     }
+
+    private Expression ParseUnary() =>
+        Match(out var op, SyntaxFacts.IsUnaryOperator)
+            ? new UnaryOperator(op, ParseUnary())
+            : ParsePostfix();
 
     private Expression ParsePostfix()
     {
@@ -466,6 +466,9 @@ public sealed class Parser(LexerResult lexerResult)
 
     private Expression ParsePrimary()
     {
+        if (Match(out var newKeyword, SyntaxKind.NewKeyword))
+            return ParseInterfaceInvocation(newKeyword);
+        
         if (Match(out var openingParen, SyntaxKind.LParen))
         {
             var expression = ParseExpression();

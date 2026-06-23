@@ -60,7 +60,7 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
         var collectionType = semanticModel.GetType(@for.CollectionExpression);
         var collectionExpression = Visit(@for.CollectionExpression);
         if (!collectionType.Equals(Intrinsics.RangeType))
-            return new ForStatement([name], collectionExpression, body);
+            return new ForStatement(["_", name], collectionExpression, body);
 
         LuauExpression start;
         LuauExpression end;
