@@ -1,7 +1,2 @@
-declare sealed interface math {
-    abs: fn(n: number): number;
-}
-
-declare let math: math;
-
-print(math.abs(69))
+let x = true ? 1 : "abc";
+x

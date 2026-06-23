@@ -48,7 +48,7 @@ public sealed class Parser(LexerResult lexerResult)
 
         if (statement != null)
             return statement;
-            
+
         _position--;
 
         return new ExpressionStatement(ParseExpression());
@@ -340,11 +340,22 @@ public sealed class Parser(LexerResult lexerResult)
         var left = ParseBinaryLevel(level + 1);
         while (Match(out var op, matches))
         {
-            if (op.Kind == SyntaxKind.AsKeyword)
+            switch (op.Kind)
             {
-                var type = ParseType();
-                left = new AsExpression(op, left, type);
-                continue;
+                case SyntaxKind.AsKeyword:
+                {
+                    var type = ParseType();
+                    left = new AsExpression(op, left, type);
+                    continue;
+                }
+                case SyntaxKind.Question:
+                {
+                    var thenBranch = ParseBinaryLevel(level);
+                    var colon = Expect(SyntaxKind.Colon);
+                    var elseBranch = ParseBinaryLevel(level);
+                    left = new TernaryOperator(op, colon, left, thenBranch, elseBranch);
+                    continue;
+                }
             }
 
             var right = ParseBinaryLevel(rightAssociative ? level : level + 1);
@@ -448,7 +459,7 @@ public sealed class Parser(LexerResult lexerResult)
         var rightParen = Expect(SyntaxKind.RParen);
         return new Arguments(leftParen, rightParen, argumentList);
     }
-    
+
     private Expression ParseNamedAccess()
     {
         var expression = ParsePrimary();
@@ -468,7 +479,7 @@ public sealed class Parser(LexerResult lexerResult)
     {
         if (Match(out var newKeyword, SyntaxKind.NewKeyword))
             return ParseInterfaceInvocation(newKeyword);
-        
+
         if (Match(out var openingParen, SyntaxKind.LParen))
         {
             var expression = ParseExpression();
@@ -773,6 +784,7 @@ public sealed class Parser(LexerResult lexerResult)
 
     private bool Match([MaybeNullWhen(false)] out Token token, params SyntaxKind[] kinds) => Match(out token, kinds.Contains);
     private bool Match(SyntaxKind kind) => Match(out _, kind);
+
     private bool Match([MaybeNullWhen(false)] out Token token, SyntaxKind kind)
     {
         if (IsEof())

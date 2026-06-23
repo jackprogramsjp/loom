@@ -7,6 +7,7 @@ internal sealed record BinaryPrecedenceLevel(bool RightAssociative, Predicate<Sy
     public static readonly BinaryPrecedenceLevel[] Levels =
     [
         new(true, SyntaxFacts.IsAssignmentOperator),
+        new(true, SyntaxKind.Question),
         new(true, SyntaxKind.QuestionQuestion),
         new(false, SyntaxKind.PipePipe),
         new(false, SyntaxKind.AmpersandAmpersand),

@@ -108,6 +108,9 @@ public abstract class Visitor<T>(T defaultValue)
 
     public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) =>
         CombineResults([Visit(assignmentOperator.Left), Visit(assignmentOperator.Right)]);
+    
+    public virtual T VisitTernaryOperator(TernaryOperator ternaryOperator) =>
+        CombineResults([Visit(ternaryOperator.Condition), Visit(ternaryOperator.ThenBranch), Visit(ternaryOperator.ElseBranch)]);
 
     public virtual T VisitBinaryOperator(BinaryOperator binaryOperator) => CombineResults([Visit(binaryOperator.Left), Visit(binaryOperator.Right)]);
     public virtual T VisitUnaryOperator(UnaryOperator unaryOperator) => Visit(unaryOperator.Operand);

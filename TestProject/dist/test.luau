@@ -1,4 +1,2 @@
-type math = {
-  read abs: (number) -> number
-}
-print(math.abs(69))
+const x = if true then 1 else "abc"
+const _ = x

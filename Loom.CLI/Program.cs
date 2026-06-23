@@ -9,7 +9,7 @@ Console.OutputEncoding = System.Text.Encoding.UTF8;
 var directory = args.ElementAtOrDefault(0) ?? ".";
 var loomConfig = ConfigReader.LocateFromDirectory(directory);
 if (loomConfig == null)
-    throw new Exception("Could not locate Loom configuration file.");
+    throw new ArgumentException($"Could not locate Loom configuration file in directory '{directory}'.");
 
 var compilationUnit = new CompilationUnit(loomConfig);
 var result = compilationUnit.Compile();

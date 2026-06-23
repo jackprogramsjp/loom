@@ -435,6 +435,17 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         return BindType(assignmentOperator, valueType);
     }
 
+    public override Type VisitTernaryOperator(TernaryOperator ternaryOperator)
+    {
+        var conditionType = Visit(ternaryOperator.Condition);
+        semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, ternaryOperator.Condition);
+
+        var (trueState, falseState) = ComputeBranchStates(ternaryOperator.Condition);
+        var thenBranchType = VisitWithFlowState(ternaryOperator.ThenBranch, trueState);
+        var elseBranchType = VisitWithFlowState(ternaryOperator.ElseBranch, falseState);
+        return BindType(ternaryOperator, TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType])));
+    }
+
     public override Type VisitBinaryOperator(BinaryOperator binaryOperator)
     {
         var leftType = Visit(binaryOperator.Left);

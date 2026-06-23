@@ -306,6 +306,9 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
 
     public override LuauNode VisitAsExpression(AsExpression asExpression) => new TypeCast(Visit(asExpression.Expression), Visit(asExpression.Type));
 
+    public override LuauNode VisitTernaryOperator(TernaryOperator ternaryOperator) =>
+        new IfExpression(Visit(ternaryOperator.Condition), Visit(ternaryOperator.ThenBranch), [], Visit(ternaryOperator.ElseBranch));
+
     public override LuauNode VisitBinaryOperator(BinaryOperator binaryOperator)
     {
         var left = Visit(binaryOperator.Left);
