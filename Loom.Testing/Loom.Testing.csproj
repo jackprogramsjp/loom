@@ -24,7 +24,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Loom.Luau\Loom.Luau.csproj" />
-        <ProjectReference Include="..\Loom\Loom.csproj" />
+        <ProjectReference Include="..\Loom.Core\Loom.Core.csproj" />
     </ItemGroup>
 
 </Project>

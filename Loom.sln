@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loom", "Loom\Loom.csproj", "{0CF89972-8F53-4B52-8BC4-F31A3A530750}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loom.Core", "Loom.Core\Loom.Core.csproj", "{0CF89972-8F53-4B52-8BC4-F31A3A530750}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loom.CLI", "Loom.CLI\Loom.CLI.csproj", "{4472B573-20FD-48C2-AF2E-FA968532C779}"
 EndProject
