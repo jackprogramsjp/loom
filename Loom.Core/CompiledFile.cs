@@ -2,7 +2,7 @@ using Loom.Diagnostics;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
-using Loom.Syntax;
+using Loom.Text;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom;

@@ -19,7 +19,7 @@ public class TypesTest
     [Fact]
     public void InterfaceType_Assignability_Self()
     {
-        var interfaceA = new InterfaceType("A", [], new ObjectType(null, []));
+        var interfaceA = new InterfaceType("A", [], ObjectType.Empty);
         Assert.True(interfaceA.IsAssignableTo(interfaceA));
     }
 
@@ -40,7 +40,7 @@ public class TypesTest
         var interfaceB = new InterfaceType("B", [], objectB);
         var objectC = new ObjectType(null, [new ObjectProperty(false, "name", String)]);
         var interfaceC = new InterfaceType("C", [], objectC);
-        var interfaceA = new InterfaceType("A", [interfaceB, interfaceC], new ObjectType(null, []));
+        var interfaceA = new InterfaceType("A", [interfaceB, interfaceC], ObjectType.Empty);
         Assert.True(interfaceA.IsAssignableTo(interfaceB));
         Assert.True(interfaceA.IsAssignableTo(interfaceC));
         Assert.False(interfaceB.IsAssignableTo(interfaceA));
@@ -104,7 +104,7 @@ public class TypesTest
     [Fact]
     public void ObjectType_Assignability_EmptyObject()
     {
-        var empty = new ObjectType(null, []);
+        var empty = ObjectType.Empty;
         var withProps = new ObjectType(null, [new ObjectProperty(false, "x", Number)]);
         Assert.False(empty.IsAssignableTo(withProps));
         Assert.True(withProps.IsAssignableTo(empty));
@@ -657,8 +657,8 @@ public class TypesTest
     [Fact]
     public void ObjectType_Equality_EmptyObjects()
     {
-        var empty1 = new ObjectType(null, []);
-        var empty2 = new ObjectType(null, []);
+        var empty1 = ObjectType.Empty;
+        var empty2 = ObjectType.Empty;
         var emptyWithIndexer = new ObjectType(new ObjectIndexer(true, String, Number), []);
 
         Assert.True(empty1.Equals(empty1));
@@ -702,7 +702,7 @@ public class TypesTest
         var obj3 = new ObjectType(new ObjectIndexer(false, String, Number), []);
         var obj4 = new ObjectType(new ObjectIndexer(true, Number, Number), []);
         var obj5 = new ObjectType(new ObjectIndexer(true, String, String), []);
-        var obj6 = new ObjectType(null, []);
+        var obj6 = ObjectType.Empty;
         Assert.True(obj1.Equals(obj2));
         Assert.False(obj1.Equals(obj3));
         Assert.False(obj1.Equals(obj4));
@@ -1209,7 +1209,7 @@ public class TypesTest
     [Fact]
     public void ObjectType_ToString_Empty()
     {
-        var empty = new ObjectType(null, []);
+        var empty = ObjectType.Empty;
         Assert.Equal("{}", empty.ToString());
     }
 
@@ -1297,7 +1297,7 @@ public class TypesTest
     [Fact]
     public void InterfaceType_ToString()
     {
-        var type = new InterfaceType("Box", [], new ObjectType(null, []));
+        var type = new InterfaceType("Box", [], ObjectType.Empty);
         Assert.Equal("Box", type.ToString());
     }
 

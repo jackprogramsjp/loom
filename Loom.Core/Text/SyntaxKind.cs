@@ -1,4 +1,4 @@
-namespace Loom.Syntax;
+namespace Loom.Text;
 
 public enum SyntaxKind : ushort
 {
@@ -81,7 +81,8 @@ public enum SyntaxKind : ushort
     IfKeyword,
     ElseKeyword,
     WhileKeyword,
-    MatchKeyword,
+    ForKeyword,
+    InKeyword,
     NameOfKeyword,
     DeclareKeyword,
     AsKeyword,

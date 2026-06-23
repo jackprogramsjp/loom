@@ -1,4 +1,4 @@
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking.Types;
 
 namespace Loom.Parsing.AST;

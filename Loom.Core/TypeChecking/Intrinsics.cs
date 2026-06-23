@@ -27,7 +27,7 @@ public static class Intrinsics
             Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory))))
         );
 
-        var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom/TypeChecking/Intrinsic" } };
+        var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" } };
         var compilationUnit = new CompilationUnit(loomConfig);
         var symbols = new List<Symbol>();
         foreach (var compiledFile in compilationUnit.SourceFiles.Select(compilationUnit.Compile))

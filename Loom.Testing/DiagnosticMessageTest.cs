@@ -1,5 +1,5 @@
 using Loom.Diagnostics;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.Utility;
 
 namespace Loom.Testing;

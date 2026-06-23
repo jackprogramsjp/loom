@@ -1,6 +1,6 @@
 using System.Reflection;
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 
 namespace Loom.Utility;
 

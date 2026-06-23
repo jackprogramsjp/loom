@@ -1,7 +1,0 @@
-fn a {
-    after 1s {
-        if true {
-            return 69;
-        }
-    }
-}

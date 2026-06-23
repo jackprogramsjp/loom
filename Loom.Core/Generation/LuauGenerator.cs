@@ -4,7 +4,7 @@ using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
@@ -52,6 +52,41 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
     public override LuauNode VisitBreak(Break @break) => new Luau.AST.Break();
     public override LuauNode VisitContinue(Continue @continue) => new Luau.AST.Continue();
     public override LuauNode VisitWhile(While @while) => new WhileStatement(Visit(@while.Condition), GenerateChunk(@while.Body));
+
+    public override LuauNode VisitFor(For @for)
+    {
+        var name = @for.Declaration.Name.Text;
+        var body = GenerateChunk(@for.Body);
+        var collectionType = semanticModel.GetType(@for.CollectionExpression);
+        var collectionExpression = Visit(@for.CollectionExpression);
+        if (!collectionType.Equals(Intrinsics.RangeType))
+            return new ForStatement([name], collectionExpression, body);
+
+        LuauExpression start;
+        LuauExpression end;
+        LuauExpression? incrementBy;
+        var one = new NumberLiteral(1);
+        var negativeOne = new Luau.AST.UnaryOperator("-", one);
+        if (@for.CollectionExpression is RangeLiteral range)
+        {
+            start = Visit(range.Minimum);
+            end = Visit(range.Maximum);
+            incrementBy = start is NumberLiteral { Value: var minimum } && end is NumberLiteral { Value: var maximum }
+                ? maximum < minimum ? negativeOne : null
+                : new IfExpression(new Luau.AST.BinaryOperator(end, "<", start), negativeOne, [], one);
+        }
+        else
+        {
+            var rangeIdentifier = PushToVariable("_range", collectionExpression);
+            var minimum = new Luau.AST.PropertyAccess(rangeIdentifier, ["minimum"]);
+            var maximum = new Luau.AST.PropertyAccess(rangeIdentifier, ["maximum"]);
+            start = minimum;
+            end = maximum;
+            incrementBy = new IfExpression(new Luau.AST.BinaryOperator(end, "<", start), negativeOne, [], one);
+        }
+
+        return new NumericForStatement(name, start, end, incrementBy, body);
+    }
 
     public override LuauNode VisitAfter(After after) =>
         new Luau.AST.ExpressionStatement(

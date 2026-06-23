@@ -1,6 +1,6 @@
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
 using FunctionType = Loom.Parsing.AST.FunctionType;

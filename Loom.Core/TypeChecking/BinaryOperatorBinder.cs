@@ -1,5 +1,5 @@
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 

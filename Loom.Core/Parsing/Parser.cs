@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Lexing;
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 
 namespace Loom.Parsing;
 
@@ -31,6 +31,7 @@ public sealed class Parser
             [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.SealedKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.IfKeyword] = ParseIf,
+            [SyntaxKind.ForKeyword] = ParseFor,
             [SyntaxKind.AfterKeyword] = ParseAfter,
             [SyntaxKind.WhileKeyword] = ParseWhile,
             [SyntaxKind.BreakKeyword] = ParseBreak,
@@ -132,6 +133,19 @@ public sealed class Parser
         return null;
     }
 
+    private Statement ParseFor(Token keyword)
+    {
+        var variableKeyword = Match(out var letKeyword, SyntaxKind.LetKeyword) ? letKeyword : Expect(SyntaxKind.MutKeyword, "variable signature");
+        var declaration = ParseDeclareVariableSignature(variableKeyword);
+        if (variableKeyword.Kind is not (SyntaxKind.LetKeyword or SyntaxKind.MutKeyword) || declaration is not DeclareVariableSignature signature)
+            return new NullStatement(variableKeyword);
+
+        var inKeyword = Expect(SyntaxKind.InKeyword);
+        var expression = ParseExpression();
+        var body = ParseStatement();
+        return new For(keyword, signature, inKeyword, expression, body);
+    }
+
     private After ParseAfter(Token keyword)
     {
         var condition = ParseExpression();
@@ -192,20 +206,11 @@ public sealed class Parser
         return new NullStatement(declareKeyword);
     }
 
-    private Statement ParseDeclareVariableSignature(Token variableKeyword)
+    private DeclareVariableSignature ParseDeclareVariableSignature(Token variableKeyword)
     {
         var name = ExpectIdentifier();
         var colonTypeClause = ParseColonTypeClause();
-        if (colonTypeClause != null)
-            return new DeclareVariableSignature(variableKeyword, name, colonTypeClause);
-
-        _diagnostics.Error(
-            name,
-            InternalCodes.MissingDeclareVariableType,
-            "Declared variable signatures must have a type."
-        );
-
-        return new NullStatement(variableKeyword);
+        return new DeclareVariableSignature(variableKeyword, name, colonTypeClause);
     }
 
     private Statement ParseDeclareFunctionSignature(Token fnKeyword)
@@ -812,7 +817,7 @@ public sealed class Parser
         _diagnostics.Error(
             token,
             InternalCodes.UnexpectedToken,
-            message != null ? message(token) : $"Expected '{expected}', got '{SafeTokenText(token)}'."
+            message != null ? message(token) : $"Expected '{expected}', got {SafeTokenText(token)}."
         );
 
         return token;

@@ -1,4 +1,4 @@
-namespace Loom.Syntax;
+namespace Loom.Text;
 
 public sealed class Token
 {

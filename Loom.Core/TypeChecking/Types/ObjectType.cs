@@ -10,6 +10,8 @@ public record ObjectProperty(bool IsMutable, string Name, Type ValueType)
 
 public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties) : Type
 {
+    public static readonly ObjectType Empty = new(null, []);
+    
     public ObjectIndexer? Indexer { get; } = indexer;
     public List<ObjectProperty> Properties { get; } = properties;
 
@@ -124,7 +126,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public override string ToString()
     {
         if (Indexer == null && Properties.Count == 0)
-            return "{}";
+            return "object";
 
         var properties = string.Join(", ", Properties.ConvertAll(p => $"{(p.IsMutable ? "mut " : "")}{p.Name}: {p.ValueType}"));
         var indexer = Indexer != null

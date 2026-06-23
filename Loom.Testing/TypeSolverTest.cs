@@ -192,8 +192,8 @@ public class TypeSolverTest
     {
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
-        var a = new InterfaceType("A", [], new ObjectType(null, []));
-        var b = new InterfaceType("A", [], new ObjectType(null, []));
+        var a = new InterfaceType("A", [], ObjectType.Empty);
+        var b = new InterfaceType("A", [], ObjectType.Empty);
 
         solver.AddConstraint(a, b, Utility.Span);
         Assert.True(solver.SolveConstraints());
@@ -204,9 +204,9 @@ public class TypeSolverTest
     {
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
-        var baseA = new InterfaceType("Base", [], new ObjectType(null, []));
-        var a = new InterfaceType("A", [baseA], new ObjectType(null, []));
-        var b = new InterfaceType("A", [], new ObjectType(null, []));
+        var baseA = new InterfaceType("Base", [], ObjectType.Empty);
+        var a = new InterfaceType("A", [baseA], ObjectType.Empty);
+        var b = new InterfaceType("A", [], ObjectType.Empty);
 
         solver.AddConstraint(a, b, Utility.Span);
         Assert.False(solver.SolveConstraints());

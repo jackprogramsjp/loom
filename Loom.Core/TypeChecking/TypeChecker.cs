@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
 using FunctionType = Loom.Parsing.AST.FunctionType;
@@ -58,7 +58,17 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         _diagnostics.Info(expressionStatement, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for expression");
         return BindType(expressionStatement, type);
     }
-    
+
+    public override Type VisitFor(For @for)
+    {
+        Visit(@for.Declaration);
+        var collectionType = Visit(@for.CollectionExpression);
+        semanticModel.TypeSolver.AddConstraint(collectionType, ObjectType.Empty, @for.CollectionExpression);
+
+        BindType(@for.Declaration, collectionType);
+        return Visit(@for.Body);
+    }
+
     public override Type VisitAfter(After after)
     {
         var durationType = Visit(after.Duration);

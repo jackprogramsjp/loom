@@ -313,6 +313,13 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("fn abc { after 1s { return 69 } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ReturnInAfter, "Cannot return a value from an 'after' statement body.");
     }
+    
+    [Fact]
+    public void ThrowsFor_VariableInitializedInForBody_UsedAfter()
+    {
+        var diagnostics = Utility.GetSemanticModel("mut x: number; for let x : 1..10 { x = 42; } x;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
+    }
     #endregion ThrowsFor
 
     [Theory]

@@ -1,4 +1,4 @@
-using Loom.Syntax;
+using Loom.Text;
 
 namespace Loom.Parsing.AST;
 
@@ -12,7 +12,7 @@ public readonly record struct NodeId(int Value)
 public abstract class Node
 {
     private static int _nextId;
-    
+
     public NodeId Id { get; }
     public List<Node> Children { get; }
     public List<Token> Tokens { get; }
@@ -35,8 +35,11 @@ public abstract class Node
 
     public abstract T Accept<T>(Visitor<T> visitor);
     public override string ToString() => Span.GetText();
-    
-    public List<T> GetDescendants<T>() where T : Node => GetDescendants().OfType<T>().ToList();
+
+    public List<T> GetDescendants<T>()
+        where T : Node =>
+        GetDescendants().OfType<T>().ToList();
+
     public List<Node> GetDescendants() => Children.SelectMany(c => c.GetDescendants()).Concat(Children).ToList();
 
     public T? FirstAncestorOfType<T>()
@@ -47,14 +50,17 @@ public abstract class Node
 
         if (Parent is T node)
             return node;
-        
+
+        // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
         return Parent?.FirstAncestorOfType<T>();
     }
 
-    private static List<Node> SortChildren(IEnumerable<Node?> children) => children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();
+    private static List<Node> SortChildren(IEnumerable<Node?> children) =>
+        children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();
+
     private static List<Token> SortTokens(IEnumerable<Token?> tokens) =>
         tokens.Where(token => token != null).Cast<Token>().OrderBy(token => token.Span.Start.Position).ToList();
-    
+
     private LocationSpan DeriveSpan() =>
         Tokens.Count == 0
             ? LocationSpan.Empty(SourceFile.Empty)

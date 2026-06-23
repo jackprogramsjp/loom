@@ -1,5 +1,5 @@
 using System.Globalization;
-using Loom.Syntax;
+using Loom.Text;
 
 namespace Loom.Parsing;
 

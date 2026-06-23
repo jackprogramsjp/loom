@@ -1,4 +1,4 @@
-namespace Loom.Syntax;
+namespace Loom.Text;
 
 public static class SyntaxFacts
 {
@@ -22,7 +22,8 @@ public static class SyntaxFacts
             new("if", SyntaxKind.IfKeyword),
             new("else", SyntaxKind.ElseKeyword),
             new("while", SyntaxKind.WhileKeyword),
-            new("match", SyntaxKind.MatchKeyword),
+            new("for", SyntaxKind.ForKeyword),
+            new("in", SyntaxKind.InKeyword),
             new("nameof", SyntaxKind.NameOfKeyword),
             new("declare", SyntaxKind.DeclareKeyword),
             new("as", SyntaxKind.AsKeyword),

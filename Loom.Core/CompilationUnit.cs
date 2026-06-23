@@ -4,7 +4,7 @@ using Loom.Lexing;
 using Loom.Parsing;
 using Loom.Projects;
 using Loom.SemanticAnalysis;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking;
 using Type = Loom.TypeChecking.Types.Type;
 

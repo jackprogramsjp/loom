@@ -1,4 +1,4 @@
-using Loom.Syntax;
+using Loom.Text;
 
 namespace Loom.Parsing.AST;
 

@@ -1,5 +1,5 @@
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.TypeChecking.Types.ArrayType;
 using FunctionType = Loom.TypeChecking.Types.FunctionType;
@@ -33,8 +33,8 @@ public class GenericTypesTest
         var paramT = new TypeParameter("T");
         var paramU = new TypeParameter("U");
         var decl = new MockGenericNamedDeclaration("Record");
-        var generic1 = new GenericType(decl, [paramT, paramU], new ObjectType(null, []));
-        var generic2 = new GenericType(decl, [paramT, paramU], new ObjectType(null, []));
+        var generic1 = new GenericType(decl, [paramT, paramU], ObjectType.Empty);
+        var generic2 = new GenericType(decl, [paramT, paramU], ObjectType.Empty);
         Assert.True(generic1.Equals(generic1));
         Assert.True(generic1.Equals(generic2));
         Assert.True(generic2.Equals(generic1));
@@ -47,9 +47,9 @@ public class GenericTypesTest
         var paramU = new TypeParameter("U");
         var paramV = new TypeParameter("V");
         var decl = new MockGenericNamedDeclaration("Record");
-        var generic1 = new GenericType(decl, [paramT, paramU], new ObjectType(null, []));
-        var generic2 = new GenericType(decl, [paramT, paramV], new ObjectType(null, []));
-        var generic3 = new GenericType(decl, [paramT], new ObjectType(null, []));
+        var generic1 = new GenericType(decl, [paramT, paramU], ObjectType.Empty);
+        var generic2 = new GenericType(decl, [paramT, paramV], ObjectType.Empty);
+        var generic3 = new GenericType(decl, [paramT], ObjectType.Empty);
         Assert.True(generic1.Equals(generic2));
         Assert.False(generic1.Equals(generic3));
     }
@@ -61,8 +61,8 @@ public class GenericTypesTest
         var decl1 = new MockGenericNamedDeclaration("Record");
         var decl2 = new MockGenericNamedDeclaration("Map");
 
-        var generic1 = new GenericType(decl1, [paramT], new ObjectType(null, []));
-        var generic2 = new GenericType(decl2, [paramT], new ObjectType(null, []));
+        var generic1 = new GenericType(decl1, [paramT], ObjectType.Empty);
+        var generic2 = new GenericType(decl2, [paramT], ObjectType.Empty);
 
         Assert.False(generic1.Equals(generic2));
     }
@@ -74,7 +74,7 @@ public class GenericTypesTest
         var paramU = new TypeParameter("U");
         var decl = new MockGenericNamedDeclaration("Record");
 
-        var generic = new GenericType(decl, [paramT, paramU], new ObjectType(null, []));
+        var generic = new GenericType(decl, [paramT, paramU], ObjectType.Empty);
         Assert.Equal("Record<T, U>", generic.ToString());
     }
 
@@ -104,7 +104,7 @@ public class GenericTypesTest
     {
         var paramT = new TypeParameter("T");
         var decl = new MockGenericNamedDeclaration("Record");
-        var generic = new GenericType(decl, [paramT], new ObjectType(null, []));
+        var generic = new GenericType(decl, [paramT], ObjectType.Empty);
 
         var inst1 = new InstantiatedType(generic, [Number]);
         var inst2 = new InstantiatedType(generic, [Number]);
@@ -117,7 +117,7 @@ public class GenericTypesTest
     {
         var paramT = new TypeParameter("T");
         var decl = new MockGenericNamedDeclaration("Record");
-        var generic = new GenericType(decl, [paramT], new ObjectType(null, []));
+        var generic = new GenericType(decl, [paramT], ObjectType.Empty);
 
         var inst1 = new InstantiatedType(generic, [Number]);
         var inst2 = new InstantiatedType(generic, [String]);
@@ -134,8 +134,8 @@ public class GenericTypesTest
         var decl1 = new MockGenericNamedDeclaration("Record");
         var decl2 = new MockGenericNamedDeclaration("Map");
 
-        var generic1 = new GenericType(decl1, [paramT], new ObjectType(null, []));
-        var generic2 = new GenericType(decl2, [paramT], new ObjectType(null, []));
+        var generic1 = new GenericType(decl1, [paramT], ObjectType.Empty);
+        var generic2 = new GenericType(decl2, [paramT], ObjectType.Empty);
 
         var inst1 = new InstantiatedType(generic1, [Number]);
         var inst2 = new InstantiatedType(generic2, [Number]);
@@ -149,7 +149,7 @@ public class GenericTypesTest
         var paramT = new TypeParameter("T");
         var paramU = new TypeParameter("U");
         var decl = new MockGenericNamedDeclaration("Record");
-        var generic = new GenericType(decl, [paramT, paramU], new ObjectType(null, []));
+        var generic = new GenericType(decl, [paramT, paramU], ObjectType.Empty);
 
         var inst = new InstantiatedType(generic, [Number, String]);
         Assert.Equal("Record<number, string>", inst.ToString());

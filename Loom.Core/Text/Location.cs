@@ -1,4 +1,4 @@
-namespace Loom.Syntax;
+namespace Loom.Text;
 
 public sealed class Location(SourceFile file, int character, int line, int position)
 {

@@ -12,7 +12,7 @@ public class IfStatement(LuauExpression condition, Chunk thenBranch, List<ElseIf
     public override string Render(RenderState state) =>
         $"if {Condition.Render(state)} then\n"
         + state.Indented(ThenBranch.Render(state))
-        + string.Join("", ElseIfBranches.ConvertAll(elseIf => $"elseif {elseIf.Condition.Render(state)} then\n" +state.Indented(elseIf.Branch.Render(state))))
+        + string.Join("", ElseIfBranches.ConvertAll(elseIf => $"elseif {elseIf.Condition.Render(state)} then\n" + state.Indented(elseIf.Branch.Render(state))))
         + (ElseBranch != null ? "else\n" + state.Indented(ElseBranch.Render(state)) : "")
         + "end";
 }

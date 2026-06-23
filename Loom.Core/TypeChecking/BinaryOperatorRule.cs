@@ -1,4 +1,4 @@
-using Loom.Syntax;
+using Loom.Text;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.TypeChecking;

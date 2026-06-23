@@ -1,5 +1,5 @@
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 
 namespace Loom.SemanticAnalysis;
 

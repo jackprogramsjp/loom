@@ -1,6 +1,6 @@
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.TypeChecking.Types.ArrayType;
 using FunctionType = Loom.TypeChecking.Types.FunctionType;
@@ -14,7 +14,7 @@ namespace Loom.TypeChecking;
 public class TypeSolver(DiagnosticBag diagnostics)
     : DiagnosedResult(diagnostics)
 {
-    private record TypeConstraint(Type A, Type B, LocationSpan Span);
+    private record TypeConstraint(Type Actual, Type Expected, LocationSpan Span);
 
     private readonly List<TypeConstraint> _constraints = [];
     private readonly Dictionary<NodeId, Type> _nodeTypes = [];
@@ -198,13 +198,15 @@ public class TypeSolver(DiagnosticBag diagnostics)
 
             if (a.Indexer.IsMutable != b.Indexer.IsMutable)
             {
-                if (!ReportTypeMismatch(a, b, span))
+                if (!ReportTypeMismatch(a, b, span, $"Indexer types match, but indexer mutability of type '{a}' does not match that of type '{b}'."))
                     success = false;
             }
         }
-        else if (a.Indexer != null || b.Indexer != null)
+        else if (a.Indexer == null && b.Indexer != null)
         {
-            if (!ReportTypeMismatch(a, b, span))
+            var noIndexerType = a.Indexer == null ? a : b;
+            var indexerType = a.Indexer != null ? a : b;
+            if (!ReportTypeMismatch(a, b, span, $"Type '{noIndexerType}' is missing indexer from type '{indexerType}'"))
                 success = false;
         }
 
@@ -221,7 +223,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
                 updated = true;
 
             if (propA.IsMutable == propB.IsMutable) continue;
-            if (!ReportTypeMismatch(a, b, span))
+            if (!ReportTypeMismatch(a, b, span, $"Property types match, but mutability of property '{name}' does not match that of type '{b}'."))
                 success = false;
         }
 
@@ -231,15 +233,13 @@ public class TypeSolver(DiagnosticBag diagnostics)
     private bool UnifyObjectWithInterface(ObjectType objectType, InterfaceType interfaceType, LocationSpan span, out bool updated)
     {
         updated = false;
-        var interfaceObject = interfaceType.ObjectType;
-        return UnifyObjectTypes(objectType, interfaceObject, span, out updated);
+        return UnifyObjectTypes(objectType, interfaceType.ObjectType, span, out updated);
     }
 
     private bool UnifyInterfaceTypes(InterfaceType a, InterfaceType b, LocationSpan span, out bool updated)
     {
         updated = false;
         var success = true;
-
         var aConstraints = a.Constraints;
         var bConstraints = b.Constraints;
         if (aConstraints.Count != bConstraints.Count)
@@ -351,12 +351,12 @@ public class TypeSolver(DiagnosticBag diagnostics)
         return type;
     }
 
-    private bool ReportTypeMismatch(Type a, Type b, LocationSpan span)
+    private bool ReportTypeMismatch(Type a, Type b, LocationSpan span, string? info = null)
     {
         Diagnostics.Error(
             span,
             InternalCodes.TypeMismatch,
-            $"Type '{a}' is not assignable to type '{b}'."
+            $"Type '{a}' is not assignable to type '{b}'.{(info != null ? " " + info : "")}"
         );
 
         return false;

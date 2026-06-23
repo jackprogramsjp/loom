@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Parsing;
 using Loom.Parsing.AST;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
@@ -62,6 +62,31 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         
         PopFlowState();
         _flowStates.Push(new FlowState(definitely, maybe, before.IsUnreachable));
+        return true;
+    }
+    
+    public override bool VisitFor(For @for)
+    {
+        PushScope();
+        Visit(@for.Declaration);
+        Visit(@for.CollectionExpression);
+        var beforeLoop = new FlowState(CurrentFlowState());
+        var lastContext = _context;
+        _context = ResolverContext.Loop;
+        var bodyState = PushFlowAndVisitBranch(@for.Body, beforeLoop);
+        _context = lastContext;
+
+        if (bodyState == null)
+            return false;
+
+        var definitely = new HashSet<Symbol>(beforeLoop.DefinitelyInitialized);
+        var maybe = new HashSet<Symbol>(beforeLoop.MaybeInitialized);
+        maybe.UnionWith(bodyState.MaybeInitialized);
+
+        PopFlowState();
+        _flowStates.Push(new FlowState(definitely, maybe, beforeLoop.IsUnreachable));
+        PopScope();
+        
         return true;
     }
 
@@ -242,36 +267,44 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitDeclare(Declare declare)
     {
-        var symbolKind = declare.Signature switch
-        {
-            InterfaceDeclaration => SymbolKind.Interface,
-            DeclareFunctionSignature => SymbolKind.Function,
-            _ => SymbolKind.Variable
-        };
+        if (declare.Signature is not InterfaceDeclaration interfaceDeclaration)
+            return base.VisitDeclare(declare);
 
-        if (Symbol.IsValueKind(symbolKind))
-        {
-            var isMutable = declare.Signature is DeclareVariableSignature { Keyword.Kind: SyntaxKind.MutKeyword };
-            if (!DeclareVariable(declare.Signature, symbolKind, out var symbol, isMutable))
-                return false;
-
-            MarkDefinitelyInitialized(symbol);
-        }
-        else if (declare.Signature is InterfaceDeclaration interfaceDeclaration)
-        {
-            var isSealed = interfaceDeclaration.SealedKeyword != null;
-            return DeclareInterface(interfaceDeclaration, isSealed, out _);
-        }
-
-        return base.VisitDeclare(declare);
+        var isSealed = interfaceDeclaration.SealedKeyword != null;
+        return DeclareInterface(interfaceDeclaration, isSealed, out _);
     }
 
     public override bool VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature)
     {
+        if (!DeclareVariable(declareFunctionSignature, SymbolKind.Function, out var symbol))
+            return false;
+
+        MarkDefinitelyInitialized(symbol);
         PushScope();
         base.VisitDeclareFunctionSignature(declareFunctionSignature);
         PopScope();
 
+        return true;
+    }
+
+    public override bool VisitDeclareVariableSignature(DeclareVariableSignature declareVariableSignature)
+    {
+        if (declareVariableSignature.ColonTypeClause == null && declareVariableSignature.Parent is not For)
+        {
+            _diagnostics.Error(
+                declareVariableSignature,
+                InternalCodes.MissingDeclareVariableType,
+                "Declared variable signatures must have a type."
+            );
+
+            return false;
+        }
+        
+        var isMutable = declareVariableSignature.Keyword.Kind == SyntaxKind.MutKeyword;
+        if (!DeclareVariable(declareVariableSignature, SymbolKind.Variable, out var symbol, isMutable))
+            return false;
+
+        MarkDefinitelyInitialized(symbol);
         return true;
     }
 
@@ -477,19 +510,18 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    private bool ResolveStatements(List<Statement> statements) =>
-        statements.All(statement =>
-            {
-                if (CurrentFlowState().IsUnreachable)
-                    _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
+    private bool ResolveStatements(List<Statement> statements) => statements.All(ResolveStatement);
+    private bool ResolveStatement(Statement statement)
+    {
+        if (CurrentFlowState().IsUnreachable)
+            _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
 
-                if (!parserResult.Tree.File.IsDeclaration || statement is Declare or InterfaceDeclaration or TypeAlias)
-                    return Visit(statement);
+        if (!parserResult.Tree.File.IsDeclaration || statement is Declare or InterfaceDeclaration or TypeAlias)
+            return Visit(statement);
 
-                _diagnostics.Error(statement, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
-                return false;
-            }
-        );
+        _diagnostics.Error(statement, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
+        return false;
+    }
 
     private bool DeclareInterface(InterfaceDeclaration interfaceDeclaration, bool isSealed, [MaybeNullWhen(false)] out InterfaceSymbol interfaceSymbol)
     {
@@ -612,10 +644,10 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     /// Visits a branch with a fresh inherited state copied from <paramref name="inherited"/>,
     /// then pops that state and returns its final content (or null if visit failed).
     /// </summary>
-    private FlowState? PushFlowAndVisitBranch(Node node, FlowState inherited)
+    private FlowState? PushFlowAndVisitBranch(Statement node, FlowState inherited)
     {
         PushFlowState(new FlowState(inherited));
-        var ok = Visit(node);
+        var ok = ResolveStatement(node);
         var state = PopFlowState();
         return ok ? state : null;
     }

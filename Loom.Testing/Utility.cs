@@ -7,7 +7,7 @@ using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Projects;
 using Loom.SemanticAnalysis;
-using Loom.Syntax;
+using Loom.Text;
 using Loom.TypeChecking;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
 using Type = Loom.TypeChecking.Types.Type;
