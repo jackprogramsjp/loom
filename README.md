@@ -2,12 +2,36 @@
 
 [![CI Status](https://github.com/R-unic/loom/actions/workflows/ci.yml/badge.svg)](https://github.com/R-unic/loom/workflows)
 [![Coverage Status](https://coveralls.io/repos/github/R-unic/loom/badge.svg?branch=master)](https://coveralls.io/github/R-unic/loom)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-yellow.svg)](https://opensource.org/licenses/apache-2.0)
 
-Domain-specific-language for Roblox that transpiles to Luau.
+**A domain-specific language for Roblox that transpiles to Luau.**
 
-## Notes
+> ⚠️ This project is a work-in-progress. Nothing is final. Breaking changes may occur at any time.
 
-This project is a work-in-progress. Nothing is final.
+## Features
+
+- **Immutability by default** – Variables, fields, and arrays are immutable unless explicitly marked `mut`
+- **Structural type system** – Duck typing with compile-time safety
+- **Modern syntax** – Familiar syntax inspired by Rust and TypeScript
+- **Rich type inference** – Minimal annotations required
+- **Extended number literals** – Automatic math for units of time and frequency, as well as binary/octal/hex support
+- **Range expressions** – `1..10` for slicing and bounds
+- **Assignment as expression** – `let x = a = b = 1`
+- **`nameof` operator** – Get names as strings at compile time
+- **Generic functions and types** – Full support for type parameters including constraints and defaults
+- **Sealed interfaces** – Prevent interfaces from being used as constraints
+- **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
+
+## Upcoming Features
+- Ternary operator
+- `typeof`
+- Implementors for interfaces
+- Private visibility for interface fields & methods
+- Event declarations
+- Full module system (imports/exports)
+- Error handling using the result pattern
+
+---
 
 ## Working Examples
 
@@ -398,7 +422,7 @@ type Foo = {
 }
 ```
 ##
-After statements are a shorthand to `task.delay`.
+After statements are a shorthand to `task.delay`. They **never yield**.
 ```cs
 after 100ms {
     print("done!");
@@ -410,14 +434,14 @@ task.delay(0.1, function(): ()
 end)
 ```
 
-## Planned Features
+---
 
-* Immutability by default
-* Structural type system
-* Enums
-* Events
-* Extended number literals for time
-* Compile-time reflection
-* Async support
-* Timing blocks (`after`/`every`)
-* ...and more
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on the process for submitting pull requests and building language features.
+
+---
+
+## License
+
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
