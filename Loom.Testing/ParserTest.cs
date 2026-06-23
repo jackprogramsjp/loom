@@ -306,7 +306,7 @@ public class ParserTest
         var diagnostics = Utility.GetParserDiagnostics("after 5s");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Unexpected end of file.");
     }
-    
+
     [Fact]
     public void ThrowsFor_ForLoop_MissingVariableKeyword()
     {
@@ -319,6 +319,186 @@ public class ParserTest
     {
         var diagnostics = Utility.GetParserDiagnostics("for let x items { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected 'in', got 'items'.");
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_Basic()
+    {
+        var tree = Utility.GetAST("a ? b : c");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var ternary = Assert.IsType<TernaryOperator>(stmt.Expression);
+
+        Assert.IsType<Identifier>(ternary.Condition);
+        Assert.IsType<Identifier>(ternary.ThenBranch);
+        Assert.IsType<Identifier>(ternary.ElseBranch);
+
+        Assert.Equal("a", ((Identifier)ternary.Condition).Name.Text);
+        Assert.Equal("b", ((Identifier)ternary.ThenBranch).Name.Text);
+        Assert.Equal("c", ((Identifier)ternary.ElseBranch).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_WithComplexExpressions()
+    {
+        var tree = Utility.GetAST("a + b ? c * d : e / f");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var ternary = Assert.IsType<TernaryOperator>(stmt.Expression);
+        var condition = Assert.IsType<BinaryOperator>(ternary.Condition);
+        Assert.Equal(SyntaxKind.Plus, condition.Operator.Kind);
+        Assert.IsType<Identifier>(condition.Left);
+        Assert.IsType<Identifier>(condition.Right);
+
+        var trueExpr = Assert.IsType<BinaryOperator>(ternary.ThenBranch);
+        Assert.Equal(SyntaxKind.Star, trueExpr.Operator.Kind);
+        Assert.IsType<Identifier>(trueExpr.Left);
+        Assert.IsType<Identifier>(trueExpr.Right);
+
+        var falseExpr = Assert.IsType<BinaryOperator>(ternary.ElseBranch);
+        Assert.Equal(SyntaxKind.Slash, falseExpr.Operator.Kind);
+        Assert.IsType<Identifier>(falseExpr.Left);
+        Assert.IsType<Identifier>(falseExpr.Right);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_RightAssociative()
+    {
+        var tree = Utility.GetAST("a ? b : c ? d : e");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var outer = Assert.IsType<TernaryOperator>(stmt.Expression);
+
+        Assert.Equal("a", ((Identifier)outer.Condition).Name.Text);
+        Assert.Equal("b", ((Identifier)outer.ThenBranch).Name.Text);
+
+        var inner = Assert.IsType<TernaryOperator>(outer.ElseBranch);
+        Assert.Equal("c", ((Identifier)inner.Condition).Name.Text);
+        Assert.Equal("d", ((Identifier)inner.ThenBranch).Name.Text);
+        Assert.Equal("e", ((Identifier)inner.ElseBranch).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_WithParentheses()
+    {
+        var tree = Utility.GetAST("(a ? b : c) ? d : e");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var outer = Assert.IsType<TernaryOperator>(stmt.Expression);
+
+        var parenCondition = Assert.IsType<Parenthesized>(outer.Condition);
+        var inner = Assert.IsType<TernaryOperator>(parenCondition.Expression);
+        Assert.Equal("a", ((Identifier)inner.Condition).Name.Text);
+        Assert.Equal("b", ((Identifier)inner.ThenBranch).Name.Text);
+        Assert.Equal("c", ((Identifier)inner.ElseBranch).Name.Text);
+
+        Assert.Equal("d", ((Identifier)outer.ThenBranch).Name.Text);
+        Assert.Equal("e", ((Identifier)outer.ElseBranch).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_WithAssignment()
+    {
+        var tree = Utility.GetAST("x = a ? b : c");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var assignment = Assert.IsType<AssignmentOperator>(stmt.Expression);
+        Assert.Equal(SyntaxKind.Equals, assignment.Operator.Kind);
+
+        var target = Assert.IsType<Identifier>(assignment.Left);
+        Assert.Equal("x", target.Name.Text);
+
+        var ternary = Assert.IsType<TernaryOperator>(assignment.Right);
+        Assert.Equal("a", ((Identifier)ternary.Condition).Name.Text);
+        Assert.Equal("b", ((Identifier)ternary.ThenBranch).Name.Text);
+        Assert.Equal("c", ((Identifier)ternary.ElseBranch).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_WithAsKeyword()
+    {
+        var tree = Utility.GetAST("a ? b : c as number");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var ternary = Assert.IsType<TernaryOperator>(stmt.Expression);
+
+        Assert.Equal("a", ((Identifier)ternary.Condition).Name.Text);
+        Assert.Equal("b", ((Identifier)ternary.ThenBranch).Name.Text);
+
+        var asExpr = Assert.IsType<AsExpression>(ternary.ElseBranch);
+        Assert.IsType<Identifier>(asExpr.Expression);
+        Assert.IsType<PrimitiveType>(asExpr.Type);
+    }
+
+    [Fact]
+    public void ThrowsFor_TernaryOperator_InvalidAssignmentTarget()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("a ? b : c = d");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Invalid assignment target.");
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_WithNestedTernaryAndDifferentPrecedence()
+    {
+        var tree = Utility.GetAST("a ? b : c ? d : e ? f : g");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var outer = Assert.IsType<TernaryOperator>(stmt.Expression);
+
+        Assert.Equal("a", ((Identifier)outer.Condition).Name.Text);
+        Assert.Equal("b", ((Identifier)outer.ThenBranch).Name.Text);
+
+        var middle = Assert.IsType<TernaryOperator>(outer.ElseBranch);
+        Assert.Equal("c", ((Identifier)middle.Condition).Name.Text);
+        Assert.Equal("d", ((Identifier)middle.ThenBranch).Name.Text);
+
+        var inner = Assert.IsType<TernaryOperator>(middle.ElseBranch);
+        Assert.Equal("e", ((Identifier)inner.Condition).Name.Text);
+        Assert.Equal("f", ((Identifier)inner.ThenBranch).Name.Text);
+        Assert.Equal("g", ((Identifier)inner.ElseBranch).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_WithLiterals()
+    {
+        var tree = Utility.GetAST("true ? 1 : 2");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var ternary = Assert.IsType<TernaryOperator>(stmt.Expression);
+
+        var cond = Assert.IsType<Literal>(ternary.Condition);
+        Assert.Equal(true, cond.Value);
+        var trueVal = Assert.IsType<Literal>(ternary.ThenBranch);
+        Assert.Equal(1L, trueVal.Value);
+        var falseVal = Assert.IsType<Literal>(ternary.ElseBranch);
+        Assert.Equal(2L, falseVal.Value);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_WithUnaryOperators()
+    {
+        var tree = Utility.GetAST("!a ? -b : ~c");
+        Assert.Single(tree.Statements);
+        
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var ternary = Assert.IsType<TernaryOperator>(stmt.Expression);
+
+        var cond = Assert.IsType<UnaryOperator>(ternary.Condition);
+        Assert.Equal(SyntaxKind.Bang, cond.Operator.Kind);
+        Assert.IsType<Identifier>(cond.Operand);
+
+        var trueVal = Assert.IsType<UnaryOperator>(ternary.ThenBranch);
+        Assert.Equal(SyntaxKind.Minus, trueVal.Operator.Kind);
+        Assert.IsType<Identifier>(trueVal.Operand);
+
+        var falseVal = Assert.IsType<UnaryOperator>(ternary.ElseBranch);
+        Assert.Equal(SyntaxKind.Tilde, falseVal.Operator.Kind);
+        Assert.IsType<Identifier>(falseVal.Operand);
+    }
+
+    [Fact]
+    public void Parses_TernaryOperator_InsideFunctionCall()
+    {
+        var tree = Utility.GetAST("foo(a ? b : c)");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<Invocation>(stmt.Expression);
+        Assert.Single(invocation.Arguments.ArgumentList);
+        var ternary = Assert.IsType<TernaryOperator>(invocation.Arguments.ArgumentList[0]);
+        Assert.Equal("a", ((Identifier)ternary.Condition).Name.Text);
+        Assert.Equal("b", ((Identifier)ternary.ThenBranch).Name.Text);
+        Assert.Equal("c", ((Identifier)ternary.ElseBranch).Name.Text);
     }
 
     [Fact]
@@ -490,7 +670,7 @@ public class ParserTest
         Assert.Single(tree.Statements);
         Assert.IsType<Continue>(tree.Statements.First());
     }
-    
+
     [Fact]
     public void Parses_QualifiedName_Invocation()
     {
@@ -500,7 +680,7 @@ public class ParserTest
         var exprStmt = Assert.IsType<ExpressionStatement>(tree.Statements.First());
         var invocation = Assert.IsType<Invocation>(exprStmt.Expression);
         Assert.Empty(invocation.Arguments.ArgumentList);
-        
+
         var qualifiedName = Assert.IsType<QualifiedName>(invocation.Expression);
         Assert.Equal("a", qualifiedName.Identifier.Name.Text);
         Assert.Single(qualifiedName.Names);

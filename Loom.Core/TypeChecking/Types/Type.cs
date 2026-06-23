@@ -1,9 +1,13 @@
 namespace Loom.TypeChecking.Types;
 
-public abstract class Type
+public abstract class Type : IEquatable<Type>
 {
     public abstract bool Equals(Type? other);
     public abstract override string ToString();
+
+#pragma warning disable CS0659
+    public override bool Equals(object? obj) => obj is Type type && Equals(type);
+#pragma warning restore CS0659
 
     public static bool IsNotNever(Type type) => !IsNever(type);
     public static bool IsNever(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Never };

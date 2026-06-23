@@ -327,7 +327,6 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("declare let x").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.MissingDeclareVariableType, "Declared variable signatures must have a type.");
     }
-    #endregion ThrowsFor
     
     [Fact]
     public void ThrowsFor_ForLoop_NonObjectCollection_Number()
@@ -356,6 +355,7 @@ public class ResolverTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Foo {}; let a: Foo? = new Foo {}; for let x in a { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'Foo?' is not assignable to type 'object'.");
     }
+    #endregion ThrowsFor
 
     [Theory]
     [InlineData("fn foo { return 42; let x = 1 }")]
@@ -368,6 +368,9 @@ public class ResolverTest
     }
 
     #region Allows
+    [Fact]
+    public void Allows_TernaryOp() => Utility.AssertNoErrors(Utility.GetSemanticModel("true ? 1 : 'abc'"));
+    
     [Theory]
     [InlineData("fn abc { return 69 }")]
     [InlineData("fn abc { if true { return 69 } }")]

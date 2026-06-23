@@ -1,2 +1,1 @@
-let x = true ? 1 : "abc";
-x
+type X = 0 | number

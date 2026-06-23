@@ -37,6 +37,24 @@ public class LuauGeneratorTest
     public void Generates_Nothing(string source) => Assert.Empty(Utility.GetLuauAST(source).Statements);
 
     [Fact]
+    public void Generates_TernaryOp()
+    {
+        var luauTree = Utility.GetLuauAST("true ? 69 : 'abc'");
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var ifExpression = Assert.IsType<IfExpression>(variable.Initializer);
+        var condition = Assert.IsType<BooleanLiteral>(ifExpression.Condition);
+        Assert.True(condition.Value);
+        
+        var number = Assert.IsType<NumberLiteral>(ifExpression.ThenBranch);
+        Assert.Equal(69, number.Value);
+        
+        var @string = Assert.IsType<StringLiteral>(ifExpression.ElseBranch);
+        Assert.Equal("abc", @string.Value);
+    }
+
+    [Fact]
     public void Generates_ForLoop_OverArray()
     {
         var luauTree = Utility.GetLuauAST("for let x in [1, 2, 3] { }", typeCheck: true);

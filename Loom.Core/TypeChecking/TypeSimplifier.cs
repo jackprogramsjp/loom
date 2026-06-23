@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Loom.TypeChecking.Types;
 using Type = Loom.TypeChecking.Types.Type;
 
@@ -5,8 +6,14 @@ namespace Loom.TypeChecking;
 
 public static class TypeSimplifier
 {
-    public static Type Simplify(Type type) =>
-        type switch
+    private static readonly ConditionalWeakTable<Type, Type> _simplifyCache = [];
+
+    public static Type Simplify(Type type)
+    {
+        if (_simplifyCache.TryGetValue(type, out var cached))
+            return cached;
+        
+        var simplified = type switch
         {
             UnionType union => SimplifyUnion(union),
             IntersectionType intersection => SimplifyIntersection(intersection),
@@ -14,6 +21,10 @@ public static class TypeSimplifier
             GenericType generic => Simplify(generic.UnderlyingType),
             _ => type
         };
+        
+        _simplifyCache.Add(type, simplified);
+        return simplified;
+    }
 
     private static Type SimplifyUnion(UnionType union)
     {
@@ -109,17 +120,27 @@ public static class TypeSimplifier
     }
 
     private static bool IsSubsetOf(Type a, Type b) =>
-        (a, b) switch
+        a switch
         {
-            // _ when Type.IsNever(a) => true,
-            // _ when Type.IsNever(b) => false,
-
-            (UnionType ua, UnionType ub) => ua.Types.All(t => IsSubsetOf(t, ub)),
-            (UnionType ua, _) => ua.Types.All(t => IsSubsetOf(t, b)),
-            (_, UnionType ub) => ub.Types.Any(t => IsSubsetOf(a, t)),
-            (IntersectionType ia, _) => ia.Types.All(t => IsSubsetOf(t, b)),
-            (_, IntersectionType ib) => ib.Types.All(t => IsSubsetOf(a, t)),
-            _ => a.Equals(b) || a.IsAssignableTo(b)
+            LiteralType la when b is LiteralType lb => Equals(la.Value, lb.Value),
+            LiteralType lit when b is PrimitiveType prim => lit.Value switch
+            {
+                double or long or int => prim.Kind == PrimitiveTypeKind.Number,
+                string => prim.Kind == PrimitiveTypeKind.String,
+                bool => prim.Kind == PrimitiveTypeKind.Bool,
+                null => prim.Kind is PrimitiveTypeKind.Unknown or PrimitiveTypeKind.None,
+                _ => false
+            },
+            PrimitiveType when b is LiteralType => false,
+            _ => (a, b) switch
+            {
+                (UnionType ua, UnionType ub) => ua.Types.All(t => IsSubsetOf(t, ub)),
+                (UnionType ua, _) => ua.Types.All(t => IsSubsetOf(t, b)),
+                (_, UnionType ub) => ub.Types.Any(t => IsSubsetOf(a, t)),
+                (IntersectionType ia, _) => ia.Types.All(t => IsSubsetOf(t, b)),
+                (_, IntersectionType ib) => ib.Types.All(t => IsSubsetOf(a, t)),
+                _ => a.Equals(b) || a.IsAssignableTo(b)
+            }
         };
 
     private static List<Type> RemoveDuplicates(List<Type> types, bool isUnion) =>

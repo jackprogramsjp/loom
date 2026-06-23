@@ -553,6 +553,41 @@ public class TypeCheckerTest
             "Type '\"nonexistent\"' cannot be used to index type '0 | 1'."
         );
     }
+
+    [Fact]
+    public void ThrowsFor_TernaryOperator_NonBoolCondition()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("1 ? 2 : 3");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '1' is not assignable to type 'bool'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_TernaryOperator_OptionalBoolConditionWithoutNarrowing()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let b: bool? = true; b ? 1 : 2");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'bool?' is not assignable to type 'bool'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_TernaryOperator_ConditionIsString()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("'hi' ? 1 : 2");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hi\"' is not assignable to type 'bool'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_TernaryOperator_ConditionIsNumber()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("42 ? 1 : 2");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '42' is not assignable to type 'bool'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_TernaryOperator_ConditionIsOptionalStringWithoutNarrowing()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let s: string? = 'a'; s ? 1 : 2");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'string?' is not assignable to type 'bool'.");
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -563,6 +598,130 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_TernaryOperator_Basic()
+    {
+        var type = Utility.GetLastStatementType("true ? 1 : 2");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 1L });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 2L });
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_ConditionIsBoolIdentifier()
+    {
+        var type = Utility.GetLastStatementType("let cond = true; cond ? 1 : 2");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_ConditionIsComparison()
+    {
+        var type = Utility.GetLastStatementType("let x = 5; x > 3 ? 'yes' : 'no'");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "yes" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "no" });
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_BranchesSameType()
+    {
+        var type = Utility.GetLastStatementType("true ? 42 : 69");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 42L });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 69L });
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_Nested()
+    {
+        var type = Utility.GetLastStatementType("true ? 1 : false ? 2 : 3");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(3, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 1L });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 2L });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 3L });
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_WithNarrowing_NonNullable()
+    {
+        var type = Utility.GetLastStatementType("let x: number? = 5; x != none ? x + 1 : 0");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_WithNarrowing_EqualsLiteral()
+    {
+        var type = Utility.GetLastStatementType("let x: number | string = 42; x == 42 ? x + 1 : x");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_WithNarrowing_NoneCheck()
+    {
+        var type = Utility.GetLastStatementType("let x: number? = none; x == none ? 0 : x + 1");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_WithNarrowing_NotNoneCheck()
+    {
+        var type = Utility.GetLastStatementType("let x: number? = 5; x != none ? x + 1 : 0");
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_WithNeverBranch()
+    {
+        var type = Utility.GetLastStatementType("true ? 1 : (2 as never)");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(1L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_InAssignment()
+    {
+        var type = Utility.GetLastStatementType("let z = true ? 1 : 'a'");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 1L });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "a" });
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_AsFunctionArgument()
+    {
+        const string source = """
+                    fn foo(x: number | string) -> x
+                    foo(true ? 1 : 'a')
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_TernaryOperator_WithOptionalConditionNarrowed()
+    {
+        var type = Utility.GetLastStatementType("let b: bool? = true; b == true ? 1 : 2");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+    }
+
     [Fact]
     public void Checks_After_PropagatesBodyType()
     {

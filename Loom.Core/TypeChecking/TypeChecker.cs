@@ -443,7 +443,8 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var (trueState, falseState) = ComputeBranchStates(ternaryOperator.Condition);
         var thenBranchType = VisitWithFlowState(ternaryOperator.ThenBranch, trueState);
         var elseBranchType = VisitWithFlowState(ternaryOperator.ElseBranch, falseState);
-        return BindType(ternaryOperator, TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType])));
+        var union = new Types.UnionType([thenBranchType, elseBranchType]);
+        return BindType(ternaryOperator, TypeSimplifier.Simplify(union));
     }
 
     public override Type VisitBinaryOperator(BinaryOperator binaryOperator)
