@@ -434,6 +434,37 @@ task.delay(0.1, function(): ()
     print("done!")
 end)
 ```
+##
+```ts
+let collection = [1, 2, 3, 4];
+for n in collection {
+    print(n);
+}
+```
+```luau
+const collection = {1, 2, 3, 4}
+for n in collection do
+    print(n)
+end
+```
+##
+```ts
+for n in 1..10 print(n)
+```
+```luau
+for n in 1, 10 do
+    print(n)
+end
+```
+##
+```ts
+for n in 10..1 print(n)
+```
+```luau
+for n in 10, 1, -1 do
+    print(n)
+end
+```
 
 ---
 
