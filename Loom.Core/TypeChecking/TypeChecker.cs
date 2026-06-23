@@ -49,16 +49,12 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         );
     }
 
+    public override Type VisitExpressionStatement(ExpressionStatement expressionStatement) => BindType(expressionStatement, Visit(expressionStatement.Expression));
+
     public override Type VisitBlock(Block block)
     {
         var types = block.Statements.ConvertAll(Visit);
         return BindType(block, types.LastOrDefault(Types.PrimitiveType.None));
-    }
-
-    public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
-    {
-        var type = TypeSimplifier.Simplify(base.VisitExpressionStatement(expressionStatement));
-        return BindType(expressionStatement, type);
     }
 
     public override Type VisitFor(For @for)
@@ -1190,7 +1186,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         semanticModel.TypeSolver.SetType(node, type);
         if (node is not (Tree or ExpressionStatement))
             _diagnostics.Debug(node, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for {node.GetType().Name}");
-        
+
         return type;
     }
 

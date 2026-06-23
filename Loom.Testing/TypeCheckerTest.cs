@@ -1,6 +1,7 @@
 using Loom.Diagnostics;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
+using Type = System.Type;
 
 namespace Loom.Testing;
 
@@ -527,21 +528,21 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("while 1 { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '1' is not assignable to type 'bool'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_After_NonNumberDuration()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("after true { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'true' is not assignable to type 'number'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_FunctionTypeParameterDefault_ConstraintViolation()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("fn foo<T: number = 'hello'>() {}");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type 'number'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_IndexedType_MissingProperty()
     {
@@ -560,8 +561,120 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("1 ?? 2");
         Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.RedundantCode);
     }
-    
+
     #region Checks
+    [Fact]
+    public void Checks_After_PropagatesBodyType()
+    {
+        var type = Utility.GetLastStatementType("after 1 { 42 }");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_If_UnionOfBranches()
+    {
+        var type = Utility.GetLastStatementType("if true { 1 } else { \"hi\" }");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 1L });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "hi" });
+    }
+
+    [Fact]
+    public void Checks_Function_NoParameters_InferredReturn()
+    {
+        const string source = """
+            fn answer -> 42
+            answer()
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_ParameterDefault_Used()
+    {
+        const string source = """
+            fn greet(name: string = "world") -> name
+            greet()
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.String), $"Expected 'string', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_Narrowing_EnumMemberEquals()
+    {
+        const string source = """
+            enum Status { Active, Inactive }
+            let x: Status = Status.Active
+            if x == Status.Active { x }
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_NameOfEquals()
+    {
+        const string source = """
+            let x = nameof(x)
+            if x == "x" { x }
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_AssignmentToMutableIndexer()
+    {
+        const string source = """
+            interface Store { mut [string]: number }
+            let store = none as never as Store
+            store["key"] = 42
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var literal = Assert.IsType<LiteralType>(result.ReturnType);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_While_PropagatesBodyType()
+    {
+        var type = Utility.GetLastStatementType("while true { 42; break }");
+        Assert.True(TypeChecking.Types.Type.IsNever(type), $"Expected 'never', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_After_PropagatesBodyType_WithExpression()
+    {
+        var type = Utility.GetLastStatementType("after 1 { \"done\" }");
+        Assert.True(type.Equals(new LiteralType("done")), $"Expected 'string', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_InterfaceInheritance_TwoLevels()
+    {
+        const string source = """
+            interface A { x: number }
+            interface B : A { }
+            interface C : B { }
+            let obj = none as never as C
+            obj.x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
     [Fact]
     public void Checks_ForLoop_OverArray_BreakInside()
     {
@@ -582,7 +695,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let matrix = [[1, 2], [3, 4]]; for let row in matrix { for let elem in row { elem } }");
         Utility.AssertNoErrors(diagnostics);
     }
-    
+
     [Theory]
     [InlineData("for let x in [1, 2, 3] { x }")]
     [InlineData("for let x in 1..10 { x }")]
@@ -592,7 +705,7 @@ public class TypeCheckerTest
         var element = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.Number, element.Kind);
     }
-    
+
     [Fact]
     public void Checks_NullCoalescing_TwoOptionalOperands()
     {
@@ -648,7 +761,7 @@ public class TypeCheckerTest
         var literal = Assert.IsType<LiteralType>(assignmentType);
         Assert.Equal(42L, literal.Value);
     }
-    
+
     [Fact]
     public void Checks_TypeAlias_PartialTypeArguments()
     {
@@ -686,7 +799,7 @@ public class TypeCheckerTest
         Assert.NotNull(tp.DefaultType);
         Assert.True(tp.DefaultType.Equals(PrimitiveType.Number), $"Expected default 'number', got '{tp.DefaultType}'");
     }
-    
+
     [Fact]
     public void Checks_Narrowing_While_NonNullable()
     {
