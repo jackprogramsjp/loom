@@ -10,9 +10,10 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom;
 
-public sealed class CompilationUnit(LoomConfig loomConfig)
+public sealed class CompilationUnit(LoomConfig loomLoomConfig)
 {
-    public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(loomConfig.Files.SourceDirectory);
+    public LoomConfig LoomConfig { get; } = loomLoomConfig;
+    public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(loomLoomConfig.Files.SourceDirectory);
     public Dictionary<Symbol, Type> Globals { get; } = [];
     
     public CompilationResult Compile()
@@ -31,60 +32,11 @@ public sealed class CompilationUnit(LoomConfig loomConfig)
         var compiledConcreteFiles = SourceFiles.FindAll(file => !file.IsDeclaration).ConvertAll(Compile);
         var compiledFiles = compiledDeclarationFiles.Concat(compiledConcreteFiles).ToList();
         var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
-        if (!diagnostics.ContainsErrors() && !loomConfig.NoEmit)
+        if (!diagnostics.ContainsErrors() && !LoomConfig.NoEmit)
             compiledFiles.ForEach(FileManager.WriteCompiledFile);
 
         return new CompilationResult(compiledFiles, diagnostics);
     }
 
-    public CompiledFile Compile(SourceFile file)
-    {
-        var pipelineDiagnostics = new List<DiagnosticBag>();
-        try
-        {
-            var lexer = new Lexer(file);
-            var lexerResult = trackDiagnostics(lexer.Tokenize());
-            var parser = new Parser(lexerResult);
-            var parserResult = trackDiagnostics(parser.Parse());
-            var resolver = new Resolver(parserResult, this);
-            var semanticModel = trackDiagnostics(resolver.Resolve());
-            var typeChecker = new TypeChecker(semanticModel);
-            var typeCheckerResult = trackDiagnostics(typeChecker.Check());
-            var generator = new LuauGenerator(semanticModel);
-            var generatorResult = trackDiagnostics(generator.Generate());
-            var renderedLuau = generatorResult.LuauTree.Render();
-            var diagnostics = DiagnosticBag.Concat(pipelineDiagnostics);
-
-            return new CompiledFile
-            {
-                Path = file.AbsolutePath
-                    .Replace(
-                        Path.GetFileName(loomConfig.Files.SourceDirectory) + Path.DirectorySeparatorChar,
-                        Path.GetFileName(loomConfig.Files.OutputDirectory) + Path.DirectorySeparatorChar
-                    )
-                    .Replace(FileManager.LoomExtension, ".luau"),
-                Diagnostics = diagnostics,
-                RenderedLuau = renderedLuau,
-                LuauTree = generatorResult.LuauTree,
-                ReturnType = typeCheckerResult.ReturnType,
-                SemanticModel = semanticModel,
-                Tree = parserResult.Tree,
-                Tokens = lexerResult.Tokens
-            };
-        }
-        catch (Exception e)
-        {
-            var diagnostics = DiagnosticBag.Concat(pipelineDiagnostics);
-            DiagnosticBag.FailFast = true;
-            diagnostics.CompilerError(file, $"The compiler threw an exception!\n{e.Message}\n{e.StackTrace}");
-            return null!;
-        }
-
-        T trackDiagnostics<T>(T result)
-            where T : DiagnosedResult
-        {
-            pipelineDiagnostics.Add(result.Diagnostics);
-            return result;
-        }
-    }
+    public CompiledFile Compile(SourceFile file) => new Compiler(this, file).Compile();
 }
