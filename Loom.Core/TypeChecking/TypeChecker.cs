@@ -41,15 +41,18 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         base.VisitTree(tree);
         _flowStates.Pop();
 
-        return tree.Statements.Count > 0
-            ? semanticModel.GetType(tree.Statements.Last())
-            : Types.PrimitiveType.Never;
+        return BindType(
+            tree,
+            tree.Statements.Count > 0
+                ? semanticModel.GetType(tree.Statements.Last())
+                : Types.PrimitiveType.Never
+        );
     }
 
     public override Type VisitBlock(Block block)
     {
         var types = block.Statements.ConvertAll(Visit);
-        return types.LastOrDefault(Types.PrimitiveType.None);
+        return BindType(block, types.LastOrDefault(Types.PrimitiveType.None));
     }
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement)
@@ -67,7 +70,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
 
         var elementType = collectionType.Equals(Intrinsics.RangeType) ? Types.PrimitiveType.Number : GetObjectValueType(collectionType);
         BindType(@for.Declaration, elementType);
-        return Visit(@for.Body);
+        return BindType(@for, Visit(@for.Body));
     }
 
     public override Type VisitAfter(After after)
@@ -75,7 +78,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var durationType = Visit(after.Duration);
         semanticModel.TypeSolver.AddConstraint(durationType, Types.PrimitiveType.Number, after.Duration);
 
-        return Visit(after.Body);
+        return BindType(after, Visit(after.Body));
     }
 
     public override Type VisitWhile(While @while)
@@ -84,7 +87,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
 
         var (trueState, _) = ComputeBranchStates(@while.Condition);
-        return VisitWithFlowState(@while.Body, trueState);
+        return BindType(@while, VisitWithFlowState(@while.Body, trueState));
     }
 
     public override Type VisitIf(If @if)
@@ -95,7 +98,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var (trueState, falseState) = ComputeBranchStates(@if.Condition);
         var thenBranchType = VisitWithFlowState(@if.ThenBranch, trueState);
         var elseBranchType = @if.ElseBranch != null ? VisitWithFlowState(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
-        return TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType]));
+        return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType])));
     }
 
     public override Type VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -107,7 +110,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         Visit(functionDeclaration.Body);
 
         _diagnostics.Info(functionDeclaration, $"Solved type '{TypeSimplifier.Simplify(functionType)}' for function");
-        return functionType;
+        return BindType(functionDeclaration, functionType);
     }
 
     public override Type VisitTypeAlias(TypeAlias typeAlias)
