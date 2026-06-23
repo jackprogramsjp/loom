@@ -438,7 +438,7 @@ end)
 ##
 ```ts
 let collection = [1, 2, 3, 4];
-for n in collection {
+for let n in collection {
     print(n);
 }
 ```
@@ -450,7 +450,7 @@ end
 ```
 ##
 ```ts
-for n in 1..10 print(n)
+for let n in 1..10 print(n)
 ```
 ```luau
 for n in 1, 10 do
@@ -459,7 +459,7 @@ end
 ```
 ##
 ```ts
-for n in 10..1 print(n)
+for let n in 10..1 print(n)
 ```
 ```luau
 for n in 10, 1, -1 do
