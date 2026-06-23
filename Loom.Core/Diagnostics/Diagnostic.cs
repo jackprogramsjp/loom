@@ -12,6 +12,7 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
             DiagnosticSeverity.Error => (Colors.Red, Colors.Magenta, "error"),
             DiagnosticSeverity.Warn => (Colors.Yellow, Colors.Yellow, "warning"),
             DiagnosticSeverity.Info => (Colors.Blue, Colors.Cyan, "info"),
+            DiagnosticSeverity.Debug => (Colors.Magenta, Colors.Magenta, "debug"),
             _ => (Colors.White, Colors.Gray, "unknown")
         };
 
@@ -73,15 +74,17 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
         }
 
         if (hasHint)
-        {
             lines.Add(
                 $"{gutter}{(noPad ? "" : pad)} {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
             );
-            lines.Add(gutter);
-        }
-        
+
         if (endLine < sourceLines.Length)
+        {
+            if (hasHint)
+                lines.Add(gutter);
+            
             lines.Add($"{gutter} {Colors.Dim}{sourceLines[endLine]}{Colors.Reset}");
+        }
         
         lines.Add(gutter);
         return string.Join(Environment.NewLine, lines);

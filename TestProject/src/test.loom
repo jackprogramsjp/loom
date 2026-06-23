@@ -1,1 +1,2 @@
-let r = 1..10; for let i in r { }
+mut x = 69;
+x &= 420;

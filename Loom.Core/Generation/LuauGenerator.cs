@@ -315,7 +315,12 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
         {
             if (op.EndsWith('='))
             {
-                _diagnostics.NotImplemented(binaryOperator, "Luau generation for bitwise assignment operators is not yet supported.");
+                _diagnostics.NotImplemented(
+                    binaryOperator,
+                    "Luau generation for bitwise assignment operators is not yet supported.",
+                    $"use '{binaryOperator.Left} = {binaryOperator.Left} {op.Replace("=", "")} {binaryOperator.Right}'"
+                );
+
                 return new Luau.AST.BinaryOperator(left, "???", right);
             }
 

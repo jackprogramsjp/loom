@@ -10,6 +10,10 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     
     public HashSet<Diagnostic> Set { get; } = diagnostics ?? [];
     
+    public void Debug(Node node, string message) => Debug(node.Span, message);
+    public void Debug(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Debug, null, message, null);
+    public void Debug(Node node, string code, string message) => Debug(node.Span, code, message);
+    public void Debug(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Debug, code, message, null);
     public void Info(Node node, string message) => Info(node.Span, message);
     public void Info(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Info, null, message, null);
     public void Info(Node node, string code, string message) => Info(node.Span, code, message);
@@ -20,18 +24,18 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     public void Error(Node node, string code, string message, string? hint = null) => Error(node.Span, code, message, hint);
     public void Error(Token token, string code, string message, string? hint = null) => Error(token.Span, code, message, hint);
     public void Error(LocationSpan span, string code, string message, string? hint = null) => Report(span, DiagnosticSeverity.Error, code, message, hint);
-    public void NotImplemented(Node node, string? feature = null) => NotImplemented(node.Span, feature);
-    public void NotImplemented(Token token, string? feature = null) => NotImplemented(token.Span, feature);
+    public void NotImplemented(Node node, string? feature = null, string? hint = null) => NotImplemented(node.Span, feature, hint);
+    public void NotImplemented(Token token, string? feature = null, string? hint = null) => NotImplemented(token.Span, feature, hint);
 
-    public void NotImplemented(LocationSpan span, string? feature = null) =>
-        Error(span, InternalCodes.NotImplemented, feature ?? "This feature is not yet implemented.");
+    public void NotImplemented(LocationSpan span, string? feature = null, string? hint = null) =>
+        Error(span, InternalCodes.NotImplemented, feature ?? "This feature is not yet implemented.", hint);
 
     public void CompilerError(Node node, string message) => CompilerError(node.Span, message);
     public void CompilerError(SourceFile file, string message) => CompilerError(LocationSpan.Empty(file), message);
     public void CompilerError(LocationSpan span, string message) => Error(span, InternalCodes.CompilerError, message, "this is a compiler bug! please report an issue.");
 
     public Diagnostic? Find(Func<Diagnostic, bool> predicate) => Set.FirstOrDefault(predicate);
-    public DiagnosticBag WithoutInfo() => new(Set.Where(d => d.Severity != DiagnosticSeverity.Info).ToHashSet());
+    public DiagnosticBag WithoutInfo() => new(Set.Where(d => d.Severity > DiagnosticSeverity.Info).ToHashSet());
     public DiagnosticBag Errors() => new(Set.Where(d => d.Severity == DiagnosticSeverity.Error).ToHashSet());
     public bool ContainsErrors() => Errors().Set.Count > 0;
 
@@ -43,7 +47,7 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     private void Report(Diagnostic diagnostic)
     {
         Set.Add(diagnostic);
-        if (!FailFast || diagnostic.Severity != DiagnosticSeverity.Error) return;
+        if (!FailFast || diagnostic.Severity < DiagnosticSeverity.Error) return;
 
         var code = (diagnostic.Code ?? InternalCodes.Unknown).GetHashCode();
         Console.WriteLine(diagnostic.ToString());

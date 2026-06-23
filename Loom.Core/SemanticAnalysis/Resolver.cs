@@ -592,7 +592,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         lookup[symbol.Name] = symbol;
         scope.Declarations[nodeId] = symbol;
         _allDeclarations[nodeId] = symbol;
-        _diagnostics.Info(symbol.Declaration, $"Declared symbol: {symbol}");
+        _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
         if (parserResult.Tree.File.IsDeclaration)
             symbol.IsGlobal = true;
     }
