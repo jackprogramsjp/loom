@@ -23,7 +23,6 @@
 - **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
 
 ## Upcoming Features
-- Ternary operator
 - `keyof`
 - `typeof`
 - Implementors for interfaces
