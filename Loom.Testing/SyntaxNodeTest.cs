@@ -114,6 +114,15 @@ public class SyntaxNodeTest
         Assert.Single(identifiers);
         Assert.Contains(retExpr, identifiers);
     }
+    
+    [Fact]
+    public void IsDescendantOf()
+    {
+        var lit = new Literal(T("42", 0, 2, SyntaxKind.NumberLiteral), 42L);
+        var exprStmt = new ExpressionStatement(lit);
+        var block = new Block(T("{", 0, 1, SyntaxKind.LBrace), T("}", 3, 1, SyntaxKind.RBrace), [exprStmt]);
+        Assert.True(lit.IsDescendantOf<Block>());
+    }
 
     [Fact]
     public void FirstAncestorOfType_FindsImmediateParent()

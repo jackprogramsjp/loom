@@ -588,7 +588,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let s: string? = 'a'; s ? 1 : 2");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'string?' is not assignable to type 'bool'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_KeyOf_OnPrimitive()
     {
@@ -609,19 +609,27 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { a: number } type K = keyof(keyof(I))");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidKeyOf, "Cannot access keys of type 'string'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_GenericInterfaceWithConstraintViolation()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I<T: number> { value: T }; new I::<string> { value: 'x' }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation, "Type 'string' does not satisfy constraint 'number' for type parameter 'T'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_CastToIntersectionType()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("69 as (number & string)");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '69' is not assignable to type 'never'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_Inference_IntersectionParameterMultipleTypeParameters()
+    {
+        const string source = "fn mix<A, B>(x: A & B): A & B -> x; mix(42)";
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotInferType, "Cannot infer type parameter 'B'. Provide explicit type arguments.");
     }
     #endregion ThrowsFor
 
@@ -634,12 +642,165 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameterUsesDefault()
+    {
+        const string source = "fn create<T = number>(): T -> 42; create()";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameterCannotInfer()
+    {
+        const string source = "fn create<T>(): T -> 42; create()";
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotInferType, "Cannot infer type parameter 'T'. Provide explicit type arguments.");
+    }
+
+    [Fact]
+    public void Checks_Inference_GenericInterfaceInvocationPropertyTypes()
+    {
+        const string source = "interface Box<T> { value: T }; new Box { value: 42 }";
+        var type = Utility.GetLastStatementType(source);
+        var iface = Assert.IsType<InterfaceType>(type);
+        var prop = iface.ObjectType.Properties.Single();
+        Assert.True(prop.ValueType.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_GenericInterfaceInvocationIndexerTypes()
+    {
+        const string source = "interface Map<K, V> { [K]: V }; new Map { [\"a\"]: 1 }";
+        var type = Utility.GetLastStatementType(source);
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.NotNull(iface.ObjectType.Indexer);
+        Assert.True(iface.ObjectType.Indexer.KeyType.IsAssignableTo(PrimitiveType.String));
+        Assert.True(iface.ObjectType.Indexer.ValueType.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_GenericInterfaceWithDefaultParameters()
+    {
+        const string source = "interface I<T = number> { value: T }; new I { value: 42 }";
+        var type = Utility.GetLastStatementType(source);
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.True(iface.ObjectType.Properties.Single().ValueType.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_AliasExpansionInParameter()
+    {
+        const string source = "type Num = number; fn id<T>(x: T): T -> x; id(42)";
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Inference_AliasExpansionInArgument()
+    {
+        const string source = "type Num = number; fn id<T>(x: T): T -> x; let n: Num = 42; id(n)";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_TypeParameterCapturesFullUnionArgument()
+    {
+        const string source = "fn id<T>(x: T): T -> x; id(42 as (number | string))";
+        var type = Utility.GetLastStatementType(source);
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
+    public void Checks_Inference_TypeParameterCapturesFunctionType()
+    {
+        const string source = "fn apply<T>(f: fn(): T): T -> f(); fn do -> 42; apply(do)";
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Inference_MultipleParametersWithSharedTypeParameter()
+    {
+        const string source = "fn both<T>(a: T, b: T): T -> a; both(42, 69)";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_IntersectionParameterSingleTypeParameter()
+    {
+        const string source = "fn id<T>(x: T & number): T & number -> x; id(42)";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_NestedGenerics()
+    {
+        const string source = "type List<T> = T[]; fn first<T>(list: List<T>): T -> list[0]; first([1, 2, 3])";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_GenericTypeWithDefaultParameter()
+    {
+        const string source = "type Container<T = number> = T; fn wrap<T = Container>(value: T): T -> value; wrap(42)";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.IsAssignableTo(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_ArrayOfGenericElement()
+    {
+        const string source = "fn head<T>(arr: T[]): T -> arr[0]; head([true, false])";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Bool));
+    }
+
+    [Fact]
+    public void Checks_Inference_OptionalParameterWithNonNullableArgument()
+    {
+        const string source = "fn unwrap<T>(x: T?): T -> x as never as T; unwrap(42)";
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Inference_OptionalParameterWithNullableArgument()
+    {
+        const string source = "fn id<T>(x: T?): T? -> x; let v: number? = 42; id(v)";
+        var type = Utility.GetLastStatementType(source);
+        var optional = Assert.IsType<OptionalType>(type);
+        Assert.True(optional.NonNullableType.Equals(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_Inference_UnionParameterSingleTypeParameter()
+    {
+        const string source = "fn id<T>(x: T | string): T | string -> x; id(42)";
+        var type = Utility.GetLastStatementType(source);
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 42L });
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
     public void Checks_FunctionWithEmptyBody()
     {
         const string source = """
             fn foo() {}
             foo()
             """;
+
         var type = Utility.GetLastStatementType(source);
         Assert.True(type.Equals(PrimitiveType.Void), $"Expected 'void', got '{type}'");
     }
@@ -651,6 +812,7 @@ public class TypeCheckerTest
             fn bar() { let x = 1; }
             bar()
             """;
+
         var type = Utility.GetLastStatementType(source);
         Assert.True(type.Equals(PrimitiveType.Void), $"Expected 'void', got '{type}'");
     }
@@ -662,13 +824,14 @@ public class TypeCheckerTest
             interface I { x: number, [string]: bool }
             new I { x: 1, ["key"]: true }
             """;
+
         var result = Utility.TypeCheck(source);
         Utility.AssertNoErrors(result);
-        
+
         var iface = Assert.IsType<InterfaceType>(result.ReturnType);
         Assert.Equal("I", iface.Name);
     }
-    
+
     [Fact]
     public void Checks_GenericInterfaceWithConstraint_Valid()
     {
@@ -686,6 +849,7 @@ public class TypeCheckerTest
             let x: V = 42
             x
             """;
+
         var type = Utility.GetLastStatementType(source);
         var union = Assert.IsType<UnionType>(type);
         Assert.Equal(2, union.Types.Count);
@@ -702,8 +866,8 @@ public class TypeCheckerTest
         Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
         Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
     }
-    
-        [Fact]
+
+    [Fact]
     public void Checks_Narrowing_ElementAccessWithLiteralIndex()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let arr = [1, 2, 3]; if arr[0] == 1 { arr[0] + 1 }");
@@ -713,7 +877,10 @@ public class TypeCheckerTest
     [Fact]
     public void Checks_Narrowing_WhileWithPropertyAccess()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface HasVal { val: number? }; let obj = none as never as HasVal; while obj.val != none { obj.val + 1; break; }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            "interface HasVal { val: number? }; let obj = none as never as HasVal; while obj.val != none { obj.val + 1; break; }"
+        );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -723,7 +890,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = 42; if x == none { 1 }");
         Utility.AssertNoErrors(diagnostics);
     }
-    
+
     [Fact]
     public void Checks_GenericFunction_InferenceWithIntersectionParameter_AndSingleArgument()
     {
@@ -731,6 +898,7 @@ public class TypeCheckerTest
             fn id<T>(a: T & number) -> a
             id(42)
             """;
+
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(42L, literal.Value);
@@ -743,6 +911,7 @@ public class TypeCheckerTest
             fn id<T>(a: T | string) -> a
             id(42)
             """;
+
         var type = Utility.GetLastStatementType(source);
         var union = Assert.IsType<UnionType>(type);
         Assert.Equal(2, union.Types.Count);
@@ -757,6 +926,7 @@ public class TypeCheckerTest
             interface I<T> { value: T | string }
             new I { value: 42 }
             """;
+
         var result = Utility.TypeCheck(source);
         Utility.AssertNoErrors(result);
         var iface = Assert.IsType<InterfaceType>(result.ReturnType);
@@ -764,7 +934,7 @@ public class TypeCheckerTest
         var union = Assert.IsType<UnionType>(prop.ValueType);
         Assert.Contains(union.Types, t => t is LiteralType { Value: 42L });
     }
-    
+
     [Fact]
     public void Checks_GenericFunction_InferenceFromGenericTypeAliasWithMultipleParameters()
     {
@@ -773,6 +943,7 @@ public class TypeCheckerTest
             fn unwrap<T, E>(r: Result<T, E>) -> r.ok
             unwrap(new Result { ok: 1, err: "oops" })
             """;
+
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(1L, literal.Value);
@@ -786,6 +957,7 @@ public class TypeCheckerTest
             let x: Id = 42
             x
             """;
+
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(42L, literal.Value);
@@ -805,7 +977,7 @@ public class TypeCheckerTest
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(5L, literal.Value);
     }
-    
+
     [Fact]
     public void Checks_KeyOf_OnObjectType_WithProperties()
     {
@@ -1995,7 +2167,7 @@ public class TypeCheckerTest
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(69L, literal.Value);
     }
-    
+
     [Fact]
     public void Checks_GenericFunctionCall_InferredArrayType()
     {
@@ -2009,7 +2181,7 @@ public class TypeCheckerTest
         var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_GenericFunctionCall_InferredGenericType()
     {

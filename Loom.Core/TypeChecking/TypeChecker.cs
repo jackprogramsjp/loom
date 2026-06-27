@@ -25,11 +25,12 @@ public sealed partial class TypeChecker
     private readonly TypeInferrer _inferrer;
     private readonly TypeNarrower _narrower;
 
+
     public TypeChecker(SemanticModel semanticModel)
         : base(Types.PrimitiveType.Never)
     {
         _semanticModel = semanticModel;
-        _inferrer = new TypeInferrer(this);
+        _inferrer = new TypeInferrer(Visit, ReportCannotInfer);
         _narrower = new TypeNarrower(semanticModel);
     }
 

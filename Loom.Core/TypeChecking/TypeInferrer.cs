@@ -10,7 +10,7 @@ using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.TypeChecking;
 
-internal sealed class TypeInferrer(TypeChecker checker)
+public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypeParameter> cannotInfer)
 {
     public TypeParameterSubstitution? InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
     {
@@ -24,15 +24,15 @@ internal sealed class TypeInferrer(TypeChecker checker)
                 {
                     var prop = objectType.GetProperty(propInit.Name.Text);
                     if (prop == null) continue;
-                    var argType = checker.Check(propInit.Expression);
+                    var argType = getType(propInit.Expression);
                     pairs.Add((prop.ValueType, argType));
                     break;
                 }
                 case InterfaceInvocationIndexInitializer when objectType.Indexer == null: continue;
                 case InterfaceInvocationIndexInitializer idxInit:
                 {
-                    var keyArg = checker.Check(idxInit.IndexExpression);
-                    var valueArg = checker.Check(idxInit.Expression);
+                    var keyArg = getType(idxInit.IndexExpression);
+                    var valueArg = getType(idxInit.Expression);
                     pairs.Add((objectType.Indexer.KeyType, keyArg));
                     pairs.Add((objectType.Indexer.ValueType, valueArg));
                     break;
@@ -58,7 +58,7 @@ internal sealed class TypeInferrer(TypeChecker checker)
             }
             else
             {
-                checker.ReportCannotInfer(node, typeParameter);
+                cannotInfer(node, typeParameter);
                 return null;
             }
         }
@@ -89,7 +89,7 @@ internal sealed class TypeInferrer(TypeChecker checker)
             }
             else
             {
-                checker.ReportCannotInfer(errorNode, typeParameter);
+                cannotInfer(errorNode, typeParameter);
                 return null;
             }
         }

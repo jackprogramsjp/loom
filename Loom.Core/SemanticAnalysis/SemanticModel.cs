@@ -45,7 +45,6 @@ public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, SymbolTa
     }
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
-    public Type? GetDeclaredType(Node node) => GetSymbol(node) is { } symbol ? GetType(symbol.Declaration) : null;
     
     private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
     {

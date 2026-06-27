@@ -49,7 +49,8 @@ internal static class Utility
         var compilationUnit = new CompilationUnit(new LoomConfig());
         return new Resolver(parserResult, compilationUnit).Resolve();
     }
-    public static TypeCheckerResult TypeCheck(string source) => new TypeChecker(GetSemanticModel(source)).Check();
+    public static TypeChecker GetTypeChecker(string source) => new(GetSemanticModel(source));
+    public static TypeCheckerResult TypeCheck(string source) => GetTypeChecker(source).Check();
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;
 
     public static Token IdentifierToken(string name, LocationSpan? span = null) => Token(SyntaxKind.Identifier, name, span);

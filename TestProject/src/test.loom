@@ -1,5 +1,3 @@
-enum Status { Active, Inactive }
-let x: Status = Status.Active;
-if x == Status.Active {
-    x
-}
+fn id<T>(x: T?): T? -> x;
+let v: number? = 42;
+id(v)
