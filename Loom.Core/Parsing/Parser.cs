@@ -106,12 +106,12 @@ public sealed class Parser(LexerResult lexerResult)
         {
             var indexType = ParseType();
             var rightBracket = Expect(SyntaxKind.RBracket);
-            var colonTypeClause = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(MaybeCurrent())}.");
+            var colonTypeClause = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(Current())}.");
             return colonTypeClause == null ? null : new IndexerDeclaration(mutKeyword, leftBracket, rightBracket, indexType, colonTypeClause);
         }
 
         var name = ExpectIdentifier("property name");
-        var propertyType = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(MaybeCurrent())}.");
+        var propertyType = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(Current())}.");
         return propertyType == null ? null : new PropertyDeclaration(mutKeyword, name, propertyType);
     }
 
@@ -121,8 +121,7 @@ public sealed class Parser(LexerResult lexerResult)
         if (colonTypeClause != null)
             return colonTypeClause;
 
-        var token = CurrentOrLast();
-        _diagnostics.Error(token, InternalCodes.ExpectedInterfaceMemberType, message);
+        _diagnostics.Error(Current(), InternalCodes.ExpectedInterfaceMemberType, message);
         return null;
     }
 
@@ -130,13 +129,13 @@ public sealed class Parser(LexerResult lexerResult)
     {
         var variableKeyword = Match(out var letKeyword, SyntaxKind.LetKeyword) ? letKeyword : Expect(SyntaxKind.MutKeyword, "variable signature");
         var declaration = ParseDeclareVariableSignature(variableKeyword);
-        if (variableKeyword.Kind is not (SyntaxKind.LetKeyword or SyntaxKind.MutKeyword) || declaration is not DeclareVariableSignature signature)
+        if (variableKeyword.Kind is not (SyntaxKind.LetKeyword or SyntaxKind.MutKeyword))
             return new NullStatement(variableKeyword);
 
         var inKeyword = Expect(SyntaxKind.InKeyword);
         var expression = ParseExpression();
         var body = ParseStatement();
-        return new For(keyword, signature, inKeyword, expression, body);
+        return new For(keyword, declaration, inKeyword, expression, body);
     }
 
     private After ParseAfter(Token keyword)
@@ -191,9 +190,9 @@ public sealed class Parser(LexerResult lexerResult)
             return ParseInterfaceDeclaration(interfaceKeyword);
 
         _diagnostics.Error(
-            MaybeCurrent() ?? declareKeyword,
+            Current() ?? declareKeyword,
             InternalCodes.ExpectedDeclarationSignature,
-            $"Expected declaration signature, got {SafeTokenText(MaybeCurrent())}."
+            $"Expected declaration signature, got {SafeTokenText(Current())}."
         );
 
         return new NullStatement(declareKeyword);
@@ -231,7 +230,7 @@ public sealed class Parser(LexerResult lexerResult)
         else if (Match(out var arrow, SyntaxKind.Arrow))
             body = new ExpressionBody(arrow, ParseExpression());
         else
-            body = new NullStatement(MaybeCurrent());
+            body = new NullStatement(Current());
 
         if (body is not NullStatement nullStatement)
             return new FunctionDeclaration(
@@ -244,7 +243,7 @@ public sealed class Parser(LexerResult lexerResult)
             );
 
         _diagnostics.Error(
-            nullStatement.Token ?? CurrentOrLast(),
+            nullStatement.Token ?? Current(),
             InternalCodes.MissingFunctionBody,
             $"Expected function body, got {SafeTokenText(nullStatement.Token)}."
         );
@@ -515,18 +514,18 @@ public sealed class Parser(LexerResult lexerResult)
         if (Match(out var token, SyntaxFacts.IsLiteral))
             return new Literal(token, LiteralUtility.ResolveValue(token));
 
-        var currentOrLast = CurrentOrLast();
+        var current = Current();
         if (IsEof())
         {
-            _diagnostics.Error(currentOrLast, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+            _diagnostics.Error(current, InternalCodes.UnexpectedEof, "Unexpected end of file.");
         }
         else
         {
-            _diagnostics.Error(currentOrLast, InternalCodes.UnexpectedToken, $"Expected expression, got {SafeTokenText(MaybeCurrent())}.");
+            _diagnostics.Error(current, InternalCodes.UnexpectedToken, $"Expected expression, got {SafeTokenText(Current())}.");
             _position++;
         }
 
-        return new NullExpression(currentOrLast);
+        return new NullExpression(current);
     }
 
     private ArrayLiteral? ParseArrayLiteral(Token? mutKeyword = null)
@@ -851,11 +850,10 @@ public sealed class Parser(LexerResult lexerResult)
         return current;
     }
 
-    private Token? MaybeCurrent() => IsEof() ? null : Current();
     private Token Current() => Peek(0);
     private Token CurrentOrLast() => !IsEof() ? Current() : Last();
     private Token Last() => Peek(-1);
     private Token Peek(int offset) => lexerResult.Tokens[_position + offset];
-    private bool IsEof() => _position >= lexerResult.Tokens.Count;
-    private static string SafeTokenText(Token? token) => token != null ? $"'{token.Text}'" : "EOF";
+    private bool IsEof() => Current().Kind == SyntaxKind.Eof;
+    private static string SafeTokenText(Token? token) => token is { Kind: not SyntaxKind.Eof } ? $"'{token.Text}'" : "EOF";
 }

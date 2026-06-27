@@ -1,1 +1,1 @@
-type X = number | number
+type X = "foo" | number

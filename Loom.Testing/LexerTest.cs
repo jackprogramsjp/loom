@@ -31,14 +31,24 @@ public class LexerTest
         var expectedSyntaxes = Operators.ConvertAll(a => a[1]).Cast<SyntaxKind>().ToList();
         var source = string.Join(' ', lexemes);
         var tokens = Utility.GetTokens(source);
-        Assert.Equal(expectedSyntaxes.Count, tokens.Count);
+        Assert.Equal(1 + expectedSyntaxes.Count, tokens.Count);
 
         for (var i = 0; i < tokens.Count; ++i)
         {
             var actual = tokens[i];
-            var expected = expectedSyntaxes[i];
+            var expected = expectedSyntaxes.Count > i ? expectedSyntaxes[i] : SyntaxKind.Eof;
             Assert.Equal(expected, actual.Kind);
         }
+    }
+    
+    [Fact]
+    public void Tokenizes_Eof()
+    {
+        var tokens = Utility.GetTokens("");
+        Assert.Single(tokens);
+
+        var token = tokens[0];
+        Assert.Equal(SyntaxKind.Eof, token.Kind);
     }
 
     [Theory]
@@ -46,7 +56,7 @@ public class LexerTest
     public void Tokenizes_Operators(string source, SyntaxKind expected)
     {
         var tokens = Utility.GetTokens(source);
-        Assert.Single(tokens);
+        Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
         Assert.Equal(expected, token.Kind);
@@ -75,7 +85,7 @@ public class LexerTest
     public void Tokenizes_Numbers(string source)
     {
         var tokens = Utility.GetTokens(source);
-        Assert.Single(tokens);
+        Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
         Assert.Equal(SyntaxKind.NumberLiteral, token.Kind);
@@ -87,7 +97,7 @@ public class LexerTest
     public void Tokenizes_Strings(string source)
     {
         var tokens = Utility.GetTokens(source);
-        Assert.Single(tokens);
+        Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
         Assert.Equal(SyntaxKind.StringLiteral, token.Kind);
@@ -101,7 +111,7 @@ public class LexerTest
     public void Tokenizes_Identifiers(string source)
     {
         var tokens = Utility.GetTokens(source);
-        Assert.Single(tokens);
+        Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
         Assert.Equal(SyntaxKind.Identifier, token.Kind);
@@ -112,9 +122,9 @@ public class LexerTest
     public void Tokenizes_Keywords(string source, SyntaxKind expected)
     {
         var tokens = Utility.GetTokens(source);
-        Assert.Single(tokens);
+        Assert.Equal(2, tokens.Count);
 
-        var token = tokens.First();
+        var token = tokens[0];
         Assert.Equal(expected, token.Kind);
     }
 
@@ -122,14 +132,17 @@ public class LexerTest
     public void Tokenizes_ProperSpan_WithWhitespace()
     {
         var tokens = Utility.GetTokens("true false");
-        Assert.Equal(2, tokens.Count);
+        Assert.Equal(3, tokens.Count);
 
         var first = tokens[0];
-        var second = tokens[^1];
+        var second = tokens[^2];
+        var eof = tokens[^1];
         var firstStart = first.Span.Start;
         var firstEnd = first.Span.End;
         var secondStart = second.Span.Start;
         var secondEnd = second.Span.End;
+        var eofStart = eof.Span.Start;
+        var eofEnd = eof.Span.End;
         Assert.Equal(firstStart.Line, firstEnd.Line);
         Assert.Equal(firstStart.Character, firstStart.Position);
         Assert.Equal(firstEnd.Character, firstEnd.Position);
@@ -141,13 +154,19 @@ public class LexerTest
         Assert.Equal(secondEnd.Character, secondEnd.Position);
         Assert.Equal(5, secondStart.Position);
         Assert.Equal(10, secondEnd.Position);
+        
+        Assert.Equal(eofStart.Line, eofEnd.Line);
+        Assert.Equal(eofStart.Character, eofStart.Position);
+        Assert.Equal(eofEnd.Character, eofEnd.Position);
+        Assert.Equal(10, eofStart.Position);
+        Assert.Equal(10, eofEnd.Position);
     }
 
     [Fact]
     public void Tokenizes_ProperSpan()
     {
         var tokens = Utility.GetTokens("true");
-        Assert.Single(tokens);
+        Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
         var start = token.Span.Start;

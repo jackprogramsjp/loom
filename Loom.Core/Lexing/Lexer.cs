@@ -33,6 +33,8 @@ public sealed class Lexer(SourceFile file)
             if (SyntaxFacts.IsTrivia(rule.Syntax)) continue;
             yield return new Token(rule.Syntax, span);
         }
+
+        yield return new Token(SyntaxKind.Eof, GetSpan(GetLocation()));
     }
 
     private LexerRule? Lex()

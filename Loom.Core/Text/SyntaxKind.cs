@@ -88,6 +88,8 @@ public enum SyntaxKind : ushort
     AsKeyword,
     NewKeyword,
     SealedKeyword,
+    ImplementKeyword,
 
     Identifier,
+    Eof
 }

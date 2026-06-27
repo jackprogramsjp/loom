@@ -29,6 +29,7 @@ public static class SyntaxFacts
             new("as", SyntaxKind.AsKeyword),
             new("new", SyntaxKind.NewKeyword),
             new("sealed", SyntaxKind.SealedKeyword),
+            new("implement", SyntaxKind.ImplementKeyword),
         ]
     );
     public static readonly Dictionary<string, SyntaxKind> OperatorMap = new(
