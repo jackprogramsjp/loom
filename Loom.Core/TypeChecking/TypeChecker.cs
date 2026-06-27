@@ -552,13 +552,16 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     public override Type VisitKeyOf(KeyOf keyOf)
     {
         var targetType = Visit(keyOf.Type);
+        if (targetType is InstantiatedType instantiated)
+            targetType = instantiated.Expand();
+        
         if (targetType is not (ObjectType or InterfaceType))
         {
-            _diagnostics.Error(keyOf, InternalCodes.InvalidKeyOf, $"Cannot access keys of type '{targetType}'.");
+            _diagnostics.Error(keyOf, InternalCodes.InvalidKeyOf, $"Cannot access keys of type '{targetType.Widen()}'.");
             return BindType(keyOf, Types.PrimitiveType.Never);
         }
 
-        var objectType = targetType is InterfaceType i ? i.ObjectType : (ObjectType)targetType;
+        var objectType = targetType is InterfaceType interfaceType ? interfaceType.ObjectType : (ObjectType)targetType;
         var type = objectType.KeyUnion();
         return BindType(keyOf, type);
     }
@@ -567,6 +570,9 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     {
         var targetType = Visit(indexedType.Type);
         var indexType = Visit(indexedType.IndexType);
+        if (targetType is InstantiatedType instantiated)
+            targetType = instantiated.Expand();
+        
         if (targetType is not (ObjectType or InterfaceType))
         {
             _diagnostics.Error(indexedType, InternalCodes.InvalidAccess, $"Type '{indexType}' cannot be used to index type '{targetType}'.");
@@ -807,6 +813,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         {
             ObjectType objectType => GetTypeAtIndexInObject(node, objectType, indexType),
             InterfaceType interfaceType => GetTypeAtIndexInInterface(node, interfaceType, indexType),
+            InstantiatedType instantiated => GetTypeAtIndex(node, instantiated.Expand(), indexType),
             _ => type
         };
 

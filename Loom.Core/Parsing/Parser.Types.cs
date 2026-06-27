@@ -56,7 +56,7 @@ public sealed partial class Parser
             return ParsePrimaryType();
 
         var leftParen = Expect(SyntaxKind.LParen);
-        var innerType = ParseUnaryType();
+        var innerType = ParsePostfixType();
         var rightParen = Expect(SyntaxKind.RParen);
         return new KeyOf(keyOfKeyword, leftParen, rightParen, innerType);
     }
