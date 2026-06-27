@@ -47,17 +47,17 @@ public static class LexerRules
     public static readonly IReadOnlyList<LexerDiagnosticRule> PriorityDiagnostic =
     [
         DiagnosticRule(
-            @"0[xX](?![a-fA-F0-9_])",
+            "0[xX](?![a-fA-F0-9_])",
             InternalCodes.MalformedNumber,
             m => $"Malformed hexadecimal literal '{m}': expected at least one hex digit after '0x'."
         ),
         DiagnosticRule(
-            @"0[bB](?![01_])",
+            "0[bB](?![01_])",
             InternalCodes.MalformedNumber,
             m => $"Malformed binary literal '{m}': expected at least one binary digit after '0b'."
         ),
         DiagnosticRule(
-            @"0[oO](?![0-7_])",
+            "0[oO](?![0-7_])",
             InternalCodes.MalformedNumber,
             m => $"Malformed octal literal '{m}': expected at least one octal digit after '0o'."
         ),
@@ -67,7 +67,7 @@ public static class LexerRules
             m => $"Malformed scientific notation '{m}': expected one or more digits after the exponent."
         ),
         DiagnosticRule(
-            @"\d[\d_]*\.(?![\d_])",
+            @"\d[\d_]*\.(?![\d_.])",
             InternalCodes.MalformedNumber,
             m => $"Malformed float literal '{m}': expected one or more digits after the decimal point."
         ),

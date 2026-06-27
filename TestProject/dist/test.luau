@@ -1,1 +1,1 @@
-const _ = 291
+const _ = { minimum = 1, maximum = 5 }
