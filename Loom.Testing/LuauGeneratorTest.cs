@@ -37,6 +37,98 @@ public class LuauGeneratorTest
     public void Generates_Nothing(string source) => Assert.Empty(Utility.GetLuauAST(source).Statements);
 
     [Fact]
+    public void Generates_KeyOfType()
+    {
+        var luauTree = Utility.GetLuauAST("type Abc = number; mut x: keyof(Abc);");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.Last());
+        Assert.NotNull(variable.DeclaredType);
+
+        var keyOfType = Assert.IsType<TypeName>(variable.DeclaredType);
+        Assert.Equal("keyof", keyOfType.Name);
+        Assert.Single(keyOfType.TypeArguments);
+        var arg = Assert.IsType<TypeName>(keyOfType.TypeArguments.First());
+        Assert.Equal("Abc", arg.Name);
+        Assert.Empty(arg.TypeArguments);
+    }
+
+    [Fact]
+    public void Generates_NestedKeyOfType()
+    {
+        var luauTree = Utility.GetLuauAST("type Abc = number; mut x: keyof(keyof(Abc));");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.Last());
+        Assert.NotNull(variable.DeclaredType);
+
+        var outerKeyOf = Assert.IsType<TypeName>(variable.DeclaredType);
+        Assert.Equal("keyof", outerKeyOf.Name);
+        Assert.Single(outerKeyOf.TypeArguments);
+
+        var innerKeyOf = Assert.IsType<TypeName>(outerKeyOf.TypeArguments.First());
+        Assert.Equal("keyof", innerKeyOf.Name);
+        Assert.Single(innerKeyOf.TypeArguments);
+
+        var arg = Assert.IsType<TypeName>(innerKeyOf.TypeArguments.First());
+        Assert.Equal("Abc", arg.Name);
+        Assert.Empty(arg.TypeArguments);
+    }
+
+    [Fact]
+    public void Generates_KeyOfInTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("type I = number; type Keys = keyof(I);");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
+        var keyOfType = Assert.IsType<TypeName>(alias.Type);
+        Assert.Equal("keyof", keyOfType.Name);
+        Assert.Single(keyOfType.TypeArguments);
+        var arg = Assert.IsType<TypeName>(keyOfType.TypeArguments.First());
+        Assert.Equal("I", arg.Name);
+        Assert.Empty(arg.TypeArguments);
+    }
+
+    [Fact]
+    public void Generates_KeyOfOnGenericInstantiation()
+    {
+        var luauTree = Utility.GetLuauAST("interface I<T> { value: T } type Keys = keyof(I<number>);");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
+        var keyOfType = Assert.IsType<TypeName>(typeAlias.Type);
+        Assert.Equal("keyof", keyOfType.Name);
+        Assert.Single(keyOfType.TypeArguments);
+
+        var genericType = Assert.IsType<TypeName>(keyOfType.TypeArguments.First());
+        Assert.Equal("I", genericType.Name);
+        Assert.Single(genericType.TypeArguments);
+        var arg = Assert.IsType<PrimitiveType>(genericType.TypeArguments.First());
+        Assert.Equal(PrimitiveTypeKind.Number, arg.Kind);
+    }
+
+    [Fact]
+    public void Generates_KeyOfWithIndexedAccess()
+    {
+        var luauTree = Utility.GetLuauAST("type I = number; type Keys = keyof(I['prop']);");
+        Assert.Equal(2, luauTree.Statements.Count);
+        
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
+        var keyOf = Assert.IsType<TypeName>(alias.Type);
+        Assert.Equal("keyof", keyOf.Name);
+        Assert.Single(keyOf.TypeArguments);
+
+        var indexed = Assert.IsType<TypeName>(keyOf.TypeArguments.First());
+        Assert.Equal("index", indexed.Name);
+        Assert.Equal(2, indexed.TypeArguments.Count);
+        var target = Assert.IsType<TypeName>(indexed.TypeArguments.First());
+        Assert.Equal("I", target.Name);
+        var index = Assert.IsType<StringLiteralType>(indexed.TypeArguments.Last());
+        Assert.Equal("prop", index.Value);
+    }
+
+    [Fact]
     public void Generates_TernaryOp()
     {
         var luauTree = Utility.GetLuauAST("true ? 69 : 'abc'");
@@ -46,10 +138,10 @@ public class LuauGeneratorTest
         var ifExpression = Assert.IsType<IfExpression>(variable.Initializer);
         var condition = Assert.IsType<BooleanLiteral>(ifExpression.Condition);
         Assert.True(condition.Value);
-        
+
         var number = Assert.IsType<NumberLiteral>(ifExpression.ThenBranch);
         Assert.Equal(69, number.Value);
-        
+
         var @string = Assert.IsType<StringLiteral>(ifExpression.ElseBranch);
         Assert.Equal("abc", @string.Value);
     }
@@ -83,7 +175,7 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST("for let x in [1] { break }", typeCheck: true);
         Assert.Single(luauTree.Statements);
-        
+
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
         Assert.Single(forStmt.Body.Statements);
         Assert.IsType<Break>(forStmt.Body.Statements.First());
@@ -108,7 +200,7 @@ public class LuauGeneratorTest
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
         Assert.Equal("i", numericFor.Name);
-        
+
         var start = Assert.IsType<NumberLiteral>(numericFor.Start);
         var end = Assert.IsType<NumberLiteral>(numericFor.End);
         Assert.Equal(0, start.Value);
@@ -125,7 +217,7 @@ public class LuauGeneratorTest
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
         Assert.Equal("i", numericFor.Name);
-        
+
         var start = Assert.IsType<NumberLiteral>(numericFor.Start);
         var end = Assert.IsType<NumberLiteral>(numericFor.End);
         Assert.Equal(5, start.Value);
@@ -161,7 +253,7 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST("let r = 1..10; for let i in r { }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
-        
+
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.Last());
         Assert.Equal("i", numericFor.Name);
         var start = Assert.IsType<PropertyAccess>(numericFor.Start);
@@ -171,10 +263,10 @@ public class LuauGeneratorTest
         Assert.Equal("r", ((Identifier)end.Target).Name);
         Assert.Equal("maximum", end.Names.First());
 
-        var ifExpression =  Assert.IsType<IfExpression>(numericFor.IncrementBy);
+        var ifExpression = Assert.IsType<IfExpression>(numericFor.IncrementBy);
         Assert.Empty(ifExpression.ElseIfBranches);
         Assert.NotNull(ifExpression.ElseBranch);
-        
+
         var condition = Assert.IsType<BinaryOperator>(ifExpression.Condition);
         Assert.Equal("<", condition.Operator);
         Assert.IsType<PropertyAccess>(condition.Left);
@@ -197,15 +289,15 @@ public class LuauGeneratorTest
 
         var luauTree = Utility.GetLuauAST(source, typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
-        
+
         var outerFor = Assert.IsType<ForStatement>(luauTree.Statements.Last());
         Assert.Equal(2, outerFor.Names.Count);
         Assert.Equal("x", outerFor.Names.Last());
-        
+
         var innerFor = Assert.IsType<ForStatement>(outerFor.Body.Statements.First());
         Assert.Equal(2, innerFor.Names.Count);
         Assert.Equal("y", innerFor.Names.Last());
-        
+
         var identifier = Assert.IsType<Identifier>(innerFor.Expression);
         Assert.Equal("xs", identifier.Name);
     }

@@ -588,6 +588,27 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let s: string? = 'a'; s ? 1 : 2");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'string?' is not assignable to type 'bool'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_KeyOf_OnPrimitive()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type K = keyof(number)");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidKeyOf, "Cannot access keys of type 'number'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_KeyOf_OnFunctionType()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("type K = keyof(fn(): void)");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidKeyOf, "Cannot access keys of type 'fn(): void'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_NestedKeyOf()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { a: number } type K = keyof(keyof(I))");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidKeyOf, "Cannot access keys of type 'string'.");
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -598,6 +619,61 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_KeyOf_OnObjectType_WithProperties()
+    {
+        var type = Utility.GetLastStatementType("interface I { a: number, b: string } type K = keyof(I)");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "a" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "b" });
+    }
+
+    [Fact]
+    public void Checks_KeyOf_OnObjectType_WithIndexerOnly()
+    {
+        var type = Utility.GetLastStatementType("interface I { [number]: string } type K = keyof(I)");
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+
+    [Fact]
+    public void Checks_KeyOf_OnObjectType_WithPropertiesAndIndexer()
+    {
+        var type = Utility.GetLastStatementType("interface I { a: number, [number]: bool } type K = keyof(I)");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "a" });
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_KeyOf_OnInterface_ResolvesObjectType()
+    {
+        var type = Utility.GetLastStatementType("interface I { x: number, y: number } type K = keyof(I)");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "x" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "y" });
+    }
+
+    [Fact]
+    public void Checks_KeyOf_OnGenericInterface_Instantiated()
+    {
+        var type = Utility.GetLastStatementType("interface Box<T> { value: T } type K = keyof(Box<number>)");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal("value", literal.Value);
+    }
+
+    [Fact]
+    public void Checks_KeyOf_OnNestedObject_ReturnsNestedKeys()
+    {
+        var type = Utility.GetLastStatementType("interface Inner { a: number, b: string } interface Outer { inner: Inner } type K = keyof(Outer['inner'])");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "a" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "b" });
+    }
+
     [Fact]
     public void Checks_TernaryOperator_Basic()
     {

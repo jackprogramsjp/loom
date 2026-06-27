@@ -67,6 +67,29 @@ public class VisitorTraversalTest
             "ColonTypeClause",
             "PrimitiveType"
         );
+    
+    [Fact]
+    public void KeyOf_VisitsType() =>
+        AssertVisitOrder(
+            "type X = keyof number;",
+            "TypeAlias",
+            "EqualsTypeClause",
+            "KeyOf",
+            "PrimitiveType"
+        );
+    
+    [Fact]
+    public void Ternary_VisitsExpressions() =>
+        AssertVisitOrder(
+            "1 ? a : b()",
+            "ExpressionStatement",
+            "TernaryOperator",
+            "Literal",
+            "Identifier",
+            "Invocation",
+            "Identifier",
+            "Arguments"
+        );
 
     [Fact]
     public void Return_VisitsExpression() =>

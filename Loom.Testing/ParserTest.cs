@@ -401,6 +401,51 @@ public class ParserTest
         var diagnostics = Utility.GetParserDiagnostics("let x: List<number>>");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '>'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_KeyOf_InvalidOperand_Union()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: keyof(T | number)");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.UnexpectedToken,
+            "Expected ')', got '|'."
+        );
+    }
+    
+    [Fact]
+    public void Parses_KeyOf_Basic()
+    {
+        var tree = Utility.GetAST("let x: keyof(T)");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var keyOf = Assert.IsType<KeyOf>(varDecl.ColonTypeClause!.Type);
+        Assert.Equal(SyntaxKind.KeyOfKeyword, keyOf.Keyword.Kind);
+        Assert.Equal(SyntaxKind.LParen, keyOf.LeftParen.Kind);
+        Assert.Equal(SyntaxKind.RParen, keyOf.RightParen.Kind);
+        Assert.IsType<TypeName>(keyOf.Type);
+        Assert.Equal("T", ((TypeName)keyOf.Type).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_KeyOf_Nested()
+    {
+        var tree = Utility.GetAST("let x: keyof(keyof(T))");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var outer = Assert.IsType<KeyOf>(varDecl.ColonTypeClause!.Type);
+        var inner = Assert.IsType<KeyOf>(outer.Type);
+        Assert.IsType<TypeName>(inner.Type);
+        Assert.Equal("T", ((TypeName)inner.Type).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_KeyOf_WithPostfix()
+    {
+        var tree = Utility.GetAST("let x: keyof(T)[]");
+        var varDecl = Assert.IsType<VariableDeclaration>(tree.Statements.Single());
+        var array = Assert.IsType<ArrayType>(varDecl.ColonTypeClause!.Type);
+        var keyOf = Assert.IsType<KeyOf>(array.ElementType);
+        Assert.IsType<TypeName>(keyOf.Type);
+    }
 
     [Fact]
     public void Parses_TernaryOperator_Basic()

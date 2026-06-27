@@ -17,6 +17,173 @@ using static PrimitiveType;
 public class TypesTest
 {
     [Fact]
+    public void ObjectType_PropertyUnion_EmptyObject()
+    {
+        var empty = ObjectType.Empty;
+        Assert.Equal(Never, empty.PropertyUnion());
+    }
+
+    [Fact]
+    public void ObjectType_ValueUnion_EmptyObject()
+    {
+        var empty = ObjectType.Empty;
+        Assert.Equal(Never, empty.ValueUnion());
+    }
+
+    [Fact]
+    public void ObjectType_PropertyUnion_OnlyProperties()
+    {
+        var obj = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", String), new ObjectProperty(false, "z", Bool)]);
+
+        var propertyUnion = obj.PropertyUnion();
+        var expected = new UnionType([Number, String, Bool]);
+        expected = Assert.IsType<UnionType>(TypeSimplifier.Simplify(expected));
+        Assert.True(propertyUnion.Equals(expected));
+    }
+
+    [Fact]
+    public void ObjectType_ValueUnion_OnlyProperties()
+    {
+        var obj = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", String)]);
+
+        var propertyUnion = obj.PropertyUnion();
+        var valueUnion = obj.ValueUnion();
+        Assert.True(propertyUnion.Equals(valueUnion));
+    }
+
+    [Fact]
+    public void ObjectType_PropertyUnion_OnlyIndexer()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            []
+        );
+
+        Assert.Equal(Never, obj.PropertyUnion());
+    }
+
+    [Fact]
+    public void ObjectType_ValueUnion_OnlyIndexer()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            []
+        );
+
+        Assert.Equal(Number, obj.ValueUnion());
+    }
+
+    [Fact]
+    public void ObjectType_PropertyUnion_WithIndexerAndProperties()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, Number, Bool),
+            [new ObjectProperty(false, "a", String), new ObjectProperty(false, "b", Number)]
+        );
+
+        var propertyUnion = obj.PropertyUnion();
+        var expected = new UnionType([String, Number]);
+        expected = Assert.IsType<UnionType>(TypeSimplifier.Simplify(expected));
+        Assert.True(propertyUnion.Equals(expected));
+    }
+
+    [Fact]
+    public void ObjectType_ValueUnion_WithIndexerAndProperties()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, Number, Bool),
+            [new ObjectProperty(false, "a", String), new ObjectProperty(false, "b", Number)]
+        );
+
+        var valueUnion = obj.ValueUnion();
+        var expected = new UnionType([Bool, String, Number]);
+        expected = Assert.IsType<UnionType>(TypeSimplifier.Simplify(expected));
+        Assert.True(valueUnion.Equals(expected));
+    }
+
+    [Fact]
+    public void ObjectType_ValueUnion_DuplicateTypeSimplification()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            [new ObjectProperty(false, "x", Number)]
+        );
+
+        var valueUnion = obj.ValueUnion();
+        Assert.Equal(Number, valueUnion);
+    }
+
+    [Fact]
+    public void ObjectType_PropertyKeyUnion_EmptyObject()
+    {
+        var empty = ObjectType.Empty;
+        var propertyKeyUnion = empty.PropertyKeyUnion();
+        Assert.Equal(Never, propertyKeyUnion);
+    }
+
+    [Fact]
+    public void ObjectType_PropertyKeyUnion_WithProperties()
+    {
+        var obj = new ObjectType(null, [new ObjectProperty(false, "x", Number), new ObjectProperty(false, "y", String), new ObjectProperty(false, "z", Bool)]);
+
+        var propertyKeyUnion = obj.PropertyKeyUnion();
+        var expected = new UnionType([new LiteralType("x"), new LiteralType("y"), new LiteralType("z")]);
+
+        expected = Assert.IsType<UnionType>(TypeSimplifier.Simplify(expected));
+        Assert.True(propertyKeyUnion.Equals(expected));
+    }
+
+    [Fact]
+    public void ObjectType_KeyUnion_NoIndexer_OnlyProperties()
+    {
+        var obj = new ObjectType(null, [new ObjectProperty(false, "a", Number), new ObjectProperty(false, "b", String)]);
+
+        var keyUnion = obj.KeyUnion();
+        var expected = new UnionType([new LiteralType("a"), new LiteralType("b")]);
+        expected = Assert.IsType<UnionType>(TypeSimplifier.Simplify(expected));
+        Assert.True(keyUnion.Equals(expected));
+    }
+
+    [Fact]
+    public void ObjectType_KeyUnion_IndexerOnly_NoProperties()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, String, Number),
+            []
+        );
+
+        var keyUnion = obj.KeyUnion();
+        Assert.Equal(String, keyUnion);
+    }
+
+    [Fact]
+    public void ObjectType_KeyUnion_IndexerAndProperties()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, Number, Bool),
+            [new ObjectProperty(false, "x", String), new ObjectProperty(false, "y", Number)]
+        );
+
+        var keyUnion = obj.KeyUnion();
+        var expected = new UnionType([Number, new LiteralType("x"), new LiteralType("y")]);
+        expected = (UnionType)TypeSimplifier.Simplify(expected);
+        Assert.True(keyUnion.Equals(expected));
+    }
+
+    [Fact]
+    public void ObjectType_KeyUnion_DuplicateKeys_Simplified()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, new LiteralType("x"), Number),
+            [new ObjectProperty(false, "x", String)]
+        );
+
+        var keyUnion = obj.KeyUnion();
+        var expected = new LiteralType("x");
+        Assert.Equal(expected, keyUnion);
+    }
+
+    [Fact]
     public void InterfaceType_Assignability_Self()
     {
         var interfaceA = new InterfaceType("A", [], ObjectType.Empty);
