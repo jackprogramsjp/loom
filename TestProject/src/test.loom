@@ -1,3 +1,2 @@
-enum Status { Active, Inactive }
-            let x: Status = Status.Active
-            if x == Status.Active { x }
+fn first<T>(a: T, b: T) -> a
+            first(42, "hello")

@@ -170,7 +170,7 @@ public class TypeCheckerTest
             """;
 
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InferredGenericConflict, "Inferred type '\"hello\"' for parameter 'T' conflicts with previous '42'.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"hello\"' is not assignable to type '42'.");
     }
 
     [Fact]
@@ -1807,6 +1807,35 @@ public class TypeCheckerTest
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(69L, literal.Value);
+    }
+    
+    [Fact]
+    public void Checks_GenericFunctionCall_InferredArrayType()
+    {
+        const string source = """
+            fn id<T>(value: T[]) -> value
+            id([69])
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var array = Assert.IsType<ArrayType>(type);
+        var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+    }
+    
+    [Fact]
+    public void Checks_GenericFunctionCall_InferredGenericType()
+    {
+        const string source = """
+            type Arr<T> = T[]
+            fn id<T>(value: Arr<T>) -> value
+            id([69])
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var array = Assert.IsType<ArrayType>(type);
+        var primitive = Assert.IsType<PrimitiveType>(array.ElementType);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
 
     [Fact]

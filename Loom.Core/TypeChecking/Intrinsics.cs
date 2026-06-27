@@ -41,7 +41,6 @@ public static class Intrinsics
                 symbol.IsGlobal = true;
                 model.TypeSolver.SetType(symbol.Declaration, compiledFile.SemanticModel.GetType(symbol.Declaration));
                 intrinsicSymbols.Add(symbol);
-                Console.WriteLine(symbol);
             }
         }
 

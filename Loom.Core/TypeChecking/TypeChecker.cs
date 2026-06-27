@@ -17,6 +17,8 @@ using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom.TypeChecking;
 
+using TypeParameterSubstitution = Dictionary<Types.TypeParameter, Type>;
+
 public sealed class TypeChecker(SemanticModel semanticModel)
     : Visitor<Type>(Types.PrimitiveType.Never)
 {
@@ -554,7 +556,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var targetType = Visit(keyOf.Type);
         if (targetType is InstantiatedType instantiated)
             targetType = instantiated.Expand();
-        
+
         if (targetType is not (ObjectType or InterfaceType))
         {
             _diagnostics.Error(keyOf, InternalCodes.InvalidKeyOf, $"Cannot access keys of type '{targetType.Widen()}'.");
@@ -572,7 +574,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var indexType = Visit(indexedType.IndexType);
         if (targetType is InstantiatedType instantiated)
             targetType = instantiated.Expand();
-        
+
         if (targetType is not (ObjectType or InterfaceType))
         {
             _diagnostics.Error(indexedType, InternalCodes.InvalidAccess, $"Type '{indexType}' cannot be used to index type '{targetType}'.");
@@ -797,7 +799,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         {
             if (type is InstantiatedType instantiated)
                 type = instantiated.Expand();
-            
+
             if (type is not (ObjectType or InterfaceType))
             {
                 _diagnostics.Error(accessExpression, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
@@ -957,12 +959,12 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         return BindType(invocation, functionType.ReturnType);
     }
 
-    private Dictionary<Types.TypeParameter, Type>? ResolveTypeArguments(
+    private TypeParameterSubstitution? ResolveTypeArguments(
         Invocation invocation,
         Types.FunctionType functionType,
         List<Type> argumentTypes)
     {
-        var substitution = new Dictionary<Types.TypeParameter, Type>();
+        var substitution = new TypeParameterSubstitution();
         if (invocation.TypeArguments != null)
         {
             var explicitArguments = invocation.TypeArguments.ArgumentsList.ConvertAll(Visit);
@@ -989,54 +991,219 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         return substitution;
     }
 
-    private Dictionary<Types.TypeParameter, Type>? InferTypeArguments(
+    private TypeParameterSubstitution? InferTypeArguments(
         Types.FunctionType functionType,
         List<Type> argumentTypes,
         Node errorNode)
     {
-        var inferred = new Dictionary<Types.TypeParameter, Type>();
+        var inferred = new TypeParameterSubstitution();
+        var visited = new HashSet<(Type, Type)>();
         for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
+            TryInferTypes(functionType.ParameterTypes[i], argumentTypes[i], inferred, visited);
+
+        var substitution = new TypeParameterSubstitution();
+        foreach (var typeParameter in functionType.TypeParameters)
         {
-            var paramType = functionType.ParameterTypes[i];
-            if (paramType is not Types.TypeParameter tp) continue;
-
-            var argType = argumentTypes[i];
-            if (inferred.TryGetValue(tp, out var existing))
+            if (inferred.TryGetValue(typeParameter, out var inferredType))
             {
-                if (existing.Equals(argType)) continue;
-
-                _diagnostics.Error(
-                    errorNode,
-                    InternalCodes.InferredGenericConflict,
-                    $"Inferred type '{argType}' for parameter '{tp.Name}' conflicts with previous '{existing}'."
-                );
+                substitution[typeParameter] = inferredType;
+            }
+            else if (typeParameter.DefaultType != null)
+            {
+                substitution[typeParameter] = typeParameter.DefaultType;
             }
             else
             {
-                inferred[tp] = argType;
-            }
-        }
-
-        var substitution = new Dictionary<Types.TypeParameter, Type>();
-        foreach (var tp in functionType.TypeParameters)
-        {
-            if (inferred.TryGetValue(tp, out var inferredType))
-            {
-                substitution[tp] = inferredType;
-            }
-            else if (tp.DefaultType != null)
-            {
-                substitution[tp] = tp.DefaultType;
-            }
-            else
-            {
-                ReportCannotInfer(errorNode, tp);
+                ReportCannotInfer(errorNode, typeParameter);
                 return null;
             }
         }
 
         return substitution;
     }
+
+    private static bool TryInferTypes(Type parameterType, Type argumentType, TypeParameterSubstitution inferredTypes, HashSet<(Type, Type)> visitedPairs)
+    {
+        parameterType = ExpandAliases(parameterType);
+        argumentType = ExpandAliases(argumentType);
+
+        if (!visitedPairs.Add((parameterType, argumentType)))
+            return true;
+
+        if (TryMatchGenericTypes(parameterType, argumentType, inferredTypes, visitedPairs, out var genericResult))
+            return genericResult;
+
+        return (parameterType, argumentType) switch
+        {
+            (Types.TypeParameter typeParameter, _) => BindTypeParameter(typeParameter, argumentType, inferredTypes),
+            (Types.ArrayType parameterArray, Types.ArrayType argumentArray) => TryInferTypes(
+                parameterArray.ElementType,
+                argumentArray.ElementType,
+                inferredTypes,
+                visitedPairs
+            ),
+            (Types.OptionalType parameterOptional, Types.OptionalType argumentOptional) => TryInferTypes(
+                parameterOptional.NonNullableType,
+                argumentOptional.NonNullableType,
+                inferredTypes,
+                visitedPairs
+            ),
+            (Types.OptionalType parameterOptional, _) => TryInferTypes(parameterOptional.NonNullableType, argumentType, inferredTypes, visitedPairs),
+            (ObjectType parameterObject, ObjectType argumentObject) => MatchObjectTypes(parameterObject, argumentObject, inferredTypes, visitedPairs),
+            (InterfaceType parameterInterface, InterfaceType argumentInterface) => TryInferTypes(
+                parameterInterface.ObjectType,
+                argumentInterface.ObjectType,
+                inferredTypes,
+                visitedPairs
+            ),
+            (Types.FunctionType parameterFunction, Types.FunctionType argumentFunction) => MatchFunctionTypes(
+                parameterFunction,
+                argumentFunction,
+                inferredTypes,
+                visitedPairs
+            ),
+            (Types.UnionType parameterUnion, Types.UnionType argumentUnion) when parameterUnion.Types.Count == argumentUnion.Types.Count => MatchUnionTypes(
+                parameterUnion,
+                argumentUnion,
+                inferredTypes,
+                visitedPairs
+            ),
+            (Types.IntersectionType parameterIntersection, Types.IntersectionType argumentIntersection) when parameterIntersection.Types.Count
+                == argumentIntersection.Types.Count => MatchIntersectionTypes(parameterIntersection, argumentIntersection, inferredTypes, visitedPairs),
+            _ => parameterType.Equals(argumentType) || argumentType.IsAssignableTo(parameterType)
+        };
+    }
+
+    private static bool BindTypeParameter(Types.TypeParameter typeParameter, Type argumentType, TypeParameterSubstitution inferredTypes)
+    {
+        if (inferredTypes.TryGetValue(typeParameter, out var existingType))
+            return existingType.Equals(argumentType);
+
+        inferredTypes[typeParameter] = argumentType;
+        return true;
+    }
+
+    private static bool MatchObjectTypes(
+        ObjectType parameterObject,
+        ObjectType argumentObject,
+        TypeParameterSubstitution inferredTypes,
+        HashSet<(Type, Type)> visitedPairs)
+    {
+        foreach (var parameterProperty in parameterObject.Properties)
+        {
+            var argumentProperty = argumentObject.GetProperty(parameterProperty.Name);
+            if (argumentProperty == null)
+                return false;
+
+            if (!TryInferTypes(parameterProperty.ValueType, argumentProperty.ValueType, inferredTypes, visitedPairs))
+                return false;
+        }
+
+        if (parameterObject.Indexer != null && argumentObject.Indexer != null)
+        {
+            return TryInferTypes(parameterObject.Indexer.KeyType, argumentObject.Indexer.KeyType, inferredTypes, visitedPairs)
+                && TryInferTypes(parameterObject.Indexer.ValueType, argumentObject.Indexer.ValueType, inferredTypes, visitedPairs);
+        }
+
+        return parameterObject.Indexer == null;
+    }
+
+    private static bool MatchFunctionTypes(
+        Types.FunctionType parameterFunction,
+        Types.FunctionType argumentFunction,
+        TypeParameterSubstitution inferredTypes,
+        HashSet<(Type, Type)> visitedPairs)
+    {
+        if (parameterFunction.ParameterTypes.Count != argumentFunction.ParameterTypes.Count)
+            return false;
+
+        return !parameterFunction.ParameterTypes.Where((t, index) => !TryInferTypes(t, argumentFunction.ParameterTypes[index], inferredTypes, visitedPairs)).Any()
+            && TryInferTypes(parameterFunction.ReturnType, argumentFunction.ReturnType, inferredTypes, visitedPairs);
+    }
+
+    private static bool MatchUnionTypes(
+        Types.UnionType parameterUnion,
+        Types.UnionType argumentUnion,
+        TypeParameterSubstitution inferredTypes,
+        HashSet<(Type, Type)> visitedPairs) =>
+        !parameterUnion.Types.Where((t, index) => !TryInferTypes(t, argumentUnion.Types[index], inferredTypes, visitedPairs)).Any();
+
+    private static bool MatchIntersectionTypes(
+        Types.IntersectionType parameterIntersection,
+        Types.IntersectionType argumentIntersection,
+        TypeParameterSubstitution inferredTypes,
+        HashSet<(Type, Type)> visitedPairs) =>
+        !parameterIntersection.Types.Where((t, index) => !TryInferTypes(t, argumentIntersection.Types[index], inferredTypes, visitedPairs)).Any();
+
+    private static bool TryMatchGenericTypes(
+        Type parameterType,
+        Type argumentType,
+        TypeParameterSubstitution inferredTypes,
+        HashSet<(Type, Type)> visitedPairs,
+        out bool result)
+    {
+        result = false;
+        var parameterGenericInfo = GetGenericTypeAndArguments(parameterType);
+        var argumentGenericInfo = GetGenericTypeAndArguments(argumentType);
+        if (parameterGenericInfo.Generic == null || argumentGenericInfo.Generic == null)
+            return false;
+
+        if (!parameterGenericInfo.Generic.Declaration.Equals(argumentGenericInfo.Generic.Declaration))
+            return false;
+
+        switch (parameterGenericInfo.Arguments.Count)
+        {
+            case > 0 when argumentGenericInfo.Arguments.Count > 0:
+            {
+                for (var index = 0; index < Math.Min(parameterGenericInfo.Arguments.Count, argumentGenericInfo.Arguments.Count); index++)
+                {
+                    if (!TryInferTypes(parameterGenericInfo.Arguments[index], argumentGenericInfo.Arguments[index], inferredTypes, visitedPairs))
+                        return false;
+                }
+
+                break;
+            }
+            case > 0 when argumentGenericInfo.Arguments.Count == 0:
+            {
+                for (var index = 0; index < Math.Min(parameterGenericInfo.Arguments.Count, argumentGenericInfo.Generic.Parameters.Count); index++)
+                {
+                    if (!TryInferTypes(argumentGenericInfo.Generic.Parameters[index], parameterGenericInfo.Arguments[index], inferredTypes, visitedPairs))
+                        return false;
+                }
+
+                break;
+            }
+            case 0 when argumentGenericInfo.Arguments.Count > 0:
+            {
+                for (var index = 0; index < Math.Min(parameterGenericInfo.Generic.Parameters.Count, argumentGenericInfo.Arguments.Count); index++)
+                {
+                    if (!TryInferTypes(parameterGenericInfo.Generic.Parameters[index], argumentGenericInfo.Arguments[index], inferredTypes, visitedPairs))
+                        return false;
+                }
+
+                break;
+            }
+        }
+
+        result = true;
+        return true;
+    }
+
+    private static Type ExpandAliases(Type type) =>
+        TypeSolver.Transform(
+            type,
+            candidateType => candidateType is InstantiatedType { GenericType.Declaration: TypeAlias } instantiated
+                ? instantiated.Expand()
+                : candidateType
+        );
+
+    private static (GenericType? Generic, List<Type> Arguments) GetGenericTypeAndArguments(Type type) =>
+        type switch
+        {
+            InstantiatedType instantiated => (instantiated.GenericType, instantiated.Arguments),
+            GenericType generic => (generic, []),
+            _ => (null, [])
+        };
 
     private InterfaceType? ResolveInterfaceType(InterfaceInvocation node, Type type)
     {
@@ -1063,7 +1230,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
             CheckTypeParameterConstraints(node, resolvedArguments[i], generic.Parameters[i]);
         }
 
-        var substitution = new Dictionary<Types.TypeParameter, Type>();
+        var substitution = new TypeParameterSubstitution();
         for (var i = 0; i < generic.Parameters.Count; i++)
             substitution[generic.Parameters[i]] = resolvedArguments[i];
 
@@ -1149,7 +1316,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         return result;
     }
 
-    private static ObjectType SubstituteObjectType(ObjectType objectType, Dictionary<Types.TypeParameter, Type> substitution)
+    private static ObjectType SubstituteObjectType(ObjectType objectType, TypeParameterSubstitution substitution)
     {
         var newProperties = objectType.Properties.ConvertAll(property => new ObjectProperty(
                 property.IsMutable,
@@ -1171,10 +1338,10 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         return new ObjectType(newIndexer, newProperties);
     }
 
-    private static List<Type> SubstituteTypeParameters(List<Type> types, Dictionary<Types.TypeParameter, Type> substitution) =>
+    private static List<Type> SubstituteTypeParameters(List<Type> types, TypeParameterSubstitution substitution) =>
         types.ConvertAll(t => SubstituteTypeParameters(t, substitution));
 
-    private static Type SubstituteTypeParameters(Type type, Dictionary<Types.TypeParameter, Type> substitution)
+    private static Type SubstituteTypeParameters(Type type, TypeParameterSubstitution substitution)
     {
         if (type is Types.TypeParameter tp && substitution.TryGetValue(tp, out var substituted))
             return substituted;

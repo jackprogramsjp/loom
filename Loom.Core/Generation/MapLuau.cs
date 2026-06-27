@@ -30,6 +30,7 @@ internal static class MapLuau
         {
             "&&" => "and",
             "||" or "??" => "or",
+            "!=" => "~=",
             _ => op
         };
 
