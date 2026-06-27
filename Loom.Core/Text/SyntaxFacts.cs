@@ -101,7 +101,7 @@ public static class SyntaxFacts
         "none",
         "void"
     ];
-    private static readonly HashSet<SyntaxKind> _triviaSyntaxes = [SyntaxKind.Whitespace, SyntaxKind.Semicolon, SyntaxKind.Comment];
+    private static readonly HashSet<SyntaxKind> _triviaSyntaxes = [SyntaxKind.Whitespace, SyntaxKind.Semicolon, SyntaxKind.Comment, SyntaxKind.MultilineComment];
     private static readonly HashSet<SyntaxKind> _literalSyntaxes =
     [
         SyntaxKind.NumberLiteral, SyntaxKind.StringLiteral, SyntaxKind.TrueLiteral, SyntaxKind.FalseLiteral, SyntaxKind.NoneLiteral

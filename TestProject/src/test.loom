@@ -1,1 +1,10 @@
-type X = "foo" | number
+## hello comment!
+print(69)
+## goodbye comment!
+#:
+silly 
+multiline
+comment
+:#
+print(420)
+## balls

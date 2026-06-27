@@ -1,3 +1,4 @@
+using Loom.Parsing.AST;
 using Loom.Text;
 
 namespace Loom.Lexing;
@@ -23,15 +24,16 @@ public static class LexerRules
 
     public static readonly List<LexerRule> Standard =
     [
-        ..SyntaxFacts.OperatorMap.Select(
-            pair => pair.Key.Length == 1
-                ? SingleCharacter(pair.Value, pair.Key[0])
-                : MultiCharacter(pair.Value, pair.Key)
+        ..SyntaxFacts.OperatorMap.Select(pair => pair.Key.Length == 1
+            ? SingleCharacter(pair.Value, pair.Key[0])
+            : MultiCharacter(pair.Value, pair.Key)
         ),
         ..SyntaxFacts.KeywordMap.Select(pair => MultiCharacter(pair.Value, pair.Key)),
         RegEx(NumberLiteral, $"{HzNumber}|{MsNumber}|{SecondsNumber}|{MinutesNumber}|{HoursNumber}|{Number}"),
         RegEx(StringLiteral, "\"([^\"]*)\"|'([^']*)'"),
         RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
-        RegEx(Whitespace, @"\s+")
+        RegEx(Whitespace, @"\s+"),
+        RegEx(MultilineComment, @"#:[\s\S]*?:#"),
+        RegEx(Comment, @"##[^\n]*"),
     ];
 }

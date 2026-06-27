@@ -6,6 +6,16 @@ namespace Loom.Lexing;
 
 public sealed class Lexer(SourceFile file)
 {
+    private static readonly IReadOnlyList<(LexerRule Rule, Regex? CompiledRegex)> _compiledRules =
+        LexerRules.Standard
+            .Select(r => (
+                r,
+                r.Kind == LexerRuleKind.RegEx
+                    ? new Regex($@"\G(?:{r.Pattern})", RegexOptions.Compiled)
+                    : null
+            ))
+            .ToList();
+    
     private readonly DiagnosticBag _diagnostics = new();
     private int _character, _position;
     private int _line = 1;
@@ -39,14 +49,14 @@ public sealed class Lexer(SourceFile file)
 
     private LexerRule? Lex()
     {
-        var matches = LexerRules.Standard
-                                .ConvertAll(r => (r, GetMatch(r)))
-                                .FindAll(pair => pair.Item2.HasValue && pair.Item2.Value.Item2 == _position) // silly
-                                .ConvertAll(pair => (pair.Item1, pair.Item2!.Value))
-                                .OrderByDescending(pair => pair.Item2.Item1.Length * (int)pair.Item1.Kind)
-                                .ToList();
+        var matches = _compiledRules
+            .Select(entry => (entry.Rule, Match: GetMatch(entry.Rule, entry.CompiledRegex)))
+            .Where(pair => pair.Match.HasValue && pair.Match.Value.Index == _position)
+            .Select(pair => (pair.Rule, pair.Match!.Value))
+            .OrderByDescending(pair => pair.Value.Content.Length * (int)pair.Rule.Kind)
+            .ToList();
 
-        if (matches.Count == 0 || matches.All(pair => pair.Value.Item1.Length == 0))
+        if (matches.Count == 0 || matches.All(pair => pair.Value.Content.Length == 0))
             return null;
 
         var (rule, (content, _)) = matches.First();
@@ -66,19 +76,22 @@ public sealed class Lexer(SourceFile file)
         return rule;
     }
 
-    private (string, int)? GetMatch(LexerRule rule)
+    private (string Content, int Index)? GetMatch(LexerRule rule, Regex? compiledRegex)
     {
-        if (rule.Kind == LexerRuleKind.RegEx)
+        if (rule.Kind == LexerRuleKind.RegEx && compiledRegex != null)
         {
-            var regEx = new Regex(rule.Pattern, RegexOptions.Compiled);
-            var match = regEx.Match(file.SourceText, _position);
+            var match = compiledRegex.Match(file.SourceText, _position);
             return match.Success ? (match.Value, match.Index) : null;
         }
 
         var isMatch = rule.Kind switch
         {
-            LexerRuleKind.SingleCharacter => !IsEof() && Current().ToString() == rule.Pattern,
-            LexerRuleKind.MultiCharacter => !IsEof(rule.Pattern.Length - 1) && PeekNext(rule.Pattern.Length) == rule.Pattern,
+            LexerRuleKind.SingleCharacter =>
+                !IsEof() && Current().ToString() == rule.Pattern,
+
+            LexerRuleKind.MultiCharacter =>
+                !IsEof(rule.Pattern.Length - 1) && PeekNext(rule.Pattern.Length) == rule.Pattern,
+
             _ => false
         };
 

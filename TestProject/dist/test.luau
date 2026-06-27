@@ -1,1 +1,2 @@
-type X = "foo" | number
+print(69)
+print(420)
