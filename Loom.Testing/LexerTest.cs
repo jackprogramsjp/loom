@@ -108,6 +108,8 @@ public class LexerTest
     [Theory]
     [InlineData("'abc\"", true)]
     [InlineData("\"abc'")]
+    [InlineData("\"abc")]
+    [InlineData("'abc", true)]
     [InlineData("\"")]
     [InlineData("'", true)]
     public void ThrowsFor_UnterminatedString(string source, bool singleQuote = false)
@@ -125,6 +127,18 @@ public class LexerTest
     {
         var diagnostics = Utility.GetLexerDiagnostics("#: hello!");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnterminatedComment, $"Unterminated block comment: expected closing ':#'.");
+    }
+    
+    [Theory]
+    [InlineData("s")]
+    [InlineData("ms")]
+    [InlineData("hz")]
+    [InlineData("HZ")]
+    public void Tokenizes_UnitSuffixesAsIdentifiers_WhenNotPrefixedByNumber(string source)
+    {
+        var tokens = Utility.GetTokens(source);
+        Assert.Equal(2, tokens.Count);
+        Assert.Equal(SyntaxKind.Identifier, tokens[0].Kind);
     }
 
     [Theory]
@@ -218,6 +232,29 @@ public class LexerTest
 
         Assert.Equal(2, tokens[1].Span.Start.Line);
     }
+    
+    [Fact]
+    public void Tokenize_WithTriviaFalse_ExcludesWhitespaceAndComments()
+    {
+        var tokens = Utility.GetTokens("true  ## comment\nfalse", withTrivia: false);
+        Assert.Equal(3, tokens.Count);
+        Assert.Equal(SyntaxKind.TrueLiteral, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.FalseLiteral, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[2].Kind);
+    }
+
+    [Fact]
+    public void Tokenize_WithTriviaTrue_IncludesWhitespaceAndComments()
+    {
+        var tokens = Utility.GetTokens("true  ## comment\nfalse", withTrivia: true);
+        Assert.Equal(6, tokens.Count);
+        Assert.Equal(SyntaxKind.TrueLiteral, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.Whitespace, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.Comment, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.Whitespace, tokens[3].Kind);
+        Assert.Equal(SyntaxKind.FalseLiteral, tokens[4].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[5].Kind);
+    }
 
     [Fact]
     public void Tokenizes_MultipleOperators()
@@ -277,6 +314,11 @@ public class LexerTest
     [InlineData("1M")]
     [InlineData("3H")]
     [InlineData("4h")]
+    [InlineData("1_000")]
+    [InlineData("1_000.5")]
+    [InlineData("1.5e1_0")]
+    [InlineData("1_0_0s")]
+    [InlineData("1.5_0ms")]
     public void Tokenizes_Numbers(string source)
     {
         var tokens = Utility.GetTokens(source);
@@ -321,6 +363,29 @@ public class LexerTest
 
         var token = tokens[0];
         Assert.Equal(expected, token.Kind);
+    }
+    
+    [Fact]
+    public void Tokenize_TracksLineAndColumnNumbers()
+    {
+        var tokens = Utility.GetTokens("abc\n123\nxyz", withTrivia: true);
+        Assert.Equal(6, tokens.Count);
+
+        var first = tokens[0];
+        Assert.Equal(1, first.Span.Start.Line);
+        Assert.Equal(0, first.Span.Start.Character);
+        Assert.Equal(3, first.Span.End.Character);
+
+        var firstWhitespace = tokens[1];
+        Assert.Equal(1, firstWhitespace.Span.Start.Line);
+        Assert.Equal(3, firstWhitespace.Span.Start.Character);
+        Assert.Equal(2, firstWhitespace.Span.End.Line);
+        Assert.Equal(0, firstWhitespace.Span.End.Character);
+
+        var number = tokens[2];
+        Assert.Equal(2, number.Span.Start.Line);
+        Assert.Equal(0, number.Span.Start.Character);
+        Assert.Equal(3, number.Span.End.Character);
     }
 
     [Fact]
