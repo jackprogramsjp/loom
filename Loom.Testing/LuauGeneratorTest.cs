@@ -2113,10 +2113,20 @@ public class LuauGeneratorTest
         Assert.Equal("..", binary.Operator);
     }
 
-    [Fact]
-    public void Generates_BinaryOperators()
+    [Theory]
+    [InlineData("+")]
+    [InlineData("-")]
+    [InlineData("/")]
+    [InlineData("//")]
+    [InlineData("^")]
+    [InlineData("==")]
+    [InlineData("!=", "~=")]
+    [InlineData("&&", "and")]
+    [InlineData("||", "or")]
+    [InlineData("??", "or")]
+    public void Generates_BinaryOperators(string op, string? mappedOp = null)
     {
-        var luauTree = Utility.GetLuauAST("1 + 2");
+        var luauTree = Utility.GetLuauAST($"1 {op} 2");
         Assert.Single(luauTree.Statements);
 
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
@@ -2125,7 +2135,7 @@ public class LuauGeneratorTest
         var right = Assert.IsType<NumberLiteral>(binary.Right);
         Assert.Equal(1, left.Value);
         Assert.Equal(2, right.Value);
-        Assert.Equal("+", binary.Operator);
+        Assert.Equal(mappedOp ?? op, binary.Operator);
     }
 
     [Fact]

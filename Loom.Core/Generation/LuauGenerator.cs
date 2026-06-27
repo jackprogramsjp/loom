@@ -123,14 +123,11 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
 
         var parameters = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit<Luau.AST.Parameter>) ?? [];
         var returnType = MaybeVisit<LuauType>(functionDeclaration.ReturnType);
-        var statements = functionDeclaration.Body switch
-        {
-            ExpressionBody body => [new Luau.AST.Return(Visit(body.Expression))],
-            Block block => GenerateStatements(block.Statements),
-            _ => []
-        };
+        var statements = functionDeclaration.Body is ExpressionBody expressionBody
+            ? new Chunk(GenerateStatements(expressionBody.Expression))
+            : GenerateChunk(functionDeclaration.Body);
 
-        return new Function(functionDeclaration.Name.Text, typeParameters, parameters, returnType, new Chunk(statements));
+        return new Function(functionDeclaration.Name.Text, typeParameters, parameters, returnType, statements);
     }
 
     public override LuauNode VisitTypeAlias(TypeAlias typeAlias)
@@ -210,17 +207,8 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
     }
 
     public override LuauNode VisitDeclare(Declare declare) => declare.Signature is InterfaceDeclaration ? Visit(declare.Signature) : new NoOpStatement();
-
-    public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement)
-    {
-        var expression = Visit(expressionStatement.Expression);
-        return IsUnorphanableExpression(expression)
-            ? new Luau.AST.ExpressionStatement(expression)
-            : new ConstVariable("_", null, expression);
-    }
-
+    public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) => WrapExpressionAsStatement(Visit(expressionStatement.Expression));
     public override LuauNode VisitNameOf(NameOf nameOf) => new StringLiteral(nameOf.Name.ToString());
-
     public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
 
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName) =>
@@ -243,11 +231,11 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
             if (TryGetEnumConstant(elementAccess, out var enumValue))
                 return enumValue;
 
-            if (!indexType.IsAssignableTo(TypeChecking.Types.PrimitiveType.Number))
-                return new Luau.AST.ElementAccess(target, Visit(elementAccess.IndexExpression));
-
             var index = Visit(elementAccess.IndexExpression);
-            return LuauFactory.StringCall("sub", [target, index, index]);
+            if (targetType.IsAssignableTo(TypeChecking.Types.PrimitiveType.String) && indexType.IsAssignableTo(TypeChecking.Types.PrimitiveType.Number))
+                return LuauFactory.StringCall("sub", [target, index, index]);
+
+            return new Luau.AST.ElementAccess(target, index);
         }
 
         var one = new NumberLiteral(1);
@@ -473,18 +461,35 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
         return true;
     }
 
-    private Chunk GenerateChunk(Statement statement) => statement is Block block ? VisitBlock(block) : new Chunk([Visit(statement)]);
+    private Chunk GenerateChunk(Statement statement) => statement is Block block ? VisitBlock(block) : new Chunk(GenerateStatements(statement));
+
+    private List<LuauStatement> GenerateStatements(Expression expression)
+    {
+        var result = new List<LuauStatement>();
+        var (luauExpression, scope) = Capture(() => Visit(expression));
+        result.AddRange(scope.PrereqStatements);
+        result.Add(new Luau.AST.Return(luauExpression));
+        result.AddRange(scope.PostreqStatements);
+
+        return result.FindAll(s => s is not NoOpStatement);
+    }
+
+    private List<LuauStatement> GenerateStatements(Statement statement)
+    {
+        var result = new List<LuauStatement>();
+        var (luauStatement, scope) = Capture(() => Visit(statement));
+        result.AddRange(scope.PrereqStatements);
+        result.Add(luauStatement);
+        result.AddRange(scope.PostreqStatements);
+
+        return result.FindAll(s => s is not NoOpStatement);
+    }
 
     private List<LuauStatement> GenerateStatements(List<Statement> statements)
     {
         var result = new List<LuauStatement>();
         foreach (var statement in statements)
-        {
-            var (luauStatement, scope) = Capture(() => Visit(statement));
-            result.AddRange(scope.PrereqStatements);
-            result.Add(luauStatement);
-            result.AddRange(scope.PostreqStatements);
-        }
+            result.AddRange(GenerateStatements(statement));
 
         return result.FindAll(s => s is not NoOpStatement);
     }
@@ -519,9 +524,14 @@ public sealed class LuauGenerator(SemanticModel semanticModel)
     private void Prereq(params LuauStatement[] statements) => _scope.PrereqStatements.AddRange(statements);
     private void Postreq(params LuauStatement[] statements) => _scope.PostreqStatements.AddRange(statements);
 
+    private static LuauStatement WrapExpressionAsStatement(LuauExpression expression) =>
+        IsUnorphanableExpression(expression)
+            ? new Luau.AST.ExpressionStatement(expression)
+            : new ConstVariable("_", null, expression);
+
     private static bool IsUnorphanableExpression(LuauExpression expression) =>
         expression is Call
-        || expression is Luau.AST.BinaryOperator binaryOperator && binaryOperator.Operator.EndsWith('=');
+        || expression is Luau.AST.BinaryOperator binaryOperator && binaryOperator.Operator.EndsWith('=') && binaryOperator.Operator is not ("==" or "~=");
 
     private LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
     private LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);

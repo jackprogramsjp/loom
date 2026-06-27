@@ -25,7 +25,7 @@ public abstract class Node
         foreach (var child in Children)
             child.Parent = this;
     }
-    
+
     public abstract T Accept<T>(Visitor<T> visitor);
     public override string ToString() => Span.GetText();
 
@@ -34,6 +34,10 @@ public abstract class Node
         GetDescendants().OfType<T>().ToList();
 
     public List<Node> GetDescendants() => Children.SelectMany(c => c.GetDescendants()).Concat(Children).ToList();
+
+    public bool IsDescendantOf<T>()
+        where T : Node =>
+        FirstAncestorOfType<T>() != null;
 
     public T? FirstAncestorOfType<T>()
         where T : Node

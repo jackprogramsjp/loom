@@ -87,7 +87,7 @@ public abstract class Visitor<T>(T defaultValue)
     public virtual T VisitBlock(Block block) => VisitList(block.Statements);
     public virtual T VisitExpressionStatement(ExpressionStatement expressionStatement) => Visit(expressionStatement.Expression);
     public virtual T VisitReturn(Return @return) => Visit(@return.Expression);
-    public virtual T VisitExpressionBody(ExpressionBody expressionBody) => Visit(new ExpressionStatement(expressionBody.Expression));
+    public virtual T VisitExpressionBody(ExpressionBody expressionBody) => Visit(expressionBody.Expression);
 
     public virtual T VisitRangeLiteral(RangeLiteral rangeLiteral) => CombineResults([Visit(rangeLiteral.Minimum), Visit(rangeLiteral.Maximum)]);
     public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);

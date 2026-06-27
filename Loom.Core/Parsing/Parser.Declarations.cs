@@ -139,7 +139,7 @@ public sealed partial class Parser
             body = new ExpressionBody(arrow, ParseExpression());
         else
             body = new NullStatement(Current());
-
+        
         if (body is not NullStatement nullStatement)
             return new FunctionDeclaration(
                 keyword,

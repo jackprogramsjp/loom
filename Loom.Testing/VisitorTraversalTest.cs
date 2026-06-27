@@ -98,7 +98,6 @@ public class VisitorTraversalTest
             "FunctionDeclaration",
             "Parameters",
             "ExpressionBody",
-            "ExpressionStatement",
             "Literal"
         );
 

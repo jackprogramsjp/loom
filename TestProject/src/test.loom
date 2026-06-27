@@ -1,2 +1,0 @@
-fn first<T>(a: T, b: T) -> a
-            first(42, "hello")
