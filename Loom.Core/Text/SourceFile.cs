@@ -7,7 +7,7 @@ public sealed class SourceFile
     public string AbsolutePath { get; }
     public string Name { get; }
     public string SourceText { get; }
-    public bool IsDeclaration { get; }
+    public bool IsDeclaration { get; set; }
     
     public SourceFile(string absolutePath, string? sourceText = null)
     {

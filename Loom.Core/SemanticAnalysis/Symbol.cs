@@ -3,7 +3,7 @@ using Loom.Text;
 
 namespace Loom.SemanticAnalysis;
 
-public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutable = false, bool isIntrinsic = false) : IEquatable<Symbol>
+public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutable = false) : IEquatable<Symbol>
 {
     
     public SourceFile File { get; } = declaration.File;
@@ -11,7 +11,7 @@ public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutab
     public SymbolKind Kind { get; } = kind;
     public string Name { get; } = name;
     public bool IsMutable { get; } = isMutable;
-    public bool IsIntrinsic { get; } = isIntrinsic;
+    public bool IsIntrinsic { get; internal set; }
     public bool IsGlobal { get; internal set; }
     public bool IsTypeSymbol { get; } = IsTypeKind(kind);
     public bool IsValueSymbol { get; } = IsValueKind(kind);

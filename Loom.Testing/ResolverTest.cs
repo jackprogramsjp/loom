@@ -12,6 +12,7 @@ public class ResolverTest
     [InlineData("mut x; x;")]
     [InlineData("mut x: number; { let x = 42; }; x;")]
     [InlineData("mut x: number; { x; }")]
+    [InlineData("mut x: number; let arr = [0]; arr[0] = 42; x;")]
     public void ThrowsFor_UseOfUninitialized(string source)
     {
         var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
@@ -355,19 +356,185 @@ public class ResolverTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Foo {}; let a: Foo? = new Foo {}; for let x in a { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'Foo?' is not assignable to type 'object'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_RuntimeStatement_InDeclarationFile()
+    {
+        var diagnostics = Utility.GetSemanticModel("let x = 1;", true).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
+    }
     #endregion ThrowsFor
 
     [Theory]
     [InlineData("fn foo { return 42; let x = 1 }")]
     [InlineData("while true { break; let unreachable = 1; }")]
     [InlineData("while true { continue; let unreachable = 1; }")]
+    [InlineData("fn test() { after 1s { return 42; let x = 1; } }")]
     public void WarnsFor_UnreachableCode(string source)
     {
         var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
     }
 
+    #region Resolves
+    [Fact]
+    public void Resolves_TypeParameter_InFunctionSignature()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("fn identity<T>(x: T): T { return x; }"));
+        var fn = Assert.IsType<FunctionDeclaration>(model.Tree.Statements.Single());
+        var returnType = fn.ReturnType!.Type as TypeName;
+        Assert.NotNull(returnType);
+        Assert.Equal("T", returnType.Name.Text);
+        
+        var symbol = model.GetSymbol(returnType);
+        Assert.NotNull(symbol);
+        Assert.Equal(SymbolKind.Type, symbol.Kind);
+        Assert.Equal("T", symbol.Name);
+    }
+
+    [Fact]
+    public void Resolves_TypeParameter_InTypeAlias()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("type Container<T> = T"));
+        var alias = Assert.IsType<TypeAlias>(model.Tree.Statements.Single());
+        var typeName = Assert.IsType<TypeName>(alias.EqualsTypeClause.Type);
+        var symbol = model.GetSymbol(typeName);
+        Assert.NotNull(symbol);
+        Assert.Equal("T", symbol.Name);
+        Assert.Equal(SymbolKind.Type, symbol.Kind);
+    }
+
+    [Fact]
+    public void Resolves_TypeParameter_Shadowing()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("type Outer<T> = fn<T>(x: T): T"));
+        var alias = Assert.IsType<TypeAlias>(model.Tree.Statements.Single());
+        var fnType = Assert.IsType<FunctionType>(alias.EqualsTypeClause.Type);
+        var paramType = fnType.Parameters!.ParameterList[0].ColonTypeClause!.Type as TypeName;
+        Assert.NotNull(paramType);
+        
+        var symbol = model.GetSymbol(paramType);
+        Assert.NotNull(symbol);
+        Assert.Equal("T", symbol.Name);
+        Assert.Equal(fnType.TypeParameters!.ParameterList[0], symbol.Declaration);
+    }
+    
+    [Fact]
+    public void Resolves_Interface_WithGenericConstraint()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("type Foo = number; interface I<T: Foo> { }"));
+        Assert.Equal(2, model.Tree.Statements.Count);
+        
+        var iface = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.Last());
+        Assert.NotNull(iface.TypeParameters);
+        
+        var tp = iface.TypeParameters.ParameterList[0];
+        Assert.NotNull(tp.ColonTypeClause);
+        
+        var constraint = tp.ColonTypeClause.Type;
+        var symbol = model.GetSymbol(constraint);
+        Assert.NotNull(symbol);
+        Assert.Equal("Foo", symbol.Name);
+    }
+    
+    [Fact]
+    public void Resolves_TypeParameter_InTypeArgument()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("type Foo<T> = T; fn foo<T>(x: Foo<T>) { }"));
+        Assert.Equal(2, model.Tree.Statements.Count);
+        
+        var fn = Assert.IsType<FunctionDeclaration>(model.Tree.Statements.Last());
+        Assert.NotNull(fn.Parameters);
+        
+        var param = fn.Parameters.ParameterList[0];
+        var typeName = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
+        Assert.NotNull(typeName.TypeArguments);
+        
+        var arg = typeName.TypeArguments.ArgumentsList[0] as TypeName;
+        Assert.NotNull(arg);
+        
+        var symbol = model.GetSymbol(arg);
+        Assert.NotNull(symbol);
+        Assert.Equal("T", symbol.Name);
+    }
+    
+    [Fact]
+    public void Resolves_IntrinsicTypeSymbols()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("mut x: Range;"));
+        Assert.Single(model.Tree.Statements);
+        
+        var declaration = Assert.IsType<VariableDeclaration>(model.Tree.Statements.First());
+        Assert.NotNull(declaration.ColonTypeClause);
+        
+        var symbol = model.GetSymbol(declaration.ColonTypeClause.Type);
+        Assert.NotNull(symbol);
+        Assert.True(symbol.IsGlobal);
+        Assert.True(symbol.IsIntrinsic);
+    }
+    
+    [Fact]
+    public void Resolves_GlobalSymbols_FromCompilationUnit()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("print(42);"));
+        Assert.Single(model.Tree.Statements);
+        
+        var stmt = Assert.IsType<ExpressionStatement>(model.Tree.Statements.First());
+        var invoc = Assert.IsType<Invocation>(stmt.Expression);
+        var ident = Assert.IsType<Identifier>(invoc.Expression);
+        var symbol = model.GetSymbol(ident);
+        Assert.NotNull(symbol);
+        Assert.Equal("print", symbol.Name);
+        Assert.True(symbol.IsGlobal);
+        Assert.True(symbol.IsIntrinsic);
+    }
+    
+    [Fact]
+    public void Resolves_Declare_InsideBlock()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("if true { declare let x: number; }"));
+        var ifStmt = Assert.IsType<If>(model.Tree.Statements.Single());
+        var block = Assert.IsType<Block>(ifStmt.ThenBranch);
+        var declare = Assert.IsType<Declare>(block.Statements.Single());
+        var sig = Assert.IsType<DeclareVariableSignature>(declare.Signature);
+        var symbol = model.GetDeclarationSymbol(sig);
+        Assert.NotNull(symbol);
+        Assert.Equal("x", symbol.Name);
+    }
+    
+    [Fact]
+    public void Resolves_FunctionName_InsideOwnBody()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("fn factorial(n: number): number { if n <= 1 { return 1 } else { return n * factorial(n - 1) } }"));
+        var fn = Assert.IsType<FunctionDeclaration>(model.Tree.Statements.Single());
+        var block = Assert.IsType<Block>(fn.Body);
+        var ifStmt = Assert.IsType<If>(block.Statements.First());
+        var elseBlock = Assert.IsType<Block>(((If)ifStmt).ElseBranch!.Branch);
+        var ret = Assert.IsType<Return>(elseBlock.Statements.First());
+        var binary = Assert.IsType<BinaryOperator>(ret.Expression!);
+        var invocation = Assert.IsType<Invocation>(binary.Right);
+        var ident = Assert.IsType<Identifier>(invocation.Expression);
+        var symbol = model.GetSymbol(ident);
+        Assert.NotNull(symbol);
+        Assert.Equal("factorial", symbol.Name);
+    }
+    #endregion
+
     #region Allows
+    [Fact]
+    public void Allows_ForLoopVariable_ShadowingOuterVariable()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; for let x in 1..10 { x; }"));
+        var statements = model.Tree.Statements;
+        var forStmt = Assert.IsType<For>(statements[1]);
+        var declSymbol = model.GetDeclarationSymbol(forStmt.Declaration);
+        Assert.NotNull(declSymbol);
+        
+        var outerDecl = Assert.IsType<VariableDeclaration>(statements[0]);
+        var outerSymbol = model.GetDeclarationSymbol(outerDecl);
+        Assert.NotEqual(declSymbol, outerSymbol);
+    }
+    
     [Fact]
     public void Allows_TernaryOp() => Utility.AssertNoErrors(Utility.GetSemanticModel("true ? 1 : 'abc'"));
     

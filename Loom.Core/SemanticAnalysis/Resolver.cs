@@ -464,7 +464,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter);
+    public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter) && base.VisitTypeParameter(typeParameter);
 
     private bool ResolveInterfaceBody(InterfaceBody? body, string name)
     {

@@ -1,1 +1,2 @@
-const _ = { minimum = 1, maximum = 5 }
+const function a<T>()
+end

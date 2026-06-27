@@ -129,7 +129,7 @@ public abstract class Visitor<T>(T defaultValue)
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
     public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
     public virtual T VisitIntersectionType(IntersectionType intersectionType) => VisitList(intersectionType.Types);
-    public virtual T VisitTypeParameter(TypeParameter typeParameter) => MaybeVisit(typeParameter.EqualsTypeClause) ?? DefaultValue;
+    public virtual T VisitTypeParameter(TypeParameter typeParameter) => CombineResults([MaybeVisit(typeParameter.ColonTypeClause) ?? DefaultValue, MaybeVisit(typeParameter.EqualsTypeClause) ?? DefaultValue]);
     public virtual T VisitTypeParameters(TypeParameters typeParameters) => VisitList(typeParameters.ParameterList);
     public virtual T VisitTypeArguments(TypeArguments typeArguments) => VisitList(typeArguments.ArgumentsList);
     public virtual T VisitColonTypeListClause(ColonTypeListClause colonTypeListClause) => VisitList(colonTypeListClause.Types);

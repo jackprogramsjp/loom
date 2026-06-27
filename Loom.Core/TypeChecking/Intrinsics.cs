@@ -34,6 +34,8 @@ public static class Intrinsics
         {
             foreach (var symbol in compiledFile.Tree.Statements.Select(statement => compiledFile.SemanticModel.GetDeclarationSymbol(statement)).OfType<Symbol>())
             {
+                symbol.IsIntrinsic = true;
+                symbol.IsGlobal = true;
                 model.TypeSolver.SetType(symbol.Declaration, compiledFile.SemanticModel.GetType(symbol.Declaration));
                 symbols.Add(symbol);
             }

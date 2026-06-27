@@ -1,1 +1,1 @@
-let x: List<number,>
+fn a<T = T>() {}

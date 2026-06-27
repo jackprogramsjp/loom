@@ -39,7 +39,16 @@ internal static class Utility
     public static DiagnosticBag GetLexerDiagnostics(string source) => Tokenize(source).Diagnostics;
     public static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
-    public static SemanticModel GetSemanticModel(string source) => new Resolver(Parse(source), new CompilationUnit(new LoomConfig())).Resolve();
+
+    public static SemanticModel GetSemanticModel(string source, bool isDeclaration = false)
+    {
+        var parserResult = Parse(source);
+        if (isDeclaration)
+            parserResult.Tree.File.IsDeclaration = true;
+        
+        var compilationUnit = new CompilationUnit(new LoomConfig());
+        return new Resolver(parserResult, compilationUnit).Resolve();
+    }
     public static TypeCheckerResult TypeCheck(string source) => new TypeChecker(GetSemanticModel(source)).Check();
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;
 

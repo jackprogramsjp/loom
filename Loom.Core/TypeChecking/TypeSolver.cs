@@ -303,10 +303,14 @@ public class TypeSolver(DiagnosticBag diagnostics)
             InterfaceType i => i.Constraints.Any(t => OccursIn(variable, t)) || OccursIn(variable, i.ObjectType),
             ObjectType obj => obj.Indexer != null && (OccursIn(variable, obj.Indexer.KeyType) || OccursIn(variable, obj.Indexer.ValueType))
                 || obj.Properties.Any(p => OccursIn(variable, p.ValueType)),
+            GenericType generic => OccursIn(variable, generic.UnderlyingType),
             InstantiatedType inst => inst.Arguments.Any(a => OccursIn(variable, a)),
             IntersectionType inter => inter.Types.Any(t => OccursIn(variable, t)),
             UnionType union => union.Types.Any(t => OccursIn(variable, t)),
-            FunctionType fn => fn.ParameterTypes.Any(t => OccursIn(variable, t)) || OccursIn(variable, fn.ReturnType),
+            FunctionType fn => fn.TypeParameters.Any(p => OccursIn(variable, p))
+                || fn.ParameterTypes.Any(t => OccursIn(variable, t))
+                || OccursIn(variable, fn.ReturnType),
+            TypeParameter tp => tp.Constraint != null && OccursIn(variable, tp.Constraint) || tp.DefaultType != null && OccursIn(variable, tp.DefaultType),
             _ => false
         };
 
