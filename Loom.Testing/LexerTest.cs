@@ -16,13 +16,115 @@ public class LexerTest
     [InlineData("$")]
     [InlineData("\\")]
     [InlineData("`")]
-    [InlineData("'abc\"")]
-    [InlineData("\"abc'")]
-    [InlineData("#: unterminated")]
     public void ThrowsFor_UnexpectedCharacters(string source)
     {
         var diagnostics = Utility.GetLexerDiagnostics(source);
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedCharacter, "Unexpected character.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedCharacter, $"Unexpected character '{source}'.");
+    }
+
+    [Theory]
+    [InlineData("0x", "0x")]
+    [InlineData("0X", "0X")]
+    [InlineData("0x.", "0x")]
+    [InlineData("0x ", "0x")]
+    [InlineData("0xG", "0x")]
+    public void ThrowsFor_MalformedHexLiteral(string source, string matched)
+    {
+        var diagnostics = Utility.GetLexerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MalformedNumber,
+            $"Malformed hexadecimal literal '{matched}': expected at least one hex digit after '0x'."
+        );
+    }
+
+    [Theory]
+    [InlineData("0b", "0b")]
+    [InlineData("0B", "0B")]
+    [InlineData("0b.", "0b")]
+    [InlineData("0b2", "0b")]
+    [InlineData("0b ", "0b")]
+    public void ThrowsFor_MalformedBinaryLiteral(string source, string matched)
+    {
+        var diagnostics = Utility.GetLexerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MalformedNumber,
+            $"Malformed binary literal '{matched}': expected at least one binary digit after '0b'."
+        );
+    }
+
+    [Theory]
+    [InlineData("0o", "0o")]
+    [InlineData("0O", "0O")]
+    [InlineData("0o.", "0o")]
+    [InlineData("0o8", "0o")]
+    [InlineData("0o ", "0o")]
+    public void ThrowsFor_MalformedOctalLiteral(string source, string matched)
+    {
+        var diagnostics = Utility.GetLexerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MalformedNumber,
+            $"Malformed octal literal '{matched}': expected at least one octal digit after '0o'."
+        );
+    }
+
+    [Theory]
+    [InlineData("1e", "1e")]
+    [InlineData("1E", "1E")]
+    [InlineData("1e+", "1e")]
+    [InlineData("1e-", "1e")]
+    [InlineData("1e ", "1e")]
+    [InlineData("3.14e", "3.14e")]
+    [InlineData("1_0e", "1_0e")]
+    [InlineData("1_0.2_3e", "1_0.2_3e")]
+    public void ThrowsFor_MalformedScientificNotation(string source, string matched)
+    {
+        var diagnostics = Utility.GetLexerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MalformedNumber,
+            $"Malformed scientific notation '{matched}': expected one or more digits after the exponent."
+        );
+    }
+
+    [Theory]
+    [InlineData("1.", "1.")]
+    [InlineData("42.", "42.")]
+    [InlineData("1_0.", "1_0.")]
+    [InlineData("1. ", "1.")]
+    [InlineData("1.e5", "1.")]
+    public void ThrowsFor_MalformedFloatLiteral(string source, string matched)
+    {
+        var diagnostics = Utility.GetLexerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MalformedNumber,
+            $"Malformed float literal '{matched}': expected one or more digits after the decimal point."
+        );
+    }
+
+    [Theory]
+    [InlineData("'abc\"", true)]
+    [InlineData("\"abc'")]
+    [InlineData("\"")]
+    [InlineData("'", true)]
+    public void ThrowsFor_UnterminatedString(string source, bool singleQuote = false)
+    {
+        var diagnostics = Utility.GetLexerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.UnterminatedString,
+            $"Unterminated string literal: expected closing {(singleQuote ? "\"'\"" : "'\"'")}."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_UnterminatedBlockComment()
+    {
+        var diagnostics = Utility.GetLexerDiagnostics("#: hello!");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnterminatedComment, $"Unterminated block comment: expected closing ':#'.");
     }
 
     [Theory]
