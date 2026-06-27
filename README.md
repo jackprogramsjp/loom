@@ -21,8 +21,8 @@
 - **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
 
 ## Upcoming Features
-- `keyof`
 - `typeof`
+- `x in collection`
 - Implementors for interfaces
 - Private visibility for interface fields & methods
 - Event declarations
@@ -356,7 +356,7 @@ interface ImmutRecord<K, V> {
 type ImmutRecord<K, V> = { read [K]: V }
 ```
 ##
-In this example `S` resolves to `number`.
+In this example `S` resolves to `string`.
 ```ts
 interface Foo { bar: string }
 type S = Foo["bar"];
@@ -471,6 +471,24 @@ let value = condition ? 69 : none;
 ```luau
 const condition = true
 const value = if condition then 69 else nil
+```
+##
+In this example `K` resolves to `number | "bar" | "baz"`.
+```ts
+interface Foo {
+    [number]: string;
+    bar: string;
+    baz: number;
+}
+type K = keyof(Foo);
+```
+```luau
+type Foo = {
+    read [number]: string,
+    read bar: string,
+    read baz: number
+}
+type K = keyof<Foo>
 ```
 
 ---

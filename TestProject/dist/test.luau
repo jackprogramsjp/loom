@@ -1,2 +1,5 @@
-const function a<T>()
-end
+type I = {
+  read [number]: boolean
+  read a: number
+}
+type K = keyof<I>
