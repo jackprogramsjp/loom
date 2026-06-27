@@ -237,6 +237,17 @@ public class ParserTest
             "Parameters must have types in function types."
         );
     }
+    
+    [Fact]
+    public void ThrowsFor_FunctionType_MissingReturnType_InParentheses()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("type F = (fn())");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.MissingDeclareFnReturnType,
+            "Function types must have a return type."
+        );
+    }
 
     [Fact]
     public void ThrowsFor_InterfaceMember_MissingPropertyType()
@@ -319,6 +330,76 @@ public class ParserTest
     {
         var diagnostics = Utility.GetParserDiagnostics("for let x items { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected 'in', got 'items'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_EmptyTypeParameterList()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("fn a<>() { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected type parameter name, got '>'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_UnterminatedTypeParameterList()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("fn a<T(x: T) { }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected '>', got '('.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_InvalidToken_InTypeArguments()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: List<number, string");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected '>', got EOF.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_UnionType_MissingSecondType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: number |");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected type, got EOF.");
+    }
+
+    [Fact]
+    public void ThrowsFor_IntersectionType_MissingSecondType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: number &");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected type, got EOF.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_UnterminatedParenthesizedType()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: (number");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 7, got EOF.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_MissingClosingAngle_InTypeArguments()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: List<number");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected '>', got EOF.");
+    }
+
+    [Fact]
+    public void ThrowsFor_EmptyTypeArguments()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: List<>");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected type, got '>'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_TrailingComma_InTypeArguments()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: List<number,>");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected type, got '>'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_UnmatchedClosingArrow_InTypeArguments()
+    {
+        var diagnostics = Utility.GetParserDiagnostics("let x: List<number>>");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '>'.");
     }
 
     [Fact]
@@ -1180,6 +1261,31 @@ public class ParserTest
 
         var indexType = Assert.IsType<LiteralType>(indexed.IndexType);
         Assert.Equal("0", indexType.Token.Text);
+    }
+    
+    [Fact]
+    public void Parses_TypeParameter_WithUnionDefault()
+    {
+        var tree = Utility.GetAST("type Alias<T = number | string> = T");
+        var alias = Assert.IsType<TypeAlias>(tree.Statements.Single());
+        Assert.NotNull(alias.TypeParameters);
+        
+        var tp = alias.TypeParameters.ParameterList[0];
+        Assert.NotNull(tp.EqualsTypeClause);
+        var union = Assert.IsType<UnionType>(tp.EqualsTypeClause.Type);
+        Assert.Equal(2, union.Types.Count);
+    }
+    
+    [Fact]
+    public void Parses_DeclareFunctionSignature_WithGenericConstraint()
+    {
+        var tree = Utility.GetAST("declare fn id<T: number>(x: T): T");
+        var declare = Assert.IsType<Declare>(tree.Statements.Single());
+        var sig = Assert.IsType<DeclareFunctionSignature>(declare.Signature);
+        Assert.NotNull(sig.TypeParameters);
+        var tp = sig.TypeParameters.ParameterList[0];
+        Assert.NotNull(tp.ColonTypeClause);
+        Assert.IsType<PrimitiveType>(tp.ColonTypeClause.Type);
     }
 
     [Fact]
@@ -2329,6 +2435,20 @@ public class ParserTest
         Assert.Equal(3, invocation.Arguments.ArgumentList.Count);
         Assert.All(invocation.Arguments.ArgumentList, a => Assert.IsType<Literal>(a));
     }
+    
+    [Fact]
+    public void Parses_Invocation_WithNestedTypeArguments()
+    {
+        var tree = Utility.GetAST("foo::<List<number>>()");
+        var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
+        var invocation = Assert.IsType<Invocation>(stmt.Expression);
+        Assert.NotNull(invocation.TypeArguments);
+        var arg = Assert.IsType<TypeName>(invocation.TypeArguments.ArgumentsList[0]);
+        Assert.Equal("List", arg.Name.Text);
+        Assert.NotNull(arg.TypeArguments);
+        var inner = Assert.IsType<PrimitiveType>(arg.TypeArguments.ArgumentsList[0]);
+        Assert.Equal(PrimitiveTypeKind.Number, inner.Kind);
+    }
 
     [Fact]
     public void Parses_Invocation_WithTypeArguments()
@@ -2392,7 +2512,7 @@ public class ParserTest
     }
 
     [Fact]
-    public void Parses_Invocation_WithNestedTypeArguments()
+    public void Parses_Invocation_WithDeepNestedTypeArguments()
     {
         var tree = Utility.GetAST("generic::<List<A<number>>>(items)");
         var expressionStatement = Assert.IsType<ExpressionStatement>(tree.Statements.Single());

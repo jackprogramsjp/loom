@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Loom.Diagnostics;
-using Loom.Parsing.AST;
 using Loom.Text;
 
 namespace Loom.Lexing;

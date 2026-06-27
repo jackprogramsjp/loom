@@ -134,13 +134,7 @@ public sealed partial class Parser
         if (MatchClosingArrow(out var rightArrow))
             return new TypeArguments(leftArrow, rightArrow, arguments);
 
-        var token = CurrentOrLast();
-        _diagnostics.Error(
-            token,
-            InternalCodes.UnexpectedToken,
-            $"Expected '>', got '{token.Text}'."
-        );
-
+        Expect(SyntaxKind.RArrow);
         return null;
     }
 }
