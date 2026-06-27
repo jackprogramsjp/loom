@@ -7,9 +7,6 @@ using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
 
-using SymbolLookup = Dictionary<string, List<Symbol>>;
-using SymbolTable = Dictionary<NodeId, List<Symbol>>;
-
 public sealed class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
     : Visitor<bool>(true)
 {

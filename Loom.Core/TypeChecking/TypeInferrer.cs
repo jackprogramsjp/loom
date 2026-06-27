@@ -1,4 +1,3 @@
-using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.TypeChecking.Types.ArrayType;
@@ -10,8 +9,6 @@ using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
 using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.TypeChecking;
-
-using TypeParameterSubstitution = Dictionary<TypeParameter, Type>;
 
 internal sealed class TypeInferrer(TypeChecker checker)
 {

@@ -1,6 +1,6 @@
-namespace Loom.SemanticAnalysis;
+global using SymbolLookup = System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Loom.SemanticAnalysis.Symbol>>;
 
-using SymbolLookup = Dictionary<string, List<Symbol>>;
+namespace Loom.SemanticAnalysis;
 
 internal sealed record ResolverScope
 {
