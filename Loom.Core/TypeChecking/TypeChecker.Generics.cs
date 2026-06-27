@@ -8,6 +8,24 @@ namespace Loom.TypeChecking;
 
 public sealed partial class TypeChecker
 {
+    private TypeParameterSubstitution? ResolveExplicitInterfaceTypeArguments(InterfaceInvocation node, GenericType generic)
+    {
+        var arguments = node.TypeArguments!.ArgumentsList.ConvertAll(Visit);
+        if (!CheckGenericArity(node.TypeArguments, generic.Parameters, arguments, $"Interface '{generic}'"))
+            return null;
+ 
+        var resolved = FillGenericArguments(node, generic.Parameters, arguments);
+        if (resolved == null)
+            return null;
+ 
+        var substitution = new TypeParameterSubstitution();
+        for (var i = 0; i < generic.Parameters.Count; i++)
+            substitution[generic.Parameters[i]] = resolved[i];
+ 
+        return substitution;
+    }
+
+    
     private List<Type>? FillGenericArguments(Node errorNode, List<Types.TypeParameter> parameters, List<Type> given)
     {
         var result = new List<Type>();

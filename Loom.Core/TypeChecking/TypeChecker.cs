@@ -24,8 +24,7 @@ public sealed partial class TypeChecker
     private readonly SemanticModel _semanticModel;
     private readonly TypeInferrer _inferrer;
     private readonly TypeNarrower _narrower;
-
-
+    
     public TypeChecker(SemanticModel semanticModel)
         : base(Types.PrimitiveType.Never)
     {
@@ -44,7 +43,6 @@ public sealed partial class TypeChecker
         return new TypeCheckerResult(type, diagnostics);
     }
 
-    internal Type Check(Node node) => Visit(node);
     protected override Type Visit(Node node) => node.Accept(this);
 
     public override Type VisitTree(Tree tree)
@@ -190,78 +188,6 @@ public sealed partial class TypeChecker
         return BindType(parameter, declaredType ?? initializerType!);
     }
 
-    public override Type VisitEnumDeclaration(EnumDeclaration enumDeclaration)
-    {
-        var properties = new List<ObjectProperty>();
-        var baseType = MaybeVisit(enumDeclaration.ColonTypeClause) ?? Types.PrimitiveType.Number;
-        if (enumDeclaration.ColonTypeClause != null && !baseType.IsAssignableTo(Types.PrimitiveType.String) && !baseType.IsAssignableTo(Types.PrimitiveType.Number))
-        {
-            _diagnostics.Error(
-                enumDeclaration.ColonTypeClause,
-                InternalCodes.InvalidEnumBaseType,
-                "Invalid enum base type.",
-                "valid types are 'string' and 'number'"
-            );
-
-            return BindType(enumDeclaration, Types.PrimitiveType.Never);
-        }
-
-        if (!baseType.IsAssignableTo(Types.PrimitiveType.String))
-        {
-            var nextValue = 0d;
-            foreach (var member in enumDeclaration.Members)
-            {
-                var memberValue = nextValue;
-                if (member.EqualsValueClause != null)
-                {
-                    var explicitType = Visit(member.EqualsValueClause);
-                    if (CheckEnumMemberIsConstant(member, explicitType))
-                    {
-                        memberValue = explicitType switch
-                        {
-                            Types.LiteralType { Value: long l } => l,
-                            Types.LiteralType { Value: int i } => i,
-                            Types.LiteralType { Value: double d } => d,
-                            _ => nextValue
-                        };
-
-                        _semanticModel.TypeSolver.AddConstraint(explicitType, baseType, member.EqualsValueClause.Value);
-                    }
-                }
-
-                var memberType = new Types.LiteralType(memberValue);
-                if (CheckEnumMemberIsConstant(member, memberType))
-                    properties.Add(new ObjectProperty(false, member.Name.Text, memberType));
-
-                nextValue = memberValue + 1;
-            }
-
-            return BindType(enumDeclaration, new ObjectType(null, properties));
-        }
-
-        foreach (var member in enumDeclaration.Members)
-        {
-            if (member.EqualsValueClause == null)
-            {
-                _diagnostics.Error(
-                    member,
-                    InternalCodes.StringEnumMemberMustHaveInitializer,
-                    $"Member '{member.Name.Text}' of string enum '{enumDeclaration.Name.Text}' must have an initializer."
-                );
-
-                return BindType(enumDeclaration, Types.PrimitiveType.Never);
-            }
-
-            var type = MaybeVisit(member.EqualsValueClause) ?? baseType;
-            if (!CheckEnumMemberIsConstant(member, type)) continue;
-
-            _semanticModel.TypeSolver.AddConstraint(type, baseType, member.EqualsValueClause.Value);
-            properties.Add(new ObjectProperty(false, member.Name.Text, type));
-        }
-
-        return BindType(enumDeclaration, new ObjectType(null, properties));
-    }
-
     public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
         var name = interfaceDeclaration.Name.Text;
@@ -314,46 +240,32 @@ public sealed partial class TypeChecker
             CheckInterfaceInvocationInitializers(node, nonGeneric);
             return BindType(node, nonGeneric);
         }
-
+ 
         if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
         {
             _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
             return BindType(node, Types.PrimitiveType.Never);
         }
-
-        TypeParameterSubstitution? substitution;
-        if (node.TypeArguments != null)
-        {
-            var arguments = node.TypeArguments.ArgumentsList.ConvertAll(Visit);
-            if (!CheckGenericArity(node.TypeArguments, generic.Parameters, arguments, $"Interface '{generic}'"))
-                return BindType(node, Types.PrimitiveType.Never);
-
-            var resolved = FillGenericArguments(node, generic.Parameters, arguments);
-            if (resolved == null)
-                return BindType(node, Types.PrimitiveType.Never);
-
-            substitution = new TypeParameterSubstitution();
-            for (var i = 0; i < generic.Parameters.Count; i++)
-                substitution[generic.Parameters[i]] = resolved[i];
-        }
-        else
-        {
-            substitution = _inferrer.InferInterfaceTypeArguments(node, generic, underlying);
-            if (substitution == null)
-                return BindType(node, Types.PrimitiveType.Never);
-        }
-
+ 
+        var substitution = node.TypeArguments != null
+            ? ResolveExplicitInterfaceTypeArguments(node, generic)
+            : _inferrer.InferInterfaceTypeArguments(node, generic, underlying);
+ 
+        if (substitution == null)
+            return BindType(node, Types.PrimitiveType.Never);
+ 
         foreach (var tp in generic.Parameters)
         {
             if (tp.Constraint != null && substitution.TryGetValue(tp, out var arg))
                 CheckTypeParameterConstraints(node, arg, tp);
         }
-
+ 
         var substitutedObject = SubstituteObjectType(underlying.ObjectType, substitution);
         var interfaceType = new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
         CheckInterfaceInvocationInitializers(node, interfaceType);
         return BindType(node, interfaceType);
     }
+
 
     public override Type VisitInvocation(Invocation invocation)
     {
@@ -679,15 +591,6 @@ public sealed partial class TypeChecker
         _flowStates.Pop();
 
         return type;
-    }
-
-    private bool CheckEnumMemberIsConstant(EnumMember member, Type type)
-    {
-        if (type is Types.LiteralType { Value: string or long or int or double })
-            return true;
-
-        _diagnostics.Error(member.EqualsValueClause!.Value, InternalCodes.DynamicEnumMemberInitializer, "Enum member initializers must be constant values.");
-        return false;
     }
 
     private Type GetTypeOfNamedAccess(Expression accessExpression, Expression targetExpression, List<DotName> names)
