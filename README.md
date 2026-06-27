@@ -16,10 +16,8 @@
 - **Rich type inference** – Minimal annotations required
 - **Extended number literals** – Automatic math for units of time and frequency, as well as binary/octal/hex support
 - **Range expressions** – `1..10` for slicing and bounds
-- **Assignment as expression** – `let x = a = b = 1`
 - **`nameof` operator** – Get names as strings at compile time
 - **Generic functions and types** – Full support for type parameters including constraints and defaults
-- **Sealed interfaces** – Prevent interfaces from being used as constraints
 - **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
 
 ## Upcoming Features
