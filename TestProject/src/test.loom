@@ -1,2 +1,5 @@
-let a = mut [1, 2, 3]
-                    fn abc -> a[69] = 420
+interface I { a: number; b: string }
+            type K = "a" | "b"
+            type V = I[K]
+            let x: V = 42
+            x

@@ -19,21 +19,32 @@ namespace Loom.TypeChecking;
 
 using TypeParameterSubstitution = Dictionary<Types.TypeParameter, Type>;
 
-public sealed class TypeChecker(SemanticModel semanticModel)
-    : Visitor<Type>(Types.PrimitiveType.Never)
+public sealed class TypeChecker
+    : Visitor<Type>
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Stack<TypedFlowState> _flowStates = [];
+    private readonly SemanticModel _semanticModel;
+    private readonly TypeInferrer _inferrer;
+
+    public TypeChecker(SemanticModel semanticModel)
+        : base(Types.PrimitiveType.Never)
+    {
+        _semanticModel = semanticModel;
+        _inferrer = new TypeInferrer(this, _diagnostics);
+    }
 
     public TypeCheckerResult Check()
     {
-        var tree = semanticModel.Tree;
+        var tree = _semanticModel.Tree;
         var type = BindType(tree, VisitTree(tree));
-        semanticModel.TypeSolver.SolveConstraints();
+        _semanticModel.TypeSolver.SolveConstraints();
 
-        var diagnostics = DiagnosticBag.Concat([semanticModel.TypeSolver.Diagnostics, _diagnostics]);
+        var diagnostics = DiagnosticBag.Concat([_semanticModel.TypeSolver.Diagnostics, _diagnostics]);
         return new TypeCheckerResult(type, diagnostics);
     }
+
+    public Type Check(Node node) => Visit(node);
 
     protected override Type Visit(Node node) => node.Accept(this);
 
@@ -46,7 +57,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         return BindType(
             tree,
             tree.Statements.Count > 0
-                ? semanticModel.GetType(tree.Statements.Last())
+                ? _semanticModel.GetType(tree.Statements.Last())
                 : Types.PrimitiveType.Never
         );
     }
@@ -56,14 +67,14 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     public override Type VisitBlock(Block block)
     {
         var types = block.Statements.ConvertAll(Visit);
-        return BindType(block, types.LastOrDefault(Types.PrimitiveType.None));
+        return BindType(block, types.LastOrDefault(Types.PrimitiveType.Void));
     }
 
     public override Type VisitFor(For @for)
     {
         Visit(@for.Declaration);
         var collectionType = Visit(@for.CollectionExpression);
-        semanticModel.TypeSolver.AddConstraint(collectionType, ObjectType.Empty, @for.CollectionExpression);
+        _semanticModel.TypeSolver.AddConstraint(collectionType, ObjectType.Empty, @for.CollectionExpression);
 
         var elementType = collectionType.Equals(Intrinsics.RangeType) ? Types.PrimitiveType.Number : GetObjectValueType(collectionType);
         BindType(@for.Declaration, elementType);
@@ -73,7 +84,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     public override Type VisitAfter(After after)
     {
         var durationType = Visit(after.Duration);
-        semanticModel.TypeSolver.AddConstraint(durationType, Types.PrimitiveType.Number, after.Duration);
+        _semanticModel.TypeSolver.AddConstraint(durationType, Types.PrimitiveType.Number, after.Duration);
 
         return BindType(after, Visit(after.Body));
     }
@@ -81,7 +92,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     public override Type VisitWhile(While @while)
     {
         var conditionType = Visit(@while.Condition);
-        semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
+        _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
 
         var (trueState, _) = ComputeBranchStates(@while.Condition);
         return BindType(@while, VisitWithFlowState(@while.Body, trueState));
@@ -90,7 +101,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     public override Type VisitIf(If @if)
     {
         var conditionType = Visit(@if.Condition);
-        semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
+        _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
 
         var (trueState, falseState) = ComputeBranchStates(@if.Condition);
         var thenBranchType = VisitWithFlowState(@if.ThenBranch, trueState);
@@ -137,7 +148,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         if (declaredType != null)
         {
             if (variableDeclaration.EqualsValueClause != null)
-                semanticModel.TypeSolver.AddConstraint(initializerType, declaredType, variableDeclaration.EqualsValueClause.Value);
+                _semanticModel.TypeSolver.AddConstraint(initializerType, declaredType, variableDeclaration.EqualsValueClause.Value);
 
             finalType = declaredType;
         }
@@ -157,7 +168,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var type = declare.Signature switch
         {
             InterfaceDeclaration interfaceDeclaration => Visit(interfaceDeclaration),
-            DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause),
+            DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause!),
             DeclareFunctionSignature functionSignature => new Types.FunctionType(
                 functionSignature.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [],
                 functionSignature.Parameters?.ParameterList.ConvertAll(Visit) ?? [],
@@ -175,7 +186,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var declaredType = MaybeVisit(parameter.ColonTypeClause);
         var initializerType = MaybeVisit(parameter.EqualsValueClause);
         if (initializerType != null && parameter.EqualsValueClause != null)
-            semanticModel.TypeSolver.AddConstraint(initializerType, declaredType!, parameter.EqualsValueClause.Value);
+            _semanticModel.TypeSolver.AddConstraint(initializerType, declaredType!, parameter.EqualsValueClause.Value);
 
         return BindType(parameter, declaredType ?? initializerType!);
     }
@@ -215,7 +226,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
                             _ => nextValue
                         };
 
-                        semanticModel.TypeSolver.AddConstraint(explicitType, baseType, member.EqualsValueClause.Value);
+                        _semanticModel.TypeSolver.AddConstraint(explicitType, baseType, member.EqualsValueClause.Value);
                     }
                 }
 
@@ -245,7 +256,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
             var type = MaybeVisit(member.EqualsValueClause) ?? baseType;
             if (!CheckEnumMemberIsConstant(member, type)) continue;
 
-            semanticModel.TypeSolver.AddConstraint(type, baseType, member.EqualsValueClause.Value);
+            _semanticModel.TypeSolver.AddConstraint(type, baseType, member.EqualsValueClause.Value);
             properties.Add(new ObjectProperty(false, member.Name.Text, type));
         }
 
@@ -289,7 +300,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var expressionType = Visit(asExpression.Expression);
         var castedType = Visit(asExpression.Type);
         if (Type.IsNotUnknown(expressionType) && Type.IsNotNever(castedType) && Type.IsNotUnknown(castedType))
-            semanticModel.TypeSolver.AddConstraint(expressionType, castedType, asExpression);
+            _semanticModel.TypeSolver.AddConstraint(expressionType, castedType, asExpression);
 
         return BindType(asExpression, castedType);
     }
@@ -299,10 +310,48 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     public override Type VisitInterfaceInvocation(InterfaceInvocation node)
     {
         var type = Visit(node.Name);
-        var interfaceType = ResolveInterfaceType(node, type);
-        if (interfaceType == null)
-            return BindType(node, Types.PrimitiveType.Never);
+        if (type is InterfaceType nonGeneric)
+        {
+            CheckInitializers(node, nonGeneric);
+            return BindType(node, nonGeneric);
+        }
 
+        if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
+        {
+            _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
+            return BindType(node, Types.PrimitiveType.Never);
+        }
+
+        TypeParameterSubstitution? substitution;
+        if (node.TypeArguments != null)
+        {
+            var arguments = node.TypeArguments.ArgumentsList.ConvertAll(Visit);
+            if (!CheckGenericArity(node.TypeArguments, generic.Parameters, arguments, $"Interface '{generic}'"))
+                return BindType(node, Types.PrimitiveType.Never);
+
+            var resolved = FillGenericArguments(node, generic.Parameters, arguments);
+            if (resolved == null)
+                return BindType(node, Types.PrimitiveType.Never);
+
+            substitution = new TypeParameterSubstitution();
+            for (var i = 0; i < generic.Parameters.Count; i++)
+                substitution[generic.Parameters[i]] = resolved[i];
+        }
+        else
+        {
+            substitution = _inferrer.InferInterfaceTypeArguments(node, generic, underlying);
+            if (substitution == null)
+                return BindType(node, Types.PrimitiveType.Never);
+        }
+
+        foreach (var tp in generic.Parameters)
+        {
+            if (tp.Constraint != null && substitution.TryGetValue(tp, out var arg))
+                CheckTypeParameterConstraints(node, arg, tp);
+        }
+
+        var substitutedObject = SubstituteObjectType(underlying.ObjectType, substitution);
+        var interfaceType = new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
         CheckInitializers(node, interfaceType);
         return BindType(node, interfaceType);
     }
@@ -383,10 +432,10 @@ public sealed class TypeChecker(SemanticModel semanticModel)
                 _ => null!
             };
 
-            var expressionType = semanticModel.GetType(expression);
+            var expressionType = _semanticModel.GetType(expression);
             var indexType = assignmentOperator.Left switch
             {
-                ElementAccess access => semanticModel.GetType(access.IndexExpression),
+                ElementAccess access => _semanticModel.GetType(access.IndexExpression),
                 PropertyAccess propertyAccess => new Types.LiteralType(propertyAccess.Names.First().Name.Text),
                 QualifiedName name => new Types.LiteralType(name.Names.First().Name.Text),
                 _ => null!
@@ -433,14 +482,14 @@ public sealed class TypeChecker(SemanticModel semanticModel)
             }
         }
 
-        semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
+        _semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
         return BindType(assignmentOperator, valueType);
     }
 
     public override Type VisitTernaryOperator(TernaryOperator ternaryOperator)
     {
         var conditionType = Visit(ternaryOperator.Condition);
-        semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, ternaryOperator.Condition);
+        _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, ternaryOperator.Condition);
 
         var (trueState, falseState) = ComputeBranchStates(ternaryOperator.Condition);
         var thenBranchType = VisitWithFlowState(ternaryOperator.ThenBranch, trueState);
@@ -456,8 +505,8 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var rule = BinaryOperatorBinder.GetRule(binaryOperator, leftType, rightType);
         if (rule != null)
         {
-            semanticModel.TypeSolver.AddConstraint(leftType, rule.LeftType, binaryOperator.Left);
-            semanticModel.TypeSolver.AddConstraint(rightType, rule.RightType, binaryOperator.Right);
+            _semanticModel.TypeSolver.AddConstraint(leftType, rule.LeftType, binaryOperator.Left);
+            _semanticModel.TypeSolver.AddConstraint(rightType, rule.RightType, binaryOperator.Right);
             return BindType(binaryOperator, rule.ReturnType);
         }
 
@@ -505,8 +554,8 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     {
         var minimumType = Visit(rangeLiteral.Minimum);
         var maximumType = Visit(rangeLiteral.Maximum);
-        semanticModel.TypeSolver.AddConstraint(minimumType, Types.PrimitiveType.Number, rangeLiteral.Minimum);
-        semanticModel.TypeSolver.AddConstraint(maximumType, Types.PrimitiveType.Number, rangeLiteral.Maximum);
+        _semanticModel.TypeSolver.AddConstraint(minimumType, Types.PrimitiveType.Number, rangeLiteral.Minimum);
+        _semanticModel.TypeSolver.AddConstraint(maximumType, Types.PrimitiveType.Number, rangeLiteral.Maximum);
 
         return BindType(rangeLiteral, Intrinsics.RangeType);
     }
@@ -528,7 +577,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         if (TryGetNarrowedType(identifier, out var narrowedType))
             return BindType(identifier, narrowedType);
 
-        var symbol = semanticModel.GetSymbol(identifier);
+        var symbol = _semanticModel.GetSymbol(identifier);
         if (symbol != null)
             return BindType(identifier, GetDeclarationType(symbol));
 
@@ -592,7 +641,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
 
     public override Type VisitTypeName(TypeName typeName)
     {
-        var symbol = semanticModel.GetSymbol(typeName);
+        var symbol = _semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
             var declaredType = GetDeclarationType(symbol);
@@ -618,7 +667,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
         var constraint = MaybeVisit(typeParameter.ColonTypeClause);
         if (defaultType != null && constraint != null)
-            semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter.EqualsTypeClause!);
+            _semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter.EqualsTypeClause!);
 
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, constraint, defaultType);
         return BindType(typeParameter, parameter);
@@ -686,7 +735,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     }
 
     private bool IsCompileTimeLiteral(Expression expr) =>
-        expr is Literal or NameOf || expr is QualifiedName && semanticModel.GetDeclaringSymbol(expr)?.Declaration is EnumDeclaration;
+        expr is Literal or NameOf || expr is QualifiedName && _semanticModel.GetDeclaringSymbol(expr)?.Declaration is EnumDeclaration;
 
     private void ApplyBinaryNarrowing(
         Expression expression,
@@ -698,8 +747,8 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var address = GetFlowAddress(expression);
         if (address == null) return;
 
-        var baseType = semanticModel.GetType(expression);
-        var literalType = semanticModel.GetType(literal);
+        var baseType = _semanticModel.GetType(expression);
+        var literalType = _semanticModel.GetType(literal);
         var isNone = literal is Literal { Value: null };
         var isEquals = operatorKind == SyntaxKind.EqualsEquals;
 
@@ -776,7 +825,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
 
     private TypedFlowAddress? GetIdentifierFlowAddress(Identifier identifier)
     {
-        var symbol = semanticModel.GetSymbol(identifier);
+        var symbol = _semanticModel.GetSymbol(identifier);
         return symbol != null ? TypedFlowAddress.Variable(symbol) : null;
     }
 
@@ -813,7 +862,24 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         return BindType(accessExpression, type);
     }
 
-    private Type GetTypeAtIndex(Node node, Type type, Type indexType) =>
+    private Type GetTypeAtIndex(Node node, Type type, Type indexType)
+    {
+        if (indexType is not Types.UnionType union || !union.Types.All(t => t is Types.LiteralType { Value: string }))
+            return GetTypeAtIndexSingle(node, type, indexType);
+
+        var results = union.Types
+            .Select(t => GetTypeAtIndexSingle(node, type, t))
+            .Where(result => !Type.IsNever(result) && !Type.IsUnknown(result))
+            .ToList();
+
+        if (results.Count != 0)
+            return BindType(node, TypeSimplifier.Simplify(new Types.UnionType(results)));
+
+        _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{type}'.");
+        return BindType(node, Types.PrimitiveType.Never);
+    }
+
+    private Type GetTypeAtIndexSingle(Node node, Type type, Type indexType) =>
         type switch
         {
             ObjectType objectType => GetTypeAtIndexInObject(node, objectType, indexType),
@@ -882,7 +948,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     {
         for (var i = 0; i < Math.Min(argumentTypes.Count, parameterTypes.Count); i++)
         {
-            semanticModel.TypeSolver.AddConstraint(
+            _semanticModel.TypeSolver.AddConstraint(
                 argumentTypes[i],
                 parameterTypes[i],
                 arguments.ArgumentList[i]
@@ -912,7 +978,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
                 .FindAll(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
                 .ConvertAll(Visit);
 
-        return TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
+        return possibleReturnTypes.Count == 0 ? Types.PrimitiveType.Void : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
     private Type InstantiateGenericType(Node node, TypeArguments? typeArguments, GenericType genericType)
@@ -976,7 +1042,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         }
         else
         {
-            var inferred = InferTypeArguments(functionType, argumentTypes, invocation);
+            var inferred = _inferrer.InferFunctionTypeArguments(functionType, argumentTypes, invocation);
             if (inferred == null)
                 return null;
 
@@ -990,253 +1056,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
 
         return substitution;
     }
-
-    private TypeParameterSubstitution? InferTypeArguments(
-        Types.FunctionType functionType,
-        List<Type> argumentTypes,
-        Node errorNode)
-    {
-        var inferred = new TypeParameterSubstitution();
-        var visited = new HashSet<(Type, Type)>();
-        for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
-            TryInferTypes(functionType.ParameterTypes[i], argumentTypes[i], inferred, visited);
-
-        var substitution = new TypeParameterSubstitution();
-        foreach (var typeParameter in functionType.TypeParameters)
-        {
-            if (inferred.TryGetValue(typeParameter, out var inferredType))
-            {
-                substitution[typeParameter] = inferredType;
-            }
-            else if (typeParameter.DefaultType != null)
-            {
-                substitution[typeParameter] = typeParameter.DefaultType;
-            }
-            else
-            {
-                ReportCannotInfer(errorNode, typeParameter);
-                return null;
-            }
-        }
-
-        return substitution;
-    }
-
-    private static bool TryInferTypes(Type parameterType, Type argumentType, TypeParameterSubstitution inferredTypes, HashSet<(Type, Type)> visitedPairs)
-    {
-        parameterType = ExpandAliases(parameterType);
-        argumentType = ExpandAliases(argumentType);
-
-        if (!visitedPairs.Add((parameterType, argumentType)))
-            return true;
-
-        if (TryMatchGenericTypes(parameterType, argumentType, inferredTypes, visitedPairs, out var genericResult))
-            return genericResult;
-
-        return (parameterType, argumentType) switch
-        {
-            (Types.TypeParameter typeParameter, _) => BindTypeParameter(typeParameter, argumentType, inferredTypes),
-            (Types.ArrayType parameterArray, Types.ArrayType argumentArray) => TryInferTypes(
-                parameterArray.ElementType,
-                argumentArray.ElementType,
-                inferredTypes,
-                visitedPairs
-            ),
-            (Types.OptionalType parameterOptional, Types.OptionalType argumentOptional) => TryInferTypes(
-                parameterOptional.NonNullableType,
-                argumentOptional.NonNullableType,
-                inferredTypes,
-                visitedPairs
-            ),
-            (Types.OptionalType parameterOptional, _) => TryInferTypes(parameterOptional.NonNullableType, argumentType, inferredTypes, visitedPairs),
-            (ObjectType parameterObject, ObjectType argumentObject) => MatchObjectTypes(parameterObject, argumentObject, inferredTypes, visitedPairs),
-            (InterfaceType parameterInterface, InterfaceType argumentInterface) => TryInferTypes(
-                parameterInterface.ObjectType,
-                argumentInterface.ObjectType,
-                inferredTypes,
-                visitedPairs
-            ),
-            (Types.FunctionType parameterFunction, Types.FunctionType argumentFunction) => MatchFunctionTypes(
-                parameterFunction,
-                argumentFunction,
-                inferredTypes,
-                visitedPairs
-            ),
-            (Types.UnionType parameterUnion, Types.UnionType argumentUnion) when parameterUnion.Types.Count == argumentUnion.Types.Count => MatchUnionTypes(
-                parameterUnion,
-                argumentUnion,
-                inferredTypes,
-                visitedPairs
-            ),
-            (Types.IntersectionType parameterIntersection, Types.IntersectionType argumentIntersection) when parameterIntersection.Types.Count
-                == argumentIntersection.Types.Count => MatchIntersectionTypes(parameterIntersection, argumentIntersection, inferredTypes, visitedPairs),
-            _ => parameterType.Equals(argumentType) || argumentType.IsAssignableTo(parameterType)
-        };
-    }
-
-    private static bool BindTypeParameter(Types.TypeParameter typeParameter, Type argumentType, TypeParameterSubstitution inferredTypes)
-    {
-        if (inferredTypes.TryGetValue(typeParameter, out var existingType))
-            return existingType.Equals(argumentType);
-
-        inferredTypes[typeParameter] = argumentType;
-        return true;
-    }
-
-    private static bool MatchObjectTypes(
-        ObjectType parameterObject,
-        ObjectType argumentObject,
-        TypeParameterSubstitution inferredTypes,
-        HashSet<(Type, Type)> visitedPairs)
-    {
-        foreach (var parameterProperty in parameterObject.Properties)
-        {
-            var argumentProperty = argumentObject.GetProperty(parameterProperty.Name);
-            if (argumentProperty == null)
-                return false;
-
-            if (!TryInferTypes(parameterProperty.ValueType, argumentProperty.ValueType, inferredTypes, visitedPairs))
-                return false;
-        }
-
-        if (parameterObject.Indexer != null && argumentObject.Indexer != null)
-        {
-            return TryInferTypes(parameterObject.Indexer.KeyType, argumentObject.Indexer.KeyType, inferredTypes, visitedPairs)
-                && TryInferTypes(parameterObject.Indexer.ValueType, argumentObject.Indexer.ValueType, inferredTypes, visitedPairs);
-        }
-
-        return parameterObject.Indexer == null;
-    }
-
-    private static bool MatchFunctionTypes(
-        Types.FunctionType parameterFunction,
-        Types.FunctionType argumentFunction,
-        TypeParameterSubstitution inferredTypes,
-        HashSet<(Type, Type)> visitedPairs)
-    {
-        if (parameterFunction.ParameterTypes.Count != argumentFunction.ParameterTypes.Count)
-            return false;
-
-        return !parameterFunction.ParameterTypes.Where((t, index) => !TryInferTypes(t, argumentFunction.ParameterTypes[index], inferredTypes, visitedPairs)).Any()
-            && TryInferTypes(parameterFunction.ReturnType, argumentFunction.ReturnType, inferredTypes, visitedPairs);
-    }
-
-    private static bool MatchUnionTypes(
-        Types.UnionType parameterUnion,
-        Types.UnionType argumentUnion,
-        TypeParameterSubstitution inferredTypes,
-        HashSet<(Type, Type)> visitedPairs) =>
-        !parameterUnion.Types.Where((t, index) => !TryInferTypes(t, argumentUnion.Types[index], inferredTypes, visitedPairs)).Any();
-
-    private static bool MatchIntersectionTypes(
-        Types.IntersectionType parameterIntersection,
-        Types.IntersectionType argumentIntersection,
-        TypeParameterSubstitution inferredTypes,
-        HashSet<(Type, Type)> visitedPairs) =>
-        !parameterIntersection.Types.Where((t, index) => !TryInferTypes(t, argumentIntersection.Types[index], inferredTypes, visitedPairs)).Any();
-
-    private static bool TryMatchGenericTypes(
-        Type parameterType,
-        Type argumentType,
-        TypeParameterSubstitution inferredTypes,
-        HashSet<(Type, Type)> visitedPairs,
-        out bool result)
-    {
-        result = false;
-        var parameterGenericInfo = GetGenericTypeAndArguments(parameterType);
-        var argumentGenericInfo = GetGenericTypeAndArguments(argumentType);
-        if (parameterGenericInfo.Generic == null || argumentGenericInfo.Generic == null)
-            return false;
-
-        if (!parameterGenericInfo.Generic.Declaration.Equals(argumentGenericInfo.Generic.Declaration))
-            return false;
-
-        switch (parameterGenericInfo.Arguments.Count)
-        {
-            case > 0 when argumentGenericInfo.Arguments.Count > 0:
-            {
-                for (var index = 0; index < Math.Min(parameterGenericInfo.Arguments.Count, argumentGenericInfo.Arguments.Count); index++)
-                {
-                    if (!TryInferTypes(parameterGenericInfo.Arguments[index], argumentGenericInfo.Arguments[index], inferredTypes, visitedPairs))
-                        return false;
-                }
-
-                break;
-            }
-            case > 0 when argumentGenericInfo.Arguments.Count == 0:
-            {
-                for (var index = 0; index < Math.Min(parameterGenericInfo.Arguments.Count, argumentGenericInfo.Generic.Parameters.Count); index++)
-                {
-                    if (!TryInferTypes(argumentGenericInfo.Generic.Parameters[index], parameterGenericInfo.Arguments[index], inferredTypes, visitedPairs))
-                        return false;
-                }
-
-                break;
-            }
-            case 0 when argumentGenericInfo.Arguments.Count > 0:
-            {
-                for (var index = 0; index < Math.Min(parameterGenericInfo.Generic.Parameters.Count, argumentGenericInfo.Arguments.Count); index++)
-                {
-                    if (!TryInferTypes(parameterGenericInfo.Generic.Parameters[index], argumentGenericInfo.Arguments[index], inferredTypes, visitedPairs))
-                        return false;
-                }
-
-                break;
-            }
-        }
-
-        result = true;
-        return true;
-    }
-
-    private static Type ExpandAliases(Type type) =>
-        TypeSolver.Transform(
-            type,
-            candidateType => candidateType is InstantiatedType { GenericType.Declaration: TypeAlias } instantiated
-                ? instantiated.Expand()
-                : candidateType
-        );
-
-    private static (GenericType? Generic, List<Type> Arguments) GetGenericTypeAndArguments(Type type) =>
-        type switch
-        {
-            InstantiatedType instantiated => (instantiated.GenericType, instantiated.Arguments),
-            GenericType generic => (generic, []),
-            _ => (null, [])
-        };
-
-    private InterfaceType? ResolveInterfaceType(InterfaceInvocation node, Type type)
-    {
-        if (type is InterfaceType nonGeneric)
-            return nonGeneric;
-
-        if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
-        {
-            _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
-            return null;
-        }
-
-        var arguments = node.TypeArguments?.ArgumentsList.ConvertAll(Visit) ?? [];
-        if (!CheckGenericArity((Node?)node.TypeArguments ?? node, generic.Parameters, arguments, $"Interface '{generic}'"))
-            return null;
-
-        var resolvedArguments = FillGenericArguments(node, generic.Parameters, arguments);
-        if (resolvedArguments == null)
-            return null;
-
-        for (var i = 0; i < generic.Parameters.Count; i++)
-        {
-            if (generic.Parameters[i].Constraint == null) continue;
-            CheckTypeParameterConstraints(node, resolvedArguments[i], generic.Parameters[i]);
-        }
-
-        var substitution = new TypeParameterSubstitution();
-        for (var i = 0; i < generic.Parameters.Count; i++)
-            substitution[generic.Parameters[i]] = resolvedArguments[i];
-
-        var substitutedObject = SubstituteObjectType(underlying.ObjectType, substitution);
-        return new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
-    }
+    
 
     private void CheckInitializers(InterfaceInvocation node, InterfaceType interfaceType)
     {
@@ -1262,7 +1082,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
                     }
 
                     var valueType = Visit(propertyInitializer.Expression);
-                    semanticModel.TypeSolver.AddConstraint(valueType, property.ValueType, propertyInitializer.Expression);
+                    _semanticModel.TypeSolver.AddConstraint(valueType, property.ValueType, propertyInitializer.Expression);
                     providedProperties.Add(name);
                     break;
                 }
@@ -1278,8 +1098,8 @@ public sealed class TypeChecker(SemanticModel semanticModel)
                 {
                     var indexType = Visit(indexInitializer.IndexExpression);
                     var valueType = Visit(indexInitializer.Expression);
-                    semanticModel.TypeSolver.AddConstraint(indexType, objectType.Indexer.KeyType, indexInitializer.IndexExpression);
-                    semanticModel.TypeSolver.AddConstraint(valueType, objectType.Indexer.ValueType, indexInitializer.Expression);
+                    _semanticModel.TypeSolver.AddConstraint(indexType, objectType.Indexer.KeyType, indexInitializer.IndexExpression);
+                    _semanticModel.TypeSolver.AddConstraint(valueType, objectType.Indexer.ValueType, indexInitializer.Expression);
                     break;
                 }
             }
@@ -1379,14 +1199,14 @@ public sealed class TypeChecker(SemanticModel semanticModel)
     }
 
     private Type GetDeclarationType(Symbol symbol) =>
-        symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != semanticModel.Tree.File.AbsolutePath
+        symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != _semanticModel.Tree.File.AbsolutePath
             ? Visit(symbol.Declaration)
-            : semanticModel.GetType(symbol.Declaration);
+            : _semanticModel.GetType(symbol.Declaration);
 
     private T BindType<T>(Node node, T type)
         where T : Type
     {
-        semanticModel.TypeSolver.SetType(node, type);
+        _semanticModel.TypeSolver.SetType(node, type);
         if (node is not (Tree or ExpressionStatement))
             _diagnostics.Debug(node, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for {node.GetType().Name}");
 

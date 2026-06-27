@@ -609,6 +609,20 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I { a: number } type K = keyof(keyof(I))");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidKeyOf, "Cannot access keys of type 'string'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_GenericInterfaceWithConstraintViolation()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface I<T: number> { value: T }; new I::<string> { value: 'x' }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation, "Type 'string' does not satisfy constraint 'number' for type parameter 'T'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_CastToIntersectionType()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("69 as (number & string)");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '69' is not assignable to type 'never'.");
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -619,6 +633,179 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_FunctionWithEmptyBody()
+    {
+        const string source = """
+            fn foo() {}
+            foo()
+            """;
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Void), $"Expected 'void', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_FunctionWithBlockNoReturn()
+    {
+        const string source = """
+            fn bar() { let x = 1; }
+            bar()
+            """;
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Void), $"Expected 'void', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_InterfaceInvocationWithPropertyAndIndexInitializers()
+    {
+        const string source = """
+            interface I { x: number, [string]: bool }
+            new I { x: 1, ["key"]: true }
+            """;
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        
+        var iface = Assert.IsType<InterfaceType>(result.ReturnType);
+        Assert.Equal("I", iface.Name);
+    }
+    
+    [Fact]
+    public void Checks_GenericInterfaceWithConstraint_Valid()
+    {
+        var result = Utility.TypeCheck("interface I<T: number> { value: T }; new I::<number> { value: 42 }");
+        Utility.AssertNoErrors(result);
+    }
+
+    [Fact]
+    public void Checks_IndexedTypeWithUnionOfStringLiterals()
+    {
+        const string source = """
+            interface I { a: number; b: string }
+            type K = "a" | "b"
+            type V = I[K]
+            let x: V = 42
+            x
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
+    public void Checks_CastToUnionType()
+    {
+        var type = Utility.GetLastStatementType("69 as (number | string)");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+    
+        [Fact]
+    public void Checks_Narrowing_ElementAccessWithLiteralIndex()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let arr = [1, 2, 3]; if arr[0] == 1 { arr[0] + 1 }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_WhileWithPropertyAccess()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface HasVal { val: number? }; let obj = none as never as HasVal; while obj.val != none { obj.val + 1; break; }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_NonOptionalComparedToNone()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = 42; if x == none { 1 }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+    
+    [Fact]
+    public void Checks_GenericFunction_InferenceWithIntersectionParameter_AndSingleArgument()
+    {
+        const string source = """
+            fn id<T>(a: T & number) -> a
+            id(42)
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericFunction_InferenceWithUnionParameter_AndSingleArgument()
+    {
+        const string source = """
+            fn id<T>(a: T | string) -> a
+            id(42)
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Equal(42L, Assert.IsType<LiteralType>(union.Types[0]).Value);
+        Assert.Equal(PrimitiveTypeKind.String, Assert.IsType<PrimitiveType>(union.Types[1]).Kind);
+    }
+
+    [Fact]
+    public void Checks_InterfaceInvocation_InferenceFromUnionProperty()
+    {
+        const string source = """
+            interface I<T> { value: T | string }
+            new I { value: 42 }
+            """;
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var iface = Assert.IsType<InterfaceType>(result.ReturnType);
+        var prop = iface.ObjectType.Properties.Single();
+        var union = Assert.IsType<UnionType>(prop.ValueType);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 42L });
+    }
+    
+    [Fact]
+    public void Checks_GenericFunction_InferenceFromGenericTypeAliasWithMultipleParameters()
+    {
+        const string source = """
+            interface Result<T, E> { ok: T, err: E }
+            fn unwrap<T, E>(r: Result<T, E>) -> r.ok
+            unwrap(new Result { ok: 1, err: "oops" })
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(1L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_TypeParameterWithConstraintAndDefault_Valid()
+    {
+        const string source = """
+            type Id<T: number = 42> = T
+            let x: Id = 42
+            x
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_ForLoopOverObjectValues()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Data { a: number; b: string } for let v in new Data { a: 1, b: 'hi' } { v }");
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_UnaryPlusOperator()
+    {
+        var type = Utility.GetLastStatementType("+5");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(5L, literal.Value);
+    }
+    
     [Fact]
     public void Checks_KeyOf_OnObjectType_WithProperties()
     {
