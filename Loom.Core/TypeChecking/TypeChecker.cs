@@ -795,6 +795,9 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         var type = Visit(targetExpression);
         foreach (var dotName in names)
         {
+            if (type is InstantiatedType instantiated)
+                type = instantiated.Expand();
+            
             if (type is not (ObjectType or InterfaceType))
             {
                 _diagnostics.Error(accessExpression, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");

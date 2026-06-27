@@ -7,12 +7,15 @@ using Loom.TypeChecking;
 
 namespace Loom.SemanticAnalysis;
 
+using SymbolLookup = Dictionary<string, List<Symbol>>;
+using SymbolTable = Dictionary<NodeId, List<Symbol>>;
+
 public sealed class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
     : Visitor<bool>(true)
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly Dictionary<NodeId, Symbol> _allDeclarations = [];
-    private readonly Dictionary<NodeId, Symbol> _allReferences = [];
+    private readonly SymbolTable _allDeclarations = [];
+    private readonly SymbolTable _allReferences = [];
     private readonly Stack<ResolverScope> _scopes = [];
     private readonly Stack<FlowState> _flowStates = [];
     private ResolverContext _context = ResolverContext.None;
@@ -331,13 +334,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitParameter(Parameter parameter)
     {
-        var scope = CurrentScope();
         var name = parameter.Name.Text;
-        var existingSymbol = scope.VariableLookup
-            .Where(pair => pair.Key == name && pair.Value.Kind == SymbolKind.Parameter)
-            .Select(pair => pair.Value)
-            .FirstOrDefault();
-
+        var existingSymbol = LookupSymbolCurrentScope(name, SymbolKind.Parameter);
         if (existingSymbol != null)
         {
             _diagnostics.Error(
@@ -445,7 +443,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             return false;
         }
 
-        _allReferences[identifier.Id] = symbol;
+        AddReference(identifier, symbol);
         return true;
     }
 
@@ -460,7 +458,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         }
 
         base.VisitTypeName(typeName);
-        _allReferences[typeName.Id] = symbol;
+        AddReference(typeName, symbol);
         return true;
     }
 
@@ -590,15 +588,40 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private void DeclareSymbol(Symbol symbol)
     {
+        AddToLookup(symbol);
+        AddDeclaration(symbol);
+        _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
+        
+        if (!parserResult.Tree.File.IsDeclaration) return;
+        symbol.IsGlobal = true;
+        _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
+    }
+    
+    private void AddToLookup(Symbol symbol)
+    {
         var scope = CurrentScope();
         var lookup = GetLookup(symbol.Kind, scope);
-        var nodeId = symbol.Declaration.Id;
-        lookup[symbol.Name] = symbol;
-        scope.Declarations[nodeId] = symbol;
-        _allDeclarations[nodeId] = symbol;
-        _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
-        if (parserResult.Tree.File.IsDeclaration)
-            symbol.IsGlobal = true;
+        if (!lookup.ContainsKey(symbol.Name))
+            lookup[symbol.Name] = [];
+        
+        lookup[symbol.Name].Add(symbol);
+    }
+    
+    private void AddDeclaration(Symbol symbol)
+    {
+        var id = symbol.Declaration.Id;
+        if (!_allDeclarations.ContainsKey(id))
+            _allDeclarations[id] = [];
+        
+        _allDeclarations[id].Add(symbol);
+    }
+    
+    private void AddReference(Node node, Symbol symbol)
+    {
+        if (!_allReferences.ContainsKey(node.Id))
+            _allReferences[node.Id] = [];
+        
+        _allReferences[node.Id].Add(symbol);
     }
 
     private Symbol? LookupTypeSymbol(string name) =>
@@ -616,14 +639,20 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var lookups = _scopes.Select(scope => GetLookup(kind, scope));
         foreach (var lookup in lookups)
         {
-            if (!lookup.TryGetValue(name, out var symbol)) continue;
-            return symbol;
+            if (!lookup.TryGetValue(name, out var symbols)) continue;
+            return symbols.First();
         }
 
         return null;
     }
+    
+    private Symbol? LookupSymbolCurrentScope(string name, SymbolKind kind)
+    {
+        var lookup = GetLookup(kind, CurrentScope());
+        return !lookup.TryGetValue(name, out var symbols) ? null : symbols.First();
+    }
 
-    private static Dictionary<string, Symbol> GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
+    private static SymbolLookup GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
     private void MarkDefinitelyInitialized(Symbol symbol)
     {
@@ -690,8 +719,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private void DeclareIntrinsicSymbols(SemanticModel semanticModel)
     {
-        var intrinsicSymbols = Intrinsics.Register(semanticModel);
-        foreach (var symbol in intrinsicSymbols)
+        foreach (var symbol in Intrinsics.Register(semanticModel))
         {
             DeclareSymbol(symbol);
             if (symbol.IsValueSymbol)

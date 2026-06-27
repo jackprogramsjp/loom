@@ -18,7 +18,7 @@ public static class Intrinsics
         )
     );
 
-    public static List<Symbol> Register(SemanticModel model)
+    public static HashSet<Symbol> Register(SemanticModel model)
     {
         if (_compilingIntrinsic) return [];
         _compilingIntrinsic = true;
@@ -29,19 +29,23 @@ public static class Intrinsics
 
         var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" } };
         var compilationUnit = new CompilationUnit(loomConfig);
-        var symbols = new List<Symbol>();
-        foreach (var compiledFile in compilationUnit.SourceFiles.Select(compilationUnit.Compile))
+        var compiledFiles = compilationUnit.SourceFiles.Select(compilationUnit.Compile);
+        
+        var intrinsicSymbols = new HashSet<Symbol>();
+        foreach (var compiledFile in compiledFiles)
         {
-            foreach (var symbol in compiledFile.Tree.Statements.Select(statement => compiledFile.SemanticModel.GetDeclarationSymbol(statement)).OfType<Symbol>())
+            var symbols = compiledFile.Tree.Statements.SelectMany(statement => compiledFile.SemanticModel.GetDeclarationSymbols(statement));
+            foreach (var symbol in symbols)
             {
                 symbol.IsIntrinsic = true;
                 symbol.IsGlobal = true;
                 model.TypeSolver.SetType(symbol.Declaration, compiledFile.SemanticModel.GetType(symbol.Declaration));
-                symbols.Add(symbol);
+                intrinsicSymbols.Add(symbol);
+                Console.WriteLine(symbol);
             }
         }
 
         _compilingIntrinsic = false;
-        return symbols;
+        return intrinsicSymbols;
     }
 }

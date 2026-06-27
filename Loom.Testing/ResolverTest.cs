@@ -536,6 +536,9 @@ public class ResolverTest
     }
     
     [Fact]
+    public void Allows_InvokingIntrinsicInterfaces() => Utility.AssertNoErrors(Utility.GetSemanticModel("new Record::<string, bool> {}"));
+    
+    [Fact]
     public void Allows_TernaryOp() => Utility.AssertNoErrors(Utility.GetSemanticModel("true ? 1 : 'abc'"));
     
     [Theory]
@@ -724,7 +727,7 @@ public class ResolverTest
     {
         var model = Utility.GetSemanticModel("enum Colors { Red, Green, Blue };");
         var enumDeclaration = Assert.IsType<EnumDeclaration>(model.Tree.Statements.First());
-        var symbol = model.GetDeclarationSymbol(enumDeclaration);
+        var symbol = model.GetDeclarationSymbol(enumDeclaration, SymbolKind.EnumType);
         Assert.NotNull(symbol);
         Assert.Equal("Colors", symbol.Name);
         Assert.Equal(SymbolKind.EnumType, symbol.Kind);
@@ -772,7 +775,7 @@ public class ResolverTest
         if (declarationType == typeof(Declare))
             statement = ((Declare)statement).Signature;
 
-        var symbol = model.GetDeclarationSymbol(statement);
+        var symbol = model.GetDeclarationSymbol(statement, SymbolKind.Interface);
         Assert.NotNull(symbol);
 
         var interfaceSymbol = Assert.IsType<InterfaceSymbol>(symbol);

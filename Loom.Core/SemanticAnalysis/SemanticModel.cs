@@ -5,22 +5,52 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.SemanticAnalysis;
 
-public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, Dictionary<NodeId, Symbol> declarations, Dictionary<NodeId, Symbol> references)
+using SymbolTable = Dictionary<NodeId, List<Symbol>>;
+
+public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, SymbolTable declarations, SymbolTable references)
     : DiagnosedResult(diagnostics)
 {
     public Tree Tree { get; } = tree;
-    public Dictionary<NodeId, Symbol> Declarations { get; } = declarations;
+    public SymbolTable Declarations { get; } = declarations;
+    public SymbolTable References { get; } = references;
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
 
-    public Symbol? GetSymbol(Node node) => references.GetValueOrDefault(node.Id);
-    public Symbol? GetDeclarationSymbol(Node node) => node is Declare declare ? GetDeclarationSymbol(declare.Signature) : Declarations.GetValueOrDefault(node.Id);
-
-    public Symbol? GetDeclaringSymbol(Node node)
+    public List<Symbol> GetDeclarationSymbols(Node node)
     {
-        var referenceSymbol = GetSymbol(node);
-        return referenceSymbol == null ? null : GetDeclarationSymbol(referenceSymbol.Declaration);
+        while (true)
+        {
+            if (node is not Declare declare)
+                return Declarations.GetValueOrDefault(node.Id, []);
+
+            node = declare.Signature;
+        }
+    }
+
+    public Symbol? GetSymbol(Node node, SymbolKind? kind = null) => FindSymbol(node, kind, References);
+
+    public Symbol? GetDeclarationSymbol(Node node, SymbolKind? kind = null)
+    {
+        while (true)
+        {
+            if (node is not Declare declare)
+                return FindSymbol(node, kind, Declarations);
+
+            node = declare.Signature;
+        }
+    }
+
+    public Symbol? GetDeclaringSymbol(Node node, SymbolKind? kind = null)
+    {
+        var referenceSymbol = GetSymbol(node, kind);
+        return referenceSymbol == null ? null : GetDeclarationSymbol(referenceSymbol.Declaration, kind);
     }
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
-    public Type? GetDeclaredType(Node node) => GetSymbol(node) is { } symbol ? TypeSolver.GetType(symbol.Declaration) : null;
+    public Type? GetDeclaredType(Node node) => GetSymbol(node) is { } symbol ? GetType(symbol.Declaration) : null;
+    
+    private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
+    {
+        var symbols = table.GetValueOrDefault(node.Id, []);
+        return kind != null ? symbols.Find(s => s.Kind == kind) : symbols.FirstOrDefault();
+    }
 }

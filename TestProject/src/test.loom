@@ -1,1 +1,3 @@
-interface I { a: number, [number]: bool } type K = keyof(I)
+enum Status { Active, Inactive }
+            let x: Status = Status.Active
+            if x == Status.Active { x }

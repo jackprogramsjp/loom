@@ -6,3 +6,7 @@ interface Range {
 interface Record<K, V> {
     [K]: V;
 }
+
+interface MutRecord<K, V> {
+    mut [K]: V;
+}

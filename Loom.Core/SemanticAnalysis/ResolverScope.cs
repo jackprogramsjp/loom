@@ -1,11 +1,10 @@
-using Loom.Parsing.AST;
-
 namespace Loom.SemanticAnalysis;
+
+using SymbolLookup = Dictionary<string, List<Symbol>>;
 
 internal sealed record ResolverScope
 {
-    public Dictionary<NodeId, Symbol> Declarations { get; } = [];
-    public Dictionary<NodeId, Symbol> References { get; } = [];
-    public Dictionary<string, Symbol> VariableLookup { get; } = [];
-    public Dictionary<string, Symbol> TypeLookup { get; } = [];
+    
+    public SymbolLookup VariableLookup { get; } = [];
+    public SymbolLookup TypeLookup { get; } = [];
 }

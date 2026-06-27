@@ -18,6 +18,7 @@
 - **Range expressions** – `1..10` for slicing and bounds
 - **`nameof` operator** – Get names as strings at compile time
 - **Generic functions and types** – Full support for type parameters including constraints and defaults
+- **Indices starting at one** – Same as Luau for familiarity
 - **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
 
 ## Upcoming Features
