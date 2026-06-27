@@ -84,6 +84,7 @@ public enum SyntaxKind : ushort
     WhileKeyword,
     ForKeyword,
     InKeyword,
+    KeyOfKeyword,
     NameOfKeyword,
     DeclareKeyword,
     AsKeyword,
@@ -92,5 +93,5 @@ public enum SyntaxKind : ushort
     ImplementKeyword,
 
     Identifier,
-    Eof
+    Eof,
 }

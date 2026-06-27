@@ -15,7 +15,7 @@ public sealed partial class Parser
 
     private TypeExpression ParsePostfixType()
     {
-        var type = ParsePrimaryType();
+        var type = ParseUnaryType();
         while (true)
         {
             if (Match(out var leftBracket, SyntaxKind.LBracket))
@@ -49,16 +49,16 @@ public sealed partial class Parser
 
         return type;
     }
-
-    private TypeExpression ParseFunctionType(Token fnKeyword)
+    
+    private TypeExpression ParseUnaryType()
     {
-        var typeParameters = ParseTypeParameters();
-        var parameters = ParseParameters();
-        var returnType = ParseColonTypeClause();
-        if (!ValidateFunctionSignature("function types", parameters?.Span ?? typeParameters?.Span ?? fnKeyword.Span, returnType, parameters))
-            return new NullTypeExpression(fnKeyword);
+        if (!Match(out var keyOfKeyword, SyntaxKind.KeyOfKeyword))
+            return ParsePrimaryType();
 
-        return new FunctionType(fnKeyword, typeParameters, parameters, returnType);
+        var leftParen = Expect(SyntaxKind.LParen);
+        var innerType = ParseUnaryType();
+        var rightParen = Expect(SyntaxKind.RParen);
+        return new KeyOf(keyOfKeyword, leftParen, rightParen, innerType);
     }
     
     private TypeExpression ParsePrimaryType()
@@ -78,6 +78,17 @@ public sealed partial class Parser
 
         var typeArguments = ParseTypeArguments();
         return new TypeName(name, typeArguments);
+    }
+    
+    private TypeExpression ParseFunctionType(Token fnKeyword)
+    {
+        var typeParameters = ParseTypeParameters();
+        var parameters = ParseParameters();
+        var returnType = ParseColonTypeClause();
+        if (!ValidateFunctionSignature("function types", parameters?.Span ?? typeParameters?.Span ?? fnKeyword.Span, returnType, parameters))
+            return new NullTypeExpression(fnKeyword);
+
+        return new FunctionType(fnKeyword, typeParameters, parameters, returnType);
     }
 
     private ParenthesizedType ParseParenthesizedType(Token leftParen)

@@ -549,6 +549,20 @@ public sealed class TypeChecker(SemanticModel semanticModel)
             )
         );
 
+    public override Type VisitKeyOf(KeyOf keyOf)
+    {
+        var targetType = Visit(keyOf.Type);
+        if (targetType is not (ObjectType or InterfaceType))
+        {
+            _diagnostics.Error(keyOf, InternalCodes.InvalidKeyOf, $"Cannot access keys of type '{targetType}'.");
+            return BindType(keyOf, Types.PrimitiveType.Never);
+        }
+
+        var objectType = targetType is InterfaceType i ? i.ObjectType : (ObjectType)targetType;
+        var type = objectType.KeyUnion();
+        return BindType(keyOf, type);
+    }
+
     public override Type VisitIndexedType(IndexedType indexedType)
     {
         var targetType = Visit(indexedType.Type);
@@ -869,7 +883,7 @@ public sealed class TypeChecker(SemanticModel semanticModel)
         {
             Types.ArrayType array => array.ElementType,
             InterfaceType interfaceType => GetObjectValueType(interfaceType.ObjectType),
-            ObjectType objectType => objectType.ValueType(),
+            ObjectType objectType => objectType.ValueUnion(),
             _ => Types.PrimitiveType.Never
         };
 

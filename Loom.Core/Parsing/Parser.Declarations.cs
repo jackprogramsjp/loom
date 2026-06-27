@@ -110,7 +110,7 @@ public sealed partial class Parser
     {
         var name = ExpectIdentifier();
         var colonTypeClause = ParseColonTypeClause();
-        return new DeclareVariableSignature(variableKeyword, name, colonTypeClause);
+        return new DeclareVariableSignature(variableKeyword, name, colonTypeClause!);
     }
 
     private Statement ParseDeclareFunctionSignature(Token fnKeyword)

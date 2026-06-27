@@ -196,7 +196,6 @@ public sealed partial class Parser(LexerResult lexerResult)
     }
 
     private Token Current() => Peek(0);
-    private Token CurrentOrLast() => !IsEof() ? Current() : Last();
     private Token Last() => Peek(-1);
     private Token Peek(int offset) => lexerResult.Tokens[_position + offset];
     private bool IsEof() => Current().Kind == SyntaxKind.Eof;

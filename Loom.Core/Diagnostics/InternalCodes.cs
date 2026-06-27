@@ -60,4 +60,5 @@ public static class InternalCodes
     public const string InvokeDeclaredInterface = "L337";
     public const string ReturnInAfter = "L338";
     public const string MissingDeclareVariableType = "L339";
+    public const string InvalidKeyOf = "L340";
 }

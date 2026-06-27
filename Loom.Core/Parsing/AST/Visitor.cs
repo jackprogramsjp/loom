@@ -119,6 +119,7 @@ public abstract class Visitor<T>(T defaultValue)
     public virtual T VisitTypeName(TypeName typeName) => MaybeVisit(typeName.TypeArguments) ?? DefaultValue;
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
     public virtual T VisitIndexedType(IndexedType indexedType) => CombineResults([Visit(indexedType.Type), Visit(indexedType.IndexType)]);
+    public virtual T VisitKeyOf(KeyOf keyOf) => Visit(keyOf.Type);
 
     public virtual T VisitFunctionType(FunctionType functionType) =>
         CombineResults(
