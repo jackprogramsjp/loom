@@ -1,8 +1,5 @@
-type I = {
-  read a: number
-  read b: string
-}
-type K = "a" | "b"
-type V = index<I, K>
-const x: V = 42
-const _ = x
+type Status = number
+const x: Status = 0
+if x == 0 then
+  const _ = x
+end

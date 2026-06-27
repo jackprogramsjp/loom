@@ -1,5 +1,5 @@
-interface I { a: number; b: string }
-            type K = "a" | "b"
-            type V = I[K]
-            let x: V = 42
-            x
+enum Status { Active, Inactive }
+let x: Status = Status.Active;
+if x == Status.Active {
+    x
+}
