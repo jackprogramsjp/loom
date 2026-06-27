@@ -18,10 +18,103 @@ public class LexerTest
     [InlineData("`")]
     [InlineData("'abc\"")]
     [InlineData("\"abc'")]
+    [InlineData("#: unterminated")]
     public void ThrowsFor_UnexpectedCharacters(string source)
     {
         var diagnostics = Utility.GetLexerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedCharacter, "Unexpected character.");
+    }
+
+    [Theory]
+    [InlineData("## this is a comment")]
+    [InlineData("##")]
+    [InlineData("## 123 !@#$%")]
+    public void Tokenizes_LineComments(string source)
+    {
+        var tokens = Utility.GetTokens(source, true);
+        Assert.Equal(2, tokens.Count);
+
+        var token = tokens[0];
+        Assert.Equal(SyntaxKind.Comment, token.Kind);
+    }
+
+    [Theory]
+    [InlineData("#: this is a multiline comment :#")]
+    [InlineData("#::#")]
+    [InlineData("#: line one\nline two :#")]
+    [InlineData("#: ## nested-looking content :#")]
+    public void Tokenizes_BlockComments(string source)
+    {
+        var tokens = Utility.GetTokens(source, true);
+        Assert.Equal(2, tokens.Count);
+
+        var token = tokens[0];
+        Assert.Equal(SyntaxKind.MultilineComment, token.Kind);
+    }
+
+    [Fact]
+    public void LineComment_DoesNotConsume_Newline()
+    {
+        var tokens = Utility.GetTokens("## comment\ntrue", true);
+        Assert.Equal(4, tokens.Count);
+        Assert.Equal(SyntaxKind.Comment, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.Whitespace, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.TrueLiteral, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
+
+        Assert.Equal(1, tokens[0].Span.Start.Line);
+        Assert.Equal(1, tokens[0].Span.End.Line);
+        Assert.Equal(2, tokens[2].Span.Start.Line);
+    }
+
+    [Fact]
+    public void BlockComment_Tracks_Lines()
+    {
+        var tokens = Utility.GetTokens("#: line one\nline two\nline three :#", true);
+        Assert.Equal(2, tokens.Count);
+        Assert.Equal(SyntaxKind.MultilineComment, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[1].Kind);
+
+        var comment = tokens[0];
+        Assert.Equal(1, comment.Span.Start.Line);
+        Assert.Equal(3, comment.Span.End.Line);
+    }
+
+    [Fact]
+    public void LineComment_AfterCode()
+    {
+        var tokens = Utility.GetTokens("true ## comment", true);
+        Assert.Equal(4, tokens.Count);
+        Assert.Equal(SyntaxKind.TrueLiteral, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.Whitespace, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.Comment, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
+    }
+
+    [Fact]
+    public void BlockComment_BetweenCode()
+    {
+        var tokens = Utility.GetTokens("true #: ignored :# false", true);
+        Assert.Equal(6, tokens.Count);
+        Assert.Equal(SyntaxKind.TrueLiteral, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.Whitespace, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.MultilineComment, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.Whitespace, tokens[3].Kind);
+        Assert.Equal(SyntaxKind.FalseLiteral, tokens[4].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[5].Kind);
+    }
+
+    [Fact]
+    public void BlockComment_DoesNotConsume_TrailingCode_AcrossLines()
+    {
+        var tokens = Utility.GetTokens("#: comment\nstill comment :# true", true);
+        Assert.Equal(4, tokens.Count);
+        Assert.Equal(SyntaxKind.MultilineComment, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.Whitespace, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.TrueLiteral, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
+
+        Assert.Equal(2, tokens[1].Span.Start.Line);
     }
 
     [Fact]
@@ -40,7 +133,7 @@ public class LexerTest
             Assert.Equal(expected, actual.Kind);
         }
     }
-    
+
     [Fact]
     public void Tokenizes_Eof()
     {
@@ -154,7 +247,7 @@ public class LexerTest
         Assert.Equal(secondEnd.Character, secondEnd.Position);
         Assert.Equal(5, secondStart.Position);
         Assert.Equal(10, secondEnd.Position);
-        
+
         Assert.Equal(eofStart.Line, eofEnd.Line);
         Assert.Equal(eofStart.Character, eofStart.Position);
         Assert.Equal(eofEnd.Character, eofEnd.Position);

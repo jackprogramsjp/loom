@@ -1,2 +1,1 @@
-print(69)
-print(420)
+const _ = true

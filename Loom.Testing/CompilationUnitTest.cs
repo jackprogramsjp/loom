@@ -38,7 +38,7 @@ public class CompilationUnitTest
 
         var file = result.Files.First();
         Assert.EndsWith("my-file.luau", file.Path);
-        Assert.Equal(3, file.Tokens.Count);
+        Assert.Equal(4, file.Tokens.Count);
         Assert.Single(file.Tree.Statements);
         Assert.IsType<BinaryOperator>(Assert.IsType<ExpressionStatement>(file.Tree.Statements.First()).Expression);
         Assert.Null(file.SemanticModel.GetSymbol(file.Tree));
