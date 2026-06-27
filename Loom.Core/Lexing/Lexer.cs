@@ -32,19 +32,50 @@ public sealed class Lexer(SourceFile file)
         while (_position < sourceLength)
         {
             var start = GetLocation();
+            if (TryDiagnosticRule(start, LexerRules.PriorityDiagnostic)) continue;
+
             var rule = Lex();
-            var span = GetSpan(start);
             if (rule == null)
             {
-                _diagnostics.Error(new LocationSpan(start, start + 1), InternalCodes.UnexpectedCharacter, "Unexpected character."); // TODO: more detailed lexer errors
+                if (!TryDiagnosticRule(start, LexerRules.Diagnostic))
+                {
+                    var character = Current();
+                    var display = char.IsControl(character) ? $"U+{(int)character:X4}" : $"'{character}'";
+                    _diagnostics.Error(
+                        new LocationSpan(start, start + 1),
+                        InternalCodes.UnexpectedCharacter,
+                        $"Unexpected character {display}."
+                    );
+                }
+
                 break;
             }
 
+            var span = GetSpan(start);
             if (!withTrivia && SyntaxFacts.IsTrivia(rule.Syntax)) continue;
             yield return new Token(rule.Syntax, span);
         }
 
         yield return new Token(SyntaxKind.Eof, GetSpan(GetLocation()));
+    }
+    
+    private bool TryDiagnosticRule(Location start, IReadOnlyList<LexerDiagnosticRule> rules)
+    {
+        foreach (var rule in rules)
+        {
+            var match = rule.Pattern.Match(file.SourceText, _position);
+            if (!match.Success || match.Index != _position) continue;
+
+            Advance(match.Value);
+            _diagnostics.Error(
+                GetSpan(start),
+                rule.DiagnosticCode,
+                rule.MessageFactory(match.Value)
+            );
+            return true;
+        }
+        
+        return false;
     }
 
     private LexerRule? Lex()
@@ -60,7 +91,17 @@ public sealed class Lexer(SourceFile file)
             return null;
 
         var (rule, (content, _)) = matches.First();
-        var lines = content.Split('\n').Length - 1;
+        Advance(content);
+        return rule;
+    }
+    
+    /// <summary>
+    /// Advances the position, line, and character counters by the length of
+    /// <paramref name="content"/>, accounting for embedded newlines.
+    /// </summary>
+    private void Advance(string content)
+    {
+        var lines = content.Count(c => c == '\n');
         var length = content.Length;
         _position += length;
         if (lines > 0)
@@ -72,8 +113,6 @@ public sealed class Lexer(SourceFile file)
         {
             _character += length;
         }
-
-        return rule;
     }
 
     private (string Content, int Index)? GetMatch(LexerRule rule, Regex? compiledRegex)

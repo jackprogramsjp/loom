@@ -7,6 +7,9 @@ public static class InternalCodes
     public const string CompilerError = "L001";
 
     public const string UnexpectedCharacter = "L101";
+    public const string MalformedNumber = "L102";
+    public const string UnterminatedString = "L103";
+    public const string UnterminatedComment = "L104";
 
     public const string UnexpectedToken = "L201";
     public const string UnexpectedEof = "L202";

@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Text;
 
@@ -36,4 +38,65 @@ public static class LexerRules
         RegEx(MultilineComment, @"#:[\s\S]*?:#"),
         RegEx(Comment, @"##[^\n]*"),
     ];
+
+    /// <summary>
+    /// Checked BEFORE standard rules. These must take priority because the
+    /// standard Int pattern would otherwise greedily consume the numeric prefix
+    /// (e.g. the '0' in '0x'), preventing the error rule from ever firing.
+    /// </summary>
+    public static readonly IReadOnlyList<LexerDiagnosticRule> PriorityDiagnostic =
+    [
+        DiagnosticRule(
+            @"0[xX](?![a-fA-F0-9_])",
+            InternalCodes.MalformedNumber,
+            m => $"Malformed hexadecimal literal '{m}': expected at least one hex digit after '0x'."
+        ),
+        DiagnosticRule(
+            @"0[bB](?![01_])",
+            InternalCodes.MalformedNumber,
+            m => $"Malformed binary literal '{m}': expected at least one binary digit after '0b'."
+        ),
+        DiagnosticRule(
+            @"0[oO](?![0-7_])",
+            InternalCodes.MalformedNumber,
+            m => $"Malformed octal literal '{m}': expected at least one octal digit after '0o'."
+        ),
+        DiagnosticRule(
+            @"\d[\d_]*(?:\.\d[\d_]*)?[eE](?![\d_])",
+            InternalCodes.MalformedNumber,
+            m => $"Malformed scientific notation '{m}': expected one or more digits after the exponent."
+        ),
+        DiagnosticRule(
+            @"\d[\d_]*\.(?![\d_])",
+            InternalCodes.MalformedNumber,
+            m => $"Malformed float literal '{m}': expected one or more digits after the decimal point."
+        ),
+    ];
+
+    /// <summary>
+    /// Checked AFTER standard rules fail. Safe as fallbacks because their
+    /// opening characters ('\"', '\'', '#') only reach here when no valid
+    /// token matched.
+    /// </summary>
+    public static readonly IReadOnlyList<LexerDiagnosticRule> Diagnostic =
+    [
+        DiagnosticRule(
+            "\"",
+            InternalCodes.UnterminatedString,
+            _ => "Unterminated string literal: expected closing '\"'."
+        ),
+        DiagnosticRule(
+            "'",
+            InternalCodes.UnterminatedString,
+            _ => "Unterminated string literal: expected closing \"'\"."
+        ),
+        DiagnosticRule(
+            @"#:[\s\S]*",
+            InternalCodes.UnterminatedComment,
+            _ => "Unterminated block comment: expected closing ':#'."
+        ),
+    ];
+
+    private static LexerDiagnosticRule DiagnosticRule(string pattern, string code, Func<string, string> message) =>
+        new(new Regex(pattern, RegexOptions.Compiled), code, message);
 }
