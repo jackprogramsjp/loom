@@ -1,6 +1,6 @@
 namespace Loom.TypeChecking;
 
-internal record struct TypedFlowState()
+public record struct TypedFlowState()
 {
     public Dictionary<TypedFlowAddress, Types.Type> NarrowedTypes { get; } = [];
 

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
@@ -26,12 +25,14 @@ public sealed class TypeChecker
     private readonly Stack<TypedFlowState> _flowStates = [];
     private readonly SemanticModel _semanticModel;
     private readonly TypeInferrer _inferrer;
+    private readonly TypeNarrower _narrower;
 
     public TypeChecker(SemanticModel semanticModel)
         : base(Types.PrimitiveType.Never)
     {
         _semanticModel = semanticModel;
-        _inferrer = new TypeInferrer(this, _diagnostics);
+        _inferrer = new TypeInferrer(this);
+        _narrower = new TypeNarrower(semanticModel);
     }
 
     public TypeCheckerResult Check()
@@ -44,8 +45,7 @@ public sealed class TypeChecker
         return new TypeCheckerResult(type, diagnostics);
     }
 
-    public Type Check(Node node) => Visit(node);
-
+    internal Type Check(Node node) => Visit(node);
     protected override Type Visit(Node node) => node.Accept(this);
 
     public override Type VisitTree(Tree tree)
@@ -94,7 +94,7 @@ public sealed class TypeChecker
         var conditionType = Visit(@while.Condition);
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
 
-        var (trueState, _) = ComputeBranchStates(@while.Condition);
+        var (trueState, _) = _narrower.ComputeBranchStates(@while.Condition, CurrentFlowState());
         return BindType(@while, VisitWithFlowState(@while.Body, trueState));
     }
 
@@ -103,7 +103,7 @@ public sealed class TypeChecker
         var conditionType = Visit(@if.Condition);
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
 
-        var (trueState, falseState) = ComputeBranchStates(@if.Condition);
+        var (trueState, falseState) = _narrower.ComputeBranchStates(@if.Condition, CurrentFlowState());
         var thenBranchType = VisitWithFlowState(@if.ThenBranch, trueState);
         var elseBranchType = @if.ElseBranch != null ? VisitWithFlowState(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
         return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType])));
@@ -387,7 +387,7 @@ public sealed class TypeChecker
 
     public override Type VisitElementAccess(ElementAccess elementAccess)
     {
-        if (TryGetNarrowedType(elementAccess, out var narrowedType))
+        if (_narrower.TryGetNarrowedType(elementAccess, CurrentFlowState(), out var narrowedType))
             return BindType(elementAccess, narrowedType);
 
         var type = Visit(elementAccess.Expression);
@@ -491,7 +491,7 @@ public sealed class TypeChecker
         var conditionType = Visit(ternaryOperator.Condition);
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, ternaryOperator.Condition);
 
-        var (trueState, falseState) = ComputeBranchStates(ternaryOperator.Condition);
+        var (trueState, falseState) = _narrower.ComputeBranchStates(ternaryOperator.Condition, CurrentFlowState());
         var thenBranchType = VisitWithFlowState(ternaryOperator.ThenBranch, trueState);
         var elseBranchType = VisitWithFlowState(ternaryOperator.ElseBranch, falseState);
         var union = new Types.UnionType([thenBranchType, elseBranchType]);
@@ -574,7 +574,7 @@ public sealed class TypeChecker
 
     public override Type VisitIdentifier(Identifier identifier)
     {
-        if (TryGetNarrowedType(identifier, out var narrowedType))
+        if (_narrower.TryGetNarrowedType(identifier, CurrentFlowState(), out var narrowedType))
             return BindType(identifier, narrowedType);
 
         var symbol = _semanticModel.GetSymbol(identifier);
@@ -682,153 +682,6 @@ public sealed class TypeChecker
         return type;
     }
 
-    private bool TryGetNarrowedType(Expression expression, [MaybeNullWhen(false)] out Type narrowedType)
-    {
-        if (_flowStates.TryPeek(out var flow) && GetFlowAddress(expression) is { } address && flow.NarrowedTypes.TryGetValue(address, out var narrowed))
-        {
-            narrowedType = BindType(expression, narrowed);
-            return true;
-        }
-
-        narrowedType = null;
-        return false;
-    }
-
-    private (TypedFlowState trueState, TypedFlowState falseState) ComputeBranchStates(Expression condition)
-    {
-        var current = _flowStates.Peek();
-        if (condition is BinaryOperator { Operator.Kind: SyntaxKind.EqualsEquals or SyntaxKind.BangEquals } binaryOperator)
-            return NarrowByCondition(binaryOperator, current);
-
-        return (new TypedFlowState(current), new TypedFlowState(current));
-    }
-
-    private (TypedFlowState trueState, TypedFlowState falseState) NarrowByCondition(BinaryOperator binaryOperator, TypedFlowState current)
-    {
-        var trueState = new TypedFlowState(current);
-        var falseState = new TypedFlowState(current);
-        if (TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expr, out var literal)
-            || TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expr, out literal))
-        {
-            ApplyBinaryNarrowing(expr, literal, binaryOperator.Operator.Kind, trueState, falseState);
-        }
-
-        return (trueState, falseState);
-    }
-
-    private bool TryGetExpressionAndLiteral(
-        Expression expr1,
-        Expression expr2,
-        [MaybeNullWhen(false)] out Expression expr,
-        [MaybeNullWhen(false)] out Expression literal)
-    {
-        if (!IsCompileTimeLiteral(expr2))
-        {
-            expr = null;
-            literal = null;
-            return false;
-        }
-
-        expr = expr1;
-        literal = expr2;
-        return true;
-    }
-
-    private bool IsCompileTimeLiteral(Expression expr) =>
-        expr is Literal or NameOf || expr is QualifiedName && _semanticModel.GetDeclaringSymbol(expr)?.Declaration is EnumDeclaration;
-
-    private void ApplyBinaryNarrowing(
-        Expression expression,
-        Expression literal,
-        SyntaxKind operatorKind,
-        TypedFlowState trueState,
-        TypedFlowState falseState)
-    {
-        var address = GetFlowAddress(expression);
-        if (address == null) return;
-
-        var baseType = _semanticModel.GetType(expression);
-        var literalType = _semanticModel.GetType(literal);
-        var isNone = literal is Literal { Value: null };
-        var isEquals = operatorKind == SyntaxKind.EqualsEquals;
-
-        if (isNone)
-        {
-            if (isEquals)
-            {
-                trueState.NarrowedTypes[address] = literalType;
-                falseState.NarrowedTypes[address] = baseType.NonNullable();
-            }
-            else
-            {
-                trueState.NarrowedTypes[address] = baseType.NonNullable();
-                falseState.NarrowedTypes[address] = literalType;
-            }
-        }
-        else
-        {
-            if (isEquals)
-            {
-                trueState.NarrowedTypes[address] = literalType;
-                falseState.NarrowedTypes[address] = RemoveType(baseType, literalType);
-            }
-            else
-            {
-                trueState.NarrowedTypes[address] = RemoveType(baseType, literalType);
-                falseState.NarrowedTypes[address] = literalType;
-            }
-        }
-    }
-
-    private static Type RemoveType(Type source, Type toRemove)
-    {
-        if (source is not Types.UnionType union)
-            return source;
-
-        var remaining = union.Types.Where(t => !toRemove.IsAssignableTo(t)).ToList();
-        return remaining.Count switch
-        {
-            0 => Types.PrimitiveType.Never,
-            1 => remaining.First(),
-            _ => new Types.UnionType(remaining)
-        };
-    }
-
-    private TypedFlowAddress? GetFlowAddress(Expression expr) =>
-        expr switch
-        {
-            Identifier identifier => GetIdentifierFlowAddress(identifier),
-            QualifiedName qualifiedName => BuildFieldChain(qualifiedName.Identifier, qualifiedName.Names),
-            PropertyAccess propertyAccess => BuildFieldChain(propertyAccess.Expression, propertyAccess.Names),
-            ElementAccess elementAccess => GetElementAddress(elementAccess),
-            _ => null
-        };
-
-    private TypedFlowAddress? BuildFieldChain(Expression baseExpr, List<DotName> dotNames)
-    {
-        var address = GetFlowAddress(baseExpr);
-        return address == null
-            ? null
-            : dotNames.Aggregate(address, (current, name) => TypedFlowAddress.Field(current, name.Name.Text));
-    }
-
-    private TypedFlowAddress? GetElementAddress(ElementAccess elementAccess)
-    {
-        if (GetFlowAddress(elementAccess.Expression) is not { } baseAddress)
-            return null;
-
-        if (elementAccess.IndexExpression is Literal { Value: not null and not bool } literal)
-            return TypedFlowAddress.Element(baseAddress, literal.Value);
-
-        return null;
-    }
-
-    private TypedFlowAddress? GetIdentifierFlowAddress(Identifier identifier)
-    {
-        var symbol = _semanticModel.GetSymbol(identifier);
-        return symbol != null ? TypedFlowAddress.Variable(symbol) : null;
-    }
-
     private bool CheckEnumMemberIsConstant(EnumMember member, Type type)
     {
         if (type is Types.LiteralType { Value: string or long or int or double })
@@ -840,7 +693,7 @@ public sealed class TypeChecker
 
     private Type GetTypeOfNamedAccess(Expression accessExpression, Expression targetExpression, List<DotName> names)
     {
-        if (TryGetNarrowedType(accessExpression, out var narrowedType))
+        if (_narrower.TryGetNarrowedType(accessExpression, CurrentFlowState(), out var narrowedType))
             return BindType(accessExpression, narrowedType);
 
         var type = Visit(targetExpression);
@@ -1056,7 +909,6 @@ public sealed class TypeChecker
 
         return substitution;
     }
-    
 
     private void CheckInitializers(InterfaceInvocation node, InterfaceType interfaceType)
     {
@@ -1213,12 +1065,14 @@ public sealed class TypeChecker
         return type;
     }
 
-    private void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
+    internal void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
         _diagnostics.Error(
             node,
             InternalCodes.CannotInferType,
             $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
         );
+
+    private TypedFlowState CurrentFlowState() => _flowStates.Peek();
 
     private static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {

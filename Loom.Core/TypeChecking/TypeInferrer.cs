@@ -13,7 +13,7 @@ namespace Loom.TypeChecking;
 
 using TypeParameterSubstitution = Dictionary<TypeParameter, Type>;
 
-public sealed class TypeInferrer(TypeChecker checker, DiagnosticBag diagnostics)
+internal sealed class TypeInferrer(TypeChecker checker)
 {
     public TypeParameterSubstitution? InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
     {
@@ -61,7 +61,7 @@ public sealed class TypeInferrer(TypeChecker checker, DiagnosticBag diagnostics)
             }
             else
             {
-                ReportCannotInfer(node, typeParameter);
+                checker.ReportCannotInfer(node, typeParameter);
                 return null;
             }
         }
@@ -92,20 +92,13 @@ public sealed class TypeInferrer(TypeChecker checker, DiagnosticBag diagnostics)
             }
             else
             {
-                ReportCannotInfer(errorNode, typeParameter);
+                checker.ReportCannotInfer(errorNode, typeParameter);
                 return null;
             }
         }
 
         return substitution;
     }
-    
-    private void ReportCannotInfer(Node node, TypeParameter typeParameter) =>
-        diagnostics.Error(
-            node,
-            InternalCodes.CannotInferType,
-            $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
-        );
     
     private static bool TryInferTypes(Type parameterType, Type argumentType, TypeParameterSubstitution inferredTypes, HashSet<(Type, Type)> visitedPairs)
     {
