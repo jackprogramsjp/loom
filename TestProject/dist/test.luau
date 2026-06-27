@@ -1,5 +1,6 @@
-local a = 69
-const function set_a(n: number)
-  a = n
-  return a
+const a = {1, 2, 3}
+const function abc()
+  const _assigned = 420
+  a[69] = _assigned
+  return _assigned
 end

@@ -113,7 +113,7 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST("type I = number; type Keys = keyof(I['prop']);");
         Assert.Equal(2, luauTree.Statements.Count);
-        
+
         var alias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
         var keyOf = Assert.IsType<TypeName>(alias.Type);
         Assert.Equal("keyof", keyOf.Name);
@@ -1669,6 +1669,124 @@ public class LuauGeneratorTest
         Assert.Equal("value", identifier.Name);
     }
 
+    [Fact]
+    public void Generates_ExpressionBody_WithElementAccessAssignment()
+    {
+        const string source = """
+                    let a = mut [1, 2, 3]
+                    fn abc -> a[69] = 420
+            """;
+
+        var luauTree = Utility.GetLuauAST(source);
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var function = Assert.IsType<Function>(luauTree.Statements.Last());
+        Assert.Equal("abc", function.Name);
+        Assert.Empty(function.Parameters);
+        Assert.Null(function.ReturnType);
+
+        var body = function.Body;
+        Assert.Equal(3, body.Statements.Count);
+
+        var declaration = Assert.IsType<ConstVariable>(body.Statements[0]);
+        Assert.Equal("_assigned", declaration.Name);
+        Assert.IsType<NumberLiteral>(declaration.Initializer);
+        
+        var expressionStatement = Assert.IsType<ExpressionStatement>(body.Statements[1]);
+        var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", assignment.Operator);
+
+        var leftElementAccess = Assert.IsType<ElementAccess>(assignment.Left);
+        var targetIdentifier = Assert.IsType<Identifier>(leftElementAccess.Target);
+        Assert.Equal("a", targetIdentifier.Name);
+        var index = Assert.IsType<NumberLiteral>(leftElementAccess.Index);
+        Assert.Equal(69, index.Value);
+
+        var assignedValue = Assert.IsType<Identifier>(assignment.Right);
+        Assert.Equal("_assigned", assignedValue.Name);
+
+        var returnStatement = Assert.IsType<Return>(body.Statements[2]);
+        var returnExpression = Assert.IsType<Identifier>(returnStatement.Expression);
+        Assert.Equal("_assigned", returnExpression.Name);
+    }
+
+    [Fact]
+    public void Generates_ExpressionBody_WithIdentifierAssignment()
+    {
+        const string source = """
+                    let a = 1
+                    let b = 2
+                    fn abc -> a = b
+            """;
+
+        var luauTree = Utility.GetLuauAST(source);
+        Assert.Equal(3, luauTree.Statements.Count);
+
+        var function = Assert.IsType<Function>(luauTree.Statements.Last());
+        Assert.Equal("abc", function.Name);
+        Assert.Empty(function.Parameters);
+        Assert.Null(function.ReturnType);
+
+        var body = function.Body;
+        Assert.Equal(2, body.Statements.Count);
+        
+        var expressionStatement = Assert.IsType<ExpressionStatement>(body.Statements[0]);
+        var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", assignment.Operator);
+
+        var leftIdentifier = Assert.IsType<Identifier>(assignment.Left);
+        Assert.Equal("a", leftIdentifier.Name);
+
+        var assignedValue = Assert.IsType<Identifier>(assignment.Right);
+        Assert.Equal("b", assignedValue.Name);
+
+        var returnStatement = Assert.IsType<Return>(body.Statements[1]);
+        var returnExpression = Assert.IsType<Identifier>(returnStatement.Expression);
+        Assert.Equal("a", returnExpression.Name);
+    }
+
+    [Fact]
+    public void Generates_ExpressionBody_WithPropertyAccessAssignment()
+    {
+        const string source = """
+                    interface I { mut prop: number }
+                    let a = none as never as I
+                    fn abc -> a.prop = 69
+            """;
+
+        var luauTree = Utility.GetLuauAST(source);
+        Assert.Equal(3, luauTree.Statements.Count);
+
+        var function = Assert.IsType<Function>(luauTree.Statements.Last());
+        Assert.Equal("abc", function.Name);
+        Assert.Empty(function.Parameters);
+        Assert.Null(function.ReturnType);
+
+        var body = function.Body;
+        Assert.Equal(3, body.Statements.Count);
+
+        var declaration = Assert.IsType<ConstVariable>(body.Statements[0]);
+        Assert.Equal("_assigned", declaration.Name);
+        Assert.IsType<NumberLiteral>(declaration.Initializer);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(body.Statements[1]);
+        var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", assignment.Operator);
+
+        var propertyAccess = Assert.IsType<PropertyAccess>(assignment.Left);
+        var targetIdentifier = Assert.IsType<Identifier>(propertyAccess.Target);
+        Assert.Equal("a", targetIdentifier.Name);
+        Assert.Single(propertyAccess.Names);
+        Assert.Equal("prop", propertyAccess.Names[0]);
+
+        var assignedValue = Assert.IsType<Identifier>(assignment.Right);
+        Assert.Equal("_assigned", assignedValue.Name);
+
+        var returnStatement = Assert.IsType<Return>(body.Statements[2]);
+        var returnExpression = Assert.IsType<Identifier>(returnStatement.Expression);
+        Assert.Equal("_assigned", returnExpression.Name);
+    }
+
     [Theory]
     [InlineData("fn abc -> 69")]
     [InlineData("fn abc { return 69 }")]
@@ -2124,7 +2242,7 @@ public class LuauGeneratorTest
     [InlineData("&&", "and")]
     [InlineData("||", "or")]
     [InlineData("??", "or")]
-    public void Generates_BinaryOperators(string op, string? mappedOp = null)
+    public void Generates_MappedBinaryOperators(string op, string? mappedOp = null)
     {
         var luauTree = Utility.GetLuauAST($"1 {op} 2");
         Assert.Single(luauTree.Statements);
