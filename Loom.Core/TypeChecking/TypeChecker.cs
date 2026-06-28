@@ -24,7 +24,7 @@ public sealed partial class TypeChecker
     private readonly SemanticModel _semanticModel;
     private readonly TypeInferrer _inferrer;
     private readonly TypeNarrower _narrower;
-    
+
     public TypeChecker(SemanticModel semanticModel)
         : base(Types.PrimitiveType.Never)
     {
@@ -188,38 +188,6 @@ public sealed partial class TypeChecker
         return BindType(parameter, declaredType ?? initializerType!);
     }
 
-    public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
-    {
-        var name = interfaceDeclaration.Name.Text;
-        var constraintTypes = interfaceDeclaration.ColonTypeListClause?.Types.ConvertAll(Visit) ?? [];
-        var parameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
-        var constraints = constraintTypes.OfType<InterfaceType>().ToList();
-        var indexerDeclaration = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
-        var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>() ?? [];
-        ObjectIndexer? indexer = null;
-
-        if (indexerDeclaration != null)
-        {
-            var isMutable = indexerDeclaration.MutKeyword != null;
-            var indexType = Visit(indexerDeclaration.IndexType);
-            var valueType = Visit(indexerDeclaration.ColonTypeClause);
-            indexer = new ObjectIndexer(isMutable, indexType, valueType);
-        }
-
-        var properties =
-            from declaration in propertyDeclarations
-            let isMutable = declaration.MutKeyword != null
-            let valueType = Visit(declaration.ColonTypeClause)
-            select new ObjectProperty(isMutable, declaration.Name.Text, valueType);
-
-        var interfaceType = new InterfaceType(name, constraints, new ObjectType(indexer, properties.ToList()));
-        if (parameters == null)
-            return BindType(interfaceDeclaration, interfaceType);
-
-        var genericType = new GenericType(interfaceDeclaration, parameters, interfaceType);
-        return BindType(interfaceDeclaration, genericType);
-    }
-
     public override Type VisitAsExpression(AsExpression asExpression)
     {
         var expressionType = Visit(asExpression.Expression);
@@ -231,41 +199,6 @@ public sealed partial class TypeChecker
     }
 
     public override Type VisitNameOf(NameOf nameOf) => new Types.LiteralType(nameOf.Name.ToString());
-
-    public override Type VisitInterfaceInvocation(InterfaceInvocation node)
-    {
-        var type = Visit(node.Name);
-        if (type is InterfaceType nonGeneric)
-        {
-            CheckInterfaceInvocationInitializers(node, nonGeneric);
-            return BindType(node, nonGeneric);
-        }
- 
-        if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
-        {
-            _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
-            return BindType(node, Types.PrimitiveType.Never);
-        }
- 
-        var substitution = node.TypeArguments != null
-            ? ResolveExplicitInterfaceTypeArguments(node, generic)
-            : _inferrer.InferInterfaceTypeArguments(node, generic, underlying);
- 
-        if (substitution == null)
-            return BindType(node, Types.PrimitiveType.Never);
- 
-        foreach (var tp in generic.Parameters)
-        {
-            if (tp.Constraint != null && substitution.TryGetValue(tp, out var arg))
-                CheckTypeParameterConstraints(node, arg, tp);
-        }
- 
-        var substitutedObject = SubstituteObjectType(underlying.ObjectType, substitution);
-        var interfaceType = new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
-        CheckInterfaceInvocationInitializers(node, interfaceType);
-        return BindType(node, interfaceType);
-    }
-
 
     public override Type VisitInvocation(Invocation invocation)
     {
@@ -316,14 +249,14 @@ public sealed partial class TypeChecker
             return BindType(elementAccess, Types.PrimitiveType.String);
         }
 
-        switch (type)
-        {
-            case ObjectType or InterfaceType:
-                return GetTypeAtIndex(elementAccess, type, indexType);
-            default:
-                _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'.");
-                return BindType(elementAccess, Types.PrimitiveType.Never);
-        }
+        if (type is InstantiatedType instantiated)
+            type = instantiated.Expand();
+
+        if (type is ObjectType or InterfaceType)
+            return GetTypeAtIndex(elementAccess, type, indexType);
+
+        _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'.");
+        return BindType(elementAccess, Types.PrimitiveType.Never);
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -627,11 +560,9 @@ public sealed partial class TypeChecker
             .Where(result => !Type.IsNever(result) && !Type.IsUnknown(result))
             .ToList();
 
-        if (results.Count != 0)
-            return BindType(node, TypeSimplifier.Simplify(new Types.UnionType(results)));
-
-        _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{type}'.");
-        return BindType(node, Types.PrimitiveType.Never);
+        return results.Count != 0
+            ? BindType(node, TypeSimplifier.Simplify(new Types.UnionType(results)))
+            : ReportCannotUseToIndex(node, type, indexType);
     }
 
     private Type GetTypeAtIndexSingle(Node node, Type type, Type indexType) =>
@@ -654,26 +585,19 @@ public sealed partial class TypeChecker
             ? interfaceType.Constraints.ConvertAll(t => GetTypeAtIndexInInterface(node, t, indexType)).Find(Type.IsNotNever) ?? Types.PrimitiveType.Never
             : Types.PrimitiveType.Never;
 
-        if (Type.IsNever(type))
-            _diagnostics.Error(
-                node,
-                InternalCodes.InvalidAccess,
-                $"Expression of type '{indexType}' cannot be used to index type '{interfaceType}'.{cannotFindReason}"
-            );
-
-        return BindType(node, type);
+        return Type.IsNever(type)
+            ? ReportCannotUseToIndex(node, interfaceType, indexType, cannotFindReason)
+            : BindType(node, type);
     }
 
     private Type GetTypeAtIndexInObject(Node node, ObjectType objectType, Type indexType)
     {
         var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
-        if (bodyType != null)
-            return BindType(node, bodyType.ValueType);
-
-        _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
-        return BindType(node, Types.PrimitiveType.Never);
+        return bodyType != null
+            ? BindType(node, bodyType.ValueType)
+            : ReportCannotUseToIndex(node, objectType, indexType, cannotFindReason);
     }
-    
+
     private static Type GetObjectValueType(Type type) =>
         type switch
         {
@@ -719,7 +643,7 @@ public sealed partial class TypeChecker
             );
         }
     }
-    
+
     private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, Types.FunctionType functionType)
     {
         CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
@@ -743,61 +667,6 @@ public sealed partial class TypeChecker
         return possibleReturnTypes.Count == 0 ? Types.PrimitiveType.Void : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
-    private void CheckInterfaceInvocationInitializers(InterfaceInvocation node, InterfaceType interfaceType)
-    {
-        var objectType = interfaceType.ObjectType;
-        var providedProperties = new HashSet<string>();
-        foreach (var initializer in node.Body.Initializers)
-        {
-            switch (initializer)
-            {
-                case InterfaceInvocationPropertyInitializer propertyInitializer:
-                {
-                    var name = propertyInitializer.Name.Text;
-                    var property = objectType.GetProperty(name);
-                    if (property == null)
-                    {
-                        _diagnostics.Error(
-                            propertyInitializer,
-                            InternalCodes.InvalidAccess,
-                            $"Property '{name}' does not exist on interface '{interfaceType.Name}'."
-                        );
-
-                        continue;
-                    }
-
-                    var valueType = Visit(propertyInitializer.Expression);
-                    _semanticModel.TypeSolver.AddConstraint(valueType, property.ValueType, propertyInitializer.Expression);
-                    providedProperties.Add(name);
-                    break;
-                }
-                case InterfaceInvocationIndexInitializer indexInitializer when objectType.Indexer == null:
-                    _diagnostics.Error(
-                        indexInitializer,
-                        InternalCodes.InvalidAccess,
-                        $"Interface '{interfaceType.Name}' does not have an indexer."
-                    );
-
-                    continue;
-                case InterfaceInvocationIndexInitializer indexInitializer:
-                {
-                    var indexType = Visit(indexInitializer.IndexExpression);
-                    var valueType = Visit(indexInitializer.Expression);
-                    _semanticModel.TypeSolver.AddConstraint(indexType, objectType.Indexer.KeyType, indexInitializer.IndexExpression);
-                    _semanticModel.TypeSolver.AddConstraint(valueType, objectType.Indexer.ValueType, indexInitializer.Expression);
-                    break;
-                }
-            }
-        }
-
-        foreach (var property in objectType.Properties.Where(property => !providedProperties.Contains(property.Name)))
-            _diagnostics.Error(
-                node.Body,
-                InternalCodes.IncompleteInterfaceInvocation,
-                $"Missing property initializer for '{property.Name}' in interface '{interfaceType.Name}'."
-            );
-    }
-
     private Type GetDeclarationType(Symbol symbol) =>
         symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != _semanticModel.Tree.File.AbsolutePath
             ? Visit(symbol.Declaration)
@@ -812,8 +681,14 @@ public sealed partial class TypeChecker
 
         return type;
     }
+    
+    private Type ReportCannotUseToIndex(Node node, Type objectType, Type indexType, string? cannotFindReason = "")
+    {
+        _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
+        return BindType(node, Types.PrimitiveType.Never);
+    }
 
-    internal void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
+    private void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
         _diagnostics.Error(
             node,
             InternalCodes.CannotInferType,

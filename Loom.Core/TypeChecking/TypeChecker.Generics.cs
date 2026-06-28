@@ -24,7 +24,6 @@ public sealed partial class TypeChecker
  
         return substitution;
     }
-
     
     private List<Type>? FillGenericArguments(Node errorNode, List<Types.TypeParameter> parameters, List<Type> given)
     {
