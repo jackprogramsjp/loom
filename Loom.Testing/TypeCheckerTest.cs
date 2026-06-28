@@ -644,6 +644,30 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation, "Type 'string' does not satisfy constraint 'Box<number>' for type parameter 'T'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_GenericTypeAlias_UnionArgumentViolatesConstraint()
+    {
+        const string source = """
+            type OnlyNum<T: number> = T
+            let x: OnlyNum<number | string> = 1
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation,
+            "Type 'number | string' does not satisfy constraint 'number' for type parameter 'T'.");
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericFunctionCall_InferredUnionViolatesConstraint()
+    {
+        const string source = """
+            fn onlyNum<T: number>(x: T) -> x
+            onlyNum(42 as (number | string))
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation,
+            "Type 'number | string' does not satisfy constraint 'number' for type parameter 'T'.");
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -655,17 +679,93 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Checks_NestedInstantiatedType_Expand()
+    {
+        const string source = """
+            type Box<T> = T
+            let x: Box<Box<number>> = 42
+            x
+            """;
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_Inference_FromNoneArgument_OptionalParameter()
+    {
+        const string source = """
+            fn id<T>(x: T?) -> x
+            id(none)
+            """;
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(Type.IsNone(type), $"Expected 'none', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_Substitution_DeepFunctionTypes()
+    {
+        const string source = """
+            fn compose<T, U>(f: fn(T): U, g: fn(U): T): fn(T): T -> f
+            compose(fn (x: number): string -> "", fn (s: string): number -> 0)
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var fnType = Assert.IsType<FunctionType>(type);
+        Assert.True(fnType.ReturnType.Equals(PrimitiveType.String));
+    }
+    
+    [Fact]
+    public void Checks_GenericFunction_TypeParameterUsedInArrayType()
+    {
+        const string source = """
+            fn first<T>(arr: T[]) -> arr[0]
+            first(["hello", "world"])
+            """;
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.String), $"Expected 'string', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_GenericInterface_IndexerInferenceWithSameTypeParameter()
+    {
+        const string source = """
+            interface Duo<T> { first: T, [number]: T }
+            new Duo { first: 42, [0]: 99 }
+            """;
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var iface = Assert.IsType<InterfaceType>(result.ReturnType);
+        var prop = iface.ObjectType.GetProperty("first")!;
+        Assert.True(prop.ValueType.Equals(PrimitiveType.Number));
+        var indexer = iface.ObjectType.Indexer!;
+        Assert.True(indexer.ValueType.Equals(PrimitiveType.Number));
+    }
+
+    [Fact]
+    public void Checks_GenericConstraint_IntersectionType()
+    {
+        const string source = """
+            interface A { a: number }
+            interface B { b: string }
+            fn merge<T: A & B>(obj: T): T -> obj
+            merge(none as never as (A & B))
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertNoErrors(diagnostics);
+    }
+    
+    [Fact]
     public void Checks_KeyOf_OnGenericInstantiation()
     {
         const string source = """
             interface Box<T> { value: T }
             type K = keyof(Box<number>)
             """;
+
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal("value", literal.Value);
     }
-    
+
     [Fact]
     public void Checks_Inference_ThroughAliasedGenericParameter()
     {
