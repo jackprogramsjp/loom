@@ -17,6 +17,110 @@ public class TypeSolverTest
     private static DiagnosticBag CreateDiagnostics() => new();
 
     [Fact]
+    public void Unify_InstantiatedWithGeneric_BindsParameters()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var generic = new GenericType(
+            new TypeAlias(null!, null!, null!, null!),
+            [new TypeParameter("T")],
+            PrimitiveType.Never
+        );
+
+        var instantiated = new InstantiatedType(generic, [PrimitiveType.Number]);
+
+        solver.AddConstraint(instantiated, generic, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_ExtraProperties_Allowed()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var objectOne = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", PrimitiveType.Number), new ObjectProperty(false, "y", PrimitiveType.String)]
+        );
+
+        var objectTwo = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", PrimitiveType.Number)]
+        );
+
+        solver.AddConstraint(objectOne, objectTwo, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Unify_ObjectTypes_MissingIndexer_ReportsError()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var objectWithIndexer = new ObjectType(new ObjectIndexer(true, PrimitiveType.String, PrimitiveType.Number), []);
+        var objectWithoutIndexer = new ObjectType(null, []);
+        solver.AddConstraint(objectWithoutIndexer, objectWithIndexer, Utility.Span);
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_InterfaceTypes_DifferentObjectBodies_ReportsError()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var baseInterface = new InterfaceType("Base", [], ObjectType.Empty);
+        var objectA = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.Number)]);
+        var objectB = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.String)]);
+        var interfaceA = new InterfaceType("I", [baseInterface], objectA);
+        var interfaceB = new InterfaceType("I", [baseInterface], objectB);
+
+        solver.AddConstraint(interfaceA, interfaceB, Utility.Span);
+        Assert.False(solver.SolveConstraints());
+        Assert.NotEmpty(diagnostics.Errors().Set);
+    }
+
+    [Fact]
+    public void Unify_FunctionTypes_IgnoresTypeParameterConstraints()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var constrainedNumber = new TypeParameter("T", PrimitiveType.Number);
+        var constrainedString = new TypeParameter("U", PrimitiveType.String);
+        var functionOne = new FunctionType([constrainedNumber], [constrainedNumber], PrimitiveType.Bool);
+        var functionTwo = new FunctionType([constrainedString], [constrainedString], PrimitiveType.Bool);
+
+        solver.AddConstraint(functionOne, functionTwo, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Unify_UnionTypes_Identical_Succeeds()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        var unionOne = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
+        var unionTwo = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
+
+        solver.AddConstraint(unionOne, unionTwo, Utility.Span);
+        Assert.True(solver.SolveConstraints());
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Unify_UnionTypes_AssignableElement_Succeeds()
+    {
+        var diagnostics = CreateDiagnostics();
+        var solver = new TypeSolver(diagnostics);
+        solver.AddConstraint(PrimitiveType.Number, new UnionType([PrimitiveType.Number, PrimitiveType.String]), Utility.Span);
+        Assert.True(solver.SolveConstraints());
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
     public void Unify_InfiniteType_OccursCheck()
     {
         var diagnostics = CreateDiagnostics();

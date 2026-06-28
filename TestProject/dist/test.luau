@@ -1,5 +1,4 @@
-const function id<T>(x: T?): T?
+const function id<T>(x: T | string)
   return x
 end
-const v: number? = 42
-id(v)
+id("hello")

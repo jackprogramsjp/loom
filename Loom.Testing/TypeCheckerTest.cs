@@ -668,6 +668,53 @@ public class TypeCheckerTest
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation,
             "Type 'number | string' does not satisfy constraint 'number' for type parameter 'T'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_GenericFunctionCall_MissingRequiredTypeParameter()
+    {
+        const string source = """
+            fn identity<T, U = number>(value: T?) -> value
+            identity()
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'T'. Provide explicit type arguments."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_Inference_UnionMultipleTypeParams_CannotInfer()
+    {
+        const string source = """
+            fn id<T, U>(x: T | U) -> x
+            id(42)
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'U'. Provide explicit type arguments."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_Inference_FunctionTypeParamCountMismatch()
+    {
+        const string source = """
+            fn apply<T>(f: fn(T): void) -> f
+            fn f(a: number, b: string): void {}
+            apply(f)
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'T'. Provide explicit type arguments."
+        );
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -678,6 +725,30 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_Inference_MatchingUnionWithTypeParam_Widens()
+    {
+        const string source = """
+            fn id<T = number>(x: T | string) -> x
+            id("hello")
+            """;
+        var type = Utility.GetLastStatementType(source);
+        Assert.Equal(PrimitiveType.String, type);
+    }
+    
+    [Fact]
+    public void Checks_Inference_RecursiveGenericType_DoesNotLoop()
+    {
+        const string source = """
+            interface List<T> { value: T, next: List<T>? }
+            fn first<T>(list: List<T>): T -> list.value
+            first(new List { value: 42, next: none })
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+    
     [Fact]
     public void Checks_NestedInstantiatedType_Expand()
     {
@@ -705,12 +776,14 @@ public class TypeCheckerTest
     public void Checks_Substitution_DeepFunctionTypes()
     {
         const string source = """
-            fn compose<T, U>(f: fn(T): U, g: fn(U): T): fn(T): T -> f
-            compose(fn (x: number): string -> "", fn (s: string): number -> 0)
+            fn compose<T, U>(f: fn(p: T): U, g: fn(p: U): T): fn(p: T): T -> f;
+            fn a(x: number): string -> "";
+            fn b(s: string): number -> 0;
+            compose(a, b);
             """;
         var type = Utility.GetLastStatementType(source);
         var fnType = Assert.IsType<FunctionType>(type);
-        Assert.True(fnType.ReturnType.Equals(PrimitiveType.String));
+        Assert.True(fnType.ReturnType.Equals(PrimitiveType.Number));
     }
     
     [Fact]
@@ -2247,22 +2320,6 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void ThrowsFor_GenericFunctionCall_MissingRequiredTypeParameter()
-    {
-        const string source = """
-            fn identity<T, U = number>(value: T?) -> value
-            identity()
-            """;
-
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'T'. Provide explicit type arguments."
-        );
-    }
-
-    [Fact]
     public void Checks_ElementAccess_NestedArray()
     {
         var type = Utility.GetLastStatementType("let matrix = [[1, 2], [3, 4]]; matrix[0][1]");
@@ -2484,7 +2541,7 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void Checks_GenericFunctionCall_InferenceAcrossMultipleParameters()
+    public void Checks_GenericFunctionCall_InferenceAcrossMultipleParameters_Widens()
     {
         const string source = """
             fn first<T>(a: T, b: T) -> a
@@ -2492,9 +2549,7 @@ public class TypeCheckerTest
             """;
 
         var type = Utility.GetLastStatementType(source);
-        Assert.True(type is LiteralType, $"Expected '42', got '{type}'");
-        var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal(42L, literal.Value);
+        Assert.Equal(PrimitiveType.Number, type);
     }
 
     [Fact]

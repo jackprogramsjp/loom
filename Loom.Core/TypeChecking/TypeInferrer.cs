@@ -172,7 +172,18 @@ public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypePara
     private static bool BindTypeParameter(TypeParameter typeParameter, Type argumentType, TypeParameterSubstitution inferredTypes)
     {
         if (inferredTypes.TryGetValue(typeParameter, out var existingType))
-            return existingType.Equals(argumentType);
+        {
+            if (existingType.Equals(argumentType))
+                return true;
+
+            var widenedExisting = existingType.Widen();
+            var widenedArgument = argumentType.Widen();
+            if (!widenedExisting.Equals(widenedArgument))
+                return true;
+
+            inferredTypes[typeParameter] = widenedExisting;
+            return true;
+        }
 
         inferredTypes[typeParameter] = argumentType;
         return true;

@@ -1,2 +1,2 @@
-fn fact(n: number) -> n <= 1 ? 1 : n * fact(n - 1)
-fact(5)
+fn id<T = number>(x: T | string) -> x
+id("hello")
