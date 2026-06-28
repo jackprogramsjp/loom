@@ -113,8 +113,8 @@ public sealed partial class TypeChecker
         var returnType = GetReturnType(functionDeclaration);
         var functionType = BindType(functionDeclaration, new Types.FunctionType(typeParameters, parameterTypes, returnType));
         Visit(functionDeclaration.Body);
-
-        return BindType(functionDeclaration, functionType);
+        
+        return functionType;
     }
 
     public override Type VisitTypeAlias(TypeAlias typeAlias)
@@ -517,6 +517,8 @@ public sealed partial class TypeChecker
         return BindType(typeParameter, parameter);
     }
 
+    private TypedFlowState CurrentFlowState() => _flowStates.Peek();
+
     private Type VisitWithFlowState(Node node, TypedFlowState state)
     {
         _flowStates.Push(state);
@@ -656,7 +658,6 @@ public sealed partial class TypeChecker
         if (functionDeclaration.ReturnType != null)
             return Visit(functionDeclaration.ReturnType);
 
-        // TODO: flow analysis
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
             : functionDeclaration.Body
@@ -681,7 +682,7 @@ public sealed partial class TypeChecker
 
         return type;
     }
-    
+
     private Type ReportCannotUseToIndex(Node node, Type objectType, Type indexType, string? cannotFindReason = "")
     {
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
@@ -694,8 +695,6 @@ public sealed partial class TypeChecker
             InternalCodes.CannotInferType,
             $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
         );
-
-    private TypedFlowState CurrentFlowState() => _flowStates.Peek();
 
     private static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {

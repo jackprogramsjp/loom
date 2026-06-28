@@ -1,3 +1,2 @@
-fn id<T>(x: T?): T? -> x;
-let v: number? = 42;
-id(v)
+fn fact(n: number) -> n <= 1 ? 1 : n * fact(n - 1)
+fact(5)

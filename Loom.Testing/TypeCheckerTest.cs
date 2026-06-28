@@ -1,7 +1,7 @@
 using Loom.Diagnostics;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
-using Type = System.Type;
+using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Testing;
 
@@ -631,6 +631,19 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotInferType, "Cannot infer type parameter 'B'. Provide explicit type arguments.");
     }
+
+    [Fact]
+    public void ThrowsFor_ConstraintViolation_DeepInstantiation()
+    {
+        const string source = """
+            type Box<T> = T
+            type NumericBox<T: Box<number>> = T
+            let x: NumericBox<string> = "hello"
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintViolation, "Type 'string' does not satisfy constraint 'Box<number>' for type parameter 'T'.");
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -641,6 +654,139 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_KeyOf_OnGenericInstantiation()
+    {
+        const string source = """
+            interface Box<T> { value: T }
+            type K = keyof(Box<number>)
+            """;
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal("value", literal.Value);
+    }
+    
+    [Fact]
+    public void Checks_Inference_ThroughAliasedGenericParameter()
+    {
+        const string source = """
+            type NumList = number[]
+            fn head<T>(list: T[]) -> list[0]
+            head([1, 2, 3] as NumList)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_InterfaceInvocation_OnlyIndexer()
+    {
+        const string source = """
+            interface StrNum { [string]: number }
+            new StrNum { ["key"]: 42 }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+    }
+
+    [Fact]
+    public void Checks_Inference_GenericFunctionTypeParameter()
+    {
+        const string source = """
+            fn apply<T>(f: fn(): T): T -> f()
+            fn getAnswer -> 42
+            apply(getAnswer)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_InstantiatedType_WithUnknownArgument()
+    {
+        const string source = """
+            type Box<T> = T
+            let x: Box<unknown> = 1
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(Type.IsUnknown(type), $"Expected 'unknown', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_InstantiatedType_WithNeverArgument()
+    {
+        const string source = """
+            type Box<T> = T
+            let x: Box<never> = none as never
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(Type.IsNever(type), $"Expected 'never', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_Inference_OmittedOptionalArgument()
+    {
+        const string source = """
+            fn wrap<T>(a: T, b: T? = none) -> a
+            wrap(42)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Inference_DeeplyNestedObjectParameter()
+    {
+        const string source = """
+            interface B<T> { b: T }
+            interface A<T> { a: B<T> }
+            fn foo<T>(x: A<T>) -> x.a.b;
+            foo(new A { a: new B { b: 42 } });
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_GenericConstraint_UsingInstantiatedType()
+    {
+        const string source = """
+            type Box<T> = T
+            type Container<T: Box<number>> = T
+            let x: Container<number> = 42
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+
+    [Fact]
+    public void Checks_TypeAlias_ChainExpansion()
+    {
+        const string source = """
+            type B = number;
+            type A = B;
+            let x: A = 1;
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
     [Fact]
     public void Checks_Inference_ReturnTypeOnlyTypeParameterUsesDefault()
     {
@@ -1244,7 +1390,7 @@ public class TypeCheckerTest
     public void Checks_While_PropagatesBodyType()
     {
         var type = Utility.GetLastStatementType("while true { 42; break }");
-        Assert.True(TypeChecking.Types.Type.IsNever(type), $"Expected 'never', got '{type}'");
+        Assert.True(Type.IsNever(type), $"Expected 'never', got '{type}'");
     }
 
     [Fact]
