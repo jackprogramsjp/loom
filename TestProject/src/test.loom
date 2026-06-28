@@ -1,2 +1,2 @@
-fn id<T = number>(x: T | string) -> x
-id("hello")
+let x: string | number = 69;
+print(x + 69)
