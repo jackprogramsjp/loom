@@ -375,6 +375,13 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
     }
+    
+    [Fact]
+    public void WarnsFor_UseExpressionBody()
+    {
+        var diagnostics = Utility.GetSemanticModel("fn abc() { return 1; }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.RedundantCode, "Use expression body.");
+    }
 
     #region Resolves
     [Fact]

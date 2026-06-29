@@ -1,4 +1,1 @@
-const function id<T>(x: T | string)
-  return x
-end
-id("hello")
+const _ = { minimum = 69, maximum = 420 }

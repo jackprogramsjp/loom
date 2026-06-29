@@ -1,2 +1,1 @@
-let x: string | number = 69;
-print(x + 69)
+new Range { minimum: 69, maximum: 420 }

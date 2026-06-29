@@ -201,6 +201,9 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var lastContext = _context;
         _context = ResolverContext.Function;
         PushInheritedFlowState();
+        if (functionDeclaration.Body is Block { Statements: [Return] })
+            _diagnostics.Warn(functionDeclaration, InternalCodes.RedundantCode, "Use expression body.");
+
         base.VisitFunctionDeclaration(functionDeclaration);
         PopFlowState();
         _context = lastContext;
@@ -588,36 +591,36 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         AddToLookup(symbol);
         AddDeclaration(symbol);
         _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
-        
+
         if (!parserResult.Tree.File.IsDeclaration) return;
         symbol.IsGlobal = true;
         _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
     }
-    
+
     private void AddToLookup(Symbol symbol)
     {
         var scope = CurrentScope();
         var lookup = GetLookup(symbol.Kind, scope);
         if (!lookup.ContainsKey(symbol.Name))
             lookup[symbol.Name] = [];
-        
+
         lookup[symbol.Name].Add(symbol);
     }
-    
+
     private void AddDeclaration(Symbol symbol)
     {
         var id = symbol.Declaration.Id;
         if (!_allDeclarations.ContainsKey(id))
             _allDeclarations[id] = [];
-        
+
         _allDeclarations[id].Add(symbol);
     }
-    
+
     private void AddReference(Node node, Symbol symbol)
     {
         if (!_allReferences.ContainsKey(node.Id))
             _allReferences[node.Id] = [];
-        
+
         _allReferences[node.Id].Add(symbol);
     }
 
@@ -642,7 +645,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
         return null;
     }
-    
+
     private Symbol? LookupSymbolCurrentScope(string name, SymbolKind kind)
     {
         var lookup = GetLookup(kind, CurrentScope());

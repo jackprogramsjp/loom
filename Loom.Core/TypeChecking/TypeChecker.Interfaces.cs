@@ -29,6 +29,9 @@ public sealed partial class TypeChecker
     public override Type VisitInterfaceInvocation(InterfaceInvocation node)
     {
         var type = Visit(node.Name);
+        if (type.Equals(Intrinsics.RangeType))
+            _diagnostics.Warn(node, InternalCodes.RedundantCode, "Use range literal.");
+        
         if (type is InterfaceType nonGeneric)
         {
             CheckInterfaceInvocationInitializers(node, nonGeneric);

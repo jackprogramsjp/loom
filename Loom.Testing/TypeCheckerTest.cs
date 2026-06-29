@@ -723,6 +723,13 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("1 ?? 2");
         Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.RedundantCode);
     }
+    
+    [Fact]
+    public void WarnsFor_UseRangeLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("new Range { minimum: 69, maximum: 420 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.RedundantCode, "Use range literal.");
+    }
 
     #region Checks
     [Fact]
