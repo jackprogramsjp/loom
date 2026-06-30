@@ -7,6 +7,7 @@ using Loom.SemanticAnalysis;
 using Loom.Text;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
+using ArrayType = Loom.TypeChecking.Types.ArrayType;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ElementAccess = Loom.Parsing.AST.ElementAccess;
 using Expression = Loom.Parsing.AST.Expression;
@@ -36,12 +37,21 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
     
     public override LuauNode VisitFor(For @for)
     {
-        var name = @for.Declaration.Name.Text;
+        var names = @for.Names.ConvertAll(n => n.Token.Text);
         var body = GenerateChunk(@for.Body);
         var collectionType = semanticModel.GetType(@for.CollectionExpression);
         var collectionExpression = Visit(@for.CollectionExpression);
+        if (names.Count == 2 && collectionType is ArrayType)
+        {
+            names.Reverse();
+            return new ForStatement(names, collectionExpression, body);
+        }
+        
+        if (collectionType is ObjectType or InterfaceType)
+            return new ForStatement(names.Count == 1 ? ["_", names[0]] : names, collectionExpression, body);
+        
         if (!collectionType.Equals(Intrinsics.RangeType))
-            return new ForStatement(["_", name], collectionExpression, body);
+            return new ForStatement(names, collectionExpression, body);
 
         LuauExpression start;
         LuauExpression end;
@@ -66,7 +76,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
             incrementBy = new IfExpression(new Luau.AST.BinaryOperator(end, "<", start), negativeOne, [], one);
         }
 
-        return new NumericForStatement(name, start, end, incrementBy, body);
+        return new NumericForStatement(names.First(), start, end, incrementBy, body);
     }
 
     public override IfStatement VisitIf(If @if)

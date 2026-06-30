@@ -1,1 +1,5 @@
-new Range { minimum: 69, maximum: 420 }
+interface Foo { abc: number }
+
+for s : ['a'] {
+    print(s)
+}

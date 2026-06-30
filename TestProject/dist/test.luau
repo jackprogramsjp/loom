@@ -1,1 +1,6 @@
-const _ = { minimum = 69, maximum = 420 }
+type Foo = {
+  read abc: number
+}
+for _, s in {"a"} do
+  print(s)
+end

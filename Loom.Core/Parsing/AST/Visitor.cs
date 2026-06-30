@@ -13,7 +13,7 @@ public abstract class Visitor<T>(T defaultValue)
         (TResult)Visit(node)!;
 
     public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
-    public virtual T VisitFor(For @for) => CombineResults([Visit(@for.Declaration), Visit(@for.CollectionExpression), Visit(@for.Body)]);
+    public virtual T VisitFor(For @for) => CombineResults([Visit(@for.CollectionExpression), Visit(@for.Body)]);
     public virtual T VisitAfter(After after) => CombineResults([Visit(after.Duration), Visit(after.Body)]);
     public virtual T VisitBreak(Break @break) => DefaultValue;
     public virtual T VisitContinue(Continue @continue) => DefaultValue;
@@ -150,7 +150,7 @@ public abstract class Visitor<T>(T defaultValue)
 
     protected T? MaybeVisit(Node? node, T? defaultValue = default) => node is null ? defaultValue : Visit(node);
 
-    private T VisitList<TNode>(List<TNode> nodes)
+    protected T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
 }

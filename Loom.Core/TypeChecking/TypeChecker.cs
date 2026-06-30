@@ -69,12 +69,44 @@ public sealed partial class TypeChecker
 
     public override Type VisitFor(For @for)
     {
-        Visit(@for.Declaration);
         var collectionType = Visit(@for.CollectionExpression);
-        _semanticModel.TypeSolver.AddConstraint(collectionType, ObjectType.Empty, @for.CollectionExpression);
+        if (collectionType is InstantiatedType i)
+            collectionType = i.Expand();
 
-        var elementType = collectionType.Equals(Intrinsics.RangeType) ? Types.PrimitiveType.Number : GetObjectValueType(collectionType);
-        BindType(@for.Declaration, elementType);
+        _semanticModel.TypeSolver.AddConstraint(collectionType, ObjectType.Empty, @for.CollectionExpression);
+        var isRange = collectionType.Equals(Intrinsics.RangeType);
+        var elementType = isRange ? Types.PrimitiveType.Number : GetObjectValueType(collectionType);
+        var maxNames = isRange ? 1 : 2;
+        if (@for.Names.Count > maxNames)
+        {
+            _diagnostics.NotImplemented(
+                @for.Names[maxNames],
+                isRange
+                    ? "Iterating over a range only produces one value, so only one name is permitted."
+                    : "Functional iterators are not supported yet, so more than two names is not permitted."
+            );
+
+            return BindType(@for, Types.PrimitiveType.Never);
+        }
+
+        switch (collectionType)
+        {
+            case Types.ArrayType:
+                BindType(@for.Names[0], elementType);
+                if (@for.Names.Count > 1)
+                    BindType(@for.Names[1], Types.PrimitiveType.Number);
+                break;
+            case InterfaceType or ObjectType:
+            {
+                var objectType = collectionType is InterfaceType interfaceType ? interfaceType.ObjectType : (ObjectType)collectionType;
+                BindType(@for.Names[0], objectType.KeyUnion());
+                if (@for.Names.Count > 1)
+                    BindType(@for.Names[1], elementType);
+                
+                break;
+            }
+        }
+
         return BindType(@for, Visit(@for.Body));
     }
 
@@ -113,7 +145,7 @@ public sealed partial class TypeChecker
         var returnType = GetReturnType(functionDeclaration);
         var functionType = BindType(functionDeclaration, new Types.FunctionType(typeParameters, parameterTypes, returnType));
         Visit(functionDeclaration.Body);
-        
+
         return functionType;
     }
 

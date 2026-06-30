@@ -48,17 +48,13 @@ public sealed partial class Parser
         return new Block(leftBrace, rightBrace, statements);
     }
     
-    private Statement ParseFor(Token keyword)
+    private For ParseFor(Token keyword)
     {
-        var variableKeyword = Match(out var letKeyword, SyntaxKind.LetKeyword) ? letKeyword : Expect(SyntaxKind.MutKeyword, "variable signature");
-        var declaration = ParseDeclareVariableSignature(variableKeyword);
-        if (variableKeyword.Kind is not (SyntaxKind.LetKeyword or SyntaxKind.MutKeyword))
-            return new NullStatement(variableKeyword);
-
-        var inKeyword = Expect(SyntaxKind.InKeyword);
+        var names = ParseDelimited(() => new Identifier(ExpectIdentifier()));
+        var colon = Expect(SyntaxKind.Colon);
         var expression = ParseExpression();
         var body = ParseStatement();
-        return new For(keyword, declaration, inKeyword, expression, body);
+        return new For(keyword, names, colon, expression, body);
     }
 
     private After ParseAfter(Token keyword)

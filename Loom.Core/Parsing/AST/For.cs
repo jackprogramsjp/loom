@@ -2,12 +2,12 @@ using Loom.Text;
 
 namespace Loom.Parsing.AST;
 
-public sealed class For(Token keyword, DeclareVariableSignature declaration, Token inKeyword, Expression collectionExpression, Statement body)
-    : Statement([keyword, ..declaration.Tokens, inKeyword, ..collectionExpression.Tokens, ..body.Tokens], [declaration, collectionExpression, body])
+public sealed class For(Token keyword, List<Identifier> names, Token colon, Expression collectionExpression, Statement body)
+    : Statement([keyword, ..names.SelectMany(n => n.Tokens), colon, ..collectionExpression.Tokens, ..body.Tokens], [collectionExpression, body])
 {
     public Token Keyword { get; } = keyword;
-    public DeclareVariableSignature Declaration { get; } = declaration;
-    public Token InKeyword { get; } = inKeyword;
+    public List<Identifier> Names { get; } = names;
+    public Token Colon { get; } = colon;
     public Expression CollectionExpression { get; } = collectionExpression;
     public Statement Body { get; } = body;
     

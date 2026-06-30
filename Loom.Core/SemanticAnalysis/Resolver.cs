@@ -67,9 +67,16 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitFor(For @for)
     {
-        PushScope();
-        Visit(@for.Declaration);
         Visit(@for.CollectionExpression);
+        PushScope();
+        foreach (var name in @for.Names)
+        {
+            if (!DeclareVariable(name, name.Token.Text, SymbolKind.Variable, out var symbol))
+                return false;
+            
+            MarkDefinitelyInitialized(symbol);
+        }
+
         var beforeLoop = new FlowState(CurrentFlowState());
         var lastContext = _context;
         _context = ResolverContext.Loop;
@@ -554,11 +561,13 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
+    private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false) =>
+        DeclareVariable(node, node.Name.Text, symbolKind, out symbol, isMutable);
+    
+    private bool DeclareVariable(Node node, string name, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
     {
         symbol = null;
         var scope = CurrentScope();
-        var name = node.Name.Text;
         if (scope.VariableLookup.ContainsKey(name))
         {
             _diagnostics.Error(node, InternalCodes.DuplicateName, $"Variable '{name}' is already declared in this scope.");

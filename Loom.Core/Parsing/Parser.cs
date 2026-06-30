@@ -22,7 +22,6 @@ public sealed partial class Parser(LexerResult lexerResult)
     }
     
     private List<T> ParseDelimited<T>(Func<T> parse, SyntaxKind delimiter = SyntaxKind.Comma)
-        where T : Node?
     {
         var first = parse();
         if (first == null)
@@ -161,7 +160,8 @@ public sealed partial class Parser(LexerResult lexerResult)
         return match;
     }
 
-    private Token ExpectIdentifier(string expected = "identifier") => Expect(SyntaxKind.Identifier, expected);
+    private Token ExpectIdentifier() => ExpectIdentifier("identifier");
+    private Token ExpectIdentifier(string expected) => Expect(SyntaxKind.Identifier, expected);
     private Token Expect(SyntaxKind kind, string expected) => Expect(kind, token => $"Expected {expected}, got {SafeTokenText(token)}.");
 
     private Token Expect(SyntaxKind kind, Func<Token?, string>? message = null)

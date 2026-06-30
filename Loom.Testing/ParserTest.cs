@@ -637,7 +637,7 @@ public class ParserTest
         Assert.Equal("x", forStmt.Declaration.Name.Text);
         Assert.Equal(SyntaxKind.LetKeyword, forStmt.Declaration.Keyword.Kind);
         Assert.Null(forStmt.Declaration.ColonTypeClause);
-        Assert.Equal(SyntaxKind.InKeyword, forStmt.InKeyword.Kind);
+        Assert.Equal(SyntaxKind.InKeyword, forStmt.Colon.Kind);
         Assert.IsType<Identifier>(forStmt.CollectionExpression);
         var body = Assert.IsType<Block>(forStmt.Body);
         Assert.Single(body.Statements);
@@ -654,7 +654,7 @@ public class ParserTest
         Assert.Equal("x", forStmt.Declaration.Name.Text);
         Assert.Equal(SyntaxKind.MutKeyword, forStmt.Declaration.Keyword.Kind);
         Assert.Null(forStmt.Declaration.ColonTypeClause);
-        Assert.Equal(SyntaxKind.InKeyword, forStmt.InKeyword.Kind);
+        Assert.Equal(SyntaxKind.InKeyword, forStmt.Colon.Kind);
         Assert.IsType<Identifier>(forStmt.CollectionExpression);
         Assert.IsType<Break>(forStmt.Body);
     }
