@@ -436,19 +436,21 @@ end)
 ##
 ```ts
 let collection = [1, 2, 3, 4];
-for let n in collection {
-    print(n);
+for v, i : collection {
+    print(i);
+    print(v);
 }
 ```
 ```luau
 const collection = {1, 2, 3, 4}
-for n in collection do
-    print(n)
+for i, v in collection do
+    print(i)
+    print(v)
 end
 ```
 ##
 ```ts
-for let n in 1..10 print(n)
+for n : 1..10 print(n)
 ```
 ```luau
 for n in 1, 10 do
@@ -457,7 +459,7 @@ end
 ```
 ##
 ```ts
-for let n in 10..1 print(n)
+for n : 10..1 print(n)
 ```
 ```luau
 for n in 10, 1, -1 do
