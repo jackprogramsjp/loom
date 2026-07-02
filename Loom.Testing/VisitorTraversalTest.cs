@@ -132,9 +132,9 @@ public class VisitorTraversalTest
     [Fact]
     public void For_VisitsChildren() =>
         AssertVisitOrder(
-            "for let x in 1..10 { 1 }",
+            "for x : 1..10 { 1 }",
             "For",
-            "DeclareVariableSignature",
+            "Identifier",
             "RangeLiteral",
             "Literal",
             "Literal",

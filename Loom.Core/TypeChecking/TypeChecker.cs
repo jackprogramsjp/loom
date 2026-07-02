@@ -89,6 +89,12 @@ public sealed partial class TypeChecker
             return BindType(@for, Types.PrimitiveType.Never);
         }
 
+        if (collectionType.Equals(Intrinsics.RangeType))
+        {
+            BindType(@for.Names[0], elementType);
+            return BindType(@for, Visit(@for.Body));
+        }
+
         switch (collectionType)
         {
             case Types.ArrayType:

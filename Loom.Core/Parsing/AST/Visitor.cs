@@ -13,7 +13,7 @@ public abstract class Visitor<T>(T defaultValue)
         (TResult)Visit(node)!;
 
     public virtual T VisitTree(Tree tree) => VisitList(tree.Statements);
-    public virtual T VisitFor(For @for) => CombineResults([Visit(@for.CollectionExpression), Visit(@for.Body)]);
+    public virtual T VisitFor(For @for) => CombineResults([VisitList(@for.Names), Visit(@for.CollectionExpression), Visit(@for.Body)]);
     public virtual T VisitAfter(After after) => CombineResults([Visit(after.Duration), Visit(after.Body)]);
     public virtual T VisitBreak(Break @break) => DefaultValue;
     public virtual T VisitContinue(Continue @continue) => DefaultValue;
@@ -138,9 +138,9 @@ public abstract class Visitor<T>(T defaultValue)
     public virtual T VisitEqualsTypeClause(EqualsTypeClause equalsTypeClause) => Visit(equalsTypeClause.Type);
     public virtual T VisitEqualsValueClause(EqualsValueClause equalsValueClause) => Visit(equalsValueClause.Value);
 
-    public virtual T VisitNullExpression(NullExpression nullExpression) => DefaultValue;
-    public virtual T VisitNullStatement(NullStatement nullStatement) => DefaultValue;
-    public virtual T VisitNullTypeExpression(NullTypeExpression nullTypeExpression) => DefaultValue;
+    public virtual T VisitNullExpression(NullExpression _) => DefaultValue;
+    public virtual T VisitNullStatement(NullStatement _) => DefaultValue;
+    public virtual T VisitNullTypeExpression(NullTypeExpression _) => DefaultValue;
 
     protected virtual T CombineResults(IEnumerable<T?> results) => results.LastOrDefault(r => r != null)!;
 

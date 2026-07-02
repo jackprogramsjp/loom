@@ -318,7 +318,7 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_VariableInitializedInForBody_UsedAfter()
     {
-        var diagnostics = Utility.GetSemanticModel("mut x: number; for let _ in 1..10 { x = 42; } x;").Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("mut x: number; for _ : 1..10 { x = 42; } x;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
     }
     
@@ -332,28 +332,28 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_ForLoop_NonObjectCollection_Number()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in 42 { }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for x : 42 { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '42' is not assignable to type 'object'.");
     }
 
     [Fact]
     public void ThrowsFor_ForLoop_NonObjectCollection_Bool()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in true { }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for x : true { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'true' is not assignable to type 'object'.");
     }
 
     [Fact]
     public void ThrowsFor_ForLoop_NonObjectCollection_String()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in \"abc\" { }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for x : \"abc\" { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '\"abc\"' is not assignable to type 'object'.");
     }
 
     [Fact]
     public void ThrowsFor_ForLoop_NonObjectCollection_Optional()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Foo {}; let a: Foo? = new Foo {}; for let x in a { }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Foo {}; let a: Foo? = new Foo {}; for x : a { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'Foo?' is not assignable to type 'object'.");
     }
     
@@ -531,10 +531,10 @@ public class ResolverTest
     [Fact]
     public void Allows_ForLoopVariable_ShadowingOuterVariable()
     {
-        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; for let x in 1..10 { x; }"));
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; for x : 1..10 { x; }"));
         var statements = model.Tree.Statements;
         var forStmt = Assert.IsType<For>(statements[1]);
-        var declSymbol = model.GetDeclarationSymbol(forStmt.Declaration);
+        var declSymbol = model.GetDeclarationSymbol(forStmt.Names.First());
         Assert.NotNull(declSymbol);
         
         var outerDecl = Assert.IsType<VariableDeclaration>(statements[0]);
@@ -572,10 +572,10 @@ public class ResolverTest
     public void Allows_NonSealedInterfaceConstraints() => Utility.AssertNoErrors(Utility.GetSemanticModel("interface A; interface B: A;"));
     
     [Fact]
-    public void Allows_BreakInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for let x in 1..10 { break }"));
+    public void Allows_BreakInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for x : 1..10 { break }"));
     
     [Fact]
-    public void Allows_ContinueInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for let x in 1..10 { continue }"));
+    public void Allows_ContinueInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for x : 1..10 { continue }"));
 
     [Fact]
     public void Allows_BreakInsideWhile() => Utility.AssertNoErrors(Utility.GetSemanticModel("while true { break }"));

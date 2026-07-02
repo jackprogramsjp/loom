@@ -34,7 +34,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
     }
 
     protected override LuauNode Visit(Node node) => node.Accept(this);
-    
+
     public override LuauNode VisitFor(For @for)
     {
         var names = @for.Names.ConvertAll(n => n.Token.Text);
@@ -46,12 +46,11 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
             names.Reverse();
             return new ForStatement(names, collectionExpression, body);
         }
-        
-        if (collectionType is ObjectType or InterfaceType)
-            return new ForStatement(names.Count == 1 ? ["_", names[0]] : names, collectionExpression, body);
-        
+
         if (!collectionType.Equals(Intrinsics.RangeType))
-            return new ForStatement(names, collectionExpression, body);
+            return collectionType is ObjectType or InterfaceType
+                ? new ForStatement(names.Count == 1 ? ["_", names[0]] : names, collectionExpression, body)
+                : new ForStatement(names, collectionExpression, body);
 
         LuauExpression start;
         LuauExpression end;

@@ -1,5 +1,1 @@
-interface Foo { abc: number }
-
-for s : ['a'] {
-    print(s)
-}
+let r = 1..10; for i : r { }

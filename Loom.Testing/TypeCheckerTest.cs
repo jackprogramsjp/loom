@@ -1292,7 +1292,7 @@ public class TypeCheckerTest
     [Fact]
     public void Checks_ForLoopOverObjectValues()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Data { a: number; b: string } for let v in new Data { a: 1, b: 'hi' } { v }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Data { a: number; b: string } for v : new Data { a: 1, b: 'hi' } { v }");
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -1598,27 +1598,27 @@ public class TypeCheckerTest
     [Fact]
     public void Checks_ForLoop_OverArray_BreakInside()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in [1, 2] { break }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for x : [1, 2] { break }");
         Utility.AssertNoErrors(diagnostics);
     }
 
     [Fact]
     public void Checks_ForLoop_OverArray_ContinueInside()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("for let x in [1, 2] { continue }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("for x : [1, 2] { continue }");
         Utility.AssertNoErrors(diagnostics);
     }
 
     [Fact]
     public void Checks_ForLoop_OverArray_Nested()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("let matrix = [[1, 2], [3, 4]]; for let row in matrix { for let elem in row { elem } }");
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let matrix = [[1, 2], [3, 4]]; for row : matrix { for elem : row { elem } }");
         Utility.AssertNoErrors(diagnostics);
     }
 
     [Theory]
-    [InlineData("for let x in [1, 2, 3] { x }")]
-    [InlineData("for let x in 1..10 { x }")]
+    [InlineData("for x : [1, 2, 3] { x }")]
+    [InlineData("for x : 1..10 { x }")]
     public void Checks_ForLoop_ElementType(string source)
     {
         var type = Utility.GetLastStatementType(source);

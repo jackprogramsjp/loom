@@ -16,6 +16,81 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class ParserTest
 {
+    public static List<object[]> ErrorTestCases =>
+    [
+        ["let", InternalCodes.UnexpectedEof, "Expected identifier, got EOF."],
+        ["let x:", InternalCodes.UnexpectedEof, "Expected type, got EOF."],
+        ["!", InternalCodes.UnexpectedEof, "Unexpected end of file."],
+        ["if )", InternalCodes.UnexpectedToken, "Expected expression, got ')'."],
+        ["nameof(123)", InternalCodes.InvalidNameOf, "'123' is not a valid name."],
+        ["(1 + 2", InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 0, got EOF."],
+        ["(1 + 2]", InternalCodes.UnexpectedToken, "Expected ')' here to close '(' at character 0, got ']'."],
+        ["arr[0", InternalCodes.UnexpectedEof, "Expected ']', got EOF."],
+        ["1 = 1", InternalCodes.InvalidAssignmentTarget, "Invalid assignment target."],
+        ["a ? b : c = d", InternalCodes.InvalidAssignmentTarget, "Invalid assignment target."],
+        ["fn foo", InternalCodes.MissingFunctionBody, "Expected function body, got EOF."],
+        [
+            "if true let x = 42",
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        ],
+        [
+            "if true { return 1 } else let x = 42",
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        ],
+        [
+            "while true let x = 1",
+            InternalCodes.DeclarationOutsideOfBlock,
+            "Declarations can only be declared inside of a block.",
+            "surround with '{' and '}'"
+        ],
+        ["after 10ms let x = 1", InternalCodes.DeclarationOutsideOfBlock, "Declarations can only be declared inside of a block."],
+        ["declare fn foo(a: number)", InternalCodes.MissingDeclareFnReturnType, "Declared function signatures must have a return type."],
+        [
+            "declare fn foo(a: number = 5): void",
+            InternalCodes.UseOfDeclareFnParameterDefaults,
+            "Parameters may not have default values in declared function signatures."
+        ],
+        ["declare fn foo(a): void", InternalCodes.MissingDeclareFnParameterType, "Parameters must have types in declared function signatures."],
+        ["declare 123", InternalCodes.ExpectedDeclarationSignature, "Expected declaration signature, got '123'."],
+        ["type Fn = fn(number)", InternalCodes.MissingDeclareFnReturnType, "Function types must have a return type."],
+        [
+            "type Fn = fn(x: number = 5): number", InternalCodes.UseOfDeclareFnParameterDefaults, "Parameters may not have default values in function types."
+        ],
+        ["type Fn = fn(x): number", InternalCodes.MissingDeclareFnParameterType, "Parameters must have types in function types."],
+        ["type F = (fn())", InternalCodes.MissingDeclareFnReturnType, "Function types must have a return type."],
+        ["interface I { name }", InternalCodes.ExpectedInterfaceMemberType, "Expected indexer type, got '}'."],
+        ["interface I { [int] }", InternalCodes.ExpectedInterfaceMemberType, "Expected indexer type, got '}'."],
+        ["interface { }", InternalCodes.UnexpectedToken, "Expected interface name, got '{'."],
+        ["interface I { 123 }", InternalCodes.UnexpectedToken, "Expected property name, got '123'."],
+        ["after { }", InternalCodes.UnexpectedToken, "Expected expression, got '{'."],
+        ["after 5s", InternalCodes.UnexpectedEof, "Unexpected end of file."],
+        ["for : items { }", InternalCodes.UnexpectedToken, "Expected identifier, got ':'."],
+        ["for x items { }", InternalCodes.UnexpectedToken, "Expected ':', got 'items'."],
+        ["fn a<>() { }", InternalCodes.UnexpectedToken, "Expected type parameter name, got '>'."],
+        ["fn a<T(x: T) { }", InternalCodes.UnexpectedToken, "Expected '>', got '('."],
+        ["let x: List<number, string", InternalCodes.UnexpectedEof, "Expected '>', got EOF."],
+        ["let x: List<number", InternalCodes.UnexpectedEof, "Expected '>', got EOF."],
+        ["let x: List<>", InternalCodes.UnexpectedToken, "Expected type, got '>'."],
+        ["let x: List<number,>", InternalCodes.UnexpectedToken, "Expected type, got '>'."],
+        ["let x: List<number>>", InternalCodes.UnexpectedToken, "Expected expression, got '>'."],
+        ["let x: number |", InternalCodes.UnexpectedEof, "Expected type, got EOF."],
+        ["let x: number &", InternalCodes.UnexpectedEof, "Expected type, got EOF."],
+        ["let x: (number", InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 7, got EOF."],
+        ["let x: keyof(T | number)", InternalCodes.UnexpectedToken, "Expected ')', got '|'."]
+    ];
+
+    [Theory]
+    [MemberData(nameof(ErrorTestCases))]
+    public void Parser_ErrorDiagnostics(string source, string code, string expectedMessage, string? hint = null)
+    {
+        var diagnostics = Utility.GetParserDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, code, expectedMessage, hint);
+    }
+
     [Fact]
     public void Unfinished_ProducesNull()
     {
@@ -56,363 +131,6 @@ public class ParserTest
         Assert.IsType<NullStatement>(@if.ThenBranch);
     }
 
-    [Fact]
-    public void ThrowsFor_ExpectedIdentifier()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected identifier, got EOF.");
-    }
-
-    [Fact]
-    public void ThrowsFor_ExpectedType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x:");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected type, got EOF.");
-    }
-
-    [Fact]
-    public void ThrowsFor_UnexpectedEof()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("!");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Unexpected end of file.");
-    }
-
-    [Fact]
-    public void ThrowsFor_UnexpectedToken()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("if )");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got ')'.");
-    }
-
-    [Fact]
-    public void ThrowsFor_InvalidNameOf()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("nameof(123)");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidNameOf, "'123' is not a valid name.");
-    }
-
-    [Theory]
-    [InlineData("(1 + 2")]
-    [InlineData("(1 + 2]", "']'")]
-    public void ThrowsFor_UnterminatedParens(string source, string got = "EOF")
-    {
-        var diagnostics = Utility.GetParserDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            got == "EOF" ? InternalCodes.UnexpectedEof : InternalCodes.UnexpectedToken,
-            $"Expected ')' here to close '(' at character 0, got {got}."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_UnterminatedBrackets()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("arr[0");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected ']', got EOF.");
-    }
-
-    [Fact]
-    public void ThrowsFor_InvalidAssignmentTarget()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("1 = 1");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Invalid assignment target.");
-    }
-
-    [Fact]
-    public void ThrowsFor_MissingFunctionBody()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("fn foo");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.MissingFunctionBody, "Expected function body, got EOF.");
-    }
-
-    [Fact]
-    public void ThrowsFor_DeclarationOutsideOfBlock_InIfThenBranch()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("if true let x = 42");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.DeclarationOutsideOfBlock,
-            "Declarations can only be declared inside of a block.",
-            "surround with '{' and '}'"
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_DeclarationOutsideOfBlock_InIfElseBranch()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("if true { return 1 } else let x = 42");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.DeclarationOutsideOfBlock,
-            "Declarations can only be declared inside of a block.",
-            "surround with '{' and '}'"
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_DeclarationOutsideOfBlock_InWhileBody()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("while true let x = 1");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.DeclarationOutsideOfBlock,
-            "Declarations can only be declared inside of a block.",
-            "surround with '{' and '}'"
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_DeclareFunction_MissingReturnType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("declare fn foo(a: number)");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.MissingDeclareFnReturnType,
-            "Declared function signatures must have a return type."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_DeclareFunction_DefaultParameter()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("declare fn foo(a: number = 5): void");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.UseOfDeclareFnParameterDefaults,
-            "Parameters may not have default values in declared function signatures."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_DeclareFunction_UntypedParameter()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("declare fn foo(a): void");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.MissingDeclareFnParameterType,
-            "Parameters must have types in declared function signatures."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_Declare_InvalidSignature()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("declare 123");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.ExpectedDeclarationSignature,
-            "Expected declaration signature, got '123'."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_FunctionType_MissingReturnType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("type Fn = fn(number)");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.MissingDeclareFnReturnType,
-            "Function types must have a return type."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_FunctionType_DefaultParameter()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("type Fn = fn(x: number = 5): number");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.UseOfDeclareFnParameterDefaults,
-            "Parameters may not have default values in function types."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_FunctionType_ParameterWithoutType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("type Fn = fn(x): number");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.MissingDeclareFnParameterType,
-            "Parameters must have types in function types."
-        );
-    }
-    
-    [Fact]
-    public void ThrowsFor_FunctionType_MissingReturnType_InParentheses()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("type F = (fn())");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.MissingDeclareFnReturnType,
-            "Function types must have a return type."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_InterfaceMember_MissingPropertyType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("interface I { name }");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.ExpectedInterfaceMemberType,
-            "Expected indexer type, got '}'."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_InterfaceMember_MissingIndexerType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("interface I { [int] }");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.ExpectedInterfaceMemberType,
-            "Expected indexer type, got '}'."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_InterfaceDeclaration_MissingName()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("interface { }");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.UnexpectedToken,
-            "Expected interface name, got '{'."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_InterfaceMember_UnexpectedToken()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("interface I { 123 }");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.UnexpectedToken,
-            "Expected property name, got '123'."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_AfterBody_WithDeclarationOutsideBlock()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("after 10ms let x = 1");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.DeclarationOutsideOfBlock,
-            "Declarations can only be declared inside of a block."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_After_WithMissingCondition()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("after { }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '{'.");
-    }
-
-    [Fact]
-    public void ThrowsFor_After_WithMissingBody()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("after 5s");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Unexpected end of file.");
-    }
-
-    [Fact]
-    public void ThrowsFor_ForLoop_MissingVariableKeyword()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("for var x in items { }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected variable signature, got 'var'.");
-    }
-
-    [Fact]
-    public void ThrowsFor_ForLoop_MissingInKeyword()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("for let x items { }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected 'in', got 'items'.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_EmptyTypeParameterList()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("fn a<>() { }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected type parameter name, got '>'.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_UnterminatedTypeParameterList()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("fn a<T(x: T) { }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected '>', got '('.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_InvalidToken_InTypeArguments()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: List<number, string");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected '>', got EOF.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_UnionType_MissingSecondType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: number |");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected type, got EOF.");
-    }
-
-    [Fact]
-    public void ThrowsFor_IntersectionType_MissingSecondType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: number &");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected type, got EOF.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_UnterminatedParenthesizedType()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: (number");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 7, got EOF.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_MissingClosingAngle_InTypeArguments()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: List<number");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedEof, "Expected '>', got EOF.");
-    }
-
-    [Fact]
-    public void ThrowsFor_EmptyTypeArguments()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: List<>");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected type, got '>'.");
-    }
-
-    [Fact]
-    public void ThrowsFor_TrailingComma_InTypeArguments()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: List<number,>");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected type, got '>'.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_UnmatchedClosingArrow_InTypeArguments()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: List<number>>");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '>'.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_KeyOf_InvalidOperand_Union()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("let x: keyof(T | number)");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.UnexpectedToken,
-            "Expected ')', got '|'."
-        );
-    }
-    
     [Fact]
     public void Parses_KeyOf_Basic()
     {
@@ -551,13 +269,6 @@ public class ParserTest
     }
 
     [Fact]
-    public void ThrowsFor_TernaryOperator_InvalidAssignmentTarget()
-    {
-        var diagnostics = Utility.GetParserDiagnostics("a ? b : c = d");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidAssignmentTarget, "Invalid assignment target.");
-    }
-
-    [Fact]
     public void Parses_TernaryOperator_WithNestedTernaryAndDifferentPrecedence()
     {
         var tree = Utility.GetAST("a ? b : c ? d : e ? f : g");
@@ -597,7 +308,7 @@ public class ParserTest
     {
         var tree = Utility.GetAST("!a ? -b : ~c");
         Assert.Single(tree.Statements);
-        
+
         var stmt = Assert.IsType<ExpressionStatement>(tree.Statements.Single());
         var ternary = Assert.IsType<TernaryOperator>(stmt.Expression);
 
@@ -628,55 +339,41 @@ public class ParserTest
     }
 
     [Fact]
-    public void Parses_ForLoop_WithLetAndBlockBody()
+    public void Parses_ForLoop_WithBlockBody()
     {
-        var tree = Utility.GetAST("for let x in items { print(x) }");
+        var tree = Utility.GetAST("for x : items { print(x) }");
         Assert.Single(tree.Statements);
-        var forStmt = Assert.IsType<For>(tree.Statements.First());
-        Assert.Equal(SyntaxKind.ForKeyword, forStmt.Keyword.Kind);
-        Assert.Equal("x", forStmt.Declaration.Name.Text);
-        Assert.Equal(SyntaxKind.LetKeyword, forStmt.Declaration.Keyword.Kind);
-        Assert.Null(forStmt.Declaration.ColonTypeClause);
-        Assert.Equal(SyntaxKind.InKeyword, forStmt.Colon.Kind);
-        Assert.IsType<Identifier>(forStmt.CollectionExpression);
-        var body = Assert.IsType<Block>(forStmt.Body);
+        var @for = Assert.IsType<For>(tree.Statements.First());
+        Assert.Equal(SyntaxKind.ForKeyword, @for.Keyword.Kind);
+        Assert.Single(@for.Names);
+
+        Assert.Equal("x", @for.Names.First().Name.Text);
+        Assert.Equal(SyntaxKind.Colon, @for.Colon.Kind);
+        Assert.IsType<Identifier>(@for.CollectionExpression);
+        var body = Assert.IsType<Block>(@for.Body);
         Assert.Single(body.Statements);
         Assert.IsType<ExpressionStatement>(body.Statements.First());
     }
 
     [Fact]
-    public void Parses_ForLoop_WithMutAndExpressionBody()
+    public void Parses_ForLoop_WithExpressionBody()
     {
-        var tree = Utility.GetAST("for mut x in items break");
+        var tree = Utility.GetAST("for x : items break");
         Assert.Single(tree.Statements);
-        var forStmt = Assert.IsType<For>(tree.Statements.First());
-        Assert.Equal(SyntaxKind.ForKeyword, forStmt.Keyword.Kind);
-        Assert.Equal("x", forStmt.Declaration.Name.Text);
-        Assert.Equal(SyntaxKind.MutKeyword, forStmt.Declaration.Keyword.Kind);
-        Assert.Null(forStmt.Declaration.ColonTypeClause);
-        Assert.Equal(SyntaxKind.InKeyword, forStmt.Colon.Kind);
-        Assert.IsType<Identifier>(forStmt.CollectionExpression);
-        Assert.IsType<Break>(forStmt.Body);
-    }
+        var @for = Assert.IsType<For>(tree.Statements.First());
+        Assert.Equal(SyntaxKind.ForKeyword, @for.Keyword.Kind);
+        Assert.Single(@for.Names);
 
-    [Fact]
-    public void Parses_ForLoop_WithTypeAnnotation()
-    {
-        var tree = Utility.GetAST("for let x: number in list { }");
-        var forStmt = Assert.IsType<For>(tree.Statements.First());
-        Assert.Equal("x", forStmt.Declaration.Name.Text);
-        Assert.NotNull(forStmt.Declaration.ColonTypeClause);
-        Assert.IsType<PrimitiveType>(forStmt.Declaration.ColonTypeClause.Type);
-        Assert.Equal(
-            PrimitiveTypeKind.Number,
-            ((PrimitiveType)forStmt.Declaration.ColonTypeClause.Type).Kind
-        );
+        Assert.Equal("x", @for.Names.First().Name.Text);
+        Assert.Equal(SyntaxKind.Colon, @for.Colon.Kind);
+        Assert.IsType<Identifier>(@for.CollectionExpression);
+        Assert.IsType<Break>(@for.Body);
     }
 
     [Fact]
     public void Parses_ForLoop_WithComplexExpression()
     {
-        var tree = Utility.GetAST("for let x in getItems() { }");
+        var tree = Utility.GetAST("for x : getItems() { }");
         var forStmt = Assert.IsType<For>(tree.Statements.First());
         var expr = Assert.IsType<Invocation>(forStmt.CollectionExpression);
         Assert.Equal("getItems", ((Identifier)expr.Expression).Name.Text);
@@ -685,7 +382,7 @@ public class ParserTest
     [Fact]
     public void Parses_NestedForLoops()
     {
-        var tree = Utility.GetAST("for let x in xs { for mut y in ys { use(x, y) } }");
+        var tree = Utility.GetAST("for x : xs { for y : ys { use(x, y) } }");
         var outer = Assert.IsType<For>(tree.Statements.First());
         var outerBody = Assert.IsType<Block>(outer.Body);
         var inner = Assert.IsType<For>(outerBody.Statements.First());
@@ -1307,20 +1004,20 @@ public class ParserTest
         var indexType = Assert.IsType<LiteralType>(indexed.IndexType);
         Assert.Equal("0", indexType.Token.Text);
     }
-    
+
     [Fact]
     public void Parses_TypeParameter_WithUnionDefault()
     {
         var tree = Utility.GetAST("type Alias<T = number | string> = T");
         var alias = Assert.IsType<TypeAlias>(tree.Statements.Single());
         Assert.NotNull(alias.TypeParameters);
-        
+
         var tp = alias.TypeParameters.ParameterList[0];
         Assert.NotNull(tp.EqualsTypeClause);
         var union = Assert.IsType<UnionType>(tp.EqualsTypeClause.Type);
         Assert.Equal(2, union.Types.Count);
     }
-    
+
     [Fact]
     public void Parses_DeclareFunctionSignature_WithGenericConstraint()
     {
@@ -2480,7 +2177,7 @@ public class ParserTest
         Assert.Equal(3, invocation.Arguments.ArgumentList.Count);
         Assert.All(invocation.Arguments.ArgumentList, a => Assert.IsType<Literal>(a));
     }
-    
+
     [Fact]
     public void Parses_Invocation_WithNestedTypeArguments()
     {

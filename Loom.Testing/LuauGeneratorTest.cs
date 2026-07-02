@@ -149,7 +149,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray()
     {
-        var luauTree = Utility.GetLuauAST("for let x in [1, 2, 3] { }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("for x : [1, 2, 3] { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
         Assert.Equal(2, forStmt.Names.Count);
@@ -162,7 +162,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray_WithBlockBody()
     {
-        var luauTree = Utility.GetLuauAST("for let x in [1] { let y = x; }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("for x : [1] { let y = x; }", typeCheck: true);
         Assert.Single(luauTree.Statements);
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
         Assert.Single(forStmt.Body.Statements);
@@ -173,7 +173,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray_WithBreak()
     {
-        var luauTree = Utility.GetLuauAST("for let x in [1] { break }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("for x : [1] { break }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
@@ -184,7 +184,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray_WithContinue()
     {
-        var luauTree = Utility.GetLuauAST("for let x in [1] { continue }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("for x : [1] { continue }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
@@ -195,7 +195,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeLiteral()
     {
-        var luauTree = Utility.GetLuauAST("for let i in 0..5 { }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("for i : 0..5 { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
@@ -212,7 +212,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeLiteral_Descending()
     {
-        var luauTree = Utility.GetLuauAST("for let i in 5..0 { }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("for i : 5..0 { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
@@ -232,7 +232,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeLiteral_ComplexStep()
     {
-        var luauTree = Utility.GetLuauAST("let a = 1; let b = 10; for let i in a..b { }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("let a = 1; let b = 10; for i : a..b { }", typeCheck: true);
         Assert.Equal(3, luauTree.Statements.Count);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.Last());
@@ -251,7 +251,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeVariable()
     {
-        var luauTree = Utility.GetLuauAST("let r = 1..10; for let i in r { }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("let r = 1..10; for i : r { }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.Last());
@@ -282,8 +282,8 @@ public class LuauGeneratorTest
     {
         const string source = """
                     let xs = [1, 2]
-                    for let x in xs {
-                        for let y in xs { }
+                    for x : xs {
+                        for y : xs { }
                     }
             """;
 
