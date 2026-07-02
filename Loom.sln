@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loom.Luau", "Loom.Luau\Loom
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loom.Config", "Loom.Config\Loom.Config.csproj", "{F6156B15-2881-443C-83F6-0604C7585F17}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Loom.Tools", "Loom.Tools\Loom.Tools.csproj", "{0DBB897D-D2C6-4F6C-8C50-6D8F40C3A704}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{F6156B15-2881-443C-83F6-0604C7585F17}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F6156B15-2881-443C-83F6-0604C7585F17}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F6156B15-2881-443C-83F6-0604C7585F17}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0DBB897D-D2C6-4F6C-8C50-6D8F40C3A704}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DBB897D-D2C6-4F6C-8C50-6D8F40C3A704}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DBB897D-D2C6-4F6C-8C50-6D8F40C3A704}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DBB897D-D2C6-4F6C-8C50-6D8F40C3A704}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

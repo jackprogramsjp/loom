@@ -11,7 +11,7 @@ public class ASTInspectorTest
 {
     private static string Inspect(object node)
     {
-        var method = typeof(ASTInspector).GetMethod(
+        var method = typeof(AstInspector).GetMethod(
             "Inspect",
             BindingFlags.NonPublic | BindingFlags.Static,
             null,
@@ -24,7 +24,7 @@ public class ASTInspectorTest
 
     private static string InspectTree(Tree tree)
     {
-        var method = typeof(ASTInspector).GetMethod(
+        var method = typeof(AstInspector).GetMethod(
             "Inspect",
             BindingFlags.NonPublic | BindingFlags.Static,
             null,

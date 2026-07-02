@@ -1,0 +1,76 @@
+﻿VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: RangeLiteral(
+      DotDot: Token(DotDot, "..")
+      Minimum: Literal(
+        Token(NumberLiteral, "1")
+        Value: 1
+      )
+      Maximum: Literal(
+        Token(NumberLiteral, "5")
+        Value: 5
+      )
+    )
+  )
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: RangeLiteral(
+      DotDot: Token(DotDot, "..")
+      Minimum: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Maximum: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+  )
+  Name: Token(Identifier, "y")
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: RangeLiteral(
+      DotDot: Token(DotDot, "..")
+      Minimum: Parenthesized(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Expression: BinaryOperator(
+          Operator: Token(Plus, "+")
+          Left: Literal(
+            Token(NumberLiteral, "1")
+            Value: 1
+          )
+          Right: Literal(
+            Token(NumberLiteral, "2")
+            Value: 2
+          )
+        )
+      )
+      Maximum: Parenthesized(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Expression: BinaryOperator(
+          Operator: Token(Plus, "+")
+          Left: Literal(
+            Token(NumberLiteral, "3")
+            Value: 3
+          )
+          Right: Literal(
+            Token(NumberLiteral, "4")
+            Value: 4
+          )
+        )
+      )
+    )
+  )
+  Name: Token(Identifier, "z")
+)

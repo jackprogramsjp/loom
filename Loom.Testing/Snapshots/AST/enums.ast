@@ -1,0 +1,134 @@
+﻿EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause: null
+  Members: []
+  Name: Token(Identifier, "Empty")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause: null
+  Members: [
+    EnumMember(
+      Name: Token(Identifier, "A")
+      EqualsValueClause: null
+    )
+    EnumMember(
+      Name: Token(Identifier, "B")
+      EqualsValueClause: null
+    )
+    EnumMember(
+      Name: Token(Identifier, "C")
+      EqualsValueClause: null
+    )
+  ]
+  Name: Token(Identifier, "Abc")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause: null
+  Members: [
+    EnumMember(
+      Name: Token(Identifier, "A")
+      EqualsValueClause: null
+    )
+    EnumMember(
+      Name: Token(Identifier, "B")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "69")
+          Value: 69
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "C")
+      EqualsValueClause: null
+    )
+  ]
+  Name: Token(Identifier, "Mixed")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause: null
+  Members: [
+    EnumMember(
+      Name: Token(Identifier, "Active")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "Inactive")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "0")
+          Value: 0
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "Pending")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "2")
+          Value: 2
+        )
+      )
+    )
+  ]
+  Name: Token(Identifier, "Status")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: String
+    )
+  )
+  Members: [
+    EnumMember(
+      Name: Token(Identifier, "Red")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(StringLiteral, ""FF0000"")
+          Value: "FF0000"
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "Green")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(StringLiteral, ""00FF00"")
+          Value: "00FF00"
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "Blue")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(StringLiteral, ""0000FF"")
+          Value: "0000FF"
+        )
+      )
+    )
+  ]
+  Name: Token(Identifier, "Colors")
+)

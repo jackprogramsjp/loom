@@ -1,0 +1,268 @@
+﻿ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Star, "*")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Type: PrimitiveType(
+        Kind: String
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(LArrow, "<")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(LArrow, "<")
+    Left: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(EqualsEquals, "==")
+    Left: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Type: PrimitiveType(
+        Kind: Bool
+      )
+    )
+    Right: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Type: PrimitiveType(
+        Kind: Bool
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: AsExpression(
+      Expression: AsExpression(
+        Expression: Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+        Type: PrimitiveType(
+          Kind: Unknown
+        )
+      )
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+    Right: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AsExpression(
+    Expression: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Type: IntersectionType(
+      Ampersands: [
+        Token(
+          Kind: Ampersand
+          Text: "&"
+        )
+      ]
+      Types: [
+        PrimitiveType(
+          Kind: Number
+        )
+        PrimitiveType(
+          Kind: Bool
+        )
+      ]
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AsExpression(
+    Expression: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        PrimitiveType(
+          Kind: String
+        )
+        PrimitiveType(
+          Kind: Number
+        )
+      ]
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Parenthesized(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    Expression: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "x")
+        Token(Identifier, "x")
+      )
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AsExpression(
+    Expression: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Type: OptionalType(
+      Question: Token(Question, "?")
+      NonNullableType: ArrayType(
+        ElementType: PrimitiveType(
+          Kind: Number
+        )
+        LeftBracket: Token(LBracket, "[")
+        MutKeyword: null
+        RightBracket: Token(RBracket, "]")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AsExpression(
+    Expression: AsExpression(
+      Expression: AsExpression(
+        Expression: Identifier(
+          Name: Token(Identifier, "x")
+          Token(Identifier, "x")
+        )
+        Type: PrimitiveType(
+          Kind: Unknown
+        )
+      )
+      Type: PrimitiveType(
+        Kind: Bool
+      )
+    )
+    Type: PrimitiveType(
+      Kind: String
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AsExpression(
+    Expression: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Type: TypeName(
+      Name: Token(Identifier, "List")
+      TypeArguments(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ArgumentsList: [
+          PrimitiveType(
+            Kind: Number
+          )
+        ]
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AsExpression(
+    Expression: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "x")
+        Token(Identifier, "x")
+      )
+      Type: PrimitiveType(
+        Kind: Unknown
+      )
+    )
+    Type: PrimitiveType(
+      Kind: Number
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AsExpression(
+    Expression: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Type: PrimitiveType(
+      Kind: Number
+    )
+  )
+)

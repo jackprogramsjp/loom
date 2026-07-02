@@ -1,0 +1,304 @@
+﻿ExpressionStatement(
+  Expression: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "foo")
+      Token(Identifier, "foo")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "add")
+      Token(Identifier, "add")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: [
+        Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+        Literal(
+          Token(NumberLiteral, "2")
+          Value: 2
+        )
+        Literal(
+          Token(NumberLiteral, "3")
+          Value: 3
+        )
+      ]
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: ElementAccess(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expression: Identifier(
+        Name: Token(Identifier, "arr")
+        Token(Identifier, "arr")
+      )
+      IndexExpression: Literal(
+        Token(NumberLiteral, "0")
+        Value: 0
+      )
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "identity")
+      Token(Identifier, "identity")
+    )
+    TypeArguments(
+      LeftArrow: Token(ColonColonLArrow, "::<")
+      RightArrow: Token(RArrow, ">")
+      ArgumentsList: [
+        PrimitiveType(
+          Kind: Number
+        )
+      ]
+    )
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: [
+        Literal(
+          Token(NumberLiteral, "42")
+          Value: 42
+        )
+      ]
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: Invocation(
+      Expression: Invocation(
+        Expression: Identifier(
+          Name: Token(Identifier, "foo")
+          Token(Identifier, "foo")
+        )
+        TypeArguments(
+          LeftArrow: Token(ColonColonLArrow, "::<")
+          RightArrow: Token(RArrow, ">")
+          ArgumentsList: [
+            TypeName(
+              Name: Token(Identifier, "List")
+              TypeArguments(
+                LeftArrow: Token(LArrow, "<")
+                RightArrow: Token(RArrow, ">")
+                ArgumentsList: [
+                  PrimitiveType(
+                    Kind: Number
+                  )
+                ]
+              )
+            )
+          ]
+        )
+        Arguments(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ArgumentList: []
+        )
+      )
+      TypeArguments: null
+      Arguments(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ArgumentList: [
+          Invocation(
+            Expression: Identifier(
+              Name: Token(Identifier, "getFn")
+              Token(Identifier, "getFn")
+            )
+            TypeArguments: null
+            Arguments(
+              LeftParen: Token(LParen, "(")
+              RightParen: Token(RParen, ")")
+              ArgumentList: []
+            )
+          )
+        ]
+      )
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: [
+        Identifier(
+          Name: Token(Identifier, "x")
+          Token(Identifier, "x")
+        )
+        Identifier(
+          Name: Token(Identifier, "y")
+          Token(Identifier, "y")
+        )
+      ]
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: Invocation(
+      Expression: Invocation(
+        Expression: Invocation(
+          Expression: Invocation(
+            Expression: Identifier(
+              Name: Token(Identifier, "foo")
+              Token(Identifier, "foo")
+            )
+            TypeArguments: null
+            Arguments(
+              LeftParen: Token(LParen, "(")
+              RightParen: Token(RParen, ")")
+              ArgumentList: [
+                Literal(
+                  Token(NumberLiteral, "1")
+                  Value: 1
+                )
+                Literal(
+                  Token(NumberLiteral, "2")
+                  Value: 2
+                )
+              ]
+            )
+          )
+          TypeArguments: null
+          Arguments(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ArgumentList: [
+              Literal(
+                Token(NumberLiteral, "2")
+                Value: 2
+              )
+            ]
+          )
+        )
+        TypeArguments: null
+        Arguments(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ArgumentList: [
+            Literal(
+              Token(NumberLiteral, "3")
+              Value: 3
+            )
+          ]
+        )
+      )
+      TypeArguments: null
+      Arguments(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ArgumentList: [
+          BinaryOperator(
+            Operator: Token(Plus, "+")
+            Left: Identifier(
+              Name: Token(Identifier, "a")
+              Token(Identifier, "a")
+            )
+            Right: Identifier(
+              Name: Token(Identifier, "b")
+              Token(Identifier, "b")
+            )
+          )
+        ]
+      )
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "generic")
+      Token(Identifier, "generic")
+    )
+    TypeArguments(
+      LeftArrow: Token(ColonColonLArrow, "::<")
+      RightArrow: Token(RArrow, ">")
+      ArgumentsList: [
+        TypeName(
+          Name: Token(Identifier, "List")
+          TypeArguments(
+            LeftArrow: Token(LArrow, "<")
+            RightArrow: Token(RArrow, ">")
+            ArgumentsList: [
+              TypeName(
+                Name: Token(Identifier, "A")
+                TypeArguments(
+                  LeftArrow: Token(LArrow, "<")
+                  RightArrow: Token(RArrow, ">")
+                  ArgumentsList: [
+                    PrimitiveType(
+                      Kind: Number
+                    )
+                  ]
+                )
+              )
+            ]
+          )
+        )
+      ]
+    )
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: [
+        Identifier(
+          Name: Token(Identifier, "items")
+          Token(Identifier, "items")
+        )
+      ]
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: QualifiedName(
+      Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "b")
+        )
+      ]
+      Token(Identifier, "a")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)

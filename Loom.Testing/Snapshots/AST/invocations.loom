@@ -1,0 +1,10 @@
+foo();
+add(1, 2, 3);
+arr[0]();
+identity::<number>(42);
+foo::<List<number>>();
+(getFn())(x, y);
+foo(1, 2)(2)(3);
+(a + b)();
+generic::<List<A<number>>>(items);
+a.b();

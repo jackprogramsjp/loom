@@ -1,0 +1,108 @@
+﻿ExpressionStatement(
+  Expression: ElementAccess(
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expression: Identifier(
+      Name: Token(Identifier, "arr")
+      Token(Identifier, "arr")
+    )
+    IndexExpression: Literal(
+      Token(NumberLiteral, "0")
+      Value: 0
+    )
+  )
+)
+ExpressionStatement(
+  Expression: ElementAccess(
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expression: Identifier(
+      Name: Token(Identifier, "arr")
+      Token(Identifier, "arr")
+    )
+    IndexExpression: BinaryOperator(
+      Operator: Token(Plus, "+")
+      Left: Identifier(
+        Name: Token(Identifier, "i")
+        Token(Identifier, "i")
+      )
+      Right: Literal(
+        Token(NumberLiteral, "1")
+        Value: 1
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: ElementAccess(
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expression: ElementAccess(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expression: ElementAccess(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Expression: Identifier(
+          Name: Token(Identifier, "arr")
+          Token(Identifier, "arr")
+        )
+        IndexExpression: Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+      )
+      IndexExpression: Literal(
+        Token(NumberLiteral, "2")
+        Value: 2
+      )
+    )
+    IndexExpression: Literal(
+      Token(NumberLiteral, "3")
+      Value: 3
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(Equals, "=")
+    Left: ElementAccess(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expression: Identifier(
+        Name: Token(Identifier, "arr")
+        Token(Identifier, "arr")
+      )
+      IndexExpression: Literal(
+        Token(NumberLiteral, "1")
+        Value: 1
+      )
+    )
+    Right: Literal(
+      Token(NumberLiteral, "42")
+      Value: 42
+    )
+  )
+)
+ExpressionStatement(
+  Expression: ElementAccess(
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expression: Invocation(
+      Expression: Identifier(
+        Name: Token(Identifier, "getArr")
+        Token(Identifier, "getArr")
+      )
+      TypeArguments: null
+      Arguments(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ArgumentList: []
+      )
+    )
+    IndexExpression: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
+    )
+  )
+)

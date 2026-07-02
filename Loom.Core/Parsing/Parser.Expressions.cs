@@ -157,8 +157,8 @@ public sealed partial class Parser
         if (Match(out var newKeyword, SyntaxKind.NewKeyword))
             return ParseInterfaceInvocation(newKeyword);
 
-        if (Match(out var openingParen, SyntaxKind.LParen))
-            return ParseParenthesized(openingParen);
+        if (Match(out var leftParen, SyntaxKind.LParen))
+            return ParseParenthesized(leftParen);
 
         if (Match(out var mutKeyword, SyntaxKind.MutKeyword) && ParseArrayLiteral(mutKeyword) is { } mutableArrayLiteral)
             return mutableArrayLiteral;
@@ -189,15 +189,15 @@ public sealed partial class Parser
         return new NullExpression(current);
     }
 
-    private Parenthesized ParseParenthesized(Token openingParen)
+    private Parenthesized ParseParenthesized(Token leftParen)
     {
         var expression = ParseExpression();
         var rightParen = Expect(
             SyntaxKind.RParen,
-            got => $"Expected ')' here to close '{openingParen.Text}' at character {openingParen.Span.Start.Character}, got {SafeTokenText(got)}."
+            got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
         );
 
-        return new Parenthesized(openingParen, rightParen, expression);
+        return new Parenthesized(leftParen, rightParen, expression);
     }
 
     private Expression ParseNameOf(Token keyword)

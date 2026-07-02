@@ -1,0 +1,6 @@
+mut x;
+mut x = 1;
+mut x: number = 1;
+let x;
+let x = 1;
+let x: bool = false;

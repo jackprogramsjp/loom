@@ -22,30 +22,13 @@ public sealed class CompiledFile(SourceFile sourceFile)
     public required IReadOnlyList<Token> Tokens { get; init; }
 
     public string GetDebugInfo(
-        bool tokens = true,
-        bool ast = true,
         bool rebuilt = true,
         bool luau = true,
         bool showDiagnostics = true,
         bool debugDiagnostics = true)
     {
         var sb = new StringBuilder();
-
-        if (tokens)
-        {
-            appendHeader("Tokens");
-            foreach (var token in Tokens)
-                sb.AppendLine(token.ToString());
-            sb.AppendLine();
-        }
-
-        if (ast)
-        {
-            appendHeader("AST");
-            sb.AppendLine(ASTInspector.Inspect(Tree));
-            sb.AppendLine();
-        }
-
+        
         if (rebuilt)
         {
             appendHeader("Rebuilt program");

@@ -1,0 +1,161 @@
+﻿TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: PrimitiveType(
+      Kind: Number
+    )
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "A")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: IntersectionType(
+      Ampersands: [
+        Token(
+          Kind: Ampersand
+          Text: "&"
+        )
+      ]
+      Types: [
+        TypeName(
+          Name: Token(Identifier, "A")
+          TypeArguments: null
+        )
+        TypeName(
+          Name: Token(Identifier, "B")
+          TypeArguments: null
+        )
+      ]
+    )
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "A")
+      )
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "B")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Intersect")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: TypeName(
+      Name: Token(Identifier, "T")
+      TypeArguments: null
+    )
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause(
+          EqualsToken: Token(Equals, "=")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Id")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: TypeName(
+      Name: Token(Identifier, "List")
+      TypeArguments(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ArgumentsList: [
+          TypeName(
+            Name: Token(Identifier, "Option")
+            TypeArguments(
+              LeftArrow: Token(LArrow, "<")
+              RightArrow: Token(RArrow, ">")
+              ArgumentsList: [
+                PrimitiveType(
+                  Kind: Number
+                )
+              ]
+            )
+          )
+        ]
+      )
+    )
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "X")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: TypeName(
+      Name: Token(Identifier, "T")
+      TypeArguments: null
+    )
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: UnionType(
+            Pipes: [
+              Token(
+                Kind: Pipe
+                Text: "|"
+              )
+            ]
+            Types: [
+              PrimitiveType(
+                Kind: Number
+              )
+              PrimitiveType(
+                Kind: String
+              )
+            ]
+          )
+        )
+        EqualsTypeClause(
+          EqualsToken: Token(Equals, "=")
+          Type: UnionType(
+            Pipes: [
+              Token(
+                Kind: Pipe
+                Text: "|"
+              )
+            ]
+            Types: [
+              PrimitiveType(
+                Kind: Number
+              )
+              PrimitiveType(
+                Kind: String
+              )
+            ]
+          )
+        )
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Alias")
+)

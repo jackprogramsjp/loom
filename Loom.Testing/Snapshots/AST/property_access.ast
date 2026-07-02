@@ -1,0 +1,14 @@
+﻿ExpressionStatement(
+  Expression: PropertyAccess(
+    Expression: Literal(
+      Token(StringLiteral, "'a'")
+      Value: "a"
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+    ]
+  )
+)

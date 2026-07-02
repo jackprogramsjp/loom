@@ -4,7 +4,7 @@ using Loom.Text;
 
 namespace Loom.Debug;
 
-public static class ASTInspector
+public static class AstInspector
 {
     private static int _indent;
     private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id", "File", "Keyword"];

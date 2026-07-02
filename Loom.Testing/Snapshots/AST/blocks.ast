@@ -1,0 +1,83 @@
+﻿Block(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  Statements: [
+    VariableDeclaration(
+      ColonTypeClause: null
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: BinaryOperator(
+          Operator: Token(Plus, "+")
+          Left: Literal(
+            Token(NumberLiteral, "69")
+            Value: 69
+          )
+          Right: Literal(
+            Token(NumberLiteral, "420")
+            Value: 420
+          )
+        )
+      )
+      Name: Token(Identifier, "a")
+    )
+    ExpressionStatement(
+      Expression: Invocation(
+        Expression: Identifier(
+          Name: Token(Identifier, "print")
+          Token(Identifier, "print")
+        )
+        TypeArguments: null
+        Arguments(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ArgumentList: [
+            Identifier(
+              Name: Token(Identifier, "a")
+              Token(Identifier, "a")
+            )
+          ]
+        )
+      )
+    )
+    Block(
+      LeftBrace: Token(LBrace, "{")
+      RightBrace: Token(RBrace, "}")
+      Statements: [
+        ExpressionStatement(
+          Expression: AssignmentOperator(
+            Operator: Token(Equals, "=")
+            Left: Identifier(
+              Name: Token(Identifier, "b")
+              Token(Identifier, "b")
+            )
+            Right: BinaryOperator(
+              Operator: Token(Star, "*")
+              Left: BinaryOperator(
+                Operator: Token(Slash, "/")
+                Left: Literal(
+                  Token(NumberLiteral, "2")
+                  Value: 2
+                )
+                Right: Literal(
+                  Token(NumberLiteral, "3")
+                  Value: 3
+                )
+              )
+              Right: BinaryOperator(
+                Operator: Token(Caret, "^")
+                Left: Literal(
+                  Token(NumberLiteral, "4")
+                  Value: 4
+                )
+                Right: Literal(
+                  Token(NumberLiteral, "6")
+                  Value: 6
+                )
+              )
+            )
+          )
+        )
+      ]
+    )
+  ]
+)

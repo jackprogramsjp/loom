@@ -1,0 +1,18 @@
+﻿ExpressionStatement(
+  Expression: Identifier(
+    Name: Token(Identifier, "abc123")
+    Token(Identifier, "abc123")
+  )
+)
+ExpressionStatement(
+  Expression: Identifier(
+    Name: Token(Identifier, "ball_sack")
+    Token(Identifier, "ball_sack")
+  )
+)
+ExpressionStatement(
+  Expression: Identifier(
+    Name: Token(Identifier, "siGmA12Df32")
+    Token(Identifier, "siGmA12Df32")
+  )
+)

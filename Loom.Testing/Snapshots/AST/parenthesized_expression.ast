@@ -1,0 +1,10 @@
+﻿ExpressionStatement(
+  Expression: Parenthesized(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    Expression: Literal(
+      Token(NumberLiteral, "69")
+      Value: 69
+    )
+  )
+)

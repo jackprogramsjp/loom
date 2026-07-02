@@ -1,0 +1,10 @@
+﻿ExpressionStatement(
+  Expression: NameOf(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    Name: Identifier(
+      Name: Token(Identifier, "abc")
+      Token(Identifier, "abc")
+    )
+  )
+)

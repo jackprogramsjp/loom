@@ -1,0 +1,33 @@
+﻿ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: UnaryOperator(
+      Operator: Token(Minus, "-")
+      Operand: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+    )
+    Right: BinaryOperator(
+      Operator: Token(Star, "*")
+      Left: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Right: BinaryOperator(
+        Operator: Token(Caret, "^")
+        Left: UnaryOperator(
+          Operator: Token(Tilde, "~")
+          Operand: Identifier(
+            Name: Token(Identifier, "c")
+            Token(Identifier, "c")
+          )
+        )
+        Right: Identifier(
+          Name: Token(Identifier, "d")
+          Token(Identifier, "d")
+        )
+      )
+    )
+  )
+)

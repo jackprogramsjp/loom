@@ -1,0 +1,38 @@
+﻿ExpressionStatement(
+  Expression: QualifiedName(
+    Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+    ]
+    Token(Identifier, "a")
+  )
+)
+ExpressionStatement(
+  Expression: QualifiedName(
+    Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "c")
+      )
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "d")
+      )
+    ]
+    Token(Identifier, "a")
+  )
+)

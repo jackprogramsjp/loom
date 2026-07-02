@@ -1,0 +1,5 @@
+type A = number
+type Intersect<A, B> = A & B
+type Id<T = number> = T
+type X = List<Option<number>>
+type Alias<T: number | string = number | string> = T

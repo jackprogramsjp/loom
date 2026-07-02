@@ -1,0 +1,507 @@
+﻿ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Minus, "-")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Star, "*")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Slash, "/")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(SlashSlash, "//")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Percent, "%")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Caret, "^")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Ampersand, "&")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Pipe, "|")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Tilde, "~")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(LArrowLArrow, "<<")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(RArrowRArrow, ">>")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(RArrowRArrowRArrow, ">>>")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(PipePipe, "||")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(AmpersandAmpersand, "&&")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(QuestionQuestion, "??")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(LArrow, "<")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(LArrowEquals, "<=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(RArrow, ">")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(RArrowEquals, ">=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(EqualsEquals, "==")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(BangEquals, "!=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(Equals, "=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(PlusEquals, "+=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(MinusEquals, "-=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(StarEquals, "*=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(SlashEquals, "/=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(SlashSlashEquals, "//=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(PercentEquals, "%=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(CaretEquals, "^=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(AmpersandEquals, "&=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(PipeEquals, "|=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(TildeEquals, "~=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(RArrowRArrowEquals, ">>=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(RArrowRArrowRArrowEquals, ">>>=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(LArrowLArrowEquals, "<<=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(AmpersandAmpersandEquals, "&&=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(PipePipeEquals, "||=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(QuestionQuestionEquals, "??=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+  )
+)

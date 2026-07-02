@@ -1,0 +1,80 @@
+﻿ExpressionStatement(
+  Expression: ArrayLiteral(
+    MutKeyword: null
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expressions: [
+      Literal(
+        Token(NumberLiteral, "69")
+        Value: 69
+      )
+      Literal(
+        Token(NumberLiteral, "420")
+        Value: 420
+      )
+    ]
+  )
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: ArrayLiteral(
+      MutKeyword: null
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expressions: [
+        Literal(
+          Token(NumberLiteral, "69")
+          Value: 69
+        )
+        Literal(
+          Token(NumberLiteral, "420")
+          Value: 420
+        )
+        ArrayLiteral(
+          MutKeyword: null
+          LeftBracket: Token(LBracket, "[")
+          RightBracket: Token(RBracket, "]")
+          Expressions: [
+            Literal(
+              Token(NumberLiteral, "1")
+              Value: 1
+            )
+            Literal(
+              Token(NumberLiteral, "2")
+              Value: 2
+            )
+            Literal(
+              Token(NumberLiteral, "3")
+              Value: 3
+            )
+          ]
+        )
+      ]
+    )
+  )
+  Name: Token(Identifier, "y")
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: ArrayLiteral(
+      MutKeyword: Token(MutKeyword, "mut")
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expressions: [
+        Literal(
+          Token(NumberLiteral, "69")
+          Value: 69
+        )
+        Literal(
+          Token(NumberLiteral, "420")
+          Value: 420
+        )
+      ]
+    )
+  )
+  Name: Token(Identifier, "x")
+)

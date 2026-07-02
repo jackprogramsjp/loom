@@ -1,0 +1,25 @@
+﻿ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Tilde, "~")
+    Left: UnaryOperator(
+      Operator: Token(Minus, "-")
+      Operand: Literal(
+        Token(NumberLiteral, "69")
+        Value: 69
+      )
+    )
+    Right: Literal(
+      Token(NumberLiteral, "420")
+      Value: 420
+    )
+  )
+)
+ExpressionStatement(
+  Expression: UnaryOperator(
+    Operator: Token(Bang, "!")
+    Operand: Literal(
+      Token(FalseLiteral, "false")
+      Value: False
+    )
+  )
+)
