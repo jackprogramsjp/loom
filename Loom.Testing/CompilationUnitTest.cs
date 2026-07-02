@@ -36,8 +36,8 @@ public class CompilationUnitTest
         Utility.AssertNoErrors(result);
         Assert.Single(result.Files);
 
-        var file = result.Files.First();
-        Assert.EndsWith("my-file.luau", file.Path);
+        var file = result.Files.Find(file => file.Path.EndsWith("basic_binary.luau"));
+        Assert.NotNull(file);
         Assert.Equal(4, file.Tokens.Count);
         Assert.Single(file.Tree.Statements);
         Assert.IsType<BinaryOperator>(Assert.IsType<ExpressionStatement>(file.Tree.Statements.First()).Expression);
@@ -54,9 +54,9 @@ public class CompilationUnitTest
 
     private static LoomConfig GetConfig()
     {
-        var config = ConfigReader.LocateFromDirectory(AssemblyFixture.TestFiles);
+        var config = ConfigReader.LocateFromDirectory(AssemblyFixture.Snapshots);
         Assert.NotNull(config);
-        Assert.Equal(AssemblyFixture.TestFiles, config.ProjectDirectory);
+        Assert.Equal(AssemblyFixture.Snapshots, config.ProjectDirectory);
 
         return config;
     }

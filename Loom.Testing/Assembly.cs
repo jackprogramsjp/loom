@@ -6,7 +6,7 @@ namespace Loom.Testing;
 // ReSharper disable once ClassNeverInstantiated.Global
 public class AssemblyFixture : IDisposable
 {
-    public static readonly string TestFiles = $"..{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}TestFiles";
+    public static readonly string Snapshots = $"..{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}Snapshots";
     
     public AssemblyFixture() => DiagnosticBag.FailFast = false;
 
