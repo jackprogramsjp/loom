@@ -714,6 +714,133 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Narrowing_UnionWithThreeVariants_Equals()
+    {
+        const string source = """
+            interface Loading { kind: "Loading" }
+            interface Success { kind: "Success", data: string }
+            interface Error { kind: "Error", error: string }
+            type Status = Loading | Success | Error;
+            
+            let s = none as never as Status;
+            if s.kind == "Success" {
+                s.data
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.String, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Narrowing_UnionWithThreeVariants_NotEquals()
+    {
+        const string source = """
+            interface Loading { kind: "Loading" }
+            interface Success { kind: "Success", data: string }
+            interface Error { kind: "Error", error: string }
+            type Status = Loading | Success | Error;
+            
+            let s = none as never as Status;
+            if s.kind != "Loading" {
+               s.kind
+            }
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertNoErrors(diagnostics);
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.IsType<UnionType>(optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Narrowing_NestedPropertyPath_Works()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string };
+            type Inner = A | B;
+            
+            interface Outer { inner: Inner };
+            let o = none as never as Outer;
+            if o.inner.kind == "A" {
+                o.inner.val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Narrowing_NestedElementAccess()
+    {
+        const string source = """
+            let matrix = [[1, 2], [3, 4]];
+            if matrix[0][1] == 2 {
+                matrix[0][1]
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        var literal = Assert.IsType<LiteralType>(optional.NonNullableType);
+        Assert.Equal(2L, literal.Value);
+    }
+
+    [Theory]
+    [InlineData("Ok", "value", "number")]
+    [InlineData("Err", "error", "\"do_something failed to execute\"")]
+    public void Checks_DiscriminatedUnion_Narrowing(string resultKind, string property, string typeString)
+    {
+        var source = $$"""
+            enum ResultKind { Ok,  Err }
+
+            interface ResultOk<T> {
+                kind: ResultKind["Ok"];
+                value: T;
+            }
+
+            interface ResultError<Error> {
+                kind: ResultKind["Err"];
+                error: Error;
+            }
+
+            type Result<T, Error> = ResultOk<T> | ResultError<Error>;
+
+            fn ok<T, Error>(value: T): Result<T, Error> {
+                return new ResultOk { kind: ResultKind.Ok, value: value };
+            }
+
+            enum MyErrors: string {
+                DoSomethingFailed = "do_something failed to execute"
+            }
+
+            let result = ok::<number, MyErrors>(69);
+            if result.kind == ResultKind.{{resultKind}}
+                result.{{property}}
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.IsAssignableFrom<PrimitiveType>(optional.NonNullableType);
+        Assert.Equal(typeString, optional.NonNullableType.ToString());
+    }
+
+    [Fact]
     public void Checks_Inference_IntersectionParameterMultipleTypeParameters_UsesUnknownForUninferred()
     {
         const string source = "fn mix<A, B>(x: A & B): A & B -> x; mix(42)";

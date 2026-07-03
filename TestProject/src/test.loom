@@ -20,10 +20,6 @@ enum MyErrors: string {
     DoSomethingFailed = "do_something failed to execute"
 }
 
-fn do_something: Result<number, MyErrors> {
-    return ok(69);
-}
-
-let result = do_something();
-if result.kind == ResultKind.Ok
-    print(result.value);
+let result = ok::<number, MyErrors>(69);
+if result.kind == ResultKind.Err
+    result.error;

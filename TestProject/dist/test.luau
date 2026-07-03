@@ -12,10 +12,7 @@ const function ok<T, Error>(value: T): Result<T, Error>
   return { kind = 0, value = value }
 end
 type MyErrors = "do_something failed to execute"
-const function do_something(): Result<number, MyErrors>
-  return ok(69)
-end
-const result = do_something()
+const result = ok(69)
 if result.kind == 1 then
-  print("do_something failed to execute")
+  const _ = "do_something failed to execute"
 end
