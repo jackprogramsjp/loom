@@ -550,7 +550,7 @@ public class TypeCheckerTest
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.InvalidAccess,
-            "Type '\"nonexistent\"' cannot be used to index type '0 | 1'."
+            "Expression of type '\"nonexistent\"' cannot be used to index type '{ A: 0, B: 1 }'. Property 'nonexistent' does not exist on type '{ A: 0, B: 1 }'."
         );
     }
 

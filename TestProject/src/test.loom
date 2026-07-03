@@ -1,2 +1,1 @@
-enum A { B, C, D }
-type X = A["D"]
+enum E { A, B } type X = E["nonexistent"]
