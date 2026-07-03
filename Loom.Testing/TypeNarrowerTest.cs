@@ -14,12 +14,187 @@ public class TypeNarrowerTest
     {
         var model = Utility.GetSemanticModel(source);
         new TypeChecker(model).Check();
-        var ifNode = model.Tree.GetDescendants<If>().FirstOrDefault() ?? 
-                     model.Tree.GetDescendants<While>().FirstOrDefault() as Statement;
+        var ifNode = model.Tree.GetDescendants<If>().FirstOrDefault() ?? model.Tree.GetDescendants<While>().FirstOrDefault() as Statement;
 
         Assert.NotNull(ifNode);
         var condition = ifNode is If ifStmt ? ifStmt.Condition : ((While)ifNode).Condition;
         return (model, condition);
+    }
+
+    [Fact]
+    public void ComputeBranchStates_LogicalAndOperator_DoesNotNarrow()
+    {
+        const string source = """
+            let x: number | string = 42;
+            let y: number = 10;
+            if x == 42 && y == 10 { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+        var narrowed = narrower.TryGetNarrowedType(left, trueState, out _);
+        Assert.False(narrowed);
+        
+        narrowed = narrower.TryGetNarrowedType(left, falseState, out _);
+        Assert.False(narrowed);
+    }
+
+    [Fact]
+    public void ComputeBranchStates_IdentifierEqualsIdentifier_DoesNotNarrow()
+    {
+        const string source = """
+            let x: number | string = 42;
+            let y: number | string = 42;
+            if x == y { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+        var right = binaryOp.Right;
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+
+        Assert.False(narrower.TryGetNarrowedType(left, trueState, out _));
+        Assert.False(narrower.TryGetNarrowedType(right, trueState, out _));
+        Assert.False(narrower.TryGetNarrowedType(left, falseState, out _));
+        Assert.False(narrower.TryGetNarrowedType(right, falseState, out _));
+    }
+
+    [Fact]
+    public void ComputeBranchStates_LiteralEqualsLiteral_DoesNotNarrow()
+    {
+        const string source = "if 1 == 2 { }";
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+        var exception = Record.Exception(() => narrower.ComputeBranchStates(condition, current));
+        Assert.Null(exception);
+
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+        Assert.False(narrower.TryGetNarrowedType(left, trueState, out _));
+        Assert.False(narrower.TryGetNarrowedType(left, falseState, out _));
+    }
+    
+    [Fact]
+    public void ComputeBranchStates_CallExpressionEqualsLiteral_DoesNotNarrow()
+    {
+        const string source = """
+            fn foo(): number { return 42; }
+            if foo() == 42 { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+        Assert.False(narrower.TryGetNarrowedType(left, trueState, out _));
+        Assert.False(narrower.TryGetNarrowedType(left, falseState, out _));
+    }
+
+    [Fact]
+    public void ComputeBranchStates_ElementAccessWithVariableIndex_DoesNotNarrow()
+    {
+        const string source = """
+            let arr = [1, 2, 3];
+            let i = 0;
+            if arr[i] == 1 { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+
+        Assert.False(narrower.TryGetNarrowedType(left, trueState, out _));
+        Assert.False(narrower.TryGetNarrowedType(left, falseState, out _));
+    }
+
+    [Fact]
+    public void ComputeBranchStates_NonUnionNotEqualsLiteral_KeepsBaseTypeUnchanged()
+    {
+        const string source = """
+            let x: number = 42;
+            if x != 42 { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+        var narrowed = narrower.TryGetNarrowedType(left, trueState, out var trueType);
+        Assert.True(narrowed);
+
+        var primitive = Assert.IsType<PrimitiveType>(trueType);
+        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
+
+        narrowed = narrower.TryGetNarrowedType(left, falseState, out var falseType);
+        Assert.True(narrowed);
+        var literal = Assert.IsType<LiteralType>(falseType);
+        Assert.Equal(42L, literal.Value);
+    }
+
+    [Fact]
+    public void ComputeBranchStates_UnionCollapsesToSingleMember_ThenExactMatchIsNever()
+    {
+        const string source = """
+            let x: number | string | bool = 42;
+            if x == 42 { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+        var (trueState, _) = narrower.ComputeBranchStates(condition, current);
+        var narrowed = narrower.TryGetNarrowedType(left, trueState, out var trueType);
+        Assert.True(narrowed);
+        Assert.IsType<LiteralType>(trueType);
+
+        var (_, innerFalseState) = narrower.ComputeBranchStates(condition, trueState);
+        narrowed = narrower.TryGetNarrowedType(left, innerFalseState, out var falseType);
+        Assert.True(narrowed);
+        var primitive = Assert.IsType<PrimitiveType>(falseType);
+        Assert.Equal(PrimitiveTypeKind.Never, primitive.Kind);
+    }
+
+    [Fact]
+    public void ComputeBranchStates_PropertyAccessOnCallExpression_DoesNotNarrow()
+    {
+        const string source = """
+            interface Obj { prop: number | string }
+            fn getObj(): Obj { return none as never as Obj; }
+            if getObj().prop == 42 { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new TypedFlowState();
+
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var left = binaryOp.Left;
+
+        var exception = Record.Exception(() => narrower.ComputeBranchStates(condition, current));
+        Assert.Null(exception);
+
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+        Assert.False(narrower.TryGetNarrowedType(left, trueState, out _));
+        Assert.False(narrower.TryGetNarrowedType(left, falseState, out _));
     }
 
     [Fact]
@@ -29,6 +204,7 @@ public class TypeNarrowerTest
             let x: number | string = 42;
             if x == 42 { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -56,6 +232,7 @@ public class TypeNarrowerTest
             let x: number | string = 42;
             if x != 42 { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -83,6 +260,7 @@ public class TypeNarrowerTest
             let x: number? = none;
             if x == none { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -110,6 +288,7 @@ public class TypeNarrowerTest
             let x: number? = 5;
             if x != none { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -138,6 +317,7 @@ public class TypeNarrowerTest
             let obj = none as never as Obj;
             if obj.prop == 42 { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -165,6 +345,7 @@ public class TypeNarrowerTest
             let arr = [1, 2, 3];
             if arr[0] == 1 { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -193,6 +374,7 @@ public class TypeNarrowerTest
             let x: Status = Status.Active;
             if x == Status.Active { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -201,7 +383,7 @@ public class TypeNarrowerTest
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
         var narrowed = narrower.TryGetNarrowedType(left, trueState, out var trueType);
         Assert.True(narrowed);
-        
+
         var literal = Assert.IsType<LiteralType>(trueType);
         Assert.Equal(0d, literal.Value);
 
@@ -218,6 +400,7 @@ public class TypeNarrowerTest
             let s = nameof(x);
             if s == "x" { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -247,6 +430,7 @@ public class TypeNarrowerTest
             let obj = none as never as Outer;
             if obj.inner.prop == 42 { }
             """;
+
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
@@ -274,6 +458,7 @@ public class TypeNarrowerTest
             let b = true;
             if b { }
             """;
+
         var (model, condition) = GetCondition(source2);
         var narrower = new TypeNarrower(model);
         var current = new TypedFlowState();
