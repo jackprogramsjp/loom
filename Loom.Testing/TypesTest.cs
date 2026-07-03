@@ -411,16 +411,11 @@ public class TypesTest
     public void ObjectType_Assignability_WithNeverAndUnknown()
     {
         var neverObj = new ObjectType(null, [new ObjectProperty(false, "prop", Never)]);
-
         var numberObj = new ObjectType(null, [new ObjectProperty(false, "prop", Number)]);
-
-        // Never is subtype of all, so object with Never property is subtype
         Assert.True(neverObj.IsAssignableTo(numberObj));
         Assert.False(numberObj.IsAssignableTo(neverObj));
 
         var unknownObj = new ObjectType(null, [new ObjectProperty(false, "prop", Unknown)]);
-
-        // Unknown is supertype
         Assert.True(numberObj.IsAssignableTo(unknownObj));
         Assert.False(unknownObj.IsAssignableTo(numberObj));
     }
@@ -428,14 +423,8 @@ public class TypesTest
     [Fact]
     public void ObjectType_Assignability_PropertyTypeContravariance()
     {
-        // For mutable properties, you might want contravariance on writes
-        // This test assumes mutable properties are contravariant
-
         var animalWriter = new ObjectType(null, [new ObjectProperty(true, "set", new FunctionType([], [Unknown], Void))]);
-
         var catWriter = new ObjectType(null, [new ObjectProperty(true, "set", new FunctionType([], [String], Void))]);
-
-        // Contravariance: AnimalWriter → CatWriter
         Assert.True(animalWriter.IsAssignableTo(catWriter));
     }
 
@@ -932,7 +921,7 @@ public class TypesTest
 
         Assert.True(fn1.Equals(fn2));
         Assert.False(fn1.Equals(fn3));
-        Assert.True(fn1.Equals(fn4)); // type parameter name doesn't matter for equality (structural)
+        Assert.True(fn1.Equals(fn4));
         Assert.False(fn1.Equals(fn5));
         Assert.False(fn1.Equals(Number));
     }
