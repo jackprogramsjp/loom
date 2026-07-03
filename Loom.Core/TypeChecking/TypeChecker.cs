@@ -148,6 +148,8 @@ public sealed partial class TypeChecker
     {
         var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [];
         var parameterTypes = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit) ?? [];
+        MaybeVisit(functionDeclaration.ReturnType);
+        
         var returnType = GetReturnType(functionDeclaration);
         var functionType = BindType(functionDeclaration, new Types.FunctionType(typeParameters, parameterTypes, returnType));
         Visit(functionDeclaration.Body);
@@ -251,7 +253,9 @@ public sealed partial class TypeChecker
         if (functionType.TypeParameters.Count == 0)
             return BindNonGenericInvocation(invocation, argumentTypes, functionType);
 
-        var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes);
+        var expectedReturnType = GetExpectedInvocationReturnType(invocation);
+        Console.WriteLine(expectedReturnType);
+        var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
         if (substitution == null)
             return BindType(invocation, Types.PrimitiveType.Never);
 
@@ -564,6 +568,35 @@ public sealed partial class TypeChecker
         _flowStates.Pop();
 
         return type;
+    }
+    
+    private Type? GetExpectedInvocationReturnType(Expression expression) =>
+        expression.Parent switch
+        {
+            VariableDeclaration { ColonTypeClause: not null } variableDeclaration
+                when variableDeclaration.EqualsValueClause?.Value == expression =>
+                _semanticModel.GetType(variableDeclaration.ColonTypeClause),
+
+            Return @return when @return.Expression == expression =>
+                GetEnclosingDeclaredReturnType(@return),
+
+            AssignmentOperator { Operator.Kind: SyntaxKind.Equals } assignment
+                when assignment.Right == expression =>
+                _semanticModel.GetType(assignment.Left),
+
+            Parameter { ColonTypeClause: not null } parameter
+                when parameter.EqualsValueClause?.Value == expression =>
+                _semanticModel.GetType(parameter.ColonTypeClause),
+
+            _ => null
+        };
+
+    private Type? GetEnclosingDeclaredReturnType(Return @return)
+    {
+        var enclosingFunction = @return.FirstAncestorOfType<FunctionDeclaration>();
+        return enclosingFunction?.ReturnType != null
+            ? ((Types.FunctionType)_semanticModel.GetType(enclosingFunction)).ReturnType
+            : null;
     }
 
     private Type GetTypeOfNamedAccess(Expression accessExpression, Expression targetExpression, List<DotName> names)

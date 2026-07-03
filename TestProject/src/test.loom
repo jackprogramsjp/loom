@@ -1,1 +1,16 @@
-enum E { A, B } type X = E["nonexistent"]
+interface Result<T, Error> {
+    value: T?;
+    error: Error?;
+}
+
+fn ok<T, Error>(value: T): Result<T, Error> {
+    return new Result { value: value, error: none as never as Error };
+}
+
+enum MyErrors: string {
+    DoSomethingFailed = "do_something failed to execute"
+}
+
+fn do_something: Result<number, MyErrors> {
+    return ok(69);
+}

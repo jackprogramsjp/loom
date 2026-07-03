@@ -69,12 +69,16 @@ public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypePara
     public TypeParameterSubstitution? InferFunctionTypeArguments(
         FunctionType functionType,
         List<Type> argumentTypes,
-        Node errorNode)
+        Node errorNode,
+        Type? expectedReturnType = null)
     {
         var inferred = new TypeParameterSubstitution();
         var visited = new HashSet<(Type, Type)>();
         for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
             TryInferTypes(functionType.ParameterTypes[i], argumentTypes[i], inferred, visited);
+        
+        if (expectedReturnType != null)
+            TryInferTypes(functionType.ReturnType, expectedReturnType, inferred, visited);
 
         var substitution = new TypeParameterSubstitution();
         foreach (var typeParameter in functionType.TypeParameters)

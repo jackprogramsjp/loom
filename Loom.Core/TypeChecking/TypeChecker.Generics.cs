@@ -51,7 +51,8 @@ public sealed partial class TypeChecker
     private TypeParameterSubstitution? ResolveTypeArguments(
         Invocation invocation,
         Types.FunctionType functionType,
-        List<Type> argumentTypes)
+        List<Type> argumentTypes,
+        Type? expectedReturnType)
     {
         var substitution = new TypeParameterSubstitution();
         if (invocation.TypeArguments != null)
@@ -65,7 +66,7 @@ public sealed partial class TypeChecker
         }
         else
         {
-            var inferred = _inferrer.InferFunctionTypeArguments(functionType, argumentTypes, invocation);
+            var inferred = _inferrer.InferFunctionTypeArguments(functionType, argumentTypes, invocation, expectedReturnType);
             if (inferred == null)
                 return null;
 

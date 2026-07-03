@@ -7,7 +7,7 @@ public sealed class InterfaceType(string name, List<InterfaceType> constraints, 
     public List<InterfaceType> Constraints { get; } = constraints;
     public ObjectType ObjectType { get; } = objectType;
     public Type AssignabilityType { get; } = constraints.Count > 0 ? new IntersectionType([objectType, ..constraints]) : objectType;
-
+    
     public override bool Equals(Type? other) =>
         other is InterfaceType interfaceType
         && ListEquals(Constraints, interfaceType.Constraints)
