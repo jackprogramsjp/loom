@@ -84,7 +84,7 @@ public sealed partial class Parser
 
     private Expression ParsePostfix()
     {
-        var expression = ParseNamedAccess();
+        var expression = ParsePrimary();
         while (!IsEof())
         {
             if (Current() is { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
@@ -100,6 +100,17 @@ public sealed partial class Parser
                 var rightBracket = Expect(SyntaxKind.RBracket);
                 expression = new ElementAccess(leftBracket, rightBracket, expression, indexExpression);
             }
+            else if (Match(out var dot, SyntaxKind.Dot))
+            {
+                var name = ExpectIdentifier();
+                var names = new List<DotName> { new(dot, name) };
+                while (Match(out var nextDot, SyntaxKind.Dot))
+                    names.Add(new DotName(nextDot, ExpectIdentifier()));
+
+                expression = expression is Identifier identifier
+                    ? new QualifiedName(identifier, names)
+                    : new PropertyAccess(expression, names);
+            }
             else
             {
                 // TODO: postfix unary operators
@@ -108,48 +119,6 @@ public sealed partial class Parser
         }
 
         return expression;
-    }
-
-    private InterfaceInvocationInitializer ParseInterfaceInvocationInitializer()
-    {
-        if (Match(out var name, SyntaxKind.Identifier))
-        {
-            var colon = Expect(SyntaxKind.Colon);
-            var expression = ParseExpression();
-            return new InterfaceInvocationPropertyInitializer(name, colon, expression);
-        }
-
-        var leftBracket = Expect(SyntaxKind.LBracket, "property name or index initializer");
-        var indexExpression = ParseExpression();
-        var rightBracket = Expect(SyntaxKind.RBracket);
-        var indexColon = Expect(SyntaxKind.Colon);
-        var indexValueExpression = ParseExpression();
-        return new InterfaceInvocationIndexInitializer(leftBracket, rightBracket, indexColon, indexExpression, indexValueExpression);
-    }
-
-    private Arguments ParseArguments(Token leftParen)
-    {
-        if (Match(out var matchedRightParen, SyntaxKind.RParen))
-            return new Arguments(leftParen, matchedRightParen, []);
-
-        var argumentList = ParseDelimited(ParseExpression);
-        var rightParen = Expect(SyntaxKind.RParen);
-        return new Arguments(leftParen, rightParen, argumentList);
-    }
-
-    private Expression ParseNamedAccess()
-    {
-        var expression = ParsePrimary();
-        var names = new List<DotName>();
-        while (Match(out var dot, SyntaxKind.Dot))
-            names.Add(new DotName(dot, Expect(SyntaxKind.Identifier)));
-
-        if (names.Count <= 0)
-            return expression;
-
-        return expression is Identifier identifier
-            ? new QualifiedName(identifier, names)
-            : new PropertyAccess(expression, names);
     }
 
     private Expression ParsePrimary()
@@ -187,6 +156,33 @@ public sealed partial class Parser
         }
 
         return new NullExpression(current);
+    }
+
+    private InterfaceInvocationInitializer ParseInterfaceInvocationInitializer()
+    {
+        if (Match(out var name, SyntaxKind.Identifier))
+        {
+            var colon = Expect(SyntaxKind.Colon);
+            var expression = ParseExpression();
+            return new InterfaceInvocationPropertyInitializer(name, colon, expression);
+        }
+
+        var leftBracket = Expect(SyntaxKind.LBracket, "property name or index initializer");
+        var indexExpression = ParseExpression();
+        var rightBracket = Expect(SyntaxKind.RBracket);
+        var indexColon = Expect(SyntaxKind.Colon);
+        var indexValueExpression = ParseExpression();
+        return new InterfaceInvocationIndexInitializer(leftBracket, rightBracket, indexColon, indexExpression, indexValueExpression);
+    }
+
+    private Arguments ParseArguments(Token leftParen)
+    {
+        if (Match(out var matchedRightParen, SyntaxKind.RParen))
+            return new Arguments(leftParen, matchedRightParen, []);
+
+        var argumentList = ParseDelimited(ParseExpression);
+        var rightParen = Expect(SyntaxKind.RParen);
+        return new Arguments(leftParen, rightParen, argumentList);
     }
 
     private Parenthesized ParseParenthesized(Token leftParen)

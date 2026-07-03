@@ -1,13 +1,7 @@
-enum Empty { }
-
 enum Abc { A, B, C }
-
-enum Mixed { A, B = 69, C }
-
 enum Status { Active = 1, Inactive = 0, Pending = 2 }
-
-enum Colors : string {
-    Red = "FF0000",
-    Green = "00FF00",
-    Blue = "0000FF"
-}
+enum Mixed { A, B = 69, C }
+enum Colors : string { Red = "FF0000", Green = "00FF00", Blue = "0000FF" }
+enum Empty { }
+enum Numbers : number { One = 1, Two = 2, Three = 3 }
+enum Flags { A = 0b0001, B = 0b0010, C = 0b0100, D = 0b1000 }

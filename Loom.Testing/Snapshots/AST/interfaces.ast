@@ -1,0 +1,320 @@
+﻿InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: []
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      PropertyDeclaration(
+        MutKeyword: null
+        Name: Token(Identifier, "x")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+      )
+      PropertyDeclaration(
+        MutKeyword: null
+        Name: Token(Identifier, "y")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "IPoint")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      PropertyDeclaration(
+        MutKeyword: Token(MutKeyword, "mut")
+        Name: Token(Identifier, "count")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "int")
+            TypeArguments: null
+          )
+        )
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      IndexerDeclaration(
+        MutKeyword: null
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        IndexType: PrimitiveType(
+          Kind: Number
+        )
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: String
+          )
+        )
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      IndexerDeclaration(
+        MutKeyword: Token(MutKeyword, "mut")
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        IndexType: PrimitiveType(
+          Kind: String
+        )
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      PropertyDeclaration(
+        MutKeyword: null
+        Name: Token(Identifier, "x")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+      )
+      IndexerDeclaration(
+        MutKeyword: null
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        IndexType: TypeName(
+          Name: Token(Identifier, "int")
+          TypeArguments: null
+        )
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Bool
+          )
+        )
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      PropertyDeclaration(
+        MutKeyword: null
+        Name: Token(Identifier, "value")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "T")
+            TypeArguments: null
+          )
+        )
+      )
+    ]
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause(
+    ColonToken: Token(Colon, ":")
+    Types: [
+      TypeName(
+        Name: Token(Identifier, "Base")
+        TypeArguments: null
+      )
+      TypeName(
+        Name: Token(Identifier, "IDisposable")
+        TypeArguments: null
+      )
+    ]
+  )
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: []
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+      TypeParameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+        EqualsTypeClause: null
+        Name: Token(Identifier, "U")
+      )
+    ]
+  )
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: null
+  TypeParameters: null
+  Name: Token(Identifier, "Empty")
+)
+InterfaceDeclaration(
+  SealedKeyword: Token(SealedKeyword, "sealed")
+  ColonTypeListClause: null
+  Body: null
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)
+Declare(
+  Signature: InterfaceDeclaration(
+    SealedKeyword: null
+    ColonTypeListClause: null
+    Body: null
+    TypeParameters: null
+    Name: Token(Identifier, "I")
+  )
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause(
+    ColonToken: Token(Colon, ":")
+    Types: [
+      TypeName(
+        Name: Token(Identifier, "A")
+        TypeArguments: null
+      )
+      TypeName(
+        Name: Token(Identifier, "B")
+        TypeArguments: null
+      )
+    ]
+  )
+  Body: null
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "U")
+      )
+    ]
+  )
+  Name: Token(Identifier, "I")
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      PropertyDeclaration(
+        MutKeyword: null
+        Name: Token(Identifier, "x")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+      )
+      PropertyDeclaration(
+        MutKeyword: null
+        Name: Token(Identifier, "y")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: String
+          )
+        )
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)

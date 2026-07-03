@@ -1,0 +1,8 @@
+while true { }
+while x > 0 { x = x - 1 }
+while true break
+while a { while b { continue } }
+while true { break }
+while true { continue }
+while condition { let x = 1 }
+while true { if x > 0 { break } else { continue } }

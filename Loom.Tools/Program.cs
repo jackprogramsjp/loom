@@ -28,6 +28,7 @@ var tools = new Dictionary<string, Action>
     ["generate-ast-snapshots"] = () =>
     {
         var snapshotsDir = arguments.ElementAtOrDefault(1);
+        var skipExisting = bool.Parse(arguments.ElementAtOrDefault(2) ?? "true");
         if (string.IsNullOrEmpty(snapshotsDir))
         {
             Console.WriteLine("Usage: loomtools generate-ast-snapshots <snapshots-directory>");
@@ -47,13 +48,19 @@ var tools = new Dictionary<string, Action>
             return;
         }
 
+        var skipped = 0;
         foreach (var loomFile in loomFiles)
         {
             var baseName = Path.GetFileNameWithoutExtension(loomFile);
             var outputFile = Path.Combine(snapshotsDir, $"{baseName}.ast");
+            if (skipExisting && File.Exists(outputFile))
+            {
+                Console.WriteLine($"Skipping {Path.GetFileName(loomFile)}.");
+                skipped++;
+                continue;
+            }
             
             Console.WriteLine($"Processing: {Path.GetFileName(loomFile)} -> {baseName}.ast");
-
             try
             {
                 var file = FileManager.LoadSingle(loomFile);
@@ -70,7 +77,7 @@ var tools = new Dictionary<string, Action>
             }
         }
 
-        Console.WriteLine($"Done. Processed {loomFiles.Length} files.");
+        Console.WriteLine($"Done. Processed {loomFiles.Length - skipped} files.");
     }
 };
 

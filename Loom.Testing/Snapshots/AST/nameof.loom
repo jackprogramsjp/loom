@@ -1,1 +1,4 @@
-nameof(abc)
+nameof(x)
+nameof(SomeType)
+nameof(foo.bar)
+nameof(a.b.c)

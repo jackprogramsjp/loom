@@ -1,0 +1,10 @@
+after 5s { }
+after 5s doSomething()
+after 2.5s { }
+after 500ms { }
+after 0.5m { }
+after 2h { }
+after 10ms { let x = 1 }
+after 2s { if condition { break } }
+if true { after 1s foo() } else { after 2s bar() }
+after getDelay() { action() }

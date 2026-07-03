@@ -1,7 +1,10 @@
-fn abc {}
-fn abc -> none
-fn wrap<T>(value: T): T { return value; }
+fn empty {}
+fn greet(name: string = "world") { return "Hello " + name }
+fn sum(a: number, b: number): number { return a + b }
 fn double(x: number) -> x * 2
-fn sum(a: number, b: number): number { return a + b; }
-fn greet(name = "world") -> "Hello " + name;
-fn wrap<T: number = 69>(x: T): T { return x; }
+fn wrap<T>(value: T): T { return value }
+fn abc -> none
+fn noArgs(): void {}
+fn multiParam(a: number, b: string, c: bool): void {}
+fn nestedGenerics<T, U: List<T>>(x: T, y: U): T { return x }
+fn expressionBody(x: number, y: number) -> x + y

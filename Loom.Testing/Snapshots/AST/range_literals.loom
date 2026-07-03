@@ -1,3 +1,5 @@
 let x = 1..5
 let y = a..b
 let z = (1 + 2)..(3 + 4)
+let a = 0..len
+let b = 1..arr.len

@@ -5,6 +5,22 @@
 )
 VariableDeclaration(
   ColonTypeClause: null
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
+    )
+  )
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -31,22 +47,6 @@ VariableDeclaration(
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
-  EqualsValueClause: null
-  Name: Token(Identifier, "x")
-)
-VariableDeclaration(
-  ColonTypeClause: null
-  EqualsValueClause(
-    EqualsToken: Token(Equals, "=")
-    Value: Literal(
-      Token(NumberLiteral, "1")
-      Value: 1
-    )
-  )
-  Name: Token(Identifier, "x")
-)
-VariableDeclaration(
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: PrimitiveType(
@@ -60,5 +60,1496 @@ VariableDeclaration(
       Value: False
     )
   )
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: Number
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: String
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: ArrayLiteral(
+      MutKeyword: Token(MutKeyword, "mut")
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expressions: [
+        Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+        Literal(
+          Token(NumberLiteral, "2")
+          Value: 2
+        )
+        Literal(
+          Token(NumberLiteral, "3")
+          Value: 3
+        )
+      ]
+    )
+  )
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: InterfaceInvocation(
+      Name: Identifier(
+        Name: Token(Identifier, "Foo")
+        Token(Identifier, "Foo")
+      )
+      TypeArguments: null
+      Body: InterfaceInvocationBody(
+        Initializers: [
+          InterfaceInvocationPropertyInitializer(
+            Name: Token(Identifier, "a")
+            Colon: Token(Colon, ":")
+            Expression: Literal(
+              Token(NumberLiteral, "1")
+              Value: 1
+            )
+          )
+          InterfaceInvocationPropertyInitializer(
+            Name: Token(Identifier, "b")
+            Colon: Token(Colon, ":")
+            Expression: Literal(
+              Token(NumberLiteral, "2")
+              Value: 2
+            )
+          )
+        ]
+        RightBrace: Token(RBrace, "}")
+        LeftBrace: Token(LBrace, "{")
+      )
+    )
+  )
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: Number
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "p")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: PrimitiveType(
+          Kind: String
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ParameterList: [
+          TypeParameter(
+            ColonTypeClause: null
+            EqualsTypeClause: null
+            Name: Token(Identifier, "T")
+          )
+        ]
+      )
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: TypeName(
+                Name: Token(Identifier, "T")
+                TypeArguments: null
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "p")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: TypeName(
+      Name: Token(Identifier, "List")
+      TypeArguments(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ArgumentsList: [
+          PrimitiveType(
+            Kind: Number
+          )
+        ]
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: TypeName(
+      Name: Token(Identifier, "List")
+      TypeArguments(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ArgumentsList: [
+          TypeName(
+            Name: Token(Identifier, "List")
+            TypeArguments(
+              LeftArrow: Token(LArrow, "<")
+              RightArrow: Token(RArrow, ">")
+              ArgumentsList: [
+                PrimitiveType(
+                  Kind: String
+                )
+              ]
+            )
+          )
+        ]
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        PrimitiveType(
+          Kind: Number
+        )
+        PrimitiveType(
+          Kind: String
+        )
+        PrimitiveType(
+          Kind: Bool
+        )
+      ]
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IntersectionType(
+      Ampersands: [
+        Token(
+          Kind: Ampersand
+          Text: "&"
+        )
+        Token(
+          Kind: Ampersand
+          Text: "&"
+        )
+      ]
+      Types: [
+        PrimitiveType(
+          Kind: Number
+        )
+        PrimitiveType(
+          Kind: String
+        )
+        PrimitiveType(
+          Kind: Bool
+        )
+      ]
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ArrayType(
+      ElementType: ParenthesizedType(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: UnionType(
+          Pipes: [
+            Token(
+              Kind: Pipe
+              Text: "|"
+            )
+          ]
+          Types: [
+            PrimitiveType(
+              Kind: Number
+            )
+            PrimitiveType(
+              Kind: String
+            )
+          ]
+        )
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: null
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ParameterList: [
+          TypeParameter(
+            ColonTypeClause: null
+            EqualsTypeClause: null
+            Name: Token(Identifier, "T")
+          )
+        ]
+      )
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: TypeName(
+                Name: Token(Identifier, "T")
+                TypeArguments: null
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "p")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: UnionType(
+          Pipes: [
+            Token(
+              Kind: Pipe
+              Text: "|"
+            )
+          ]
+          Types: [
+            TypeName(
+              Name: Token(Identifier, "T")
+              TypeArguments: null
+            )
+            FunctionType(
+              FnKeyword: Token(FnKeyword, "fn")
+              TypeParameters(
+                LeftArrow: Token(LArrow, "<")
+                RightArrow: Token(RArrow, ">")
+                ParameterList: [
+                  TypeParameter(
+                    ColonTypeClause: null
+                    EqualsTypeClause: null
+                    Name: Token(Identifier, "U")
+                  )
+                ]
+              )
+              Parameters(
+                LeftParen: Token(LParen, "(")
+                RightParen: Token(RParen, ")")
+                ParameterList: [
+                  Parameter(
+                    ColonTypeClause(
+                      ColonToken: Token(Colon, ":")
+                      Type: TypeName(
+                        Name: Token(Identifier, "U")
+                        TypeArguments: null
+                      )
+                    )
+                    EqualsValueClause: null
+                    Name: Token(Identifier, "p")
+                  )
+                ]
+              )
+              ReturnType: ColonTypeClause(
+                ColonToken: Token(Colon, ":")
+                Type: TypeName(
+                  Name: Token(Identifier, "U")
+                  TypeArguments: null
+                )
+              )
+            )
+          ]
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        ParenthesizedType(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          Type: IntersectionType(
+            Ampersands: [
+              Token(
+                Kind: Ampersand
+                Text: "&"
+              )
+            ]
+            Types: [
+              TypeName(
+                Name: Token(Identifier, "A")
+                TypeArguments: null
+              )
+              TypeName(
+                Name: Token(Identifier, "B")
+                TypeArguments: null
+              )
+            ]
+          )
+        )
+        ParenthesizedType(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          Type: IntersectionType(
+            Ampersands: [
+              Token(
+                Kind: Ampersand
+                Text: "&"
+              )
+            ]
+            Types: [
+              TypeName(
+                Name: Token(Identifier, "C")
+                TypeArguments: null
+              )
+              TypeName(
+                Name: Token(Identifier, "D")
+                TypeArguments: null
+              )
+            ]
+          )
+        )
+      ]
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        IndexedType(
+          LeftBracket: Token(LBracket, "[")
+          RightBracket: Token(RBracket, "]")
+          Type: TypeName(
+            Name: Token(Identifier, "A")
+            TypeArguments: null
+          )
+          IndexType: TypeName(
+            Name: Token(Identifier, "B")
+            TypeArguments: null
+          )
+        )
+        IndexedType(
+          LeftBracket: Token(LBracket, "[")
+          RightBracket: Token(RBracket, "]")
+          Type: TypeName(
+            Name: Token(Identifier, "C")
+            TypeArguments: null
+          )
+          IndexType: TypeName(
+            Name: Token(Identifier, "D")
+            TypeArguments: null
+          )
+        )
+      ]
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ArrayType(
+      ElementType: KeyOf(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: null
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: Number
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "a")
+          )
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: String
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "b")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: UnionType(
+          Pipes: [
+            Token(
+              Kind: Pipe
+              Text: "|"
+            )
+          ]
+          Types: [
+            PrimitiveType(
+              Kind: Bool
+            )
+            FunctionType(
+              FnKeyword: Token(FnKeyword, "fn")
+              TypeParameters: null
+              Parameters(
+                LeftParen: Token(LParen, "(")
+                RightParen: Token(RParen, ")")
+                ParameterList: [
+                  Parameter(
+                    ColonTypeClause(
+                      ColonToken: Token(Colon, ":")
+                      Type: PrimitiveType(
+                        Kind: Bool
+                      )
+                    )
+                    EqualsValueClause: null
+                    Name: Token(Identifier, "c")
+                  )
+                ]
+              )
+              ReturnType: ColonTypeClause(
+                ColonToken: Token(Colon, ":")
+                Type: PrimitiveType(
+                  Kind: Number
+                )
+              )
+            )
+          ]
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: TypeName(
+      Name: Token(Identifier, "Array")
+      TypeArguments(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ArgumentsList: [
+          TypeName(
+            Name: Token(Identifier, "Map")
+            TypeArguments(
+              LeftArrow: Token(LArrow, "<")
+              RightArrow: Token(RArrow, ">")
+              ArgumentsList: [
+                PrimitiveType(
+                  Kind: String
+                )
+                TypeName(
+                  Name: Token(Identifier, "List")
+                  TypeArguments(
+                    LeftArrow: Token(LArrow, "<")
+                    RightArrow: Token(RArrow, ">")
+                    ArgumentsList: [
+                      PrimitiveType(
+                        Kind: Number
+                      )
+                    ]
+                  )
+                )
+              ]
+            )
+          )
+        ]
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters: null
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: PrimitiveType(
+          Kind: Void
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "callback")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: Number
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "x")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: OptionalType(
+          Question: Token(Question, "?")
+          NonNullableType: PrimitiveType(
+            Kind: Number
+          )
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "callback")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: Number
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "x")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: ArrayType(
+          ElementType: PrimitiveType(
+            Kind: Number
+          )
+          LeftBracket: Token(LBracket, "[")
+          MutKeyword: null
+          RightBracket: Token(RBracket, "]")
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "callback")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: Number
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "x")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: UnionType(
+          Pipes: [
+            Token(
+              Kind: Pipe
+              Text: "|"
+            )
+          ]
+          Types: [
+            PrimitiveType(
+              Kind: Number
+            )
+            PrimitiveType(
+              Kind: String
+            )
+          ]
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "callback")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: OptionalType(
+      Question: Token(Question, "?")
+      NonNullableType: ParenthesizedType(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: FunctionType(
+          FnKeyword: Token(FnKeyword, "fn")
+          TypeParameters: null
+          Parameters(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ParameterList: [
+              Parameter(
+                ColonTypeClause(
+                  ColonToken: Token(Colon, ":")
+                  Type: PrimitiveType(
+                    Kind: Number
+                  )
+                )
+                EqualsValueClause: null
+                Name: Token(Identifier, "x")
+              )
+            ]
+          )
+          ReturnType: ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: PrimitiveType(
+              Kind: Number
+            )
+          )
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "callback")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ArrayType(
+      ElementType: ParenthesizedType(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: FunctionType(
+          FnKeyword: Token(FnKeyword, "fn")
+          TypeParameters: null
+          Parameters(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ParameterList: [
+              Parameter(
+                ColonTypeClause(
+                  ColonToken: Token(Colon, ":")
+                  Type: PrimitiveType(
+                    Kind: Number
+                  )
+                )
+                EqualsValueClause: null
+                Name: Token(Identifier, "x")
+              )
+            ]
+          )
+          ReturnType: ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: PrimitiveType(
+              Kind: Number
+            )
+          )
+        )
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: null
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "callbacks")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ParameterList: [
+          TypeParameter(
+            ColonTypeClause: null
+            EqualsTypeClause: null
+            Name: Token(Identifier, "T")
+          )
+        ]
+      )
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: TypeName(
+                Name: Token(Identifier, "T")
+                TypeArguments: null
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "value")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "identity")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ParameterList: [
+          TypeParameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: Number
+              )
+            )
+            EqualsTypeClause: null
+            Name: Token(Identifier, "T")
+          )
+        ]
+      )
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: TypeName(
+                Name: Token(Identifier, "T")
+                TypeArguments: null
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "item")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: ArrayType(
+          ElementType: TypeName(
+            Name: Token(Identifier, "T")
+            TypeArguments: null
+          )
+          LeftBracket: Token(LBracket, "[")
+          MutKeyword: null
+          RightBracket: Token(RBracket, "]")
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "wrap")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+      IndexType: TypeName(
+        Name: Token(Identifier, "K")
+        TypeArguments: null
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: PrimitiveType(
+        Kind: Number
+      )
+      IndexType: PrimitiveType(
+        Kind: String
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+      IndexType: LiteralType(
+        Token(StringLiteral, "'length'")
+        Value: "length"
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+      IndexType: UnionType(
+        Pipes: [
+          Token(
+            Kind: Pipe
+            Text: "|"
+          )
+        ]
+        Types: [
+          LiteralType(
+            Token(StringLiteral, "'a'")
+            Value: "a"
+          )
+          LiteralType(
+            Token(StringLiteral, "'b'")
+            Value: "b"
+          )
+        ]
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: IndexedType(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+        IndexType: TypeName(
+          Name: Token(Identifier, "K")
+          TypeArguments: null
+        )
+      )
+      IndexType: TypeName(
+        Name: Token(Identifier, "V")
+        TypeArguments: null
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: OptionalType(
+      Question: Token(Question, "?")
+      NonNullableType: IndexedType(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+        IndexType: TypeName(
+          Name: Token(Identifier, "K")
+          TypeArguments: null
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ArrayType(
+      ElementType: IndexedType(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+        IndexType: TypeName(
+          Name: Token(Identifier, "K")
+          TypeArguments: null
+        )
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: null
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: ParenthesizedType(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: IntersectionType(
+          Ampersands: [
+            Token(
+              Kind: Ampersand
+              Text: "&"
+            )
+          ]
+          Types: [
+            TypeName(
+              Name: Token(Identifier, "A")
+              TypeArguments: null
+            )
+            TypeName(
+              Name: Token(Identifier, "B")
+              TypeArguments: null
+            )
+          ]
+        )
+      )
+      IndexType: UnionType(
+        Pipes: [
+          Token(
+            Kind: Pipe
+            Text: "|"
+          )
+        ]
+        Types: [
+          TypeName(
+            Name: Token(Identifier, "C")
+            TypeArguments: null
+          )
+          TypeName(
+            Name: Token(Identifier, "D")
+            TypeArguments: null
+          )
+        ]
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: ParenthesizedType(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: FunctionType(
+          FnKeyword: Token(FnKeyword, "fn")
+          TypeParameters: null
+          Parameters(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ParameterList: []
+          )
+          ReturnType: ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: TypeName(
+              Name: Token(Identifier, "T")
+              TypeArguments: null
+            )
+          )
+        )
+      )
+      IndexType: TypeName(
+        Name: Token(Identifier, "K")
+        TypeArguments: null
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        IndexedType(
+          LeftBracket: Token(LBracket, "[")
+          RightBracket: Token(RBracket, "]")
+          Type: TypeName(
+            Name: Token(Identifier, "T")
+            TypeArguments: null
+          )
+          IndexType: TypeName(
+            Name: Token(Identifier, "K")
+            TypeArguments: null
+          )
+        )
+        PrimitiveType(
+          Kind: Number
+        )
+      ]
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: TypeName(
+        Name: Token(Identifier, "Array")
+        TypeArguments(
+          LeftArrow: Token(LArrow, "<")
+          RightArrow: Token(RArrow, ">")
+          ArgumentsList: [
+            PrimitiveType(
+              Kind: Number
+            )
+          ]
+        )
+      )
+      IndexType: LiteralType(
+        Token(NumberLiteral, "0")
+        Value: 0
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: IndexedType(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Type: ParenthesizedType(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: IntersectionType(
+          Ampersands: [
+            Token(
+              Kind: Ampersand
+              Text: "&"
+            )
+          ]
+          Types: [
+            TypeName(
+              Name: Token(Identifier, "A")
+              TypeArguments: null
+            )
+            TypeName(
+              Name: Token(Identifier, "B")
+              TypeArguments: null
+            )
+          ]
+        )
+      )
+      IndexType: UnionType(
+        Pipes: [
+          Token(
+            Kind: Pipe
+            Text: "|"
+          )
+        ]
+        Types: [
+          TypeName(
+            Name: Token(Identifier, "C")
+            TypeArguments: null
+          )
+          TypeName(
+            Name: Token(Identifier, "D")
+            TypeArguments: null
+          )
+        ]
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: OptionalType(
+      Question: Token(Question, "?")
+      NonNullableType: ArrayType(
+        ElementType: OptionalType(
+          Question: Token(Question, "?")
+          NonNullableType: TypeName(
+            Name: Token(Identifier, "Abc")
+            TypeArguments: null
+          )
+        )
+        LeftBracket: Token(LBracket, "[")
+        MutKeyword: null
+        RightBracket: Token(RBracket, "]")
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ArrayType(
+      ElementType: TypeName(
+        Name: Token(Identifier, "Abc")
+        TypeArguments: null
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: Token(MutKeyword, "mut")
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ArrayType(
+      ElementType: TypeName(
+        Name: Token(Identifier, "Abc")
+        TypeArguments: null
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: null
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: OptionalType(
+      Question: Token(Question, "?")
+      NonNullableType: TypeName(
+        Name: Token(Identifier, "Abc")
+        TypeArguments: null
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: TypeName(
+      Name: Token(Identifier, "Abc")
+      TypeArguments: null
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ParenthesizedType(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(NumberLiteral, "69")
+      Value: 69
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(NumberLiteral, "10hz")
+      Value: 0.1
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(NumberLiteral, "0x69")
+      Value: 105
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(NumberLiteral, "0b1011")
+      Value: 11
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(StringLiteral, "'abc'")
+      Value: "abc"
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(StringLiteral, ""abc"")
+      Value: "abc"
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(TrueLiteral, "true")
+      Value: True
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(FalseLiteral, "false")
+      Value: False
+    )
+  )
+  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )

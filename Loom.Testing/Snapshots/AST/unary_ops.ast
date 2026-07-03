@@ -23,3 +23,93 @@ ExpressionStatement(
     )
   )
 )
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Tilde, "~")
+    Left: BinaryOperator(
+      Operator: Token(Minus, "-")
+      Left: UnaryOperator(
+        Operator: Token(Bang, "!")
+        Operand: Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+    )
+    Right: BinaryOperator(
+      Operator: Token(Minus, "-")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Parenthesized(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Expression: UnaryOperator(
+          Operator: Token(Minus, "-")
+          Operand: Identifier(
+            Name: Token(Identifier, "a")
+            Token(Identifier, "a")
+          )
+        )
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: UnaryOperator(
+    Operator: Token(Bang, "!")
+    Operand: Parenthesized(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      Expression: UnaryOperator(
+        Operator: Token(Bang, "!")
+        Operand: Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(AmpersandAmpersand, "&&")
+    Left: UnaryOperator(
+      Operator: Token(Bang, "!")
+      Operand: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+    )
+    Right: BinaryOperator(
+      Operator: Token(Minus, "-")
+      Left: UnaryOperator(
+        Operator: Token(Bang, "!")
+        Operand: Identifier(
+          Name: Token(Identifier, "b")
+          Token(Identifier, "b")
+        )
+      )
+      Right: Parenthesized(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Expression: BinaryOperator(
+          Operator: Token(Plus, "+")
+          Left: Identifier(
+            Name: Token(Identifier, "a")
+            Token(Identifier, "a")
+          )
+          Right: Identifier(
+            Name: Token(Identifier, "b")
+            Token(Identifier, "b")
+          )
+        )
+      )
+    )
+  )
+)

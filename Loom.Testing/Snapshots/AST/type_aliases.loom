@@ -1,5 +1,13 @@
 type A = number
+type B = string
 type Intersect<A, B> = A & B
+type Union<A, B> = A | B
 type Id<T = number> = T
-type X = List<Option<number>>
-type Alias<T: number | string = number | string> = T
+type Result<T, E> = Ok<T> | Err<E>
+type Callback = fn(p: number): void
+type Optional<T> = T?
+type Array<T> = T[]
+type Nested<T> = List<Option<T>>
+type Func<T, R> = fn(p: T): R
+type T = number | string | bool
+type Fn = fn<T>: T

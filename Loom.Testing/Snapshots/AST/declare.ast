@@ -1,0 +1,208 @@
+﻿Declare(
+  Signature: DeclareFunctionSignature(
+    Parameters(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ParameterList: [
+        Parameter(
+          ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: TypeName(
+              Name: Token(Identifier, "T")
+              TypeArguments: null
+            )
+          )
+          EqualsValueClause: null
+          Name: Token(Identifier, "x")
+        )
+      ]
+    )
+    ReturnType: ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+    )
+    TypeParameters(
+      LeftArrow: Token(LArrow, "<")
+      RightArrow: Token(RArrow, ">")
+      ParameterList: [
+        TypeParameter(
+          ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: PrimitiveType(
+              Kind: Number
+            )
+          )
+          EqualsTypeClause: null
+          Name: Token(Identifier, "T")
+        )
+      ]
+    )
+    Name: Token(Identifier, "id")
+  )
+)
+Declare(
+  Signature: DeclareFunctionSignature(
+    Parameters(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ParameterList: [
+        Parameter(
+          ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: PrimitiveType(
+              Kind: Number
+            )
+          )
+          EqualsValueClause: null
+          Name: Token(Identifier, "a")
+        )
+        Parameter(
+          ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: PrimitiveType(
+              Kind: Number
+            )
+          )
+          EqualsValueClause: null
+          Name: Token(Identifier, "b")
+        )
+      ]
+    )
+    ReturnType: ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+    TypeParameters: null
+    Name: Token(Identifier, "add")
+  )
+)
+Declare(
+  Signature: DeclareFunctionSignature(
+    Parameters(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ParameterList: [
+        Parameter(
+          ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: TypeName(
+              Name: Token(Identifier, "T")
+              TypeArguments: null
+            )
+          )
+          EqualsValueClause: null
+          Name: Token(Identifier, "value")
+        )
+      ]
+    )
+    ReturnType: ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+    )
+    TypeParameters(
+      LeftArrow: Token(LArrow, "<")
+      RightArrow: Token(RArrow, ">")
+      ParameterList: [
+        TypeParameter(
+          ColonTypeClause: null
+          EqualsTypeClause: null
+          Name: Token(Identifier, "T")
+        )
+      ]
+    )
+    Name: Token(Identifier, "id")
+  )
+)
+Declare(
+  Signature: DeclareFunctionSignature(
+    Parameters(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ParameterList: []
+    )
+    ReturnType: ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+    TypeParameters: null
+    Name: Token(Identifier, "rand")
+  )
+)
+Declare(
+  Signature: DeclareFunctionSignature(
+    Parameters: null
+    ReturnType: ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: PrimitiveType(
+        Kind: Void
+      )
+    )
+    TypeParameters: null
+    Name: Token(Identifier, "exit")
+  )
+)
+Declare(
+  Signature: DeclareVariableSignature(
+    ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+    Name: Token(Identifier, "x")
+  )
+)
+Declare(
+  Signature: DeclareVariableSignature(
+    ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: PrimitiveType(
+        Kind: String
+      )
+    )
+    Name: Token(Identifier, "y")
+  )
+)
+Declare(
+  Signature: InterfaceDeclaration(
+    SealedKeyword: null
+    ColonTypeListClause: null
+    Body: null
+    TypeParameters: null
+    Name: Token(Identifier, "I")
+  )
+)
+Declare(
+  Signature: InterfaceDeclaration(
+    SealedKeyword: null
+    ColonTypeListClause: null
+    Body: InterfaceBody(
+      LeftBrace: Token(LBrace, "{")
+      RightBrace: Token(RBrace, "}")
+      Members: [
+        PropertyDeclaration(
+          MutKeyword: null
+          Name: Token(Identifier, "balls")
+          ColonTypeClause(
+            ColonToken: Token(Colon, ":")
+            Type: PrimitiveType(
+              Kind: Number
+            )
+          )
+        )
+      ]
+    )
+    TypeParameters: null
+    Name: Token(Identifier, "Abc")
+  )
+)

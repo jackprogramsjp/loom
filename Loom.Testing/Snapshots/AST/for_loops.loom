@@ -1,0 +1,9 @@
+for x : items { }
+for x : items break
+for x : items continue
+for x, y : pairs(t) { use(x, y) }
+for x : getItems() { process(x) }
+for x : xs { for y : ys { use(x, y) } }
+for x : 1..10 { print(x) }
+for x : mut arr { x = x * 2 }
+for x : items { if x > 5 { break } else { continue } }

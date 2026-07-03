@@ -302,3 +302,189 @@ ExpressionStatement(
     )
   )
 )
+ExpressionStatement(
+  Expression: InterfaceInvocation(
+    Name: Identifier(
+      Name: Token(Identifier, "Foo")
+      Token(Identifier, "Foo")
+    )
+    TypeArguments(
+      LeftArrow: Token(ColonColonLArrow, "::<")
+      RightArrow: Token(RArrow, ">")
+      ArgumentsList: [
+        PrimitiveType(
+          Kind: Number
+        )
+        PrimitiveType(
+          Kind: String
+        )
+      ]
+    )
+    Body: InterfaceInvocationBody(
+      Initializers: [
+        InterfaceInvocationPropertyInitializer(
+          Name: Token(Identifier, "a")
+          Colon: Token(Colon, ":")
+          Expression: Literal(
+            Token(NumberLiteral, "1")
+            Value: 1
+          )
+        )
+        InterfaceInvocationPropertyInitializer(
+          Name: Token(Identifier, "b")
+          Colon: Token(Colon, ":")
+          Expression: Literal(
+            Token(NumberLiteral, "2")
+            Value: 2
+          )
+        )
+      ]
+      RightBrace: Token(RBrace, "}")
+      LeftBrace: Token(LBrace, "{")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: InterfaceInvocation(
+    Name: Identifier(
+      Name: Token(Identifier, "Foo")
+      Token(Identifier, "Foo")
+    )
+    TypeArguments: null
+    Body: InterfaceInvocationBody(
+      Initializers: [
+        InterfaceInvocationIndexInitializer(
+          RightBracket: Token(RBracket, "]")
+          LeftBracket: Token(LBracket, "[")
+          Colon: Token(Colon, ":")
+          IndexExpression: Identifier(
+            Name: Token(Identifier, "key")
+            Token(Identifier, "key")
+          )
+          Expression: Identifier(
+            Name: Token(Identifier, "value")
+            Token(Identifier, "value")
+          )
+        )
+      ]
+      RightBrace: Token(RBrace, "}")
+      LeftBrace: Token(LBrace, "{")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: InterfaceInvocation(
+    Name: Identifier(
+      Name: Token(Identifier, "Foo")
+      Token(Identifier, "Foo")
+    )
+    TypeArguments: null
+    Body: InterfaceInvocationBody(
+      Initializers: [
+        InterfaceInvocationIndexInitializer(
+          RightBracket: Token(RBracket, "]")
+          LeftBracket: Token(LBracket, "[")
+          Colon: Token(Colon, ":")
+          IndexExpression: Literal(
+            Token(NumberLiteral, "69")
+            Value: 69
+          )
+          Expression: Literal(
+            Token(NumberLiteral, "420")
+            Value: 420
+          )
+        )
+      ]
+      RightBrace: Token(RBrace, "}")
+      LeftBrace: Token(LBrace, "{")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: InterfaceInvocation(
+    Name: Identifier(
+      Name: Token(Identifier, "Foo")
+      Token(Identifier, "Foo")
+    )
+    TypeArguments: null
+    Body: InterfaceInvocationBody(
+      Initializers: [
+        InterfaceInvocationIndexInitializer(
+          RightBracket: Token(RBracket, "]")
+          LeftBracket: Token(LBracket, "[")
+          Colon: Token(Colon, ":")
+          IndexExpression: Invocation(
+            Expression: Identifier(
+              Name: Token(Identifier, "getKey")
+              Token(Identifier, "getKey")
+            )
+            TypeArguments: null
+            Arguments(
+              LeftParen: Token(LParen, "(")
+              RightParen: Token(RParen, ")")
+              ArgumentList: []
+            )
+          )
+          Expression: Invocation(
+            Expression: Identifier(
+              Name: Token(Identifier, "getValue")
+              Token(Identifier, "getValue")
+            )
+            TypeArguments: null
+            Arguments(
+              LeftParen: Token(LParen, "(")
+              RightParen: Token(RParen, ")")
+              ArgumentList: []
+            )
+          )
+        )
+      ]
+      RightBrace: Token(RBrace, "}")
+      LeftBrace: Token(LBrace, "{")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: InterfaceInvocation(
+    Name: Identifier(
+      Name: Token(Identifier, "Foo")
+      Token(Identifier, "Foo")
+    )
+    TypeArguments: null
+    Body: InterfaceInvocationBody(
+      Initializers: [
+        InterfaceInvocationPropertyInitializer(
+          Name: Token(Identifier, "a")
+          Colon: Token(Colon, ":")
+          Expression: Literal(
+            Token(NumberLiteral, "1")
+            Value: 1
+          )
+        )
+        InterfaceInvocationIndexInitializer(
+          RightBracket: Token(RBracket, "]")
+          LeftBracket: Token(LBracket, "[")
+          Colon: Token(Colon, ":")
+          IndexExpression: Literal(
+            Token(NumberLiteral, "2")
+            Value: 2
+          )
+          Expression: Literal(
+            Token(StringLiteral, ""two"")
+            Value: "two"
+          )
+        )
+        InterfaceInvocationPropertyInitializer(
+          Name: Token(Identifier, "c")
+          Colon: Token(Colon, ":")
+          Expression: Literal(
+            Token(NumberLiteral, "3")
+            Value: 3
+          )
+        )
+      ]
+      RightBrace: Token(RBrace, "}")
+      LeftBrace: Token(LBrace, "{")
+    )
+  )
+)

@@ -165,17 +165,24 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: Parenthesized(
-    LeftParen: Token(LParen, "(")
-    RightParen: Token(RParen, ")")
-    Expression: AsExpression(
-      Expression: Identifier(
-        Name: Token(Identifier, "x")
-        Token(Identifier, "x")
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: Parenthesized(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      Expression: AsExpression(
+        Expression: Identifier(
+          Name: Token(Identifier, "x")
+          Token(Identifier, "x")
+        )
+        Type: PrimitiveType(
+          Kind: Number
+        )
       )
-      Type: PrimitiveType(
-        Kind: Number
-      )
+    )
+    Right: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
     )
   )
 )

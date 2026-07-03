@@ -1,6 +1,57 @@
-mut x;
-mut x = 1;
-mut x: number = 1;
-let x;
-let x = 1;
-let x: bool = false;
+let x
+mut x
+let x = 1
+mut x = 1
+let x: number = 1
+mut x: bool = false
+let x: number
+mut x: string
+let x = mut [1, 2, 3]
+let x = new Foo { a: 1, b: 2 }
+let x: fn(p: number): string
+let x: fn<T>(p: T): T
+let x: List<number>
+let x: List<List<string>>
+let x: number | string | bool
+let x: number & string & bool
+let x: (number | string)[]
+let x: fn<T>(p: T): T | fn<U>(p: U): U
+let x: (A & B) | (C & D)
+let x: A[B] | C[D]
+let x: keyof(T)[]
+let x: fn(a: number, b: string): bool | fn(c: bool): number
+let x: Array<Map<string, List<number>>>
+let callback: fn: void
+let callback: fn(x: number): number?
+let callback: fn(x: number): number[]
+let callback: fn(x: number): number | string
+let callback: (fn(x: number): number)?
+let callbacks: (fn(x: number): number)[]
+let identity: fn<T>(value: T): T
+let wrap: fn<T: number>(item: T): T[]
+let x: T[K]
+let x: number[string]
+let x: T['length']
+let x: T['a' | 'b']
+let x: T[K][V]
+let x: T[K]?
+let x: T[K][]
+let x: (A & B)[C | D]
+let x: (fn(): T)[K]
+let x: T[K] | number
+let x: Array<number>[0]
+let x: (A & B)[C | D]
+let x: Abc?[]?
+let x: Abc[mut]
+let x: Abc[]
+let x: Abc?
+let x: Abc
+let x: (number)
+let x: 69
+let x: 10hz
+let x: 0x69
+let x: 0b1011
+let x: 'abc'
+let x: "abc"
+let x: true
+let x: false

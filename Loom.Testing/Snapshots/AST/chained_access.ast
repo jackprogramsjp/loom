@@ -1,0 +1,333 @@
+﻿ExpressionStatement(
+  Expression: QualifiedName(
+    Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+    ]
+    Token(Identifier, "a")
+  )
+)
+ExpressionStatement(
+  Expression: QualifiedName(
+    Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "c")
+      )
+    ]
+    Token(Identifier, "a")
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: QualifiedName(
+      Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "b")
+        )
+      ]
+      Token(Identifier, "a")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: QualifiedName(
+      Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "b")
+        )
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "c")
+        )
+      ]
+      Token(Identifier, "a")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)
+ExpressionStatement(
+  Expression: ElementAccess(
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expression: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    IndexExpression: Literal(
+      Token(NumberLiteral, "0")
+      Value: 0
+    )
+  )
+)
+ExpressionStatement(
+  Expression: ElementAccess(
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expression: ElementAccess(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expression: ElementAccess(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Expression: Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+        IndexExpression: Literal(
+          Token(NumberLiteral, "0")
+          Value: 0
+        )
+      )
+      IndexExpression: Literal(
+        Token(NumberLiteral, "1")
+        Value: 1
+      )
+    )
+    IndexExpression: Literal(
+      Token(NumberLiteral, "2")
+      Value: 2
+    )
+  )
+)
+ExpressionStatement(
+  Expression: PropertyAccess(
+    Expression: ElementAccess(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expression: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      IndexExpression: Literal(
+        Token(NumberLiteral, "0")
+        Value: 0
+      )
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+    ]
+  )
+)
+ExpressionStatement(
+  Expression: ElementAccess(
+    LeftBracket: Token(LBracket, "[")
+    RightBracket: Token(RBracket, "]")
+    Expression: QualifiedName(
+      Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "b")
+        )
+      ]
+      Token(Identifier, "a")
+    )
+    IndexExpression: Literal(
+      Token(NumberLiteral, "0")
+      Value: 0
+    )
+  )
+)
+ExpressionStatement(
+  Expression: PropertyAccess(
+    Expression: ElementAccess(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expression: QualifiedName(
+        Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+        Names: [
+          DotName(
+            Dot: Token(Dot, ".")
+            Name: Token(Identifier, "b")
+          )
+        ]
+        Token(Identifier, "a")
+      )
+      IndexExpression: Literal(
+        Token(NumberLiteral, "0")
+        Value: 0
+      )
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "c")
+      )
+    ]
+  )
+)
+ExpressionStatement(
+  Expression: PropertyAccess(
+    Expression: Invocation(
+      Expression: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      TypeArguments: null
+      Arguments(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ArgumentList: []
+      )
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+    ]
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: ElementAccess(
+      LeftBracket: Token(LBracket, "[")
+      RightBracket: Token(RBracket, "]")
+      Expression: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      IndexExpression: Literal(
+        Token(NumberLiteral, "0")
+        Value: 0
+      )
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)
+ExpressionStatement(
+  Expression: PropertyAccess(
+    Expression: Invocation(
+      Expression: ElementAccess(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Expression: Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+        IndexExpression: Literal(
+          Token(NumberLiteral, "0")
+          Value: 0
+        )
+      )
+      TypeArguments: null
+      Arguments(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ArgumentList: []
+      )
+    )
+    Names: [
+      DotName(
+        Dot: Token(Dot, ".")
+        Name: Token(Identifier, "b")
+      )
+    ]
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: PropertyAccess(
+      Expression: ElementAccess(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Expression: PropertyAccess(
+          Expression: Invocation(
+            Expression: QualifiedName(
+              Identifier(
+                Name: Token(Identifier, "a")
+                Token(Identifier, "a")
+              )
+              Names: [
+                DotName(
+                  Dot: Token(Dot, ".")
+                  Name: Token(Identifier, "b")
+                )
+              ]
+              Token(Identifier, "a")
+            )
+            TypeArguments: null
+            Arguments(
+              LeftParen: Token(LParen, "(")
+              RightParen: Token(RParen, ")")
+              ArgumentList: []
+            )
+          )
+          Names: [
+            DotName(
+              Dot: Token(Dot, ".")
+              Name: Token(Identifier, "c")
+            )
+          ]
+        )
+        IndexExpression: Literal(
+          Token(NumberLiteral, "0")
+          Value: 0
+        )
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "d")
+        )
+      ]
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+)

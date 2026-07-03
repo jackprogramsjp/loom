@@ -1,0 +1,7 @@
+## single line comment
+let x = 1
+#: block comment :#
+let y = 2
+let #: inline :# x = 1
+let x = #: comment :# 1
+## comment at end

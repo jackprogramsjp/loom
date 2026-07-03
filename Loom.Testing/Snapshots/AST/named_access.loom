@@ -1,0 +1,10 @@
+a.b
+a.b.c
+a.b.c.d
+'a'.b
+(1 + 2).b
+foo().bar
+foo().bar.baz
+a.b(c).d
+(a + b).c
+new Foo { x: 1 }.bar

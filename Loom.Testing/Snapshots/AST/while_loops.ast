@@ -1,0 +1,184 @@
+﻿While(
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+While(
+  Condition: BinaryOperator(
+    Operator: Token(RArrow, ">")
+    Left: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Right: Literal(
+      Token(NumberLiteral, "0")
+      Value: 0
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      ExpressionStatement(
+        Expression: AssignmentOperator(
+          Operator: Token(Equals, "=")
+          Left: Identifier(
+            Name: Token(Identifier, "x")
+            Token(Identifier, "x")
+          )
+          Right: BinaryOperator(
+            Operator: Token(Minus, "-")
+            Left: Identifier(
+              Name: Token(Identifier, "x")
+              Token(Identifier, "x")
+            )
+            Right: Literal(
+              Token(NumberLiteral, "1")
+              Value: 1
+            )
+          )
+        )
+      )
+    ]
+  )
+)
+While(
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
+  )
+  Body: Break(
+
+  )
+)
+While(
+  Condition: Identifier(
+    Name: Token(Identifier, "a")
+    Token(Identifier, "a")
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      While(
+        Condition: Identifier(
+          Name: Token(Identifier, "b")
+          Token(Identifier, "b")
+        )
+        Body: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: [
+            Continue(
+
+            )
+          ]
+        )
+      )
+    ]
+  )
+)
+While(
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      Break(
+
+      )
+    ]
+  )
+)
+While(
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      Continue(
+
+      )
+    ]
+  )
+)
+While(
+  Condition: Identifier(
+    Name: Token(Identifier, "condition")
+    Token(Identifier, "condition")
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      VariableDeclaration(
+        ColonTypeClause: null
+        EqualsValueClause(
+          EqualsToken: Token(Equals, "=")
+          Value: Literal(
+            Token(NumberLiteral, "1")
+            Value: 1
+          )
+        )
+        Name: Token(Identifier, "x")
+      )
+    ]
+  )
+)
+While(
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      If(
+        Condition: BinaryOperator(
+          Operator: Token(RArrow, ">")
+          Left: Identifier(
+            Name: Token(Identifier, "x")
+            Token(Identifier, "x")
+          )
+          Right: Literal(
+            Token(NumberLiteral, "0")
+            Value: 0
+          )
+        )
+        ThenBranch: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: [
+            Break(
+
+            )
+          ]
+        )
+        ElseBranch(
+          Branch: Block(
+            LeftBrace: Token(LBrace, "{")
+            RightBrace: Token(RBrace, "}")
+            Statements: [
+              Continue(
+
+              )
+            ]
+          )
+        )
+      )
+    ]
+  )
+)

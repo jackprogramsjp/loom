@@ -1,0 +1,9 @@
+declare fn id<T: number>(x: T): T
+declare fn add(a: number, b: number): number
+declare fn id<T>(value: T): T
+declare fn rand(): number
+declare fn exit: void
+declare let x: number
+declare mut y: string
+declare interface I;
+declare interface Abc { balls: number }

@@ -1,3 +1,9 @@
-[69, 420];
-let y = [69, 420, [1, 2, 3]];
-let x = mut [69, 420];
+let x = [];
+let x = [1];
+let x = [1, 2, 3];
+let x = [[1, 2], [3, 4]];
+let x = [a, b, c];
+let x = [1 + 2, 3 * 4];
+let x = [foo(), bar()];
+let x = mut [];
+let x = mut [1, 2, 3];

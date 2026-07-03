@@ -74,3 +74,48 @@ VariableDeclaration(
   )
   Name: Token(Identifier, "z")
 )
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: RangeLiteral(
+      DotDot: Token(DotDot, "..")
+      Minimum: Literal(
+        Token(NumberLiteral, "0")
+        Value: 0
+      )
+      Maximum: Identifier(
+        Name: Token(Identifier, "len")
+        Token(Identifier, "len")
+      )
+    )
+  )
+  Name: Token(Identifier, "a")
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: RangeLiteral(
+      DotDot: Token(DotDot, "..")
+      Minimum: Literal(
+        Token(NumberLiteral, "1")
+        Value: 1
+      )
+      Maximum: QualifiedName(
+        Identifier(
+          Name: Token(Identifier, "arr")
+          Token(Identifier, "arr")
+        )
+        Names: [
+          DotName(
+            Dot: Token(Dot, ".")
+            Name: Token(Identifier, "len")
+          )
+        ]
+        Token(Identifier, "arr")
+      )
+    )
+  )
+  Name: Token(Identifier, "b")
+)

@@ -1,0 +1,290 @@
+﻿ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    ThenBranch: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+    ElseBranch: Identifier(
+      Name: Token(Identifier, "c")
+      Token(Identifier, "c")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: BinaryOperator(
+      Operator: Token(Plus, "+")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    ThenBranch: BinaryOperator(
+      Operator: Token(Star, "*")
+      Left: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "d")
+        Token(Identifier, "d")
+      )
+    )
+    ElseBranch: BinaryOperator(
+      Operator: Token(Slash, "/")
+      Left: Identifier(
+        Name: Token(Identifier, "e")
+        Token(Identifier, "e")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "f")
+        Token(Identifier, "f")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    ThenBranch: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+    ElseBranch: TernaryOperator(
+      Question: Token(Question, "?")
+      Colon: Token(Colon, ":")
+      Condition: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      ThenBranch: Identifier(
+        Name: Token(Identifier, "d")
+        Token(Identifier, "d")
+      )
+      ElseBranch: TernaryOperator(
+        Question: Token(Question, "?")
+        Colon: Token(Colon, ":")
+        Condition: Invocation(
+          Expression: Identifier(
+            Name: Token(Identifier, "e")
+            Token(Identifier, "e")
+          )
+          TypeArguments: null
+          Arguments(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ArgumentList: [
+              TernaryOperator(
+                Question: Token(Question, "?")
+                Colon: Token(Colon, ":")
+                Condition: Identifier(
+                  Name: Token(Identifier, "a")
+                  Token(Identifier, "a")
+                )
+                ThenBranch: Identifier(
+                  Name: Token(Identifier, "b")
+                  Token(Identifier, "b")
+                )
+                ElseBranch: Identifier(
+                  Name: Token(Identifier, "c")
+                  Token(Identifier, "c")
+                )
+              )
+            ]
+          )
+        )
+        ThenBranch: Identifier(
+          Name: Token(Identifier, "d")
+          Token(Identifier, "d")
+        )
+        ElseBranch: Identifier(
+          Name: Token(Identifier, "e")
+          Token(Identifier, "e")
+        )
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(Equals, "=")
+    Left: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Right: TernaryOperator(
+      Question: Token(Question, "?")
+      Colon: Token(Colon, ":")
+      Condition: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      ThenBranch: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      ElseBranch: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    ThenBranch: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+    ElseBranch: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    ThenBranch: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+    ElseBranch: TernaryOperator(
+      Question: Token(Question, "?")
+      Colon: Token(Colon, ":")
+      Condition: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      ThenBranch: Identifier(
+        Name: Token(Identifier, "d")
+        Token(Identifier, "d")
+      )
+      ElseBranch: TernaryOperator(
+        Question: Token(Question, "?")
+        Colon: Token(Colon, ":")
+        Condition: Identifier(
+          Name: Token(Identifier, "e")
+          Token(Identifier, "e")
+        )
+        ThenBranch: Identifier(
+          Name: Token(Identifier, "f")
+          Token(Identifier, "f")
+        )
+        ElseBranch: Identifier(
+          Name: Token(Identifier, "g")
+          Token(Identifier, "g")
+        )
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: Literal(
+      Token(TrueLiteral, "true")
+      Value: True
+    )
+    ThenBranch: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
+    )
+    ElseBranch: Literal(
+      Token(NumberLiteral, "2")
+      Value: 2
+    )
+  )
+)
+ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: UnaryOperator(
+      Operator: Token(Bang, "!")
+      Operand: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+    )
+    ThenBranch: UnaryOperator(
+      Operator: Token(Minus, "-")
+      Operand: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    ElseBranch: UnaryOperator(
+      Operator: Token(Tilde, "~")
+      Operand: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "foo")
+      Token(Identifier, "foo")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: [
+        TernaryOperator(
+          Question: Token(Question, "?")
+          Colon: Token(Colon, ":")
+          Condition: Identifier(
+            Name: Token(Identifier, "a")
+            Token(Identifier, "a")
+          )
+          ThenBranch: Identifier(
+            Name: Token(Identifier, "b")
+            Token(Identifier, "b")
+          )
+          ElseBranch: Identifier(
+            Name: Token(Identifier, "c")
+            Token(Identifier, "c")
+          )
+        )
+      ]
+    )
+  )
+)

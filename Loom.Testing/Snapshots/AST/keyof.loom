@@ -1,0 +1,3 @@
+let x: keyof(T)
+let x: keyof(keyof(T))
+let x: keyof(T)[]

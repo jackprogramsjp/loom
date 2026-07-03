@@ -2,13 +2,6 @@
   LeftBrace: Token(LBrace, "{")
   RightBrace: Token(RBrace, "}")
   ColonTypeClause: null
-  Members: []
-  Name: Token(Identifier, "Empty")
-)
-EnumDeclaration(
-  LeftBrace: Token(LBrace, "{")
-  RightBrace: Token(RBrace, "}")
-  ColonTypeClause: null
   Members: [
     EnumMember(
       Name: Token(Identifier, "A")
@@ -24,32 +17,6 @@ EnumDeclaration(
     )
   ]
   Name: Token(Identifier, "Abc")
-)
-EnumDeclaration(
-  LeftBrace: Token(LBrace, "{")
-  RightBrace: Token(RBrace, "}")
-  ColonTypeClause: null
-  Members: [
-    EnumMember(
-      Name: Token(Identifier, "A")
-      EqualsValueClause: null
-    )
-    EnumMember(
-      Name: Token(Identifier, "B")
-      EqualsValueClause(
-        EqualsToken: Token(Equals, "=")
-        Value: Literal(
-          Token(NumberLiteral, "69")
-          Value: 69
-        )
-      )
-    )
-    EnumMember(
-      Name: Token(Identifier, "C")
-      EqualsValueClause: null
-    )
-  ]
-  Name: Token(Identifier, "Mixed")
 )
 EnumDeclaration(
   LeftBrace: Token(LBrace, "{")
@@ -88,6 +55,32 @@ EnumDeclaration(
     )
   ]
   Name: Token(Identifier, "Status")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause: null
+  Members: [
+    EnumMember(
+      Name: Token(Identifier, "A")
+      EqualsValueClause: null
+    )
+    EnumMember(
+      Name: Token(Identifier, "B")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "69")
+          Value: 69
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "C")
+      EqualsValueClause: null
+    )
+  ]
+  Name: Token(Identifier, "Mixed")
 )
 EnumDeclaration(
   LeftBrace: Token(LBrace, "{")
@@ -131,4 +124,102 @@ EnumDeclaration(
     )
   ]
   Name: Token(Identifier, "Colors")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause: null
+  Members: []
+  Name: Token(Identifier, "Empty")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: Number
+    )
+  )
+  Members: [
+    EnumMember(
+      Name: Token(Identifier, "One")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "Two")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "2")
+          Value: 2
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "Three")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "3")
+          Value: 3
+        )
+      )
+    )
+  ]
+  Name: Token(Identifier, "Numbers")
+)
+EnumDeclaration(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  ColonTypeClause: null
+  Members: [
+    EnumMember(
+      Name: Token(Identifier, "A")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "0b0001")
+          Value: 1
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "B")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "0b0010")
+          Value: 2
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "C")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "0b0100")
+          Value: 4
+        )
+      )
+    )
+    EnumMember(
+      Name: Token(Identifier, "D")
+      EqualsValueClause(
+        EqualsToken: Token(Equals, "=")
+        Value: Literal(
+          Token(NumberLiteral, "0b1000")
+          Value: 8
+        )
+      )
+    )
+  ]
+  Name: Token(Identifier, "Flags")
 )

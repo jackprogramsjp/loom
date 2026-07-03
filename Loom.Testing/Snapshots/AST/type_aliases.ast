@@ -11,6 +11,16 @@
 TypeAlias(
   EqualsTypeClause(
     EqualsToken: Token(Equals, "=")
+    Type: PrimitiveType(
+      Kind: String
+    )
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "B")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
     Type: IntersectionType(
       Ampersands: [
         Token(
@@ -51,6 +61,46 @@ TypeAlias(
 TypeAlias(
   EqualsTypeClause(
     EqualsToken: Token(Equals, "=")
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        TypeName(
+          Name: Token(Identifier, "A")
+          TypeArguments: null
+        )
+        TypeName(
+          Name: Token(Identifier, "B")
+          TypeArguments: null
+        )
+      ]
+    )
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "A")
+      )
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "B")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Union")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
     Type: TypeName(
       Name: Token(Identifier, "T")
       TypeArguments: null
@@ -77,6 +127,147 @@ TypeAlias(
 TypeAlias(
   EqualsTypeClause(
     EqualsToken: Token(Equals, "=")
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        TypeName(
+          Name: Token(Identifier, "Ok")
+          TypeArguments(
+            LeftArrow: Token(LArrow, "<")
+            RightArrow: Token(RArrow, ">")
+            ArgumentsList: [
+              TypeName(
+                Name: Token(Identifier, "T")
+                TypeArguments: null
+              )
+            ]
+          )
+        )
+        TypeName(
+          Name: Token(Identifier, "Err")
+          TypeArguments(
+            LeftArrow: Token(LArrow, "<")
+            RightArrow: Token(RArrow, ">")
+            ArgumentsList: [
+              TypeName(
+                Name: Token(Identifier, "E")
+                TypeArguments: null
+              )
+            ]
+          )
+        )
+      ]
+    )
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "E")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Result")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: PrimitiveType(
+                Kind: Number
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "p")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: PrimitiveType(
+          Kind: Void
+        )
+      )
+    )
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "Callback")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: OptionalType(
+      Question: Token(Question, "?")
+      NonNullableType: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+    )
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Optional")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: ArrayType(
+      ElementType: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: null
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Array")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
     Type: TypeName(
       Name: Token(Identifier, "List")
       TypeArguments(
@@ -89,8 +280,9 @@ TypeAlias(
               LeftArrow: Token(LArrow, "<")
               RightArrow: Token(RArrow, ">")
               ArgumentsList: [
-                PrimitiveType(
-                  Kind: Number
+                TypeName(
+                  Name: Token(Identifier, "T")
+                  TypeArguments: null
                 )
               ]
             )
@@ -99,15 +291,49 @@ TypeAlias(
       )
     )
   )
-  TypeParameters: null
-  Name: Token(Identifier, "X")
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Nested")
 )
 TypeAlias(
   EqualsTypeClause(
     EqualsToken: Token(Equals, "=")
-    Type: TypeName(
-      Name: Token(Identifier, "T")
-      TypeArguments: null
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters: null
+      Parameters(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ParameterList: [
+          Parameter(
+            ColonTypeClause(
+              ColonToken: Token(Colon, ":")
+              Type: TypeName(
+                Name: Token(Identifier, "T")
+                TypeArguments: null
+              )
+            )
+            EqualsValueClause: null
+            Name: Token(Identifier, "p")
+          )
+        ]
+      )
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: TypeName(
+          Name: Token(Identifier, "R")
+          TypeArguments: null
+        )
+      )
     )
   )
   TypeParameters(
@@ -115,47 +341,75 @@ TypeAlias(
     RightArrow: Token(RArrow, ">")
     ParameterList: [
       TypeParameter(
-        ColonTypeClause(
-          ColonToken: Token(Colon, ":")
-          Type: UnionType(
-            Pipes: [
-              Token(
-                Kind: Pipe
-                Text: "|"
-              )
-            ]
-            Types: [
-              PrimitiveType(
-                Kind: Number
-              )
-              PrimitiveType(
-                Kind: String
-              )
-            ]
-          )
-        )
-        EqualsTypeClause(
-          EqualsToken: Token(Equals, "=")
-          Type: UnionType(
-            Pipes: [
-              Token(
-                Kind: Pipe
-                Text: "|"
-              )
-            ]
-            Types: [
-              PrimitiveType(
-                Kind: Number
-              )
-              PrimitiveType(
-                Kind: String
-              )
-            ]
-          )
-        )
+        ColonTypeClause: null
+        EqualsTypeClause: null
         Name: Token(Identifier, "T")
+      )
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "R")
       )
     ]
   )
-  Name: Token(Identifier, "Alias")
+  Name: Token(Identifier, "Func")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: UnionType(
+      Pipes: [
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+        Token(
+          Kind: Pipe
+          Text: "|"
+        )
+      ]
+      Types: [
+        PrimitiveType(
+          Kind: Number
+        )
+        PrimitiveType(
+          Kind: String
+        )
+        PrimitiveType(
+          Kind: Bool
+        )
+      ]
+    )
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "T")
+)
+TypeAlias(
+  EqualsTypeClause(
+    EqualsToken: Token(Equals, "=")
+    Type: FunctionType(
+      FnKeyword: Token(FnKeyword, "fn")
+      TypeParameters(
+        LeftArrow: Token(LArrow, "<")
+        RightArrow: Token(RArrow, ">")
+        ParameterList: [
+          TypeParameter(
+            ColonTypeClause: null
+            EqualsTypeClause: null
+            Name: Token(Identifier, "T")
+          )
+        ]
+      )
+      Parameters: null
+      ReturnType: ColonTypeClause(
+        ColonToken: Token(Colon, ":")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+      )
+    )
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "Fn")
 )

@@ -3,8 +3,60 @@
     LeftParen: Token(LParen, "(")
     RightParen: Token(RParen, ")")
     Name: Identifier(
-      Name: Token(Identifier, "abc")
-      Token(Identifier, "abc")
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: NameOf(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    Name: Identifier(
+      Name: Token(Identifier, "SomeType")
+      Token(Identifier, "SomeType")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: NameOf(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    Name: QualifiedName(
+      Identifier(
+        Name: Token(Identifier, "foo")
+        Token(Identifier, "foo")
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "bar")
+        )
+      ]
+      Token(Identifier, "foo")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: NameOf(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    Name: QualifiedName(
+      Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "b")
+        )
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "c")
+        )
+      ]
+      Token(Identifier, "a")
     )
   )
 )

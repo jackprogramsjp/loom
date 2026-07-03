@@ -7,86 +7,28 @@
   )
   Parameters: null
   TypeParameters: null
-  Name: Token(Identifier, "abc")
+  Name: Token(Identifier, "empty")
 )
 FunctionDeclaration(
   ReturnType: null
-  Body: ExpressionBody(
-    Arrow: Token(Arrow, "->")
-    Expression: Literal(
-      Token(NoneLiteral, "none")
-      Value: null
-    )
-  )
-  Parameters: null
-  TypeParameters: null
-  Name: Token(Identifier, "abc")
-)
-FunctionDeclaration(
-  ReturnType: ColonTypeClause(
-    ColonToken: Token(Colon, ":")
-    Type: TypeName(
-      Name: Token(Identifier, "T")
-      TypeArguments: null
-    )
-  )
   Body: Block(
     LeftBrace: Token(LBrace, "{")
     RightBrace: Token(RBrace, "}")
     Statements: [
       Return(
-        Expression: Identifier(
-          Name: Token(Identifier, "value")
-          Token(Identifier, "value")
-        )
-      )
-    ]
-  )
-  Parameters(
-    LeftParen: Token(LParen, "(")
-    RightParen: Token(RParen, ")")
-    ParameterList: [
-      Parameter(
-        ColonTypeClause(
-          ColonToken: Token(Colon, ":")
-          Type: TypeName(
-            Name: Token(Identifier, "T")
-            TypeArguments: null
+        Expression: BinaryOperator(
+          Operator: Token(Plus, "+")
+          Left: Literal(
+            Token(StringLiteral, ""Hello "")
+            Value: "Hello "
+          )
+          Right: Identifier(
+            Name: Token(Identifier, "name")
+            Token(Identifier, "name")
           )
         )
-        EqualsValueClause: null
-        Name: Token(Identifier, "value")
       )
     ]
-  )
-  TypeParameters(
-    LeftArrow: Token(LArrow, "<")
-    RightArrow: Token(RArrow, ">")
-    ParameterList: [
-      TypeParameter(
-        ColonTypeClause: null
-        EqualsTypeClause: null
-        Name: Token(Identifier, "T")
-      )
-    ]
-  )
-  Name: Token(Identifier, "wrap")
-)
-FunctionDeclaration(
-  ReturnType: null
-  Body: ExpressionBody(
-    Arrow: Token(Arrow, "->")
-    Expression: BinaryOperator(
-      Operator: Token(Star, "*")
-      Left: Identifier(
-        Name: Token(Identifier, "x")
-        Token(Identifier, "x")
-      )
-      Right: Literal(
-        Token(NumberLiteral, "2")
-        Value: 2
-      )
-    )
   )
   Parameters(
     LeftParen: Token(LParen, "(")
@@ -96,16 +38,22 @@ FunctionDeclaration(
         ColonTypeClause(
           ColonToken: Token(Colon, ":")
           Type: PrimitiveType(
-            Kind: Number
+            Kind: String
           )
         )
-        EqualsValueClause: null
-        Name: Token(Identifier, "x")
+        EqualsValueClause(
+          EqualsToken: Token(Equals, "=")
+          Value: Literal(
+            Token(StringLiteral, ""world"")
+            Value: "world"
+          )
+        )
+        Name: Token(Identifier, "name")
       )
     ]
   )
   TypeParameters: null
-  Name: Token(Identifier, "double")
+  Name: Token(Identifier, "greet")
 )
 FunctionDeclaration(
   ReturnType: ColonTypeClause(
@@ -167,14 +115,14 @@ FunctionDeclaration(
   Body: ExpressionBody(
     Arrow: Token(Arrow, "->")
     Expression: BinaryOperator(
-      Operator: Token(Plus, "+")
-      Left: Literal(
-        Token(StringLiteral, ""Hello "")
-        Value: "Hello "
+      Operator: Token(Star, "*")
+      Left: Identifier(
+        Name: Token(Identifier, "x")
+        Token(Identifier, "x")
       )
-      Right: Identifier(
-        Name: Token(Identifier, "name")
-        Token(Identifier, "name")
+      Right: Literal(
+        Token(NumberLiteral, "2")
+        Value: 2
       )
     )
   )
@@ -183,20 +131,153 @@ FunctionDeclaration(
     RightParen: Token(RParen, ")")
     ParameterList: [
       Parameter(
-        ColonTypeClause: null
-        EqualsValueClause(
-          EqualsToken: Token(Equals, "=")
-          Value: Literal(
-            Token(StringLiteral, ""world"")
-            Value: "world"
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
           )
         )
-        Name: Token(Identifier, "name")
+        EqualsValueClause: null
+        Name: Token(Identifier, "x")
       )
     ]
   )
   TypeParameters: null
-  Name: Token(Identifier, "greet")
+  Name: Token(Identifier, "double")
+)
+FunctionDeclaration(
+  ReturnType: ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: TypeName(
+      Name: Token(Identifier, "T")
+      TypeArguments: null
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      Return(
+        Expression: Identifier(
+          Name: Token(Identifier, "value")
+          Token(Identifier, "value")
+        )
+      )
+    ]
+  )
+  Parameters(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    ParameterList: [
+      Parameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "T")
+            TypeArguments: null
+          )
+        )
+        EqualsValueClause: null
+        Name: Token(Identifier, "value")
+      )
+    ]
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "wrap")
+)
+FunctionDeclaration(
+  ReturnType: null
+  Body: ExpressionBody(
+    Arrow: Token(Arrow, "->")
+    Expression: Literal(
+      Token(NoneLiteral, "none")
+      Value: null
+    )
+  )
+  Parameters: null
+  TypeParameters: null
+  Name: Token(Identifier, "abc")
+)
+FunctionDeclaration(
+  ReturnType: ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: Void
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+  Parameters(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    ParameterList: []
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "noArgs")
+)
+FunctionDeclaration(
+  ReturnType: ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: Void
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+  Parameters(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    ParameterList: [
+      Parameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+        EqualsValueClause: null
+        Name: Token(Identifier, "a")
+      )
+      Parameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: String
+          )
+        )
+        EqualsValueClause: null
+        Name: Token(Identifier, "b")
+      )
+      Parameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Bool
+          )
+        )
+        EqualsValueClause: null
+        Name: Token(Identifier, "c")
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "multiParam")
 )
 FunctionDeclaration(
   ReturnType: ColonTypeClause(
@@ -233,6 +314,17 @@ FunctionDeclaration(
         EqualsValueClause: null
         Name: Token(Identifier, "x")
       )
+      Parameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "U")
+            TypeArguments: null
+          )
+        )
+        EqualsValueClause: null
+        Name: Token(Identifier, "y")
+      )
     ]
   )
   TypeParameters(
@@ -240,22 +332,76 @@ FunctionDeclaration(
     RightArrow: Token(RArrow, ">")
     ParameterList: [
       TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+      TypeParameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "List")
+            TypeArguments(
+              LeftArrow: Token(LArrow, "<")
+              RightArrow: Token(RArrow, ">")
+              ArgumentsList: [
+                TypeName(
+                  Name: Token(Identifier, "T")
+                  TypeArguments: null
+                )
+              ]
+            )
+          )
+        )
+        EqualsTypeClause: null
+        Name: Token(Identifier, "U")
+      )
+    ]
+  )
+  Name: Token(Identifier, "nestedGenerics")
+)
+FunctionDeclaration(
+  ReturnType: null
+  Body: ExpressionBody(
+    Arrow: Token(Arrow, "->")
+    Expression: BinaryOperator(
+      Operator: Token(Plus, "+")
+      Left: Identifier(
+        Name: Token(Identifier, "x")
+        Token(Identifier, "x")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "y")
+        Token(Identifier, "y")
+      )
+    )
+  )
+  Parameters(
+    LeftParen: Token(LParen, "(")
+    RightParen: Token(RParen, ")")
+    ParameterList: [
+      Parameter(
         ColonTypeClause(
           ColonToken: Token(Colon, ":")
           Type: PrimitiveType(
             Kind: Number
           )
         )
-        EqualsTypeClause(
-          EqualsToken: Token(Equals, "=")
-          Type: LiteralType(
-            Token(NumberLiteral, "69")
-            Value: 69
+        EqualsValueClause: null
+        Name: Token(Identifier, "x")
+      )
+      Parameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
           )
         )
-        Name: Token(Identifier, "T")
+        EqualsValueClause: null
+        Name: Token(Identifier, "y")
       )
     ]
   )
-  Name: Token(Identifier, "wrap")
+  TypeParameters: null
+  Name: Token(Identifier, "expressionBody")
 )

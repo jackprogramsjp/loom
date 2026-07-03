@@ -14,7 +14,7 @@ public sealed partial class Parser
         var statement = token.Kind switch
         {
             SyntaxKind.LBrace => ParseBlock(token),
-            SyntaxKind.ReturnKeyword => new Return(token, ParseExpression()),
+            SyntaxKind.ReturnKeyword => ParseReturn(token),
             SyntaxKind.FnKeyword => ParseFunctionDeclaration(token),
             SyntaxKind.LetKeyword or SyntaxKind.MutKeyword => ParseVariableDeclaration(token),
             SyntaxKind.TypeKeyword => ParseTypeAlias(token),
@@ -46,6 +46,38 @@ public sealed partial class Parser
 
         var rightBrace = Last();
         return new Block(leftBrace, rightBrace, statements);
+    }
+    
+    private Return ParseReturn(Token keyword)
+    {
+        if (IsEof() || Current().Kind == SyntaxKind.RBrace || IsStatementKeyword())
+            return new Return(keyword, null);
+
+        var expression = ParseExpression();
+        return new Return(keyword, expression);
+    }
+
+    private bool IsStatementKeyword()
+    {
+        if (IsEof())
+            return false;
+
+        var kind = Current().Kind;
+        return kind is SyntaxKind.ReturnKeyword
+                    or SyntaxKind.FnKeyword
+                    or SyntaxKind.LetKeyword
+                    or SyntaxKind.MutKeyword
+                    or SyntaxKind.TypeKeyword
+                    or SyntaxKind.EnumKeyword
+                    or SyntaxKind.DeclareKeyword
+                    or SyntaxKind.InterfaceKeyword
+                    or SyntaxKind.SealedKeyword
+                    or SyntaxKind.IfKeyword
+                    or SyntaxKind.ForKeyword
+                    or SyntaxKind.AfterKeyword
+                    or SyntaxKind.WhileKeyword
+                    or SyntaxKind.BreakKeyword
+                    or SyntaxKind.ContinueKeyword;
     }
     
     private For ParseFor(Token keyword)

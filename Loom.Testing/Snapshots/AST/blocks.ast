@@ -81,3 +81,8 @@
     )
   ]
 )
+Block(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  Statements: []
+)

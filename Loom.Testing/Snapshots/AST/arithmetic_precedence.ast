@@ -31,3 +31,548 @@
     )
   )
 )
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: BinaryOperator(
+      Operator: Token(Star, "*")
+      Left: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: BinaryOperator(
+      Operator: Token(Star, "*")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "c")
+      Token(Identifier, "c")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Minus, "-")
+    Left: BinaryOperator(
+      Operator: Token(Plus, "+")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "c")
+      Token(Identifier, "c")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Slash, "/")
+    Left: BinaryOperator(
+      Operator: Token(Star, "*")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "c")
+      Token(Identifier, "c")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(PipePipe, "||")
+    Left: BinaryOperator(
+      Operator: Token(AmpersandAmpersand, "&&")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "c")
+      Token(Identifier, "c")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(PipePipe, "||")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: BinaryOperator(
+      Operator: Token(AmpersandAmpersand, "&&")
+      Left: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(LArrow, "<")
+    Left: BinaryOperator(
+      Operator: Token(Plus, "+")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    Right: BinaryOperator(
+      Operator: Token(Star, "*")
+      Left: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "d")
+        Token(Identifier, "d")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(AmpersandAmpersand, "&&")
+    Left: BinaryOperator(
+      Operator: Token(EqualsEquals, "==")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    Right: BinaryOperator(
+      Operator: Token(BangEquals, "!=")
+      Left: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "d")
+        Token(Identifier, "d")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Pipe, "|")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: BinaryOperator(
+      Operator: Token(Ampersand, "&")
+      Left: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Pipe, "|")
+    Left: BinaryOperator(
+      Operator: Token(Caret, "^")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+    )
+    Right: Identifier(
+      Name: Token(Identifier, "c")
+      Token(Identifier, "c")
+    )
+  )
+)
+ExpressionStatement(
+  Expression: TernaryOperator(
+    Question: Token(Question, "?")
+    Colon: Token(Colon, ":")
+    Condition: UnaryOperator(
+      Operator: Token(Bang, "!")
+      Operand: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+    )
+    ThenBranch: Identifier(
+      Name: Token(Identifier, "b")
+      Token(Identifier, "b")
+    )
+    ElseBranch: TernaryOperator(
+      Question: Token(Question, "?")
+      Colon: Token(Colon, ":")
+      Condition: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      ThenBranch: Identifier(
+        Name: Token(Identifier, "d")
+        Token(Identifier, "d")
+      )
+      ElseBranch: Identifier(
+        Name: Token(Identifier, "e")
+        Token(Identifier, "e")
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Type: PrimitiveType(
+        Kind: Number
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(Equals, "=")
+    Left: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Right: BinaryOperator(
+      Operator: Token(Plus, "+")
+      Left: Identifier(
+        Name: Token(Identifier, "a")
+        Token(Identifier, "a")
+      )
+      Right: BinaryOperator(
+        Operator: Token(Star, "*")
+        Left: Identifier(
+          Name: Token(Identifier, "b")
+          Token(Identifier, "b")
+        )
+        Right: Identifier(
+          Name: Token(Identifier, "c")
+          Token(Identifier, "c")
+        )
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: BinaryOperator(
+      Operator: Token(Plus, "+")
+      Left: BinaryOperator(
+        Operator: Token(Plus, "+")
+        Left: BinaryOperator(
+          Operator: Token(Minus, "-")
+          Left: BinaryOperator(
+            Operator: Token(Plus, "+")
+            Left: Invocation(
+              Expression: QualifiedName(
+                Identifier(
+                  Name: Token(Identifier, "a")
+                  Token(Identifier, "a")
+                )
+                Names: [
+                  DotName(
+                    Dot: Token(Dot, ".")
+                    Name: Token(Identifier, "b")
+                  )
+                ]
+                Token(Identifier, "a")
+              )
+              TypeArguments: null
+              Arguments(
+                LeftParen: Token(LParen, "(")
+                RightParen: Token(RParen, ")")
+                ArgumentList: []
+              )
+            )
+            Right: ElementAccess(
+              LeftBracket: Token(LBracket, "[")
+              RightBracket: Token(RBracket, "]")
+              Expression: Identifier(
+                Name: Token(Identifier, "c")
+                Token(Identifier, "c")
+              )
+              IndexExpression: Literal(
+                Token(NumberLiteral, "0")
+                Value: 0
+              )
+            )
+          )
+          Right: Identifier(
+            Name: Token(Identifier, "a")
+            Token(Identifier, "a")
+          )
+        )
+        Right: BinaryOperator(
+          Operator: Token(Star, "*")
+          Left: Identifier(
+            Name: Token(Identifier, "b")
+            Token(Identifier, "b")
+          )
+          Right: BinaryOperator(
+            Operator: Token(Caret, "^")
+            Left: Identifier(
+              Name: Token(Identifier, "c")
+              Token(Identifier, "c")
+            )
+            Right: Invocation(
+              Expression: Identifier(
+                Name: Token(Identifier, "d")
+                Token(Identifier, "d")
+              )
+              TypeArguments: null
+              Arguments(
+                LeftParen: Token(LParen, "(")
+                RightParen: Token(RParen, ")")
+                ArgumentList: [
+                  TernaryOperator(
+                    Question: Token(Question, "?")
+                    Colon: Token(Colon, ":")
+                    Condition: Identifier(
+                      Name: Token(Identifier, "a")
+                      Token(Identifier, "a")
+                    )
+                    ThenBranch: Identifier(
+                      Name: Token(Identifier, "b")
+                      Token(Identifier, "b")
+                    )
+                    ElseBranch: TernaryOperator(
+                      Question: Token(Question, "?")
+                      Colon: Token(Colon, ":")
+                      Condition: Identifier(
+                        Name: Token(Identifier, "c")
+                        Token(Identifier, "c")
+                      )
+                      ThenBranch: Identifier(
+                        Name: Token(Identifier, "d")
+                        Token(Identifier, "d")
+                      )
+                      ElseBranch: Identifier(
+                        Name: Token(Identifier, "e")
+                        Token(Identifier, "e")
+                      )
+                    )
+                  )
+                ]
+              )
+            )
+          )
+        )
+      )
+      Right: AsExpression(
+        Expression: Invocation(
+          Expression: Identifier(
+            Name: Token(Identifier, "f")
+            Token(Identifier, "f")
+          )
+          TypeArguments: null
+          Arguments(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ArgumentList: [
+              BinaryOperator(
+                Operator: Token(Plus, "+")
+                Left: Identifier(
+                  Name: Token(Identifier, "a")
+                  Token(Identifier, "a")
+                )
+                Right: Identifier(
+                  Name: Token(Identifier, "b")
+                  Token(Identifier, "b")
+                )
+              )
+            ]
+          )
+        )
+        Type: PrimitiveType(
+          Kind: Number
+        )
+      )
+    )
+    Right: AsExpression(
+      Expression: Identifier(
+        Name: Token(Identifier, "c")
+        Token(Identifier, "c")
+      )
+      Type: PrimitiveType(
+        Kind: String
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: AssignmentOperator(
+    Operator: Token(PipePipeEquals, "||=")
+    Left: Identifier(
+      Name: Token(Identifier, "a")
+      Token(Identifier, "a")
+    )
+    Right: AssignmentOperator(
+      Operator: Token(AmpersandAmpersandEquals, "&&=")
+      Left: Identifier(
+        Name: Token(Identifier, "b")
+        Token(Identifier, "b")
+      )
+      Right: AssignmentOperator(
+        Operator: Token(QuestionQuestionEquals, "??=")
+        Left: Identifier(
+          Name: Token(Identifier, "c")
+          Token(Identifier, "c")
+        )
+        Right: Identifier(
+          Name: Token(Identifier, "d")
+          Token(Identifier, "d")
+        )
+      )
+    )
+  )
+)
+ExpressionStatement(
+  Expression: BinaryOperator(
+    Operator: Token(Plus, "+")
+    Left: BinaryOperator(
+      Operator: Token(Minus, "-")
+      Left: BinaryOperator(
+        Operator: Token(Minus, "-")
+        Left: BinaryOperator(
+          Operator: Token(Plus, "+")
+          Left: Identifier(
+            Name: Token(Identifier, "a")
+            Token(Identifier, "a")
+          )
+          Right: BinaryOperator(
+            Operator: Token(Star, "*")
+            Left: Identifier(
+              Name: Token(Identifier, "b")
+              Token(Identifier, "b")
+            )
+            Right: Identifier(
+              Name: Token(Identifier, "c")
+              Token(Identifier, "c")
+            )
+          )
+        )
+        Right: BinaryOperator(
+          Operator: Token(Slash, "/")
+          Left: Identifier(
+            Name: Token(Identifier, "d")
+            Token(Identifier, "d")
+          )
+          Right: BinaryOperator(
+            Operator: Token(Caret, "^")
+            Left: Identifier(
+              Name: Token(Identifier, "e")
+              Token(Identifier, "e")
+            )
+            Right: Identifier(
+              Name: Token(Identifier, "f")
+              Token(Identifier, "f")
+            )
+          )
+        )
+      )
+      Right: ElementAccess(
+        LeftBracket: Token(LBracket, "[")
+        RightBracket: Token(RBracket, "]")
+        Expression: Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+        IndexExpression: Literal(
+          Token(NumberLiteral, "0")
+          Value: 0
+        )
+      )
+    )
+    Right: PropertyAccess(
+      Expression: Invocation(
+        Expression: Identifier(
+          Name: Token(Identifier, "b")
+          Token(Identifier, "b")
+        )
+        TypeArguments: null
+        Arguments(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ArgumentList: []
+        )
+      )
+      Names: [
+        DotName(
+          Dot: Token(Dot, ".")
+          Name: Token(Identifier, "c")
+        )
+      ]
+    )
+  )
+)

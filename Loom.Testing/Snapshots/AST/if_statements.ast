@@ -1,44 +1,7 @@
 ﻿If(
-  Condition: Identifier(
-    Name: Token(Identifier, "condition")
-    Token(Identifier, "condition")
-  )
-  ThenBranch: Block(
-    LeftBrace: Token(LBrace, "{")
-    RightBrace: Token(RBrace, "}")
-    Statements: []
-  )
-  ElseBranch: null
-)
-If(
-  Condition: Identifier(
-    Name: Token(Identifier, "condition")
-    Token(Identifier, "condition")
-  )
-  ThenBranch: Block(
-    LeftBrace: Token(LBrace, "{")
-    RightBrace: Token(RBrace, "}")
-    Statements: [
-      Return(
-        Expression: Literal(
-          Token(NumberLiteral, "1")
-          Value: 1
-        )
-      )
-    ]
-  )
-  ElseBranch(
-    Branch: Block(
-      LeftBrace: Token(LBrace, "{")
-      RightBrace: Token(RBrace, "}")
-      Statements: []
-    )
-  )
-)
-If(
-  Condition: Identifier(
-    Name: Token(Identifier, "condition")
-    Token(Identifier, "condition")
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
   )
   ThenBranch: Block(
     LeftBrace: Token(LBrace, "{")
@@ -63,40 +26,110 @@ If(
     LeftBrace: Token(LBrace, "{")
     RightBrace: Token(RBrace, "}")
     Statements: [
-      VariableDeclaration(
-        ColonTypeClause: null
-        EqualsValueClause(
-          EqualsToken: Token(Equals, "=")
-          Value: Literal(
-            Token(NumberLiteral, "1")
-            Value: 1
-          )
-        )
-        Name: Token(Identifier, "x")
-      )
-      VariableDeclaration(
-        ColonTypeClause: null
-        EqualsValueClause(
-          EqualsToken: Token(Equals, "=")
-          Value: Literal(
-            Token(NumberLiteral, "2")
-            Value: 2
-          )
-        )
-        Name: Token(Identifier, "y")
-      )
       Return(
-        Expression: BinaryOperator(
-          Operator: Token(Plus, "+")
-          Left: Identifier(
-            Name: Token(Identifier, "x")
-            Token(Identifier, "x")
+        Expression: Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+      )
+    ]
+  )
+  ElseBranch(
+    Branch: Block(
+      LeftBrace: Token(LBrace, "{")
+      RightBrace: Token(RBrace, "}")
+      Statements: [
+        Return(
+          Expression: Literal(
+            Token(NumberLiteral, "0")
+            Value: 0
           )
-          Right: Identifier(
+        )
+      ]
+    )
+  )
+)
+If(
+  Condition: BinaryOperator(
+    Operator: Token(AmpersandAmpersand, "&&")
+    Left: BinaryOperator(
+      Operator: Token(RArrow, ">")
+      Left: Identifier(
+        Name: Token(Identifier, "x")
+        Token(Identifier, "x")
+      )
+      Right: Literal(
+        Token(NumberLiteral, "5")
+        Value: 5
+      )
+    )
+    Right: BinaryOperator(
+      Operator: Token(LArrow, "<")
+      Left: Identifier(
+        Name: Token(Identifier, "y")
+        Token(Identifier, "y")
+      )
+      Right: Literal(
+        Token(NumberLiteral, "10")
+        Value: 10
+      )
+    )
+  )
+  ThenBranch: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      Return(
+        Expression: Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+      )
+    ]
+  )
+  ElseBranch: null
+)
+If(
+  Condition: BinaryOperator(
+    Operator: Token(RArrow, ">")
+    Left: Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Right: Literal(
+      Token(NumberLiteral, "0")
+      Value: 0
+    )
+  )
+  ThenBranch: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      If(
+        Condition: BinaryOperator(
+          Operator: Token(RArrow, ">")
+          Left: Identifier(
             Name: Token(Identifier, "y")
             Token(Identifier, "y")
           )
+          Right: Literal(
+            Token(NumberLiteral, "0")
+            Value: 0
+          )
         )
+        ThenBranch: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: [
+            Return(
+              Expression: Literal(
+                Token(NumberLiteral, "1")
+                Value: 1
+              )
+            )
+          ]
+        )
+        ElseBranch: null
       )
     ]
   )
@@ -175,116 +208,6 @@ If(
   )
 )
 If(
-  Condition: Literal(
-    Token(TrueLiteral, "true")
-    Value: True
-  )
-  ThenBranch: Block(
-    LeftBrace: Token(LBrace, "{")
-    RightBrace: Token(RBrace, "}")
-    Statements: [
-      VariableDeclaration(
-        ColonTypeClause: null
-        EqualsValueClause(
-          EqualsToken: Token(Equals, "=")
-          Value: Literal(
-            Token(NumberLiteral, "42")
-            Value: 42
-          )
-        )
-        Name: Token(Identifier, "x")
-      )
-    ]
-  )
-  ElseBranch: null
-)
-If(
-  Condition: BinaryOperator(
-    Operator: Token(RArrow, ">")
-    Left: Identifier(
-      Name: Token(Identifier, "x")
-      Token(Identifier, "x")
-    )
-    Right: Literal(
-      Token(NumberLiteral, "0")
-      Value: 0
-    )
-  )
-  ThenBranch: Block(
-    LeftBrace: Token(LBrace, "{")
-    RightBrace: Token(RBrace, "}")
-    Statements: [
-      If(
-        Condition: BinaryOperator(
-          Operator: Token(RArrow, ">")
-          Left: Identifier(
-            Name: Token(Identifier, "y")
-            Token(Identifier, "y")
-          )
-          Right: Literal(
-            Token(NumberLiteral, "0")
-            Value: 0
-          )
-        )
-        ThenBranch: Block(
-          LeftBrace: Token(LBrace, "{")
-          RightBrace: Token(RBrace, "}")
-          Statements: [
-            Return(
-              Expression: Literal(
-                Token(NumberLiteral, "1")
-                Value: 1
-              )
-            )
-          ]
-        )
-        ElseBranch: null
-      )
-    ]
-  )
-  ElseBranch: null
-)
-If(
-  Condition: BinaryOperator(
-    Operator: Token(AmpersandAmpersand, "&&")
-    Left: BinaryOperator(
-      Operator: Token(RArrow, ">")
-      Left: Identifier(
-        Name: Token(Identifier, "x")
-        Token(Identifier, "x")
-      )
-      Right: Literal(
-        Token(NumberLiteral, "5")
-        Value: 5
-      )
-    )
-    Right: BinaryOperator(
-      Operator: Token(LArrow, "<")
-      Left: Identifier(
-        Name: Token(Identifier, "y")
-        Token(Identifier, "y")
-      )
-      Right: Literal(
-        Token(NumberLiteral, "10")
-        Value: 10
-      )
-    )
-  )
-  ThenBranch: Block(
-    LeftBrace: Token(LBrace, "{")
-    RightBrace: Token(RBrace, "}")
-    Statements: [
-      Return(
-        Expression: Literal(
-          Token(NumberLiteral, "1")
-          Value: 1
-        )
-      )
-    ]
-  )
-  ElseBranch: null
-)
-If(
   Condition: Identifier(
     Name: Token(Identifier, "condition")
     Token(Identifier, "condition")
@@ -301,6 +224,97 @@ If(
         Name: Token(Identifier, "elseBranch")
         Token(Identifier, "elseBranch")
       )
+    )
+  )
+)
+If(
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
+  )
+  ThenBranch: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      VariableDeclaration(
+        ColonTypeClause: null
+        EqualsValueClause(
+          EqualsToken: Token(Equals, "=")
+          Value: Literal(
+            Token(NumberLiteral, "1")
+            Value: 1
+          )
+        )
+        Name: Token(Identifier, "x")
+      )
+      VariableDeclaration(
+        ColonTypeClause: null
+        EqualsValueClause(
+          EqualsToken: Token(Equals, "=")
+          Value: Literal(
+            Token(NumberLiteral, "2")
+            Value: 2
+          )
+        )
+        Name: Token(Identifier, "y")
+      )
+      Return(
+        Expression: BinaryOperator(
+          Operator: Token(Plus, "+")
+          Left: Identifier(
+            Name: Token(Identifier, "x")
+            Token(Identifier, "x")
+          )
+          Right: Identifier(
+            Name: Token(Identifier, "y")
+            Token(Identifier, "y")
+          )
+        )
+      )
+    ]
+  )
+  ElseBranch: null
+)
+If(
+  Condition: Identifier(
+    Name: Token(Identifier, "condition")
+    Token(Identifier, "condition")
+  )
+  ThenBranch: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+  ElseBranch(
+    Branch: Block(
+      LeftBrace: Token(LBrace, "{")
+      RightBrace: Token(RBrace, "}")
+      Statements: []
+    )
+  )
+)
+If(
+  Condition: Identifier(
+    Name: Token(Identifier, "condition")
+    Token(Identifier, "condition")
+  )
+  ThenBranch: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      Return(
+        Expression: Literal(
+          Token(NumberLiteral, "1")
+          Value: 1
+        )
+      )
+    ]
+  )
+  ElseBranch(
+    Branch: Block(
+      LeftBrace: Token(LBrace, "{")
+      RightBrace: Token(RBrace, "}")
+      Statements: []
     )
   )
 )

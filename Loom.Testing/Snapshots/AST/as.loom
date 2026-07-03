@@ -6,7 +6,7 @@ a as bool == b as bool;
 a as unknown as number + 1;
 x as number & bool;
 x as string | number;
-(x as number);
+(x as number) + 1;
 x as number[]?;
 x as unknown as bool as string;
 x as List<number>;

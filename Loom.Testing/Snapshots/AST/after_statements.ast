@@ -1,0 +1,220 @@
+﻿After(
+  Duration: Literal(
+    Token(NumberLiteral, "5s")
+    Value: 5
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "5s")
+    Value: 5
+  )
+  Body: ExpressionStatement(
+    Expression: Invocation(
+      Expression: Identifier(
+        Name: Token(Identifier, "doSomething")
+        Token(Identifier, "doSomething")
+      )
+      TypeArguments: null
+      Arguments(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        ArgumentList: []
+      )
+    )
+  )
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "2.5s")
+    Value: 2.5
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "500ms")
+    Value: 0.5
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "0.5m")
+    Value: 30
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "2h")
+    Value: 7200
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "10ms")
+    Value: 0.01
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      VariableDeclaration(
+        ColonTypeClause: null
+        EqualsValueClause(
+          EqualsToken: Token(Equals, "=")
+          Value: Literal(
+            Token(NumberLiteral, "1")
+            Value: 1
+          )
+        )
+        Name: Token(Identifier, "x")
+      )
+    ]
+  )
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "2s")
+    Value: 2
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      If(
+        Condition: Identifier(
+          Name: Token(Identifier, "condition")
+          Token(Identifier, "condition")
+        )
+        ThenBranch: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: [
+            Break(
+
+            )
+          ]
+        )
+        ElseBranch: null
+      )
+    ]
+  )
+)
+If(
+  Condition: Literal(
+    Token(TrueLiteral, "true")
+    Value: True
+  )
+  ThenBranch: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      After(
+        Duration: Literal(
+          Token(NumberLiteral, "1s")
+          Value: 1
+        )
+        Body: ExpressionStatement(
+          Expression: Invocation(
+            Expression: Identifier(
+              Name: Token(Identifier, "foo")
+              Token(Identifier, "foo")
+            )
+            TypeArguments: null
+            Arguments(
+              LeftParen: Token(LParen, "(")
+              RightParen: Token(RParen, ")")
+              ArgumentList: []
+            )
+          )
+        )
+      )
+    ]
+  )
+  ElseBranch(
+    Branch: Block(
+      LeftBrace: Token(LBrace, "{")
+      RightBrace: Token(RBrace, "}")
+      Statements: [
+        After(
+          Duration: Literal(
+            Token(NumberLiteral, "2s")
+            Value: 2
+          )
+          Body: ExpressionStatement(
+            Expression: Invocation(
+              Expression: Identifier(
+                Name: Token(Identifier, "bar")
+                Token(Identifier, "bar")
+              )
+              TypeArguments: null
+              Arguments(
+                LeftParen: Token(LParen, "(")
+                RightParen: Token(RParen, ")")
+                ArgumentList: []
+              )
+            )
+          )
+        )
+      ]
+    )
+  )
+)
+After(
+  Duration: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "getDelay")
+      Token(Identifier, "getDelay")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      ExpressionStatement(
+        Expression: Invocation(
+          Expression: Identifier(
+            Name: Token(Identifier, "action")
+            Token(Identifier, "action")
+          )
+          TypeArguments: null
+          Arguments(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ArgumentList: []
+          )
+        )
+      )
+    ]
+  )
+)

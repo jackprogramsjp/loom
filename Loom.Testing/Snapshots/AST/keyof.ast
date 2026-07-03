@@ -1,0 +1,54 @@
+﻿VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: KeyOf(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      Type: TypeName(
+        Name: Token(Identifier, "T")
+        TypeArguments: null
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: KeyOf(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      Type: KeyOf(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+      )
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: ArrayType(
+      ElementType: KeyOf(
+        LeftParen: Token(LParen, "(")
+        RightParen: Token(RParen, ")")
+        Type: TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+      )
+      LeftBracket: Token(LBracket, "[")
+      MutKeyword: null
+      RightBracket: Token(RBracket, "]")
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)

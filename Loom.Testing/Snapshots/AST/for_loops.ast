@@ -1,0 +1,352 @@
+﻿For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Identifier(
+    Name: Token(Identifier, "items")
+    Token(Identifier, "items")
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Identifier(
+    Name: Token(Identifier, "items")
+    Token(Identifier, "items")
+  )
+  Body: Break(
+
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Identifier(
+    Name: Token(Identifier, "items")
+    Token(Identifier, "items")
+  )
+  Body: Continue(
+
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+    Identifier(
+      Name: Token(Identifier, "y")
+      Token(Identifier, "y")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "pairs")
+      Token(Identifier, "pairs")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: [
+        Identifier(
+          Name: Token(Identifier, "t")
+          Token(Identifier, "t")
+        )
+      ]
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      ExpressionStatement(
+        Expression: Invocation(
+          Expression: Identifier(
+            Name: Token(Identifier, "use")
+            Token(Identifier, "use")
+          )
+          TypeArguments: null
+          Arguments(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ArgumentList: [
+              Identifier(
+                Name: Token(Identifier, "x")
+                Token(Identifier, "x")
+              )
+              Identifier(
+                Name: Token(Identifier, "y")
+                Token(Identifier, "y")
+              )
+            ]
+          )
+        )
+      )
+    ]
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Invocation(
+    Expression: Identifier(
+      Name: Token(Identifier, "getItems")
+      Token(Identifier, "getItems")
+    )
+    TypeArguments: null
+    Arguments(
+      LeftParen: Token(LParen, "(")
+      RightParen: Token(RParen, ")")
+      ArgumentList: []
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      ExpressionStatement(
+        Expression: Invocation(
+          Expression: Identifier(
+            Name: Token(Identifier, "process")
+            Token(Identifier, "process")
+          )
+          TypeArguments: null
+          Arguments(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ArgumentList: [
+              Identifier(
+                Name: Token(Identifier, "x")
+                Token(Identifier, "x")
+              )
+            ]
+          )
+        )
+      )
+    ]
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Identifier(
+    Name: Token(Identifier, "xs")
+    Token(Identifier, "xs")
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      For(
+        Names: [
+          Identifier(
+            Name: Token(Identifier, "y")
+            Token(Identifier, "y")
+          )
+        ]
+        Colon: Token(Colon, ":")
+        CollectionExpression: Identifier(
+          Name: Token(Identifier, "ys")
+          Token(Identifier, "ys")
+        )
+        Body: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: [
+            ExpressionStatement(
+              Expression: Invocation(
+                Expression: Identifier(
+                  Name: Token(Identifier, "use")
+                  Token(Identifier, "use")
+                )
+                TypeArguments: null
+                Arguments(
+                  LeftParen: Token(LParen, "(")
+                  RightParen: Token(RParen, ")")
+                  ArgumentList: [
+                    Identifier(
+                      Name: Token(Identifier, "x")
+                      Token(Identifier, "x")
+                    )
+                    Identifier(
+                      Name: Token(Identifier, "y")
+                      Token(Identifier, "y")
+                    )
+                  ]
+                )
+              )
+            )
+          ]
+        )
+      )
+    ]
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: RangeLiteral(
+    DotDot: Token(DotDot, "..")
+    Minimum: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
+    )
+    Maximum: Literal(
+      Token(NumberLiteral, "10")
+      Value: 10
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      ExpressionStatement(
+        Expression: Invocation(
+          Expression: Identifier(
+            Name: Token(Identifier, "print")
+            Token(Identifier, "print")
+          )
+          TypeArguments: null
+          Arguments(
+            LeftParen: Token(LParen, "(")
+            RightParen: Token(RParen, ")")
+            ArgumentList: [
+              Identifier(
+                Name: Token(Identifier, "x")
+                Token(Identifier, "x")
+              )
+            ]
+          )
+        )
+      )
+    ]
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Identifier(
+    Name: Token(Identifier, "arr")
+    Token(Identifier, "arr")
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      ExpressionStatement(
+        Expression: AssignmentOperator(
+          Operator: Token(Equals, "=")
+          Left: Identifier(
+            Name: Token(Identifier, "x")
+            Token(Identifier, "x")
+          )
+          Right: BinaryOperator(
+            Operator: Token(Star, "*")
+            Left: Identifier(
+              Name: Token(Identifier, "x")
+              Token(Identifier, "x")
+            )
+            Right: Literal(
+              Token(NumberLiteral, "2")
+              Value: 2
+            )
+          )
+        )
+      )
+    ]
+  )
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "x")
+      Token(Identifier, "x")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: Identifier(
+    Name: Token(Identifier, "items")
+    Token(Identifier, "items")
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: [
+      If(
+        Condition: BinaryOperator(
+          Operator: Token(RArrow, ">")
+          Left: Identifier(
+            Name: Token(Identifier, "x")
+            Token(Identifier, "x")
+          )
+          Right: Literal(
+            Token(NumberLiteral, "5")
+            Value: 5
+          )
+        )
+        ThenBranch: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: [
+            Break(
+
+            )
+          ]
+        )
+        ElseBranch(
+          Branch: Block(
+            LeftBrace: Token(LBrace, "{")
+            RightBrace: Token(RBrace, "}")
+            Statements: [
+              Continue(
+
+              )
+            ]
+          )
+        )
+      )
+    ]
+  )
+)
