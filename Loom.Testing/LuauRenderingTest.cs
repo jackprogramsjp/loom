@@ -16,6 +16,12 @@ public class LuauRenderingTest
         var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
         Assert.Equal("(x :: number)", typeCast.Render());
     }
+    
+    [Fact]
+    public void Renders_Return() => Assert.Equal("return 69", new Return(new NumberLiteral(69)).Render());
+    
+    [Fact]
+    public void Renders_Return_Empty() => Assert.Equal("return", new Return().Render());
 
     [Fact]
     public void Renders_Continue() => Assert.Equal("continue", new Continue().Render());
