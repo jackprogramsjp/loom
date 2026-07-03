@@ -1,18 +1,16 @@
-type ResultKind = number
-type ResultOk<T> = {
-  read kind: index<ResultKind, "Ok">
-  read value: T
+type A = {
+  read kind: "A"
+  read val: number
 }
-type ResultError<Error> = {
-  read kind: index<ResultKind, "Err">
-  read error: Error
+type B = {
+  read kind: "B"
+  read val: string
 }
-type Result<T, Error> = ResultOk<T> | ResultError<Error>
-const function ok<T, Error>(value: T): Result<T, Error>
-  return { kind = 0, value = value }
-end
-type MyErrors = "do_something failed to execute"
-const result = ok(69)
-if result.kind == 1 then
-  const _ = "do_something failed to execute"
+type Inner = A | B
+type Outer = {
+  read inner: Inner
+}
+const o = ((nil :: never) :: Outer)
+if o.inner.kind == "A" then
+  const _ = o.inner.val + 1
 end

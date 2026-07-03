@@ -5,6 +5,7 @@ using Loom.Text;
 using Loom.TypeChecking.Types;
 using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
+using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.TypeChecking;
 
@@ -16,6 +17,13 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         {
             narrowedType = narrowed;
             semanticModel.TypeSolver.SetType(expression, narrowed);
+            return true;
+        }
+
+        if (TryResolveViaNarrowedPrefix(expression, current) is { } resolved)
+        {
+            narrowedType = resolved;
+            semanticModel.TypeSolver.SetType(expression, resolved);
             return true;
         }
 
@@ -39,7 +47,14 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         if (TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expression, out var literal)
             || TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expression, out literal))
         {
-            ApplyBinaryNarrowing(expression, literal, binaryOperator.Operator.Kind, trueState, falseState);
+            ApplyBinaryNarrowing(
+                expression,
+                literal,
+                binaryOperator.Operator.Kind,
+                current,
+                trueState,
+                falseState
+            );
         }
 
         return (trueState, falseState);
@@ -70,6 +85,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         Expression expression,
         Expression literal,
         SyntaxKind operatorKind,
+        TypedFlowState currentState,
         TypedFlowState trueState,
         TypedFlowState falseState)
     {
@@ -91,6 +107,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
                     propertyNames,
                     literalType,
                     isEquals,
+                    currentState,
                     trueState,
                     falseState
                 );
@@ -106,6 +123,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
                     propertyNames,
                     literalType,
                     isEquals,
+                    currentState,
                     trueState,
                     falseState
                 );
@@ -120,6 +138,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
                     indexLiteralType,
                     literalType,
                     isEquals,
+                    currentState,
                     trueState,
                     falseState
                 );
@@ -162,28 +181,46 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         List<string> propertyPath,
         Type literalType,
         bool isEquals,
+        TypedFlowState currentState,
         TypedFlowState trueState,
         TypedFlowState falseState)
     {
         var baseAddress = GetFlowAddress(baseExpression);
         if (baseAddress == null) return;
-        
-        var baseType = semanticModel.GetDeclarationType(baseExpression);
-        if (baseType is not Types.UnionType union) return;
 
+        var baseType = GetBaseExpressionType(baseExpression, currentState);
+        if (baseType == null) return;
+
+        var unionAddress = baseAddress;
+        var currentType = baseType;
+        var pathIndex = 0;
+        while (currentType is not UnionType && pathIndex < propertyPath.Count)
+        {
+            var name = propertyPath[pathIndex];
+            var nextAddress = TypedFlowAddress.Field(unionAddress, name);
+            currentType = currentState.NarrowedTypes.TryGetValue(nextAddress, out var narrowedStep)
+                ? narrowedStep
+                : GetMemberPropertyType(currentType, name);
+
+            if (currentType == null) return;
+            unionAddress = nextAddress;
+            pathIndex++;
+        }
+        
+        if (currentType is not UnionType union) return;
+
+        var remainingPath = propertyPath.Skip(pathIndex).ToList();
         var constantValue = semanticModel.GetConstantValue(literalExpression);
-        var propertyName = propertyPath.Last();
         var trueMembers = new List<Type>();
         var falseMembers = new List<Type>();
-
         foreach (var member in union.Types)
         {
-            var propertyType = GetMemberPropertyType(member, propertyName);
+            var propertyType = GetTypeAtPath(member, remainingPath);
             if (propertyType == null) continue;
 
             var matches = constantValue != null && propertyType is Types.LiteralType propertyLiteral
-                    ? Equals(propertyLiteral.Value, constantValue)
-                    : propertyType.IsAssignableTo(literalType) && literalType.IsAssignableTo(propertyType);
+                ? Equals(propertyLiteral.Value, constantValue)
+                : propertyType.IsAssignableTo(literalType) && literalType.IsAssignableTo(propertyType);
 
             if (matches)
                 trueMembers.Add(member);
@@ -193,16 +230,15 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
 
         var trueBaseType = BuildUnionOrNever(trueMembers);
         var falseBaseType = BuildUnionOrNever(falseMembers);
-
         if (isEquals)
         {
-            trueState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(trueBaseType);
-            falseState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(falseBaseType);
+            trueState.NarrowedTypes[unionAddress] = TypeSimplifier.Simplify(trueBaseType);
+            falseState.NarrowedTypes[unionAddress] = TypeSimplifier.Simplify(falseBaseType);
         }
         else
         {
-            trueState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(falseBaseType);
-            falseState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(trueBaseType);
+            trueState.NarrowedTypes[unionAddress] = TypeSimplifier.Simplify(falseBaseType);
+            falseState.NarrowedTypes[unionAddress] = TypeSimplifier.Simplify(trueBaseType);
         }
     }
 
@@ -211,14 +247,15 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         Type indexType,
         Type literalType,
         bool isEquals,
+        TypedFlowState currentState,
         TypedFlowState trueState,
         TypedFlowState falseState)
     {
         var baseAddress = GetFlowAddress(baseExpression);
         if (baseAddress == null) return;
 
-        var baseType = semanticModel.GetDeclarationType(baseExpression);
-        if (baseType is not Types.UnionType union) return;
+        var baseType = GetBaseExpressionType(baseExpression, currentState);
+        if (baseType is not UnionType union) return;
 
         var trueMembers = new List<Type>();
         var falseMembers = new List<Type>();
@@ -245,6 +282,61 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
             trueState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(falseBaseType);
             falseState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(trueBaseType);
         }
+    }
+
+    private Type? GetBaseExpressionType(Expression baseExpression, TypedFlowState currentState) =>
+        TryGetNarrowedType(baseExpression, currentState, out var narrowedType) ? narrowedType : semanticModel.GetDeclarationType(baseExpression);
+    
+    private Type? TryResolveViaNarrowedPrefix(Expression expression, TypedFlowState current)
+    {
+        Expression baseExpr;
+        List<string> path;
+        switch (expression)
+        {
+            case QualifiedName qualifiedName:
+                baseExpr = qualifiedName.Identifier;
+                path = qualifiedName.Names.ConvertAll(n => n.Name.Text);
+                break;
+            case PropertyAccess propertyAccess:
+                baseExpr = propertyAccess.Expression;
+                path = propertyAccess.Names.ConvertAll(n => n.Name.Text);
+                break;
+            default:
+                return null;
+        }
+
+        if (GetFlowAddress(baseExpr) is not { } address)
+            return null;
+        
+        var narrowedBase = current.NarrowedTypes.GetValueOrDefault(address);
+        var narrowedIndex = narrowedBase != null ? 0 : -1;
+        for (var i = 0; i < path.Count; i++)
+        {
+            address = TypedFlowAddress.Field(address, path[i]);
+            if (!current.NarrowedTypes.TryGetValue(address, out var narrowed)) continue;
+
+            narrowedBase = narrowed;
+            narrowedIndex = i + 1;
+        }
+
+        if (narrowedIndex < 0 || narrowedBase == null)
+            return null;
+
+        var remainingPath = path.Skip(narrowedIndex).ToList();
+        return GetTypeAtPath(narrowedBase, remainingPath);
+    }
+
+    private static Type? GetTypeAtPath(Type type, List<string> path)
+    {
+        var final = type;
+        foreach (var part in path)
+        {
+            final = GetMemberPropertyType(final, part);
+            if (final == null)
+                return null;
+        }
+
+        return final;
     }
 
     private static Type? GetMemberPropertyType(Type member, string propertyName)

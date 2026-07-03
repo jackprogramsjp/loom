@@ -1,25 +1,9 @@
-enum ResultKind { Ok,  Err }
+interface A { kind: "A", val: number }
+interface B { kind: "B", val: string };
+type Inner = A | B;
 
-interface ResultOk<T> {
-    kind: ResultKind["Ok"];
-    value: T;
+interface Outer { inner: Inner };
+let o = none as never as Outer;
+if o.inner.kind == "B" {
+    o.inner.val + 1
 }
-
-interface ResultError<Error> {
-    kind: ResultKind["Err"];
-    error: Error;
-}
-
-type Result<T, Error> = ResultOk<T> | ResultError<Error>;
-
-fn ok<T, Error>(value: T): Result<T, Error> {
-    return new ResultOk { kind: ResultKind.Ok, value: value };
-}
-
-enum MyErrors: string {
-    DoSomethingFailed = "do_something failed to execute"
-}
-
-let result = ok::<number, MyErrors>(69);
-if result.kind == ResultKind.Err
-    result.error;

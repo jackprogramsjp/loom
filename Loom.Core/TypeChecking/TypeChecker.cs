@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
