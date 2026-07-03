@@ -4,15 +4,16 @@ using ArrayType = Loom.TypeChecking.Types.ArrayType;
 using FunctionType = Loom.TypeChecking.Types.FunctionType;
 using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
 using OptionalType = Loom.TypeChecking.Types.OptionalType;
+using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
 using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.TypeChecking;
 
-public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypeParameter> cannotInfer)
+public sealed class TypeInferrer(Func<Node, Type> getType)
 {
-    public TypeParameterSubstitution? InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
+    public TypeParameterSubstitution InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
     {
         var objectType = underlying.ObjectType;
         var pairs = new List<(Type parameterType, Type argumentType)>();
@@ -48,33 +49,22 @@ public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypePara
         var substitution = new TypeParameterSubstitution();
         foreach (var typeParameter in generic.Parameters)
         {
-            if (inferred.TryGetValue(typeParameter, out var inferredType))
-            {
-                substitution[typeParameter] = inferredType;
-            }
-            else if (typeParameter.DefaultType != null)
-            {
-                substitution[typeParameter] = typeParameter.DefaultType;
-            }
-            else
-            {
-                cannotInfer(node, typeParameter);
-                return null;
-            }
+            substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
+                ? inferredType
+                : typeParameter.DefaultType ?? PrimitiveType.Unknown;
         }
 
         return substitution;
     }
 
-    public TypeParameterSubstitution? InferFunctionTypeArguments(
+    public static TypeParameterSubstitution InferFunctionTypeArguments(
         FunctionType functionType,
         List<Type> argumentTypes,
-        Node errorNode,
         Type? expectedReturnType = null)
     {
         var inferred = new TypeParameterSubstitution();
-        var visited = new HashSet<(Type, Type)>();n
-        for (var i = 0; i < Math.Min(functionType.ParameterTypes.Conount, argumentTypes.Count); i++)
+        var visited = new HashSet<(Type, Type)>();
+        for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
             TryInferTypes(functionType.ParameterTypes[i], argumentTypes[i], inferred, visited);
 
         if (expectedReturnType != null)
@@ -83,24 +73,14 @@ public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypePara
         var substitution = new TypeParameterSubstitution();
         foreach (var typeParameter in functionType.TypeParameters)
         {
-            if (inferred.TryGetValue(typeParameter, out var inferredType))
-            {
-                substitution[typeParameter] = inferredType;
-            }
-            else if (typeParameter.DefaultType != null)
-            {
-                substitution[typeParameter] = typeParameter.DefaultType;
-            }
-            else
-            {
-                cannotInfer(errorNode, typeParameter);
-                return null;
-            }
+            substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
+                ? inferredType
+                : typeParameter.DefaultType ?? PrimitiveType.Unknown;
         }
 
         return substitution;
     }
-    
+
     private static bool TryInferTypes(Type parameterType, Type argumentType, TypeParameterSubstitution inferredTypes, HashSet<(Type, Type)> visitedPairs)
     {
         parameterType = ExpandAliases(parameterType);

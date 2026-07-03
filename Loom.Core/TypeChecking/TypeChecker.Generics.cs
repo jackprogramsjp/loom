@@ -66,10 +66,7 @@ public sealed partial class TypeChecker
         }
         else
         {
-            var inferred = _inferrer.InferFunctionTypeArguments(functionType, argumentTypes, invocation, expectedReturnType);
-            if (inferred == null)
-                return null;
-
+            var inferred = TypeInferrer.InferFunctionTypeArguments(functionType, argumentTypes, expectedReturnType);
             foreach (var (tp, type) in inferred)
                 substitution[tp] = type;
         }

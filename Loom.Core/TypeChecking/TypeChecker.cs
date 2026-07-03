@@ -29,7 +29,7 @@ public sealed partial class TypeChecker
         : base(Types.PrimitiveType.Never)
     {
         _semanticModel = semanticModel;
-        _inferrer = new TypeInferrer(Visit, ReportCannotInfer);
+        _inferrer = new TypeInferrer(Visit);
         _narrower = new TypeNarrower(semanticModel);
     }
 
