@@ -44,13 +44,6 @@ public static class TypeSimplifier
         var flattened = FlattenNestedUnions(union.Types.ConvertAll(Simplify));
         var distinct = RemoveDuplicates(flattened, isUnion: true);
         var absorbed = ApplyAbsorption(distinct, isUnion: true);
-        if (absorbed.All(t => t is ObjectType or InterfaceType))
-        {
-            var merged = MergeObjectUnion(absorbed);
-            if (merged != null)
-                return Simplify(merged);
-        }
-
         if (!absorbed.Any(Type.IsNone))
             return absorbed.Count switch
             {
@@ -66,58 +59,6 @@ public static class TypeSimplifier
             1 => new OptionalType(nonNullable.First()),
             _ => new OptionalType(SimplifyUnion(new UnionType(nonNullable)))
         };
-    }
-
-    private static ObjectType? MergeObjectUnion(List<Type> types)
-    {
-        if (types.Count == 0)
-            return null;
-
-        var objectTypes = types.ConvertAll(t => t is InterfaceType i ? i.ObjectType : t).Cast<ObjectType>().ToList();
-        if (objectTypes.Count == 0)
-            return null;
-
-        var commonPropertyNames = objectTypes
-            .Select(o => o.Properties.Select(p => p.Name).ToHashSet())
-            .Aggregate((a, b) =>
-                {
-                    a.IntersectWith(b);
-                    return a;
-                }
-            );
-
-        if (commonPropertyNames.Count == 0 && objectTypes.Any(o => o.Indexer == null))
-            return null;
-
-        var properties = new List<ObjectProperty>();
-        foreach (var name in commonPropertyNames)
-        {
-            var valueTypes = new List<Type>();
-            var isMutable = false;
-            foreach (var prop in objectTypes.Select(obj => obj.GetProperty(name)!))
-            {
-                valueTypes.Add(prop.ValueType);
-                if (prop.IsMutable) isMutable = true;
-            }
-
-            var unionType = Simplify(new UnionType(valueTypes));
-            properties.Add(new ObjectProperty(isMutable, name, unionType));
-        }
-
-        ObjectIndexer? mergedIndexer = null;
-        if (objectTypes.Any(o => o.Indexer == null))
-            return new ObjectType(mergedIndexer, properties);
-
-        {
-            var keyTypes = objectTypes.Select(o => o.Indexer!.KeyType).ToList();
-            var valueTypes = objectTypes.Select(o => o.Indexer!.ValueType).ToList();
-            var keyUnion = Simplify(new UnionType(keyTypes));
-            var valueUnion = Simplify(new UnionType(valueTypes));
-            var isMutable = objectTypes.Any(o => o.Indexer!.IsMutable);
-            mergedIndexer = new ObjectIndexer(isMutable, keyUnion, valueUnion);
-        }
-
-        return new ObjectType(mergedIndexer, properties);
     }
 
     private static Type SimplifyIntersection(IntersectionType intersection)

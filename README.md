@@ -25,10 +25,10 @@
 - `typeof`
 - `x in collection`
 - Implementors for interfaces
-- Private visibility for interface fields & methods
+- Error handling using the result pattern
+- `defer` statements
 - Event declarations
 - Full module system (imports/exports)
-- Error handling using the result pattern
 - Roblox type generator + Luau typings
 
 ---

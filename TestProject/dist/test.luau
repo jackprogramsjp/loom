@@ -1,4 +1,8 @@
-const function id<T>(value: { T })
-  return value
+type Abc<T, U> = {
+  read t: T
+  read u: U
+}
+const function abc<T, U>(t: T): Abc<T, number>
+  return { t = t, u = 69 }
 end
-id({69})
+abc(69)
