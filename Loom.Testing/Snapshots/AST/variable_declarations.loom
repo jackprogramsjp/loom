@@ -6,6 +6,9 @@ let x: number = 1
 mut x: bool = false
 let x: number
 mut x: string
+mut x: unknown
+mut x: never
+mut x: none
 let x = mut [1, 2, 3]
 let x = new Foo { a: 1, b: 2 }
 let x: fn(p: number): string

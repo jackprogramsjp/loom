@@ -83,6 +83,37 @@ VariableDeclaration(
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: Unknown
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: Never
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: LiteralType(
+      Token(NoneLiteral, "none")
+      Value: null
+    )
+  )
+  EqualsValueClause: null
+  Name: Token(Identifier, "x")
+)
+VariableDeclaration(
   ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
