@@ -2115,6 +2115,14 @@ public class TypeCheckerTest
         Assert.Equal(0d, Assert.IsType<LiteralType>(union.Types.First()).Value);
         Assert.Equal(1d, Assert.IsType<LiteralType>(union.Types.Last()).Value);
     }
+    
+    [Fact]
+    public void Checks_IndexedEnumTypeAnnotation()
+    {
+        var type = Utility.GetLastStatementType("enum Status { Active, Inactive } let x: Status['Active'] = Status.Active");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(0d, literal.Value);
+    }
 
     [Fact]
     public void Checks_EnumWithNumberBaseTypeExplicit()
