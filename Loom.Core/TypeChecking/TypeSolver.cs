@@ -14,7 +14,22 @@ namespace Loom.TypeChecking;
 public class TypeSolver(DiagnosticBag diagnostics)
     : DiagnosedResult(diagnostics)
 {
-    private record TypeConstraint(Type Actual, Type Expected, LocationSpan Span);
+    private record TypeConstraint
+    {
+        public TypeConstraint(Type Actual, Type Expected, LocationSpan Span)
+        {
+            ArgumentNullException.ThrowIfNull(Actual);
+            ArgumentNullException.ThrowIfNull(Expected);
+            ArgumentNullException.ThrowIfNull(Span);
+            this.Actual = Actual;
+            this.Expected = Expected;
+            this.Span = Span;
+        }
+
+        public Type Actual { get; init; }
+        public Type Expected { get; init; }
+        public LocationSpan Span { get; init; }
+    }
 
     private readonly List<TypeConstraint> _constraints = [];
     private readonly Dictionary<NodeId, Type> _nodeTypes = [];
@@ -76,11 +91,11 @@ public class TypeSolver(DiagnosticBag diagnostics)
         while (changed)
         {
             changed = false;
-            foreach (var (a, b, span) in _constraints)
+            foreach (var constraint in _constraints)
             {
-                var resolvedA = Substitute(a);
-                var resolvedB = Substitute(b);
-                if (!TryUnify(resolvedA, resolvedB, span, out var updated))
+                var resolvedA = Substitute(constraint.Actual);
+                var resolvedB = Substitute(constraint.Expected);
+                if (!TryUnify(resolvedA, resolvedB, constraint.Span, out var updated))
                     return false;
 
                 if (updated)

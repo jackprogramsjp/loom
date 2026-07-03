@@ -101,6 +101,7 @@ public sealed partial class TypeChecker
                 BindType(@for.Names[0], elementType);
                 if (@for.Names.Count > 1)
                     BindType(@for.Names[1], Types.PrimitiveType.Number);
+
                 break;
             case InterfaceType or ObjectType:
             {
@@ -108,7 +109,7 @@ public sealed partial class TypeChecker
                 BindType(@for.Names[0], objectType.KeyUnion());
                 if (@for.Names.Count > 1)
                     BindType(@for.Names[1], elementType);
-                
+
                 break;
             }
         }
@@ -149,7 +150,7 @@ public sealed partial class TypeChecker
         var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [];
         var parameterTypes = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit) ?? [];
         MaybeVisit(functionDeclaration.ReturnType);
-        
+
         var returnType = GetReturnType(functionDeclaration);
         var functionType = BindType(functionDeclaration, new Types.FunctionType(typeParameters, parameterTypes, returnType));
         Visit(functionDeclaration.Body);
@@ -222,8 +223,8 @@ public sealed partial class TypeChecker
     {
         var declaredType = MaybeVisit(parameter.ColonTypeClause);
         var initializerType = MaybeVisit(parameter.EqualsValueClause);
-        if (initializerType != null && parameter.EqualsValueClause != null)
-            _semanticModel.TypeSolver.AddConstraint(initializerType, declaredType!, parameter.EqualsValueClause.Value);
+        if (declaredType != null && parameter.EqualsValueClause != null)
+            _semanticModel.TypeSolver.AddConstraint(initializerType!, declaredType, parameter.EqualsValueClause.Value);
 
         return BindType(parameter, declaredType ?? initializerType!);
     }
@@ -249,12 +250,12 @@ public sealed partial class TypeChecker
             return BindType(invocation, Types.PrimitiveType.Never);
         }
 
+        var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
         var argumentTypes = invocation.Arguments.ArgumentList.ConvertAll(Visit);
         if (functionType.TypeParameters.Count == 0)
-            return BindNonGenericInvocation(invocation, argumentTypes, functionType);
+            return BindNonGenericInvocation(invocation, argumentTypes, functionType, declaration);
 
-        var expectedReturnType = GetExpectedInvocationReturnType(invocation);
-        Console.WriteLine(expectedReturnType);
+        var expectedReturnType = GetContextualType(invocation);
         var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
         if (substitution == null)
             return BindType(invocation, Types.PrimitiveType.Never);
@@ -263,7 +264,7 @@ public sealed partial class TypeChecker
         var substitutedReturnType = SubstituteTypeParameters(functionType.ReturnType, substitution);
         var instantiated = new Types.FunctionType([], substitutedParameterTypes, substitutedReturnType);
 
-        CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes);
+        CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
         AddArgumentConstraints(invocation.Arguments, argumentTypes, substitutedParameterTypes);
         return BindType(invocation, instantiated.ReturnType);
     }
@@ -569,12 +570,16 @@ public sealed partial class TypeChecker
 
         return type;
     }
-    
-    private Type? GetExpectedInvocationReturnType(Expression expression) =>
+
+    private Type? GetContextualType(Expression expression) =>
         expression.Parent switch
         {
-            VariableDeclaration { ColonTypeClause: not null } variableDeclaration
-                when variableDeclaration.EqualsValueClause?.Value == expression =>
+            EqualsValueClause equalsValueClause when equalsValueClause.Value == expression
+                && equalsValueClause.Parent is VariableDeclaration { ColonTypeClause: not null } variableDeclaration =>
+                _semanticModel.GetType(variableDeclaration.ColonTypeClause),
+
+            EqualsValueClause equalsValueClause when equalsValueClause.Value == expression
+                && equalsValueClause.Parent is Parameter { ColonTypeClause: not null } variableDeclaration =>
                 _semanticModel.GetType(variableDeclaration.ColonTypeClause),
 
             Return @return when @return.Expression == expression =>
@@ -583,10 +588,6 @@ public sealed partial class TypeChecker
             AssignmentOperator { Operator.Kind: SyntaxKind.Equals } assignment
                 when assignment.Right == expression =>
                 _semanticModel.GetType(assignment.Left),
-
-            Parameter { ColonTypeClause: not null } parameter
-                when parameter.EqualsValueClause?.Value == expression =>
-                _semanticModel.GetType(parameter.ColonTypeClause),
 
             _ => null
         };
@@ -690,11 +691,31 @@ public sealed partial class TypeChecker
         );
     }
 
-    private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)
+    private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes, DeclareFunctionSignature? declaration)
     {
-        var requiredParameterTypes = parameterTypes.FindAll(Type.IsNotOptional);
+        var requiredParameterTypes = new List<Type>();
+        if (declaration == null)
+        {
+            requiredParameterTypes = parameterTypes.FindAll(Type.IsNotOptional);
+        }
+        else
+        {
+            if (declaration.Parameters != null)
+            {
+                for (var i = 0; i < declaration.Parameters.ParameterList.Count; i++)
+                {
+                    var parameterType = parameterTypes[i];
+                    var parameter = declaration.Parameters.ParameterList[i];
+                    if (parameter.EqualsValueClause != null || !Type.IsNotOptional(parameterType)) continue;
+
+                    requiredParameterTypes.Add(parameterType);
+                }
+            }
+        }
+
         var minimum = requiredParameterTypes.Count;
         var maximum = parameterTypes.Count;
+
         var arityDisplay = minimum == maximum
             ? maximum.ToString()
             : $"{minimum}-{maximum}";
@@ -717,9 +738,9 @@ public sealed partial class TypeChecker
         }
     }
 
-    private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, Types.FunctionType functionType)
+    private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, Types.FunctionType functionType, DeclareFunctionSignature? declaration)
     {
-        CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
+        CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes, declaration);
         AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
         return BindType(invocation, functionType.ReturnType);
     }

@@ -725,6 +725,98 @@ public class TypeCheckerTest
             "Cannot infer type parameter 'T'. Provide explicit type arguments."
         );
     }
+
+    [Fact]
+    public void ThrowsFor_Inference_UnionArgumentMismatchedMemberCount_CannotInfer()
+    {
+        const string source = """
+            fn id<T>(x: T | string) -> x
+            id(42 as (number | string | bool))
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'T'. Provide explicit type arguments."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Inference_EnclosingFunctionHasNoDeclaredReturnType()
+    {
+        const string source = """
+            fn create<T>(): T -> none as never as T
+            fn make() { return create() }
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'T'. Provide explicit type arguments."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Inference_NestedInBinaryOperator_CannotInfer()
+    {
+        const string source = """
+            fn create<T>(): T -> none as never as T
+            fn make: number {
+                return create() + 1
+            }
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'T'. Provide explicit type arguments."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Inference_VariableDeclarationWithoutAnnotation_CannotInfer()
+    {
+        const string source = """
+            fn create<T>(): T -> none as never as T
+            let x = create()
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.CannotInferType,
+            "Cannot infer type parameter 'T'. Provide explicit type arguments."
+        );
+    }
+    
+    [Fact]
+    public void ThrowsFor_Inference_VariableDeclarationAnnotation_ViolatesConstraint()
+    {
+        const string source = """
+            fn create<T: number>(value: T) -> value
+            let x: string = create()
+            """;
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.ConstraintViolation,
+            "Type 'T1' does not satisfy constraint 'number' for type parameter 'T'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Inference_ArgumentBasedBinding_TakesPriorityOverConflictingContext()
+    {
+        const string source = """
+            fn wrap<T>(value: T) -> value
+            let x: string = wrap(42)
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '42' is not assignable to type 'string'.");
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -742,6 +834,113 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_DefaultParameterValue()
+    {
+        var type = Utility.AssertNoErrors(Utility.TypeCheck("fn abc(x = 1) -> x; abc()")).ReturnType;
+        Assert.Equal(new LiteralType(1L), type);
+    }
+
+    [Fact]
+    public void Checks_Inference_ContextualReturnType_ResolvesSecondTypeParameterOnly()
+    {
+        const string source = """
+            interface Pair<A, B> { first: A, second: B }
+            fn makePair<A, B>(first: A): Pair<A, B> -> new Pair { first: first, second: none as never as B }
+            fn compute: Pair<number, string> {
+                return makePair(42)
+            }
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameter_VariableDeclarationContext()
+    {
+        const string source = "fn create<T>(): T -> none as never as T; let x: number = create(); x";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Number), $"Expected 'number', got '{type}'");
+    }
+
+    [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameter_AssignmentContext()
+    {
+        const string source = """
+            fn create<T>(): T -> none as never as T
+            mut x: number = 0
+            x = create()
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameter_ParameterDefaultContext()
+    {
+        const string source = """
+            fn create<T>(): T -> none as never as T
+            fn use(x: number = create()) -> x
+            use()
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Checks_Inference_ContextualReturnType_OverridesDefaultTypeParameter()
+    {
+        const string source = """
+            interface Result<T, E> { value: T?, error: E? }
+            fn ok<T, E = string>(value: T): Result<T, E> -> new Result { value: value, error: none as never as E }
+            enum MyErrors: string { Failed = "failed" }
+            fn compute: Result<number, MyErrors> {
+                return ok(69)
+            }
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void Checks_Inference_MissingContext_FallsBackToDefaultTypeParameter()
+    {
+        const string source = """
+            interface Result<T, E> { value: T?, error: E? }
+            fn ok<T, E = string>(value: T): Result<T, E> -> new Result { value: value, error: none as never as E }
+            ok(69)
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var iface = Assert.IsType<InterfaceType>(type);
+        var errorProp = iface.ObjectType.GetProperty("error")!;
+        var optional = Assert.IsType<OptionalType>(errorProp.ValueType);
+        Assert.True(optional.NonNullableType.Equals(PrimitiveType.String), $"Expected default 'string', got '{optional.NonNullableType}'");
+    }
+
+    [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameter_ContextualArrayType()
+    {
+        const string source = "fn create<T>(): T -> none as never as T; let x: string[] = create(); x";
+        var type = Utility.GetLastStatementType(source);
+        var array = Assert.IsType<ArrayType>(type);
+        Assert.True(array.ElementType.Equals(PrimitiveType.String), $"Expected 'string', got '{array.ElementType}'");
+    }
+
+    [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameter_NestedReturnUsesEnclosingFunction()
+    {
+        const string source = """
+            fn create<T>(): T -> none as never as T
+            fn make: number {
+                if true { return create() } else { return 0 }
+            }
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
     [Fact]
     public void Checks_ReturnType_Inference()
     {
@@ -763,7 +962,7 @@ public class TypeCheckerTest
                 return ok(69);
             }
             """;
-        
+
         Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
     }
 
