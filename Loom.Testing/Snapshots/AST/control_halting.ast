@@ -13,3 +13,162 @@ Return(
 Return(
   Expression: null
 )
+Return(
+  Expression: null
+)
+If(
+  Condition: Identifier(
+    Name: Token(Identifier, "abc")
+    Token(Identifier, "abc")
+  )
+  ThenBranch: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+  ElseBranch: null
+)
+Return(
+  Expression: null
+)
+Declare(
+  Signature: DeclareFunctionSignature(
+    Parameters: null
+    ReturnType: ColonTypeClause(
+      ColonToken: Token(Colon, ":")
+      Type: PrimitiveType(
+        Kind: Void
+      )
+    )
+    TypeParameters: null
+    Name: Token(Identifier, "foo")
+  )
+)
+Return(
+  Expression: null
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: Literal(
+      Token(NumberLiteral, "69")
+      Value: 69
+    )
+  )
+  Name: Token(Identifier, "x")
+)
+Return(
+  Expression: null
+)
+VariableDeclaration(
+  ColonTypeClause: null
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: Literal(
+      Token(NumberLiteral, "69")
+      Value: 69
+    )
+  )
+  Name: Token(Identifier, "x")
+)
+Return(
+  Expression: null
+)
+While(
+  Condition: Literal(
+    Token(NumberLiteral, "69")
+    Value: 69
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+Return(
+  Expression: null
+)
+After(
+  Duration: Literal(
+    Token(NumberLiteral, "5s")
+    Value: 5
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+Return(
+  Expression: null
+)
+For(
+  Names: [
+    Identifier(
+      Name: Token(Identifier, "i")
+      Token(Identifier, "i")
+    )
+  ]
+  Colon: Token(Colon, ":")
+  CollectionExpression: RangeLiteral(
+    DotDot: Token(DotDot, "..")
+    Minimum: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
+    )
+    Maximum: Literal(
+      Token(NumberLiteral, "10")
+      Value: 10
+    )
+  )
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+)
+Return(
+  Expression: null
+)
+Block(
+  LeftBrace: Token(LBrace, "{")
+  RightBrace: Token(RBrace, "}")
+  Statements: []
+)
+Return(
+  Expression: null
+)
+Continue(
+
+)
+Return(
+  Expression: null
+)
+Break(
+
+)
+Return(
+  Expression: null
+)
+FunctionDeclaration(
+  ReturnType: null
+  Body: Block(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Statements: []
+  )
+  Parameters: null
+  TypeParameters: null
+  Name: Token(Identifier, "foo")
+)
+Return(
+  Expression: null
+)
+InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: null
+  TypeParameters: null
+  Name: Token(Identifier, "I")
+)

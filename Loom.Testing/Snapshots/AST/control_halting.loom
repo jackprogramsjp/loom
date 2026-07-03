@@ -2,3 +2,27 @@ break;
 continue;
 return 69;
 return;
+return;
+if abc {}
+return;
+declare fn foo: void;
+return;
+let x = 69;
+return;
+mut x = 69;
+return;
+while 69 {}
+return;
+after 5s {}
+return;
+for i : 1..10 {}
+return;
+{ }
+return;
+continue;
+return;
+break;
+return;
+fn foo {}
+return;
+interface I;

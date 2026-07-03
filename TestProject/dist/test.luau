@@ -1,3 +1,5 @@
-const x = 1
-const y = 2
-const _ = { minimum = x, maximum = y }
+const function abc()
+  return
+    const x = 69
+  
+end

@@ -89,8 +89,10 @@ public class ParserTest
     public void Parser_Snapshots(string sourcePath, string snapshotPath)
     {
         var source = File.ReadAllText(sourcePath);
-        var tree = Utility.GetAST(source);
-        var actual = AstInspector.Inspect(tree).Replace(Environment.NewLine, "\n");
+        var result = Utility.Parse(source);
+        Utility.AssertNoErrors(result);
+        
+        var actual = AstInspector.Inspect(result.Tree).Replace(Environment.NewLine, "\n");
         var expected = File.ReadAllText(snapshotPath).Replace(Environment.NewLine, "\n");
         Assert.Equal(expected, actual);
     }

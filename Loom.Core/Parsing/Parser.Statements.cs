@@ -5,39 +5,41 @@ namespace Loom.Parsing;
 
 public sealed partial class Parser
 {
+    private Dictionary<SyntaxKind, Func<Token, Statement>> StatementParsers =>
+        new()
+        {
+            [SyntaxKind.LBrace] = ParseBlock,
+            [SyntaxKind.ReturnKeyword] = ParseReturn,
+            [SyntaxKind.FnKeyword] = ParseFunctionDeclaration,
+            [SyntaxKind.LetKeyword] = ParseVariableDeclaration,
+            [SyntaxKind.MutKeyword] = ParseVariableDeclaration,
+            [SyntaxKind.TypeKeyword] = ParseTypeAlias,
+            [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
+            [SyntaxKind.DeclareKeyword] = ParseDeclareStatement,
+            [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
+            [SyntaxKind.SealedKeyword] = ParseInterfaceDeclaration,
+            [SyntaxKind.IfKeyword] = ParseIf,
+            [SyntaxKind.ForKeyword] = ParseFor,
+            [SyntaxKind.AfterKeyword] = ParseAfter,
+            [SyntaxKind.WhileKeyword] = ParseWhile,
+            [SyntaxKind.BreakKeyword] = ParseBreak,
+            [SyntaxKind.ContinueKeyword] = ParseContinue,
+        };
+
     private Statement ParseStatement()
     {
         if (IsEof())
             return new ExpressionStatement(ParseExpression());
 
         var token = Advance();
-        var statement = token.Kind switch
-        {
-            SyntaxKind.LBrace => ParseBlock(token),
-            SyntaxKind.ReturnKeyword => ParseReturn(token),
-            SyntaxKind.FnKeyword => ParseFunctionDeclaration(token),
-            SyntaxKind.LetKeyword or SyntaxKind.MutKeyword => ParseVariableDeclaration(token),
-            SyntaxKind.TypeKeyword => ParseTypeAlias(token),
-            SyntaxKind.EnumKeyword => ParseEnumDeclaration(token),
-            SyntaxKind.DeclareKeyword => ParseDeclareStatement(token),
-            SyntaxKind.InterfaceKeyword or SyntaxKind.SealedKeyword => ParseInterfaceDeclaration(token),
-            SyntaxKind.IfKeyword => ParseIf(token),
-            SyntaxKind.ForKeyword => ParseFor(token),
-            SyntaxKind.AfterKeyword => ParseAfter(token),
-            SyntaxKind.WhileKeyword => ParseWhile(token),
-            SyntaxKind.BreakKeyword => ParseBreak(token),
-            SyntaxKind.ContinueKeyword => ParseContinue(token),
-            _ => null
-        };
-
-        if (statement != null)
-            return statement;
+        var statementParser = StatementParsers.GetValueOrDefault(token.Kind);
+        if (statementParser != null)
+            return statementParser(token);
 
         _position--;
-
         return new ExpressionStatement(ParseExpression());
     }
-    
+
     private Block ParseBlock(Token leftBrace)
     {
         var statements = new List<Statement>();
@@ -47,39 +49,18 @@ public sealed partial class Parser
         var rightBrace = Last();
         return new Block(leftBrace, rightBrace, statements);
     }
-    
+
     private Return ParseReturn(Token keyword)
     {
-        if (IsEof() || Current().Kind == SyntaxKind.RBrace || IsStatementKeyword())
+        if (IsEof() || Current().Kind == SyntaxKind.RBrace || AtStatementKeyword())
             return new Return(keyword, null);
 
         var expression = ParseExpression();
         return new Return(keyword, expression);
     }
 
-    private bool IsStatementKeyword()
-    {
-        if (IsEof())
-            return false;
+    private bool AtStatementKeyword() => !IsEof() && StatementParsers.ContainsKey(Current().Kind);
 
-        var kind = Current().Kind;
-        return kind is SyntaxKind.ReturnKeyword
-                    or SyntaxKind.FnKeyword
-                    or SyntaxKind.LetKeyword
-                    or SyntaxKind.MutKeyword
-                    or SyntaxKind.TypeKeyword
-                    or SyntaxKind.EnumKeyword
-                    or SyntaxKind.DeclareKeyword
-                    or SyntaxKind.InterfaceKeyword
-                    or SyntaxKind.SealedKeyword
-                    or SyntaxKind.IfKeyword
-                    or SyntaxKind.ForKeyword
-                    or SyntaxKind.AfterKeyword
-                    or SyntaxKind.WhileKeyword
-                    or SyntaxKind.BreakKeyword
-                    or SyntaxKind.ContinueKeyword;
-    }
-    
     private For ParseFor(Token keyword)
     {
         var names = ParseDelimited(() => new Identifier(ExpectIdentifier()));
