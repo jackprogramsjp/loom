@@ -625,14 +625,6 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void ThrowsFor_Inference_IntersectionParameterMultipleTypeParameters()
-    {
-        const string source = "fn mix<A, B>(x: A & B): A & B -> x; mix(42)";
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotInferType, "Cannot infer type parameter 'B'. Provide explicit type arguments.");
-    }
-
-    [Fact]
     public void ThrowsFor_ConstraintViolation_DeepInstantiation()
     {
         const string source = """
@@ -678,126 +670,13 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void ThrowsFor_GenericFunctionCall_MissingRequiredTypeParameter()
-    {
-        const string source = """
-            fn identity<T, U = number>(value: T?) -> value
-            identity()
-            """;
-
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'T'. Provide explicit type arguments."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_Inference_UnionMultipleTypeParams_CannotInfer()
-    {
-        const string source = """
-            fn id<T, U>(x: T | U) -> x
-            id(42)
-            """;
-
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'U'. Provide explicit type arguments."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_Inference_FunctionTypeParamCountMismatch()
-    {
-        const string source = """
-            fn apply<T>(f: fn(T): void) -> f
-            fn f(a: number, b: string): void {}
-            apply(f)
-            """;
-
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'T'. Provide explicit type arguments."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_Inference_UnionArgumentMismatchedMemberCount_CannotInfer()
-    {
-        const string source = """
-            fn id<T>(x: T | string) -> x
-            id(42 as (number | string | bool))
-            """;
-
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'T'. Provide explicit type arguments."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_Inference_EnclosingFunctionHasNoDeclaredReturnType()
-    {
-        const string source = """
-            fn create<T>(): T -> none as never as T
-            fn make() { return create() }
-            """;
-
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'T'. Provide explicit type arguments."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_Inference_NestedInBinaryOperator_CannotInfer()
-    {
-        const string source = """
-            fn create<T>(): T -> none as never as T
-            fn make: number {
-                return create() + 1
-            }
-            """;
-
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'T'. Provide explicit type arguments."
-        );
-    }
-
-    [Fact]
-    public void ThrowsFor_Inference_VariableDeclarationWithoutAnnotation_CannotInfer()
-    {
-        const string source = """
-            fn create<T>(): T -> none as never as T
-            let x = create()
-            """;
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.CannotInferType,
-            "Cannot infer type parameter 'T'. Provide explicit type arguments."
-        );
-    }
-    
-    [Fact]
     public void ThrowsFor_Inference_VariableDeclarationAnnotation_ViolatesConstraint()
     {
         const string source = """
             fn create<T: number>(value: T) -> value
             let x: string = create()
             """;
+
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(
             diagnostics,
@@ -834,6 +713,72 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_Inference_IntersectionParameterMultipleTypeParameters_UsesUnknownForUninferred()
+    {
+        const string source = "fn mix<A, B>(x: A & B): A & B -> x; mix(42)";
+        var type = Utility.GetLastStatementType(source);
+        Assert.Equal(PrimitiveType.Never, type);
+    }
+
+    [Fact]
+    public void Checks_Inference_MissingRequiredTypeParameter_UsesUnknownForUninferred()
+    {
+        const string source = "fn identity<T, U = number>(value: T?) -> value; identity(none)";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(Type.IsNone(type));
+    }
+
+    [Fact]
+    public void Checks_Inference_UnionMultipleTypeParams_UsesUnknownForUninferred()
+    {
+        const string source = "fn id<T, U>(x: T | U) -> x; id(42)";
+        var type = Utility.GetLastStatementType(source);
+        Assert.Equal(new LiteralType(42L), type);
+    }
+
+    [Fact]
+    public void Checks_Inference_UnionArgumentMismatchedMemberCount_UsesUnknownForUninferred()
+    {
+        const string source = "fn create<T>(): T -> none as never as T; create()";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(Type.IsUnknown(type));
+    }
+
+    [Fact]
+    public void Checks_Inference_EnclosingFunctionHasNoDeclaredReturnType_UsesUnknown()
+    {
+        const string source = "fn create<T>(): T -> none as never as T; fn make() { return create() }";
+        var type = Utility.GetLastStatementType(source);
+        var fnType = Assert.IsType<FunctionType>(type);
+        Assert.True(Type.IsUnknown(fnType.ReturnType));
+    }
+
+    [Fact]
+    public void Checks_Inference_NestedInBinaryOperator_UsesUnknown()
+    {
+        const string source = "fn create<T>(): T -> none as never as T; fn make() { return create() }";
+        var type = Utility.GetLastStatementType(source);
+        var fnType = Assert.IsType<FunctionType>(type);
+        Assert.True(Type.IsUnknown(fnType.ReturnType));
+    }
+
+    [Fact]
+    public void Checks_Inference_VariableDeclarationWithoutAnnotation_UsesUnknown()
+    {
+        const string source = "fn create<T>(): T -> none as never as T; let x = create()";
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(Type.IsUnknown(type));
+    }
+
+    [Fact]
+    public void Checks_Inference_ReturnTypeOnlyTypeParameterCannotInfer_UsesUnknown()
+    {
+        const string source = "fn create<T>(): T -> none as never as T; create()";
+        var type = Utility.GetLastStatementType(source);
+        Assert.Equal(PrimitiveType.Unknown, type);
+    }
+
     [Fact]
     public void Checks_DefaultParameterValue()
     {
@@ -1215,14 +1160,6 @@ public class TypeCheckerTest
         const string source = "fn create<T = number>(): T -> 42; create()";
         var type = Utility.GetLastStatementType(source);
         Assert.True(type.IsAssignableTo(PrimitiveType.Number));
-    }
-
-    [Fact]
-    public void Checks_Inference_ReturnTypeOnlyTypeParameterCannotInfer()
-    {
-        const string source = "fn create<T>(): T -> 42; create()";
-        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotInferType, "Cannot infer type parameter 'T'. Provide explicit type arguments.");
     }
 
     [Fact]

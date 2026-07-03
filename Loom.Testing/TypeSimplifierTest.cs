@@ -8,7 +8,13 @@ namespace Loom.Testing;
 public class TypeSimplifierTest
 {
     public static readonly List<object[]> NoChangeTypes = new List<Type>(
-        [PrimitiveType.Bool, PrimitiveType.None, PrimitiveType.Never, new UnionType([PrimitiveType.Bool, PrimitiveType.String])]
+        [
+            PrimitiveType.Bool,
+            PrimitiveType.None,
+            PrimitiveType.Never,
+            new UnionType([PrimitiveType.Bool, PrimitiveType.String]),
+            new FunctionType([], [], PrimitiveType.Number)
+        ]
     ).ConvertAll<object[]>(t => [t]);
 
     [Theory]
@@ -18,6 +24,385 @@ public class TypeSimplifierTest
         var simplified = TypeSimplifier.Simplify(type);
         var equal = type.Equals(simplified);
         Assert.True(equal, $"Expected type {type} to not change during simplification. Got: {simplified}");
+    }
+
+    [Fact]
+    public void SimplifyUnionOfObjectTypesWithCommonPropertyProducesSingleObjectWithUnionProperty()
+    {
+        var firstObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", PrimitiveType.Number)]
+        );
+
+        var secondObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", PrimitiveType.String)]
+        );
+
+        var union = new UnionType([firstObject, secondObject]);
+        var simplified = TypeSimplifier.Simplify(union);
+
+        var expectedValueType = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
+        var expectedProperty = new ObjectProperty(false, "x", expectedValueType);
+        var expectedObject = new ObjectType(null, [expectedProperty]);
+
+        Assert.True(
+            simplified.Equals(expectedObject),
+            $"Expected {expectedObject}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyUnionOfObjectTypesWithDifferentPropertiesLeavesUnionUnchanged()
+    {
+        var firstObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", PrimitiveType.Number)]
+        );
+
+        var secondObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "y", PrimitiveType.String)]
+        );
+
+        var union = new UnionType([firstObject, secondObject]);
+        var simplified = TypeSimplifier.Simplify(union);
+
+        var expected = new UnionType([firstObject, secondObject]);
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyUnionOfObjectTypesWithCommonIndexerProducesObjectWithMergedIndexer()
+    {
+        var firstIndexer = new ObjectIndexer(false, PrimitiveType.Number, PrimitiveType.Bool);
+        var firstObject = new ObjectType(firstIndexer, []);
+        var secondIndexer = new ObjectIndexer(false, PrimitiveType.String, PrimitiveType.Number);
+        var secondObject = new ObjectType(secondIndexer, []);
+        var union = new UnionType([firstObject, secondObject]);
+        var simplified = TypeSimplifier.Simplify(union);
+        var expectedKey = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
+        var expectedValue = new UnionType([PrimitiveType.Bool, PrimitiveType.Number]);
+        var expectedIndexer = new ObjectIndexer(false, expectedKey, expectedValue);
+        var expectedObject = new ObjectType(expectedIndexer, []);
+
+        Assert.True(
+            simplified.Equals(expectedObject),
+            $"Expected {expectedObject}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyUnionOfObjectTypesWithMixedIndexerAndPropertiesProducesMergedObjectWithIndexerFromFirst()
+    {
+        var firstIndexer = new ObjectIndexer(false, PrimitiveType.Number, PrimitiveType.Bool);
+        var firstObject = new ObjectType(
+            firstIndexer,
+            [new ObjectProperty(false, "a", PrimitiveType.Number)]
+        );
+
+        var secondObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "a", PrimitiveType.String)]
+        );
+
+        var union = new UnionType([firstObject, secondObject]);
+        var simplified = TypeSimplifier.Simplify(union);
+
+        var propertyValue = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
+        var mergedProperty = new ObjectProperty(false, "a", propertyValue);
+        var expectedObject = new ObjectType(null, [mergedProperty]);
+
+        Assert.True(
+            simplified.Equals(expectedObject),
+            $"Expected {expectedObject}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyIntersectionOfObjectTypesWithDifferentPropertyTypesYieldsNever()
+    {
+        var firstObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", PrimitiveType.Number)]
+        );
+
+        var secondObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "x", PrimitiveType.String)]
+        );
+
+        var intersection = new IntersectionType([firstObject, secondObject]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+
+        Assert.True(
+            simplified.Equals(new ObjectType(
+                null,
+                [new ObjectProperty(false, "x", PrimitiveType.Never)]
+            )),
+            $"Expected never, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyIntersectionOfObjectTypesWithMatchingPropertyAndMutabilityReturnsObjectWithIntersectedProperty()
+    {
+        var firstObject = new ObjectType(
+            null,
+            [new ObjectProperty(true, "x", PrimitiveType.Number)]
+        );
+
+        var secondObject = new ObjectType(
+            null,
+            [new ObjectProperty(true, "x", new LiteralType(5))]
+        );
+
+        var intersection = new IntersectionType([firstObject, secondObject]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+        var expectedProperty = new ObjectProperty(true, "x", new LiteralType(5));
+        var expectedObject = new ObjectType(null, [expectedProperty]);
+
+        Assert.True(
+            simplified.Equals(expectedObject),
+            $"Expected {expectedObject}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyIntersectionOfObjectTypesWithIndexerIntersectsKeyAndValueTypes()
+    {
+        var firstIndexer = new ObjectIndexer(false, PrimitiveType.Number, PrimitiveType.Bool);
+        var firstObject = new ObjectType(firstIndexer, []);
+        var secondIndexer = new ObjectIndexer(false, new LiteralType(1), PrimitiveType.String);
+        var secondObject = new ObjectType(secondIndexer, []);
+        var intersection = new IntersectionType([firstObject, secondObject]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+        var expectedIndexer = new ObjectIndexer(false, new LiteralType(1), PrimitiveType.Never);
+        var expectedObject = new ObjectType(expectedIndexer, []);
+
+        Assert.True(
+            simplified.Equals(expectedObject),
+            $"Expected {expectedObject}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyInterfaceWithConstraintsProducesInterfaceWithMergedObject()
+    {
+        var baseObject = new ObjectType(
+            null,
+            [new ObjectProperty(false, "a", PrimitiveType.Number)]
+        );
+
+        var constraintObject = new InterfaceType(
+            "Constraint",
+            [],
+            new ObjectType(
+                null,
+                [new ObjectProperty(false, "b", PrimitiveType.String)]
+            )
+        );
+
+        var interfaceType = new InterfaceType("IMyInterface", [constraintObject], baseObject);
+        var simplified = TypeSimplifier.Simplify(interfaceType);
+
+        var propertyA = new ObjectProperty(false, "a", PrimitiveType.Number);
+        var propertyB = new ObjectProperty(false, "b", PrimitiveType.String);
+        var expectedObject = new ObjectType(null, [propertyA, propertyB]);
+        var expected = new InterfaceType("IMyInterface", [], expectedObject);
+
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyOptionalTypeWithNestedOptionalFlattensToSingleOptional()
+    {
+        var inner = new OptionalType(PrimitiveType.Number);
+        var outer = new OptionalType(inner);
+        var simplified = TypeSimplifier.Simplify(outer);
+
+        var expected = new OptionalType(PrimitiveType.Number);
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyIntersectionOfOptionalAndNoneResultsNone()
+    {
+        var optional = new OptionalType(PrimitiveType.Number);
+        var intersection = new IntersectionType([optional, PrimitiveType.None]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+
+        Assert.True(
+            simplified.Equals(PrimitiveType.None),
+            $"Expected none, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyUnionOfOptionalAndSameTypeYieldsOptional()
+    {
+        var optional = new OptionalType(PrimitiveType.Number);
+        var union = new UnionType([optional, PrimitiveType.Number]);
+        var simplified = TypeSimplifier.Simplify(union);
+
+        var expected = new OptionalType(PrimitiveType.Number);
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyUnionWithNeverRemovesNever()
+    {
+        var union = new UnionType([PrimitiveType.Number, PrimitiveType.Never]);
+        var simplified = TypeSimplifier.Simplify(union);
+        Assert.True(
+            simplified.Equals(PrimitiveType.Number),
+            $"Expected Number, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyIntersectionWithNeverBecomesNever()
+    {
+        var intersection = new IntersectionType([PrimitiveType.String, PrimitiveType.Never]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+        Assert.True(
+            simplified.Equals(PrimitiveType.Never),
+            $"Expected Never, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyArrayTypeIntersectionProducesArrayTypeWithNeverElement()
+    {
+        var arrayNumber = new ArrayType(PrimitiveType.Number, false);
+        var arrayString = new ArrayType(PrimitiveType.String, false);
+        var intersection = new IntersectionType([arrayNumber, arrayString]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+
+        var expected = new ArrayType(PrimitiveType.Never, false);
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyArrayTypeUnionMergesToArrayOfUnionElement()
+    {
+        var arrayNumber = new ArrayType(PrimitiveType.Number, false);
+        var arrayString = new ArrayType(PrimitiveType.String, false);
+        var union = new UnionType([arrayNumber, arrayString]);
+        var simplified = TypeSimplifier.Simplify(union);
+
+        var expectedElement = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
+        var expected = new ArrayType(expectedElement, false);
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyUnionOfArrayAndObjectWithIndexerMergesIntoObjectWithIndexer()
+    {
+        var array = new ArrayType(PrimitiveType.Bool, false);
+        var objectIndexer = new ObjectIndexer(false, PrimitiveType.Number, PrimitiveType.String);
+        var objectType = new ObjectType(objectIndexer, []);
+        var union = new UnionType([array, objectType]);
+        var simplified = TypeSimplifier.Simplify(union);
+
+        var valueUnion = new UnionType([PrimitiveType.Bool, PrimitiveType.String]);
+        var mergedIndexer = new ObjectIndexer(false, PrimitiveType.Number, valueUnion);
+        var expected = new ArrayType(mergedIndexer.ValueType, false);
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyDistributionOfIntersectionOverUnionWithComplexTypes()
+    {
+        var objectA = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.Number)]);
+        var objectB = new ObjectType(null, [new ObjectProperty(false, "y", PrimitiveType.String)]);
+        var objectC = new ObjectType(null, [new ObjectProperty(false, "x", PrimitiveType.Number), new ObjectProperty(false, "y", PrimitiveType.String)]);
+
+        var union = new UnionType([objectA, objectB]);
+        var intersection = new IntersectionType([union, objectC]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+
+        Assert.True(
+            simplified.Equals(objectC),
+            $"Expected {objectC}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyIntersectionWithSubtypeAbsorbsSubtype()
+    {
+        var literal = new LiteralType(5);
+        var intersection = new IntersectionType([literal, PrimitiveType.Number]);
+        var simplified = TypeSimplifier.Simplify(intersection);
+        Assert.True(
+            simplified.Equals(literal),
+            $"Expected {literal}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyUnionWithSupertypeAbsorbsSubtype()
+    {
+        var literal = new LiteralType(5);
+        var union = new UnionType([literal, PrimitiveType.Number]);
+        var simplified = TypeSimplifier.Simplify(union);
+        Assert.True(
+            simplified.Equals(PrimitiveType.Number),
+            $"Expected Number, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyCachingReturnsSameInstanceForSameType()
+    {
+        var type = new UnionType([PrimitiveType.Bool, PrimitiveType.String]);
+        var first = TypeSimplifier.Simplify(type);
+        var second = TypeSimplifier.Simplify(type);
+        Assert.Same(first, second);
+    }
+
+    [Fact]
+    public void SimplifyOptionalWithNoneInUnionBecomesOptional()
+    {
+        var union = new UnionType([new LiteralType("hello"), PrimitiveType.None]);
+        var simplified = TypeSimplifier.Simplify(union);
+        var expected = new OptionalType(new LiteralType("hello"));
+        Assert.True(
+            simplified.Equals(expected),
+            $"Expected {expected}, but got {simplified}"
+        );
+    }
+
+    [Fact]
+    public void SimplifyOptionalWithNeverInUnionBecomesOtherType()
+    {
+        var union = new UnionType([PrimitiveType.Never, PrimitiveType.Bool]);
+        var simplified = TypeSimplifier.Simplify(union);
+        Assert.True(
+            simplified.Equals(PrimitiveType.Bool),
+            $"Expected Bool, but got {simplified}"
+        );
     }
 
     [Fact]

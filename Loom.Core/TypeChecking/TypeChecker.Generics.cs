@@ -2,6 +2,7 @@ global using TypeParameterSubstitution = System.Collections.Generic.Dictionary<L
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.TypeChecking.Types;
+using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.TypeChecking;
@@ -13,41 +14,18 @@ public sealed partial class TypeChecker
         var arguments = node.TypeArguments!.ArgumentsList.ConvertAll(Visit);
         if (!CheckGenericArity(node.TypeArguments, generic.Parameters, arguments, $"Interface '{generic}'"))
             return null;
- 
-        var resolved = FillGenericArguments(node, generic.Parameters, arguments);
-        if (resolved == null)
-            return null;
- 
+
+        var resolved = FillGenericArguments(generic.Parameters, arguments);
         var substitution = new TypeParameterSubstitution();
         for (var i = 0; i < generic.Parameters.Count; i++)
             substitution[generic.Parameters[i]] = resolved[i];
- 
+
         return substitution;
     }
-    
-    private List<Type>? FillGenericArguments(Node errorNode, List<Types.TypeParameter> parameters, List<Type> given)
-    {
-        var result = new List<Type>();
-        for (var i = 0; i < parameters.Count; i++)
-        {
-            if (i < given.Count)
-            {
-                result.Add(given[i]);
-            }
-            else if (parameters[i].DefaultType != null)
-            {
-                result.Add(parameters[i].DefaultType!);
-            }
-            else
-            {
-                ReportCannotInfer(errorNode, parameters[i]);
-                return null;
-            }
-        }
 
-        return result;
-    }
-    
+    private static List<Type> FillGenericArguments(List<Types.TypeParameter> parameters, List<Type> given) =>
+        parameters.Select((t, i) => i < given.Count ? given[i] : t.DefaultType ?? PrimitiveType.Unknown).ToList();
+
     private TypeParameterSubstitution? ResolveTypeArguments(
         Invocation invocation,
         Types.FunctionType functionType,
@@ -77,32 +55,14 @@ public sealed partial class TypeChecker
 
         return substitution;
     }
-    
+
     private Type InstantiateGenericType(Node node, TypeArguments? typeArguments, GenericType genericType)
     {
         var arguments = typeArguments?.ArgumentsList.ConvertAll(Visit) ?? [];
         if (!CheckGenericArity(typeArguments ?? node, genericType.Parameters, arguments, $"Type '{genericType}'"))
-            return BindType(node, Types.PrimitiveType.Never);
+            return BindType(node, PrimitiveType.Never);
 
-        var fullArguments = new List<Type>();
-        for (var i = 0; i < genericType.Parameters.Count; i++)
-        {
-            var typeParameter = genericType.Parameters[i];
-            if (i < arguments.Count)
-            {
-                fullArguments.Add(arguments[i]);
-            }
-            else if (typeParameter.DefaultType != null)
-            {
-                fullArguments.Add(typeParameter.DefaultType);
-            }
-            else
-            {
-                ReportCannotInfer(typeArguments ?? node, typeParameter);
-                return BindType(node, Types.PrimitiveType.Never);
-            }
-        }
-
+        var fullArguments = FillGenericArguments(genericType.Parameters, arguments);
         for (var i = 0; i < genericType.Parameters.Count; i++)
         {
             var parameter = genericType.Parameters[i];
@@ -114,7 +74,7 @@ public sealed partial class TypeChecker
         var instantiated = new InstantiatedType(genericType, arguments);
         return BindType(node, instantiated);
     }
-    
+
     private void CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
     {
         if (parameter.Constraint == null) return;
@@ -143,7 +103,7 @@ public sealed partial class TypeChecker
 
         return false;
     }
-    
+
     private static ObjectType SubstituteObjectType(ObjectType objectType, TypeParameterSubstitution substitution)
     {
         var newProperties = objectType.Properties.ConvertAll(property => new ObjectProperty(

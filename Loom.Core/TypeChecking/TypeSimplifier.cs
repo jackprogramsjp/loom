@@ -22,6 +22,7 @@ public static class TypeSimplifier
                     (ObjectType)Simplify(new IntersectionType([interfaceType.ObjectType, ..interfaceType.Constraints.Select(Simplify)]))
                 )
                 : interfaceType,
+            ObjectType objectType => SimplifyObject(objectType),
             UnionType union => SimplifyUnion(union),
             IntersectionType intersection => SimplifyIntersection(intersection),
             InstantiatedType instantiated => Simplify(instantiated.Expand()),
@@ -32,6 +33,11 @@ public static class TypeSimplifier
         _simplifyCache.Add(type, simplified);
         return simplified;
     }
+
+    private static Type SimplifyObject(ObjectType objectType) =>
+        objectType.Properties.Count == 0 && objectType.Indexer != null && objectType.Indexer.KeyType.Equals(PrimitiveType.Number)
+            ? new ArrayType(objectType.Indexer.ValueType, objectType.Indexer.IsMutable)
+            : objectType;
 
     private static Type SimplifyUnion(UnionType union)
     {
@@ -44,7 +50,7 @@ public static class TypeSimplifier
             if (merged != null)
                 return Simplify(merged);
         }
-        
+
         if (!absorbed.Any(Type.IsNone))
             return absorbed.Count switch
             {
@@ -61,13 +67,24 @@ public static class TypeSimplifier
             _ => new OptionalType(SimplifyUnion(new UnionType(nonNullable)))
         };
     }
-    
+
     private static ObjectType? MergeObjectUnion(List<Type> types)
     {
+        if (types.Count == 0)
+            return null;
+
         var objectTypes = types.ConvertAll(t => t is InterfaceType i ? i.ObjectType : t).Cast<ObjectType>().ToList();
+        if (objectTypes.Count == 0)
+            return null;
+
         var commonPropertyNames = objectTypes
             .Select(o => o.Properties.Select(p => p.Name).ToHashSet())
-            .Aggregate((a, b) => { a.IntersectWith(b); return a; });
+            .Aggregate((a, b) =>
+                {
+                    a.IntersectWith(b);
+                    return a;
+                }
+            );
 
         if (commonPropertyNames.Count == 0 && objectTypes.Any(o => o.Indexer == null))
             return null;
@@ -82,6 +99,7 @@ public static class TypeSimplifier
                 valueTypes.Add(prop.ValueType);
                 if (prop.IsMutable) isMutable = true;
             }
+
             var unionType = Simplify(new UnionType(valueTypes));
             properties.Add(new ObjectProperty(isMutable, name, unionType));
         }

@@ -783,14 +783,7 @@ public sealed partial class TypeChecker
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
         return BindType(node, Types.PrimitiveType.Never);
     }
-
-    private void ReportCannotInfer(Node node, Types.TypeParameter typeParameter) =>
-        _diagnostics.Error(
-            node,
-            InternalCodes.CannotInferType,
-            $"Cannot infer type parameter '{typeParameter.Name}'. Provide explicit type arguments."
-        );
-
+    
     private static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {
         if (suggestion == null)
