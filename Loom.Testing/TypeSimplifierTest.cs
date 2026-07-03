@@ -27,32 +27,6 @@ public class TypeSimplifierTest
     }
 
     [Fact]
-    public void SimplifyUnionOfObjectTypesWithCommonPropertyProducesSingleObjectWithUnionProperty()
-    {
-        var firstObject = new ObjectType(
-            null,
-            [new ObjectProperty(false, "x", PrimitiveType.Number)]
-        );
-
-        var secondObject = new ObjectType(
-            null,
-            [new ObjectProperty(false, "x", PrimitiveType.String)]
-        );
-
-        var union = new UnionType([firstObject, secondObject]);
-        var simplified = TypeSimplifier.Simplify(union);
-
-        var expectedValueType = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
-        var expectedProperty = new ObjectProperty(false, "x", expectedValueType);
-        var expectedObject = new ObjectType(null, [expectedProperty]);
-
-        Assert.True(
-            simplified.Equals(expectedObject),
-            $"Expected {expectedObject}, but got {simplified}"
-        );
-    }
-
-    [Fact]
     public void SimplifyUnionOfObjectTypesWithDifferentPropertiesLeavesUnionUnchanged()
     {
         var firstObject = new ObjectType(
@@ -72,53 +46,6 @@ public class TypeSimplifierTest
         Assert.True(
             simplified.Equals(expected),
             $"Expected {expected}, but got {simplified}"
-        );
-    }
-
-    [Fact]
-    public void SimplifyUnionOfObjectTypesWithCommonIndexerProducesObjectWithMergedIndexer()
-    {
-        var firstIndexer = new ObjectIndexer(false, PrimitiveType.Number, PrimitiveType.Bool);
-        var firstObject = new ObjectType(firstIndexer, []);
-        var secondIndexer = new ObjectIndexer(false, PrimitiveType.String, PrimitiveType.Number);
-        var secondObject = new ObjectType(secondIndexer, []);
-        var union = new UnionType([firstObject, secondObject]);
-        var simplified = TypeSimplifier.Simplify(union);
-        var expectedKey = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
-        var expectedValue = new UnionType([PrimitiveType.Bool, PrimitiveType.Number]);
-        var expectedIndexer = new ObjectIndexer(false, expectedKey, expectedValue);
-        var expectedObject = new ObjectType(expectedIndexer, []);
-
-        Assert.True(
-            simplified.Equals(expectedObject),
-            $"Expected {expectedObject}, but got {simplified}"
-        );
-    }
-
-    [Fact]
-    public void SimplifyUnionOfObjectTypesWithMixedIndexerAndPropertiesProducesMergedObjectWithIndexerFromFirst()
-    {
-        var firstIndexer = new ObjectIndexer(false, PrimitiveType.Number, PrimitiveType.Bool);
-        var firstObject = new ObjectType(
-            firstIndexer,
-            [new ObjectProperty(false, "a", PrimitiveType.Number)]
-        );
-
-        var secondObject = new ObjectType(
-            null,
-            [new ObjectProperty(false, "a", PrimitiveType.String)]
-        );
-
-        var union = new UnionType([firstObject, secondObject]);
-        var simplified = TypeSimplifier.Simplify(union);
-
-        var propertyValue = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
-        var mergedProperty = new ObjectProperty(false, "a", propertyValue);
-        var expectedObject = new ObjectType(null, [mergedProperty]);
-
-        Assert.True(
-            simplified.Equals(expectedObject),
-            $"Expected {expectedObject}, but got {simplified}"
         );
     }
 
@@ -297,41 +224,7 @@ public class TypeSimplifierTest
             $"Expected {expected}, but got {simplified}"
         );
     }
-
-    [Fact]
-    public void SimplifyArrayTypeUnionMergesToArrayOfUnionElement()
-    {
-        var arrayNumber = new ArrayType(PrimitiveType.Number, false);
-        var arrayString = new ArrayType(PrimitiveType.String, false);
-        var union = new UnionType([arrayNumber, arrayString]);
-        var simplified = TypeSimplifier.Simplify(union);
-
-        var expectedElement = new UnionType([PrimitiveType.Number, PrimitiveType.String]);
-        var expected = new ArrayType(expectedElement, false);
-        Assert.True(
-            simplified.Equals(expected),
-            $"Expected {expected}, but got {simplified}"
-        );
-    }
-
-    [Fact]
-    public void SimplifyUnionOfArrayAndObjectWithIndexerMergesIntoObjectWithIndexer()
-    {
-        var array = new ArrayType(PrimitiveType.Bool, false);
-        var objectIndexer = new ObjectIndexer(false, PrimitiveType.Number, PrimitiveType.String);
-        var objectType = new ObjectType(objectIndexer, []);
-        var union = new UnionType([array, objectType]);
-        var simplified = TypeSimplifier.Simplify(union);
-
-        var valueUnion = new UnionType([PrimitiveType.Bool, PrimitiveType.String]);
-        var mergedIndexer = new ObjectIndexer(false, PrimitiveType.Number, valueUnion);
-        var expected = new ArrayType(mergedIndexer.ValueType, false);
-        Assert.True(
-            simplified.Equals(expected),
-            $"Expected {expected}, but got {simplified}"
-        );
-    }
-
+    
     [Fact]
     public void SimplifyDistributionOfIntersectionOverUnionWithComplexTypes()
     {

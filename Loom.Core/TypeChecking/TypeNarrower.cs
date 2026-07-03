@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
 using Loom.Text;
+using Loom.TypeChecking.Types;
 using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 
@@ -22,19 +23,23 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         return false;
     }
 
-    public (TypedFlowState trueState, TypedFlowState falseState) ComputeBranchStates(Expression condition, TypedFlowState current) =>
-        condition is BinaryOperator { Operator.Kind: SyntaxKind.EqualsEquals or SyntaxKind.BangEquals } binaryOperator
-            ? NarrowByCondition(binaryOperator, current)
-            : (new TypedFlowState(current), new TypedFlowState(current));
+    public (TypedFlowState trueState, TypedFlowState falseState) ComputeBranchStates(Expression condition, TypedFlowState current)
+    {
+        if (condition is BinaryOperator { Operator.Kind: SyntaxKind.EqualsEquals or SyntaxKind.BangEquals } binaryOperator)
+            return NarrowByCondition(binaryOperator, current);
+
+        return (new TypedFlowState(current), new TypedFlowState(current));
+    }
 
     private (TypedFlowState trueState, TypedFlowState falseState) NarrowByCondition(BinaryOperator binaryOperator, TypedFlowState current)
     {
         var trueState = new TypedFlowState(current);
         var falseState = new TypedFlowState(current);
-        if (TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expr, out var literal)
-            || TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expr, out literal))
+
+        if (TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expression, out var literal)
+            || TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expression, out literal))
         {
-            ApplyBinaryNarrowing(expr, literal, binaryOperator.Operator.Kind, trueState, falseState);
+            ApplyBinaryNarrowing(expression, literal, binaryOperator.Operator.Kind, trueState, falseState);
         }
 
         return (trueState, falseState);
@@ -58,11 +63,8 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         return true;
     }
 
-    private bool IsCompileTimeLiteral(Expression expr)
-    {
-        Console.WriteLine(expr is QualifiedName ? semanticModel.GetSymbol(expr) : null);
-        return expr is Literal or NameOf || expr is QualifiedName name && semanticModel.GetDeclaringSymbol(name.Identifier)?.Declaration is EnumDeclaration;
-    }
+    private bool IsCompileTimeLiteral(Expression expr) =>
+        expr is Literal or NameOf || expr is QualifiedName name && semanticModel.GetDeclaringSymbol(name.Identifier)?.Declaration is EnumDeclaration;
 
     private void ApplyBinaryNarrowing(
         Expression expression,
@@ -78,6 +80,53 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         var literalType = semanticModel.GetType(literal);
         var isNone = literal is Literal { Value: null };
         var isEquals = operatorKind == SyntaxKind.EqualsEquals;
+        switch (expression)
+        {
+            case PropertyAccess propertyAccess:
+            {
+                var propertyNames = propertyAccess.Names.ConvertAll(n => n.Name.Text);
+                NarrowBaseByProperty(
+                    propertyAccess.Expression,
+                    literal,
+                    propertyNames,
+                    literalType,
+                    isEquals,
+                    trueState,
+                    falseState
+                );
+
+                break;
+            }
+            case QualifiedName qualifiedName:
+            {
+                var propertyNames = qualifiedName.Names.ConvertAll(n => n.Name.Text);
+                NarrowBaseByProperty(
+                    qualifiedName.Identifier,
+                    literal,
+                    propertyNames,
+                    literalType,
+                    isEquals,
+                    trueState,
+                    falseState
+                );
+
+                break;
+            }
+            case ElementAccess { IndexExpression: Literal { Value: not null and not bool } } elementAccess:
+            {
+                var indexLiteralType = semanticModel.GetType(elementAccess.IndexExpression);
+                NarrowBaseByElement(
+                    elementAccess.Expression,
+                    indexLiteralType,
+                    literalType,
+                    isEquals,
+                    trueState,
+                    falseState
+                );
+
+                break;
+            }
+        }
 
         if (isNone)
         {
@@ -107,11 +156,146 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         }
     }
 
+    private void NarrowBaseByProperty(
+        Expression baseExpression,
+        Expression literalExpression,
+        List<string> propertyPath,
+        Type literalType,
+        bool isEquals,
+        TypedFlowState trueState,
+        TypedFlowState falseState)
+    {
+        var baseAddress = GetFlowAddress(baseExpression);
+        if (baseAddress == null) return;
+        
+        var baseType = semanticModel.GetDeclarationType(baseExpression);
+        if (baseType is not Types.UnionType union) return;
+
+        var constantValue = semanticModel.GetConstantValue(literalExpression);
+        var propertyName = propertyPath.Last();
+        var trueMembers = new List<Type>();
+        var falseMembers = new List<Type>();
+
+        foreach (var member in union.Types)
+        {
+            var propertyType = GetMemberPropertyType(member, propertyName);
+            if (propertyType == null) continue;
+
+            var matches = constantValue != null && propertyType is Types.LiteralType propertyLiteral
+                    ? Equals(propertyLiteral.Value, constantValue)
+                    : propertyType.IsAssignableTo(literalType) && literalType.IsAssignableTo(propertyType);
+
+            if (matches)
+                trueMembers.Add(member);
+            else
+                falseMembers.Add(member);
+        }
+
+        var trueBaseType = BuildUnionOrNever(trueMembers);
+        var falseBaseType = BuildUnionOrNever(falseMembers);
+
+        if (isEquals)
+        {
+            trueState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(trueBaseType);
+            falseState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(falseBaseType);
+        }
+        else
+        {
+            trueState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(falseBaseType);
+            falseState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(trueBaseType);
+        }
+    }
+
+    private void NarrowBaseByElement(
+        Expression baseExpression,
+        Type indexType,
+        Type literalType,
+        bool isEquals,
+        TypedFlowState trueState,
+        TypedFlowState falseState)
+    {
+        var baseAddress = GetFlowAddress(baseExpression);
+        if (baseAddress == null) return;
+
+        var baseType = semanticModel.GetDeclarationType(baseExpression);
+        if (baseType is not Types.UnionType union) return;
+
+        var trueMembers = new List<Type>();
+        var falseMembers = new List<Type>();
+        foreach (var member in union.Types)
+        {
+            var elementType = GetMemberElementType(member, indexType);
+            if (elementType == null) continue;
+
+            if (elementType.IsAssignableTo(literalType) && literalType.IsAssignableTo(elementType))
+                trueMembers.Add(member);
+            else
+                falseMembers.Add(member);
+        }
+
+        var trueBaseType = BuildUnionOrNever(trueMembers);
+        var falseBaseType = BuildUnionOrNever(falseMembers);
+        if (isEquals)
+        {
+            trueState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(trueBaseType);
+            falseState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(falseBaseType);
+        }
+        else
+        {
+            trueState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(falseBaseType);
+            falseState.NarrowedTypes[baseAddress] = TypeSimplifier.Simplify(trueBaseType);
+        }
+    }
+
+    private static Type? GetMemberPropertyType(Type member, string propertyName)
+    {
+        if (member is InstantiatedType instantiated)
+            member = instantiated.Expand();
+
+        if (member is ObjectType objectType)
+        {
+            var (bodyType, _) = objectType.GetTypeAtIndex(new Types.LiteralType(propertyName));
+            return bodyType?.ValueType;
+        }
+
+        if (member is not InterfaceType interfaceType)
+            return null;
+
+        var result = interfaceType.ObjectType.GetTypeAtIndex(new Types.LiteralType(propertyName), interfaceType);
+        return result.BodyType?.ValueType;
+    }
+
+    private static Type? GetMemberElementType(Type member, Type indexType)
+    {
+        if (member is InstantiatedType instantiated)
+            member = instantiated.Expand();
+
+        if (member is ObjectType objectType)
+        {
+            var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
+            return bodyType?.ValueType;
+        }
+
+        if (member is not InterfaceType interfaceType)
+            return null;
+
+        var result = interfaceType.ObjectType.GetTypeAtIndex(indexType, interfaceType);
+        return result.BodyType?.ValueType;
+    }
+
+    private static Type BuildUnionOrNever(List<Type> types) =>
+        types.Count switch
+        {
+            0 => PrimitiveType.Never,
+            1 => types.First(),
+            _ => new Types.UnionType(types)
+        };
+
     private static Type RemoveType(Type source, Type toRemove)
     {
         if (source.Equals(toRemove))
             return PrimitiveType.Never;
-        
+
         if (source is not Types.UnionType union)
             return source;
 

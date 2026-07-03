@@ -1,8 +1,21 @@
-type Abc<T, U> = {
-  read t: T
-  read u: U
+type ResultKind = number
+type ResultOk<T> = {
+  read kind: index<ResultKind, "Ok">
+  read value: T
 }
-const function abc<T, U>(t: T): Abc<T, number>
-  return { t = t, u = 69 }
+type ResultError<Error> = {
+  read kind: index<ResultKind, "Err">
+  read error: Error
+}
+type Result<T, Error> = ResultOk<T> | ResultError<Error>
+const function ok<T, Error>(value: T): Result<T, Error>
+  return { kind = 0, value = value }
 end
-abc(69)
+type MyErrors = "do_something failed to execute"
+const function do_something(): Result<number, MyErrors>
+  return ok(69)
+end
+const result = do_something()
+if result.kind == 1 then
+  print("do_something failed to execute")
+end

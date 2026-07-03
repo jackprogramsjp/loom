@@ -14,6 +14,16 @@ public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, SymbolTa
     public SymbolTable References { get; } = references;
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
 
+    public object? GetConstantValue(Expression expr) =>
+        expr switch
+        {
+            QualifiedName qn when GetType(qn.Identifier) is TypeChecking.Types.ObjectType objectType
+                && objectType.GetProperty(qn.Names.First().Name.Text) is { ValueType: TypeChecking.Types.LiteralType literalType } =>
+                literalType.Value,
+            _ when GetType(expr) is TypeChecking.Types.LiteralType literalType => literalType.Value,
+            _ => null
+        };
+
     public List<Symbol> GetDeclarationSymbols(Node node)
     {
         while (true)
@@ -45,7 +55,8 @@ public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, SymbolTa
     }
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
-    
+    public Type? GetDeclarationType(Node node) => GetSymbol(node) is {} symbol ? TypeSolver.GetType(symbol.Declaration) : null;
+
     private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
     {
         var symbols = table.GetValueOrDefault(node.Id, []);

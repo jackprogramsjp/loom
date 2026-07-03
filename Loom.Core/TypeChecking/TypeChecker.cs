@@ -466,7 +466,7 @@ public sealed partial class TypeChecker
 
         var symbol = _semanticModel.GetSymbol(identifier);
         if (symbol != null)
-            return BindType(identifier, GetDeclarationType(symbol));
+            return BindType(identifier, GetType(symbol));
 
         _diagnostics.Error(identifier, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
         return BindType(identifier, Types.PrimitiveType.Never);
@@ -531,7 +531,7 @@ public sealed partial class TypeChecker
         var symbol = _semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
-            var declaredType = GetDeclarationType(symbol);
+            var declaredType = GetType(symbol);
             if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
                 return BindType(typeName, typeName.Parent is IndexedType ? objectType : objectType.PropertyUnion());
 
@@ -608,17 +608,47 @@ public sealed partial class TypeChecker
         var type = Visit(targetExpression);
         foreach (var dotName in names)
         {
-            if (type is InstantiatedType instantiated)
-                type = instantiated.Expand();
-            
-            if (type is not (ObjectType or InterfaceType))
+            if (type is Types.UnionType union)
             {
-                _diagnostics.Error(accessExpression, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
-                return BindType(accessExpression, Types.PrimitiveType.Never);
-            }
+                var memberTypes = new List<Type>();
+                foreach (var member in union.Types)
+                {
+                    var memberType = GetTypeOfMember(targetExpression, member, dotName.Name.Text);
+                    if (memberType == null)
+                    {
+                        _diagnostics.Error(
+                            accessExpression,
+                            InternalCodes.InvalidAccess,
+                            $"Property '{dotName.Name.Text}' does not exist on member '{member}' of the union."
+                        );
 
-            var indexType = new Types.LiteralType(dotName.Name.Text);
-            type = GetTypeAtIndex(accessExpression, type, indexType);
+                        return BindType(accessExpression, Types.PrimitiveType.Never);
+                    }
+
+                    memberTypes.Add(memberType);
+                }
+
+                type = TypeSimplifier.Simplify(new Types.UnionType(memberTypes));
+            }
+            else
+            {
+                if (type is InstantiatedType instantiated)
+                    type = instantiated.Expand();
+
+                if (type is not (ObjectType or InterfaceType))
+                {
+                    _diagnostics.Error(
+                        accessExpression,
+                        InternalCodes.InvalidAccess,
+                        $"Cannot access property '{dotName.Name.Text}' on type '{type}'."
+                    );
+
+                    return BindType(accessExpression, Types.PrimitiveType.Never);
+                }
+
+                var indexType = new Types.LiteralType(dotName.Name.Text);
+                type = GetTypeAtIndex(accessExpression, type, indexType);
+            }
         }
 
         return BindType(accessExpression, type);
@@ -626,16 +656,27 @@ public sealed partial class TypeChecker
 
     private Type GetTypeAtIndex(Node node, Type type, Type indexType)
     {
-        if (indexType is not Types.UnionType union || !union.Types.All(t => t is Types.LiteralType { Value: string }))
+        if (type is Types.UnionType union)
+        {
+            var results = union.Types
+                .ConvertAll(member => GetTypeAtIndexSingle(node, member, indexType))
+                .FindAll(memberResult => !Type.IsNever(memberResult) && !Type.IsUnknown(memberResult));
+
+            return results.Count == 0
+                ? ReportCannotUseToIndex(node, type, indexType)
+                : BindType(node, TypeSimplifier.Simplify(new Types.UnionType(results)));
+        }
+
+        if (indexType is not Types.UnionType indexUnion || !indexUnion.Types.All(t => t is Types.LiteralType { Value: string }))
             return GetTypeAtIndexSingle(node, type, indexType);
 
-        var results = union.Types
+        var stringLiteralResults = indexUnion.Types
             .Select(t => GetTypeAtIndexSingle(node, type, t))
-            .Where(result => !Type.IsNever(result) && !Type.IsUnknown(result))
+            .Where(r => !Type.IsNever(r) && !Type.IsUnknown(r))
             .ToList();
 
-        return results.Count != 0
-            ? BindType(node, TypeSimplifier.Simplify(new Types.UnionType(results)))
+        return stringLiteralResults.Count != 0
+            ? BindType(node, TypeSimplifier.Simplify(new Types.UnionType(stringLiteralResults)))
             : ReportCannotUseToIndex(node, type, indexType);
     }
 
@@ -647,6 +688,23 @@ public sealed partial class TypeChecker
             InstantiatedType instantiated => GetTypeAtIndex(node, instantiated.Expand(), indexType),
             _ => type
         };
+
+    private Type? GetTypeOfMember(Node node, Type type, string propertyName)
+    {
+        if (type is InstantiatedType instantiated)
+            type = instantiated.Expand();
+
+        switch (type)
+        {
+            case ObjectType objectType:
+                var (bodyType, _) = objectType.GetTypeAtIndex(new Types.LiteralType(propertyName));
+                return bodyType?.ValueType;
+            case InterfaceType interfaceType:
+                return GetTypeAtIndexInInterface(node, interfaceType, new Types.LiteralType(propertyName));
+            default:
+                return null;
+        }
+    }
 
     private Type GetTypeAtIndexInInterface(Node node, InterfaceType interfaceType, Type indexType)
     {
@@ -760,7 +818,7 @@ public sealed partial class TypeChecker
         return possibleReturnTypes.Count == 0 ? Types.PrimitiveType.Void : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
-    private Type GetDeclarationType(Symbol symbol) =>
+    private Type GetType(Symbol symbol) =>
         symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != _semanticModel.Tree.File.AbsolutePath
             ? Visit(symbol.Declaration)
             : _semanticModel.GetType(symbol.Declaration);
@@ -783,7 +841,7 @@ public sealed partial class TypeChecker
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
         return BindType(node, Types.PrimitiveType.Never);
     }
-    
+
     private static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {
         if (suggestion == null)

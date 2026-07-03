@@ -51,7 +51,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public ObjectProperty? GetProperty(Type type) => type is LiteralType { Value: string name } && Properties.Count > 0 ? GetProperty(name) : null;
     public ObjectProperty? GetProperty(string name) => Properties.Find(p => p.Name == name);
 
-    public (ObjectBodyType?, string) GetTypeAtIndex(Type indexType, Type? self = null)
+    public (ObjectBodyType? BodyType, string CannotFindReason) GetTypeAtIndex(Type indexType, Type? self = null)
     {
         var cannotFindReason = "";
         if (indexType is LiteralType { Value: string name } && Properties.Count > 0)
