@@ -59,4 +59,6 @@ public static class InternalCodes
     public const string ReturnInAfter = "L336";
     public const string MissingDeclareVariableType = "L337";
     public const string InvalidKeyOf = "L338";
+    
+    public const string SimplifiableCode = "L400";
 }

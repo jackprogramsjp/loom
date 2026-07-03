@@ -30,7 +30,7 @@ public sealed partial class TypeChecker
     {
         var type = Visit(node.Name);
         if (type.Equals(Intrinsics.RangeType))
-            _diagnostics.Warn(node, InternalCodes.RedundantCode, "Use range literal.");
+            _diagnostics.Warn(node, InternalCodes.SimplifiableCode, "Use range literal.");
         
         if (type is InterfaceType nonGeneric)
         {

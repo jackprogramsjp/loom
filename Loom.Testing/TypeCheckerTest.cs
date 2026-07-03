@@ -709,19 +709,90 @@ public class TypeCheckerTest
     public void WarnsFor_UseRangeLiteral()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("new Range { minimum: 69, maximum: 420 }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.RedundantCode, "Use range literal.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.SimplifiableCode, "Use range literal.");
     }
 
     #region Checks
     [Fact]
-    public void Narrowing_UnionWithThreeVariants_Equals()
+    public void Checks_Enum_KeyOf()
+    {
+        var type = Utility.GetLastStatementType("enum E { A, B } type K = keyof(E)");
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "A" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "B" });
+    }
+
+    [Fact]
+    public void Checks_Enum_IndexedType_WithExplicitValues()
+    {
+        var type = Utility.GetLastStatementType("enum E { A = 42, B = 99 } type T = E[\"B\"]");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(99d, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Enum_IndexedType_WithStringEnum()
+    {
+        var type = Utility.GetLastStatementType("enum E : string { A = \"foo\", B = \"bar\" } type T = E[\"B\"]");
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal("bar", literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Enum_AsTypeAnnotation_WithMatchingNumberLiteral()
+    {
+        const string source = """
+            enum Status { Active, Inactive }
+            let x: Status = 0
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 0d });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: 1d });
+    }
+
+    [Fact]
+    public void Checks_Enum_AsTypeAnnotation_WithMatchingStringLiteral()
+    {
+        const string source = """
+            enum Status : string { Active = "on", Inactive = "off" }
+            let x: Status = "on"
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "on" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "off" });
+    }
+
+    [Fact]
+    public void Checks_Enum_AsGenericArgument()
+    {
+        const string source = """
+            enum Status { Active, Inactive }
+            fn id<T>(value: T): T -> value
+            let x = id(Status.Active)
+            x
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        var literal = Assert.IsType<LiteralType>(type);
+        Assert.Equal(0d, literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_UnionWithThreeVariants_Equals()
     {
         const string source = """
             interface Loading { kind: "Loading" }
             interface Success { kind: "Success", data: string }
             interface Error { kind: "Error", error: string }
             type Status = Loading | Success | Error;
-            
+
             let s = none as never as Status;
             if s.kind == "Success" {
                 s.data
@@ -730,20 +801,20 @@ public class TypeCheckerTest
 
         var result = Utility.TypeCheck(source);
         Utility.AssertNoErrors(result);
-        
+
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.Equal(PrimitiveType.String, optional.NonNullableType);
     }
 
     [Fact]
-    public void Narrowing_UnionWithThreeVariants_NotEquals()
+    public void Checks_Narrowing_UnionWithThreeVariants_NotEquals()
     {
         const string source = """
             interface Loading { kind: "Loading" }
             interface Success { kind: "Success", data: string }
             interface Error { kind: "Error", error: string }
             type Status = Loading | Success | Error;
-            
+
             let s = none as never as Status;
             if s.kind != "Loading" {
                s.kind
@@ -754,19 +825,19 @@ public class TypeCheckerTest
         Utility.AssertNoErrors(diagnostics);
         var result = Utility.TypeCheck(source);
         Utility.AssertNoErrors(result);
-        
+
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.IsType<UnionType>(optional.NonNullableType);
     }
 
     [Fact]
-    public void Narrowing_NestedPropertyPath_Works()
+    public void Checks_Narrowing_NestedPropertyPath_Works()
     {
         const string source = """
             interface A { kind: "A", val: number }
             interface B { kind: "B", val: string };
             type Inner = A | B;
-            
+
             interface Outer { inner: Inner };
             let o = none as never as Outer;
             if o.inner.kind == "A" {
@@ -776,13 +847,13 @@ public class TypeCheckerTest
 
         var result = Utility.TypeCheck(source);
         Utility.AssertNoErrors(result);
-        
+
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
     }
 
     [Fact]
-    public void Narrowing_NestedElementAccess()
+    public void Checks_Narrowing_NestedElementAccess()
     {
         const string source = """
             let matrix = [[1, 2], [3, 4]];
