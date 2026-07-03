@@ -168,7 +168,7 @@ public sealed partial class TypeChecker
 
         var parameters = typeAlias.TypeParameters.ParameterList.ConvertAll(VisitTypeParameter);
         var underlyingType = Visit(typeAlias.EqualsTypeClause);
-        var genericType = new GenericType(typeAlias, parameters, underlyingType);
+        var genericType = new GenericType(typeAlias, parameters, TypeSimplifier.Simplify(underlyingType));
         return BindType(typeAlias, genericType);
     }
 
@@ -610,7 +610,7 @@ public sealed partial class TypeChecker
         {
             if (type is InstantiatedType instantiated)
                 type = instantiated.Expand();
-
+            
             if (type is not (ObjectType or InterfaceType))
             {
                 _diagnostics.Error(accessExpression, InternalCodes.InvalidAccess, $"Cannot access property '{dotName.Name.Text}' on type '{type}'.");
@@ -769,8 +769,11 @@ public sealed partial class TypeChecker
         where T : Type
     {
         _semanticModel.TypeSolver.SetType(node, type);
-        if (node is not (Tree or ExpressionStatement))
-            _diagnostics.Debug(node, $"Solved type '{(type is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : type)}' for {node.GetType().Name}");
+        if (node is Tree or ExpressionStatement)
+            return type;
+
+        var simplified = TypeSimplifier.Simplify(type);
+        _diagnostics.Debug(node, $"Solved type '{(simplified is InterfaceType i ? $"{i.ObjectType} ({i.Name})" : simplified)}' for {node.GetType().Name}");
 
         return type;
     }

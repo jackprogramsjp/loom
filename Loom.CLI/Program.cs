@@ -3,7 +3,6 @@ using Loom.Diagnostics;
 using Loom.Projects;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
-
 // DiagnosticBag.FailFast = false;
 
 var directory = args.ElementAtOrDefault(0) ?? ".";

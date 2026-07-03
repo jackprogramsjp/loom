@@ -12,16 +12,23 @@ public static class TypeSimplifier
     {
         if (_simplifyCache.TryGetValue(type, out var cached))
             return cached;
-        
+
         var simplified = type switch
         {
+            InterfaceType interfaceType => interfaceType.Constraints.Count > 0
+                ? new InterfaceType(
+                    interfaceType.Name,
+                    [],
+                    (ObjectType)Simplify(new IntersectionType([interfaceType.ObjectType, ..interfaceType.Constraints.Select(Simplify)]))
+                )
+                : interfaceType,
             UnionType union => SimplifyUnion(union),
             IntersectionType intersection => SimplifyIntersection(intersection),
             InstantiatedType instantiated => Simplify(instantiated.Expand()),
             GenericType generic => Simplify(generic.UnderlyingType),
             _ => type
         };
-        
+
         _simplifyCache.Add(type, simplified);
         return simplified;
     }
@@ -31,6 +38,13 @@ public static class TypeSimplifier
         var flattened = FlattenNestedUnions(union.Types.ConvertAll(Simplify));
         var distinct = RemoveDuplicates(flattened, isUnion: true);
         var absorbed = ApplyAbsorption(distinct, isUnion: true);
+        if (absorbed.All(t => t is ObjectType or InterfaceType))
+        {
+            var merged = MergeObjectUnion(absorbed);
+            if (merged != null)
+                return Simplify(merged);
+        }
+        
         if (!absorbed.Any(Type.IsNone))
             return absorbed.Count switch
             {
@@ -47,22 +61,112 @@ public static class TypeSimplifier
             _ => new OptionalType(SimplifyUnion(new UnionType(nonNullable)))
         };
     }
+    
+    private static ObjectType? MergeObjectUnion(List<Type> types)
+    {
+        var objectTypes = types.ConvertAll(t => t is InterfaceType i ? i.ObjectType : t).Cast<ObjectType>().ToList();
+        var commonPropertyNames = objectTypes
+            .Select(o => o.Properties.Select(p => p.Name).ToHashSet())
+            .Aggregate((a, b) => { a.IntersectWith(b); return a; });
+
+        if (commonPropertyNames.Count == 0 && objectTypes.Any(o => o.Indexer == null))
+            return null;
+
+        var properties = new List<ObjectProperty>();
+        foreach (var name in commonPropertyNames)
+        {
+            var valueTypes = new List<Type>();
+            var isMutable = false;
+            foreach (var prop in objectTypes.Select(obj => obj.GetProperty(name)!))
+            {
+                valueTypes.Add(prop.ValueType);
+                if (prop.IsMutable) isMutable = true;
+            }
+            var unionType = Simplify(new UnionType(valueTypes));
+            properties.Add(new ObjectProperty(isMutable, name, unionType));
+        }
+
+        ObjectIndexer? mergedIndexer = null;
+        if (objectTypes.Any(o => o.Indexer == null))
+            return new ObjectType(mergedIndexer, properties);
+
+        {
+            var keyTypes = objectTypes.Select(o => o.Indexer!.KeyType).ToList();
+            var valueTypes = objectTypes.Select(o => o.Indexer!.ValueType).ToList();
+            var keyUnion = Simplify(new UnionType(keyTypes));
+            var valueUnion = Simplify(new UnionType(valueTypes));
+            var isMutable = objectTypes.Any(o => o.Indexer!.IsMutable);
+            mergedIndexer = new ObjectIndexer(isMutable, keyUnion, valueUnion);
+        }
+
+        return new ObjectType(mergedIndexer, properties);
+    }
 
     private static Type SimplifyIntersection(IntersectionType intersection)
     {
         var flattened = FlattenNestedIntersections(intersection.Types.ConvertAll(Simplify));
         var distinct = RemoveDuplicates(flattened, isUnion: false);
+
         if (distinct.Count == 0 || distinct.Any(Type.IsNever))
             return PrimitiveType.Never;
-        
+
+        if (distinct.All(t => t is ObjectType or InterfaceType))
+            return Simplify(MergeObjectTypes(distinct.ToList()));
+
         if (distinct.Any(t => t is UnionType))
             return Simplify(DistributeIntersection(distinct));
 
         var absorbed = ApplyAbsorption(distinct, isUnion: false);
         if (absorbed.Count > 1 && absorbed.All(t => t is PrimitiveType))
             return PrimitiveType.Never;
-        
+
         return absorbed.Count == 1 ? absorbed.First() : new IntersectionType(absorbed);
+    }
+
+    private static Type MergeObjectTypes(List<Type> types)
+    {
+        var propertyDictionary = new Dictionary<string, ObjectProperty>();
+        ObjectIndexer? mergedIndexer = null;
+
+        var objectTypes = types.ConvertAll(t => t is InterfaceType i ? i.ObjectType : t).Cast<ObjectType>().ToList();
+        foreach (var objectType in objectTypes)
+        {
+            foreach (var property in objectType.Properties)
+            {
+                if (propertyDictionary.TryGetValue(property.Name, out var existing))
+                {
+                    var valueType = Simplify(new IntersectionType([existing.ValueType, property.ValueType]));
+                    var isMutable = existing.IsMutable && property.IsMutable;
+                    propertyDictionary[property.Name] = new ObjectProperty(isMutable, property.Name, valueType);
+                }
+                else
+                {
+                    propertyDictionary[property.Name] = property;
+                }
+            }
+
+            if (objectType.Indexer == null) continue;
+            if (mergedIndexer == null)
+            {
+                mergedIndexer = new ObjectIndexer(objectType.Indexer.IsMutable, objectType.Indexer.KeyType, objectType.Indexer.ValueType);
+            }
+            else
+            {
+                var newKeyType = Simplify(new IntersectionType([mergedIndexer.KeyType, objectType.Indexer.KeyType]));
+                var newValueType = Simplify(new IntersectionType([mergedIndexer.ValueType, objectType.Indexer.ValueType]));
+                var newIsMutable = mergedIndexer.IsMutable && objectType.Indexer.IsMutable;
+                mergedIndexer = new ObjectIndexer(newIsMutable, newKeyType, newValueType);
+            }
+        }
+
+        var properties = propertyDictionary.Values.ToList();
+        if (mergedIndexer == null || properties.Count != 0 || !mergedIndexer.KeyType.Equals(PrimitiveType.Number))
+            return new ObjectType(mergedIndexer, properties);
+
+        if (objectTypes.All(t => t is ArrayType))
+            return new ArrayType(mergedIndexer.ValueType, mergedIndexer.IsMutable);
+
+        return new ObjectType(mergedIndexer, properties);
     }
 
     private static Type DistributeIntersection(List<Type> types)
@@ -74,7 +178,7 @@ public static class TypeSimplifier
 
             var rest = new List<Type>(types);
             rest.RemoveAt(i);
-                
+
             var distributed = union.Types
                 .Select(variant => new IntersectionType(new List<Type> { variant }.Concat(rest).ToList()))
                 .Select(Simplify)

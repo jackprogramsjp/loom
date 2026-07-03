@@ -26,9 +26,9 @@ public class TypeSolver(DiagnosticBag diagnostics)
             this.Span = Span;
         }
 
-        public Type Actual { get; init; }
-        public Type Expected { get; init; }
-        public LocationSpan Span { get; init; }
+        public Type Actual { get; }
+        public Type Expected { get; }
+        public LocationSpan Span { get; }
     }
 
     private readonly List<TypeConstraint> _constraints = [];

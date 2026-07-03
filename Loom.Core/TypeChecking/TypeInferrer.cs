@@ -73,10 +73,10 @@ public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypePara
         Type? expectedReturnType = null)
     {
         var inferred = new TypeParameterSubstitution();
-        var visited = new HashSet<(Type, Type)>();
-        for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
+        var visited = new HashSet<(Type, Type)>();n
+        for (var i = 0; i < Math.Min(functionType.ParameterTypes.Conount, argumentTypes.Count); i++)
             TryInferTypes(functionType.ParameterTypes[i], argumentTypes[i], inferred, visited);
-        
+
         if (expectedReturnType != null)
             TryInferTypes(functionType.ReturnType, expectedReturnType, inferred, visited);
 
@@ -302,7 +302,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType, Action<Node, TypePara
     private static Type ExpandAliases(Type type) =>
         TypeSolver.Transform(
             type,
-            candidateType => candidateType is InstantiatedType { GenericType.Declaration: TypeAlias } instantiated
+            candidateType => candidateType is InstantiatedType { GenericType.Declaration: TypeAlias or InterfaceDeclaration } instantiated
                 ? instantiated.Expand()
                 : candidateType
         );

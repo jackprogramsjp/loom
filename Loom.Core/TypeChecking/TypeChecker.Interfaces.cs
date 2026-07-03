@@ -18,7 +18,7 @@ public sealed partial class TypeChecker
         var indexer = ResolveInterfaceIndexer(indexerDeclaration);
         var properties = ResolveInterfaceProperties(propertyDeclarations).ToList();
         var objectType = new ObjectType(indexer, properties);
-        var interfaceType = new InterfaceType(name, constraints, objectType);
+        var interfaceType = new InterfaceType(name, constraints, objectType); 
         if (typeParameters == null)
             return BindType(interfaceDeclaration, interfaceType);
 

@@ -313,8 +313,8 @@ public class TypeSolverTest
         var b = new InterfaceType("A", [], ObjectType.Empty);
 
         solver.AddConstraint(a, b, Utility.Span);
-        Assert.False(solver.SolveConstraints());
-        Assert.NotEmpty(diagnostics.Errors().Set);
+        Assert.True(solver.SolveConstraints());
+        Assert.Empty(diagnostics.Errors().Set);
     }
 
     [Fact]
