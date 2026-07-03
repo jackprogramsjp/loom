@@ -528,7 +528,7 @@ public sealed partial class TypeChecker
         {
             var declaredType = GetDeclarationType(symbol);
             if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
-                return BindType(typeName, objectType.PropertyUnion());
+                return BindType(typeName, typeName.Parent is IndexedType ? objectType : objectType.PropertyUnion());
 
             if (declaredType is GenericType genericType)
                 return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);

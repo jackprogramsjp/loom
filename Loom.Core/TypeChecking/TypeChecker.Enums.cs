@@ -73,7 +73,7 @@ public sealed partial class TypeChecker
                 return null;
             }
 
-            var type = MaybeVisit(member.EqualsValueClause) ?? baseType;
+            var type = Visit(member.EqualsValueClause);
             if (!CheckEnumMemberIsConstant(member, type)) continue;
 
             _semanticModel.TypeSolver.AddConstraint(type, baseType, member.EqualsValueClause.Value);

@@ -1,5 +1,2 @@
-const function abc()
-  return
-    const x = 69
-  
-end
+type A = number
+type X = index<A, "D">

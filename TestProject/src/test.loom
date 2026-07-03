@@ -1,6 +1,2 @@
-fn abc {
-    return
-    {
-        let x = 69;
-    }
-}
+enum A { B, C, D }
+type X = A["D"]
