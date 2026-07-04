@@ -1,10 +1,12 @@
 using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
+using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
 using Break = Loom.Parsing.AST.Break;
 using Continue = Loom.Parsing.AST.Continue;
+using ElementAccess = Loom.Parsing.AST.ElementAccess;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using FunctionType = Loom.Parsing.AST.FunctionType;
 using Identifier = Loom.Parsing.AST.Identifier;
@@ -16,6 +18,7 @@ using Parenthesized = Loom.Parsing.AST.Parenthesized;
 using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
+using PropertyAccess = Loom.Parsing.AST.PropertyAccess;
 using Return = Loom.Parsing.AST.Return;
 using TypeParameter = Loom.Parsing.AST.TypeParameter;
 using TypeParameters = Loom.Parsing.AST.TypeParameters;
@@ -30,22 +33,29 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitBreak(Break @break) => new Luau.AST.Break();
     public override LuauNode VisitContinue(Continue @continue) => new Luau.AST.Continue();
     public override LuauNode VisitWhile(While @while) => new WhileStatement(Visit(@while.Condition), GenerateChunk(@while.Body));
+
     public override LuauNode VisitAfter(After after) =>
         new Luau.AST.ExpressionStatement(
             LuauFactory.TaskCall("delay", [Visit(after.Duration), new AnonymousFunction(null, [], new UnitType(), GenerateChunk(after.Body))])
         );
-    
+
     public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
     public override LuauNode VisitReturn(Return @return) => new Luau.AST.Return(MaybeVisit<LuauExpression>(@return.Expression));
     public override LuauNode VisitDeclare(Declare declare) => declare.Signature is InterfaceDeclaration ? Visit(declare.Signature) : new NoOpStatement();
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) => WrapExpressionAsStatement(Visit(expressionStatement.Expression));
     public override LuauNode VisitNameOf(NameOf nameOf) => new StringLiteral(nameOf.Name.ToString());
-    public override LuauNode VisitInvocation(Invocation invocation) => new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
+
+    public override LuauNode VisitInvocation(Invocation invocation)
+    {
+        var call = new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
+        return _macros.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
+    }
+
     public override LuauNode VisitAsExpression(AsExpression asExpression) => new TypeCast(Visit(asExpression.Expression), Visit(asExpression.Type));
 
     public override LuauNode VisitTernaryOperator(TernaryOperator ternaryOperator) =>
         new IfExpression(Visit(ternaryOperator.Condition), Visit(ternaryOperator.ThenBranch), [], Visit(ternaryOperator.ElseBranch));
-    
+
     public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));
 
     public override LuauNode VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) => Visit(interfaceInvocation.Body);
@@ -91,7 +101,7 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
     public override LuauNode VisitIndexedType(IndexedType indexedType) => new Luau.AST.TypeName("index", [Visit(indexedType.Type), Visit(indexedType.IndexType)]);
     public override LuauNode VisitKeyOf(KeyOf keyOf) => new Luau.AST.TypeName("keyof", [Visit(keyOf.Type)]);
-    
+
     public override LuauNode VisitTypeParameters(TypeParameters typeParameters) =>
         new Luau.AST.TypeParameters(typeParameters.ParameterList.ConvertAll(VisitTypeParameter));
 

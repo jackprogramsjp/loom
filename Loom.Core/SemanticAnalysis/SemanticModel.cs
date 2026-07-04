@@ -9,7 +9,7 @@ namespace Loom.SemanticAnalysis;
 public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, SymbolTable declarations, SymbolTable references)
     : DiagnosedResult(diagnostics)
 {
-    public Tree Tree { get; } = tree;
+    public Tree Tree { get; internal set; } = tree;
     public SymbolTable Declarations { get; } = declarations;
     public SymbolTable References { get; } = references;
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());

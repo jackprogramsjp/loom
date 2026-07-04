@@ -22,9 +22,10 @@ using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
 namespace Loom.Generation;
 
 public sealed partial class LuauGenerator(SemanticModel semanticModel)
-    : Visitor<LuauNode>(new NoOpStatement())
+    : Visitor<LuauNode>(_ => new NoOpStatement())
 {
     private readonly DiagnosticBag _diagnostics = new();
+    private readonly Macros _macros = new(semanticModel);
     private LuauScope _scope = new();
 
     public LuauGeneratorResult Generate()
@@ -47,7 +48,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
             return new ForStatement(names, collectionExpression, body);
         }
 
-        if (!collectionType.Equals(Intrinsics.RangeType))
+        if (!collectionType.Equals(Intrinsics.Range))
             return collectionType is ObjectType or InterfaceType
                 ? new ForStatement(names.Count == 1 ? ["_", names[0]] : names, collectionExpression, body)
                 : new ForStatement(names, collectionExpression, body);
@@ -202,7 +203,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
         var target = Visit(elementAccess.Expression);
         var targetType = semanticModel.GetType(elementAccess.Expression);
         var indexType = semanticModel.GetType(elementAccess.IndexExpression);
-        if (!indexType.Equals(Intrinsics.RangeType))
+        if (!indexType.Equals(Intrinsics.Range))
         {
             if (TryGetEnumConstant(elementAccess, out var enumValue))
                 return enumValue;

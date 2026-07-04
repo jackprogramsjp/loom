@@ -8,7 +8,7 @@ using Loom.TypeChecking;
 namespace Loom.SemanticAnalysis;
 
 public sealed class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
-    : Visitor<bool>(true)
+    : Visitor<bool>(_ => true)
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly SymbolTable _allDeclarations = [];

@@ -5,7 +5,7 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class VisitorTraversalTest
 {
-    private sealed class RecordingVisitor() : Visitor<bool>(true)
+    private sealed class RecordingVisitor() : Visitor<bool>(_ => true)
     {
         public List<string> Log { get; } = [];
 

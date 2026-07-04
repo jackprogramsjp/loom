@@ -8,8 +8,8 @@ public sealed class TypeParameter(string name, Type? constraint = null, Type? de
 
     public override bool Equals(Type? other) =>
         other is TypeParameter parameter
-        && (DefaultType?.Equals(parameter.DefaultType) ?? parameter.DefaultType == null)
-        && (Constraint?.Equals(parameter.Constraint) ?? parameter.Constraint == null);
+        && Equals(DefaultType, parameter.DefaultType)
+        && Equals(Constraint, parameter.Constraint);
 
     public override string ToString() => Name + (Constraint != null ? ": " + Constraint : "") + (DefaultType != null ? " = " + DefaultType : "");
 }

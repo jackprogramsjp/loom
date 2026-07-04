@@ -29,7 +29,7 @@ public sealed partial class TypeChecker
     public override Type VisitInterfaceInvocation(InterfaceInvocation node)
     {
         var type = Visit(node.Name);
-        if (type.Equals(Intrinsics.RangeType))
+        if (type.Equals(Intrinsics.Range))
             _diagnostics.Warn(node, InternalCodes.SimplifiableCode, "Use range literal.");
         
         if (type is InterfaceType nonGeneric)

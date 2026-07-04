@@ -9,7 +9,7 @@ public static class Intrinsics
 {
     private static bool _compilingIntrinsic;
 
-    public static readonly InterfaceType RangeType = new(
+    public static readonly InterfaceType Range = new(
         "Range",
         [],
         new ObjectType(
@@ -29,8 +29,12 @@ public static class Intrinsics
 
         var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" } };
         var compilationUnit = new CompilationUnit(loomConfig);
-        var compiledFiles = compilationUnit.SourceFiles.Select(compilationUnit.Compile);
-        
+        var compiledFiles = compilationUnit.SourceFiles.Select(f =>
+        {
+            f.IsIntrinsic = true;
+            return compilationUnit.Compile(f);
+        });
+
         var intrinsicSymbols = new HashSet<Symbol>();
         foreach (var compiledFile in compiledFiles)
         {

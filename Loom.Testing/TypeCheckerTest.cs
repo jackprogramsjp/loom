@@ -1472,7 +1472,7 @@ public class TypeCheckerTest
     public void Checks_DiscriminatedUnion_Narrowing(string resultKind, string property, string typeString)
     {
         var source = $$"""
-            enum ResultKind { Ok,  Err }
+            enum ResultKind { Ok, Err }
 
             interface ResultOk<T> {
                 kind: ResultKind["Ok"];
@@ -3276,7 +3276,7 @@ public class TypeCheckerTest
     public void Checks_RangeLiteral()
     {
         var type = Utility.GetLastStatementType("1..10");
-        Assert.True(type.Equals(Intrinsics.RangeType), $"Expected 'Range', got '{type}'");
+        Assert.True(type.Equals(Intrinsics.Range), $"Expected 'Range', got '{type}'");
     }
 
     [Fact]

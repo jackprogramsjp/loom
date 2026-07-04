@@ -10,3 +10,24 @@ interface Record<K, V> {
 interface MutRecord<K, V> {
     mut [K]: V;
 }
+
+enum ResultKind { Ok, Err }
+
+interface ResultOk<T> {
+    kind: ResultKind["Ok"];
+    value: T;
+}
+
+interface ResultError<Error> {
+    kind: ResultKind["Err"];
+    error: Error;
+}
+
+type Result<T, Error> = ResultOk<T> | ResultError<Error>;
+
+declare interface ResultStatic {
+    ok: fn<T>(value: T): ResultOk<T>;
+    err: fn<Error>(error: Error): ResultError<Error>;
+}
+
+declare let Result: ResultStatic;

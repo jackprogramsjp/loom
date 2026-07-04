@@ -27,7 +27,7 @@ public sealed partial class TypeChecker
     private readonly TypeNarrower _narrower;
 
     public TypeChecker(SemanticModel semanticModel)
-        : base(Types.PrimitiveType.Never)
+        : base(_ => Types.PrimitiveType.Never)
     {
         _semanticModel = semanticModel;
         _inferrer = new TypeInferrer(Visit);
@@ -75,7 +75,7 @@ public sealed partial class TypeChecker
             collectionType = i.Expand();
 
         _semanticModel.TypeSolver.AddConstraint(collectionType, ObjectType.Empty, @for.CollectionExpression);
-        var isRange = collectionType.Equals(Intrinsics.RangeType);
+        var isRange = collectionType.Equals(Intrinsics.Range);
         var elementType = isRange ? Types.PrimitiveType.Number : GetObjectValueType(collectionType);
         var maxNames = isRange ? 1 : 2;
         if (@for.Names.Count > maxNames)
@@ -90,7 +90,7 @@ public sealed partial class TypeChecker
             return BindType(@for, Types.PrimitiveType.Never);
         }
 
-        if (collectionType.Equals(Intrinsics.RangeType))
+        if (collectionType.Equals(Intrinsics.Range))
         {
             BindType(@for.Names[0], elementType);
             return BindType(@for, Visit(@for.Body));
@@ -280,13 +280,13 @@ public sealed partial class TypeChecker
 
         var type = Visit(elementAccess.Expression);
         var indexType = Visit(elementAccess.IndexExpression);
-        if (type is Types.ArrayType && indexType.IsAssignableTo(Intrinsics.RangeType))
+        if (type is Types.ArrayType && indexType.IsAssignableTo(Intrinsics.Range))
         {
             CheckInvalidAccessAssignment(elementAccess, type, indexType);
             return BindType(elementAccess, type);
         }
 
-        var indexIsRangeOrNumber = indexType.IsAssignableTo(Intrinsics.RangeType) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
+        var indexIsRangeOrNumber = indexType.IsAssignableTo(Intrinsics.Range) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
         if (indexIsRangeOrNumber && type.IsAssignableTo(Types.PrimitiveType.String))
         {
             CheckInvalidAccessAssignment(elementAccess, type, indexType);
@@ -460,7 +460,7 @@ public sealed partial class TypeChecker
         _semanticModel.TypeSolver.AddConstraint(minimumType, Types.PrimitiveType.Number, rangeLiteral.Minimum);
         _semanticModel.TypeSolver.AddConstraint(maximumType, Types.PrimitiveType.Number, rangeLiteral.Maximum);
 
-        return BindType(rangeLiteral, Intrinsics.RangeType);
+        return BindType(rangeLiteral, Intrinsics.Range);
     }
 
     public override Type VisitArrayLiteral(ArrayLiteral arrayLiteral)

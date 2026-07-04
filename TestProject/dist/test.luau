@@ -1,8 +1,3 @@
-type Foo = {
-  read foo: string
-}
-type Bar = {
-  read foo: number
-}
-const x: Bar | Foo = (nil :: never)
-const _ = x.foo
+const function do_something(): Result<number, string>
+  return { kind = 1, error = "function fucking died" }
+end

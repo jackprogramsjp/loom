@@ -14,6 +14,6 @@ var compilationUnit = new CompilationUnit(loomConfig);
 var result = compilationUnit.Compile();
 var debugInfo = result.Files
     .FindAll(f => !f.SourceFile.IsDeclaration)
-    .ConvertAll(f => f.GetDebugInfo(rebuilt: false, debugDiagnostics: true));
+    .ConvertAll(f => f.GetDebugInfo(rebuilt: false, debugDiagnostics: false));
 
 Console.WriteLine(string.Join(Environment.NewLine, debugInfo));

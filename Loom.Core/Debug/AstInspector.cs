@@ -9,6 +9,7 @@ public static class AstInspector
     private static int _indent;
     private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id", "File", "Keyword"];
 
+    public static string Inspect(TypeChecking.Types.Type type) => Inspect((object)type);
     public static string Inspect(Tree tree) => string.Join(Environment.NewLine, tree.Statements.ConvertAll(Inspect));
     
     private static string Inspect(object node)

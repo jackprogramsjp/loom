@@ -8,6 +8,7 @@ public sealed class SourceFile
     public string Name { get; }
     public string SourceText { get; }
     public bool IsDeclaration { get; set; }
+    public bool IsIntrinsic { get; internal set; }
     
     public SourceFile(string absolutePath, string? sourceText = null)
     {
