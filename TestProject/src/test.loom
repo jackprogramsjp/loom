@@ -1,9 +1,3 @@
-interface A { kind: "A", val: number }
-interface B { kind: "B", val: string };
-type Inner = A | B;
-
-interface Outer { inner: Inner };
-let o = none as never as Outer;
-if o.inner.kind == "B" {
-    o.inner.val + 1
-}
+interface Foo { foo: string }
+interface Bar: Foo { bar: number }
+let x = new Bar { foo: "abc", bar: 69 };

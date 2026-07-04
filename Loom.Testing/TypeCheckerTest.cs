@@ -714,6 +714,540 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Checks_NameOfEnumMember()
+    {
+        const string source = """
+            enum Color { Red }
+
+            nameof(Color.Red)
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        Assert.Equal(new LiteralType("Color.Red"), result.ReturnType);
+    }
+    
+    [Fact]
+    public void Checks_Narrowing_NestedPropertyByEnum()
+    {
+        const string source = """
+            enum Kind { A, B }
+
+            interface A { kind: Kind['A'], value: number }
+            interface B { kind: Kind['B'], value: string }
+            interface WithChild<T> { child: T }
+            type U = WithChild<A> | WithChild<B>
+
+            let x: U = none as never;
+            if x.child.kind == Kind.A {
+                x.child.value
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+    
+    [Fact]
+    public void Checks_Narrowing_ElementAccessByEnum()
+    {
+        const string source = """
+            enum Kind { A, B }
+
+            interface A { kind: Kind['A'], value: number }
+            interface B { kind: Kind['B'], value: string }
+
+            let xs: (A | B)[] = [];
+
+            if xs[0].kind == Kind.A {
+                xs[0].value
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+    
+    [Fact]
+    public void Checks_Narrowing_PropertyByEnum()
+    {
+        const string source = """
+            enum Kind { A, B }
+
+            interface A { kind: Kind['A'], value: number }
+            interface B { kind: Kind['B'], value: string }
+
+            let x: A | B = none as never;
+            if x.kind == Kind.A {
+                x.value
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+    
+    [Fact]
+    public void Checks_Narrowing_ElementAccessOfProperty()
+    {
+        const string source = """
+            interface A { kind: "A", vals: number[] }
+            interface B { kind: "B", vals: string[] }
+            type U = A | B;
+
+            let x: U = new A { kind: "A", vals: [] };
+            if x.kind == "A" {
+                x.vals[0]
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_ElementAccessPropertyChain()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            interface WithChild<T> { child: T }
+            type U = (WithChild<A> | WithChild<B>)[];
+
+            let arr: U = [];
+            if arr[0].child.kind == "A" {
+                arr[0].child.val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_PropertyAfterElementAfterProperty()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            interface WithItems<T> { items: T[] }
+            type U = WithItems<A | B>;
+
+            let x: U = none as never;
+            if x.items[0].kind == "A" {
+                x.items[0].val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_NotEquals_ElementAccess()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+
+            let arr: U[] = [];
+            if arr[0].kind != "A" {
+                arr[0].val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.String, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_RepeatedElementAccess()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+
+            let arr: U[] = [];
+            if arr[0].kind == "A" {
+                arr[0].kind;
+                arr[0].val;
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_DifferentIndicesRemainIndependent()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+
+            let arr: U[] = [];
+            if arr[0].kind == "A" {
+                arr[1].val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.IsType<UnionType>(optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_LogicalAnd_ElementAccess()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+
+            let arr: U[] = [];
+            if arr[0].kind == "A" && arr[0].kind == "A" {
+                arr[0].val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_NullableElementAccess()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+
+            let arr: U?[] = [];
+            if arr[0] != none && arr[0].kind == "A" {
+                arr[0].val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_AndFalseBranch_MergedProperty()
+    {
+        const string source = """
+            interface A { kind: "A", val: number };
+            interface B { kind: "B", val: string };
+            type U = A | B;
+            let x = none as never as U;
+            if x.kind == "A" && x.val == 5 {
+            } else {
+                x.val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        var union = Assert.IsType<UnionType>(optional.NonNullableType);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
+    public void Checks_Narrowing_ThreeVariantOr_FalseBranch()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            interface C { kind: "C", val: bool }
+            type U = A | B | C;
+            let x = none as never as U;
+            if x.kind == "A" || x.kind == "B" {
+            } else {
+                x.val && true
+            }
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void Checks_Narrowing_AndOfParenthesizedOr()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+            let x = none as never as U;
+            while (x.kind == "A" || x.kind == "B") && x.kind == "A" {
+                x.val
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(PrimitiveType.Number, result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_NotOfOr()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            interface C { kind: "C", val: bool }
+            type U = A | B | C;
+            let x = none as never as U;
+            while !(x.kind == "A" || x.kind == "B") {
+                x.val
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(PrimitiveType.Bool, result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_DoubleNegation()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+            let x = none as never as U;
+            while !!(x.kind == "A") {
+                x.val
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(PrimitiveType.Number, result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_EqualityOperandsReversed()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+            let x = none as never as U;
+            while "A" == x.kind {
+                x.val
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(PrimitiveType.Number, result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_ChainedAnd_ThreeConditions()
+    {
+        const string source = """
+            interface Loading { kind: "Loading" }
+            interface Success { kind: "Success", data: string, ok: bool }
+            interface Error { kind: "Error", error: string }
+            type Status = Loading | Success | Error;
+            let s = none as never as Status;
+            while s.kind == "Success" && s.data == "x" && s.ok == true {
+                s.data
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        var literal = Assert.IsType<LiteralType>(result.ReturnType);
+        Assert.Equal("x", literal.Value);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_NestedFlowScopes_Accumulate()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+            let x = none as never as U;
+            while x.kind == "A" {
+                while x.val > 0 {
+                    x.val
+                }
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(PrimitiveType.Number, result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_PropertyOfElementAccess()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+            let arr: U[] = [];
+            if arr[0].kind == "A" {
+                arr[0].val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_SiblingIfStatements_NoLeakage()
+    {
+        const string source = """
+            interface A { kind: "A", val: number }
+            interface B { kind: "B", val: string }
+            type U = A | B;
+            let x = none as never as U;
+            if x.kind == "A" { x.val }
+            if x.kind == "B" { x.val }
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void Checks_Narrowing_ComplexLogicalExpression()
+    {
+        const string source = """
+            interface A { kind: "A", val: number };
+            interface B { kind: "B", val: string };
+            type U = A | B;
+            let x = none as never as U;
+            if (x.kind == "A" && x.val > 0) || (x.kind == "B" && x.val == "hi") {
+                x.val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        var union = Assert.IsType<UnionType>(optional.NonNullableType);
+        Assert.Equal(2, union.Types.Count);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_LogicalNot()
+    {
+        const string source = """
+            interface A { kind: "A", val: number };
+            interface B { kind: "B", val: string };
+            type U = A | B;
+
+            let x = none as never as U;
+            while !(x.kind == "A") {
+                x.val
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(PrimitiveType.String, result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_LogicalAnd()
+    {
+        const string source = """
+            interface A { kind: "A", val: number };
+            interface B { kind: "B", val: string };
+            type U = A | B;
+
+            let x = none as never as U;
+            while x.kind == "A" && x.val == 0 {
+                x.val
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(new LiteralType(0L), result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_Narrowing_LogicalOr()
+    {
+        const string source = """
+            interface A { kind: "A", val: number };
+            interface B { kind: "B", val: string };
+            interface C { kind: "C", val: bool };
+            type U = A | B | C;
+            let x = none as never as U;
+            if x.kind == "A" || x.kind == "B" {
+                x.val
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        var union = Assert.IsType<UnionType>(optional.NonNullableType);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.Number));
+        Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
+    }
+
+    [Fact]
+    public void Checks_Parenthesized_Narrowing()
+    {
+        const string source = """
+            interface A { kind: "A", val: number };
+            interface B { kind: "B", val: string };
+            type U = A | B;
+
+            let x = none as never as U;
+            while ((((x.kind == "A")))) {
+                x.val
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.Equal(PrimitiveType.Number, result.ReturnType);
+    }
+
+    [Fact]
     public void Checks_Enum_KeyOf()
     {
         var type = Utility.GetLastStatementType("enum E { A, B } type K = keyof(E)");
@@ -726,17 +1260,17 @@ public class TypeCheckerTest
     [Fact]
     public void Checks_Enum_IndexedType_WithExplicitValues()
     {
-        var type = Utility.GetLastStatementType("enum E { A = 42, B = 99 } type T = E[\"B\"]");
+        var type = Utility.GetLastStatementType("enum E { A = 42.69, B = 99 } type T = E[\"A\"]");
         var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal(99d, literal.Value);
+        Assert.Equal(42.69d, literal.Value);
     }
 
     [Fact]
     public void Checks_Enum_IndexedType_WithStringEnum()
     {
-        var type = Utility.GetLastStatementType("enum E : string { A = \"foo\", B = \"bar\" } type T = E[\"B\"]");
+        var type = Utility.GetLastStatementType("enum E : string { A = \"foo\", B = nameof(E) } type T = E[\"B\"]");
         var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal("bar", literal.Value);
+        Assert.Equal("E", literal.Value);
     }
 
     [Fact]
@@ -773,15 +1307,15 @@ public class TypeCheckerTest
     public void Checks_Enum_AsGenericArgument()
     {
         const string source = """
-            enum Status { Active, Inactive }
+            enum Status { Active = 69.420, Inactive }
             fn id<T>(value: T): T -> value
-            let x = id(Status.Active)
+            let x = id(Status.Inactive)
             x
             """;
 
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
-        Assert.Equal(0d, literal.Value);
+        Assert.Equal(70d, literal.Value);
     }
 
     [Fact]
