@@ -1,1 +1,5 @@
-Result.err('stupid program')
+fn unsafe_function(condition: bool): Result<number, string> ->
+    condition ? Result.ok(69) : Result.err("function failed!");
+    
+let result = unsafe_function(true);
+print(result.kind == ResultKind.Ok ? result.value : result.error);

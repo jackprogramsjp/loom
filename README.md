@@ -16,8 +16,9 @@
 - **Rich type inference** – Minimal annotations required
 - **Extended number literals** – Automatic math for units of time and frequency, as well as binary/octal/hex support
 - **Range expressions** – `1..10` for slicing and bounds
-- **`nameof` operator** – Get names as strings at compile time
+- **`nameof` operator** – Get names as strings at compile time. See [example](#nameof)
 - **Generic functions and types** – Full support for type parameters including constraints and defaults
+- **Result pattern for errors** – Error handling uses the result pattern from Rust, no more `pcall`s. See [example](#result-pattern).
 - **Indices starting at one** – Same as Luau for familiarity
 - **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
 
@@ -25,7 +26,6 @@
 - `typeof`
 - `x in collection`
 - Implementors for interfaces
-- Error handling using the result pattern
 - `defer` statements
 - Event declarations
 - Full module system (imports/exports)
@@ -175,7 +175,7 @@ const arr: { number } = {1, 2, 3}
 const x = 69
 arr[1] = x
 ```
-##
+## nameof
 The `nameof` operator can be used to read the tokens of `Name` expressions as a string.
 ```rs
 let abc = 69;
@@ -184,6 +184,15 @@ let name = nameof(abc)
 ```luau
 const abc = 69;
 const name = "abc"
+```
+##
+```rs
+let range = 1..10;
+let name = nameof(range.minimum);
+```
+```luau
+const range = { minimum = 1, maximum = 10 }
+const name = "range.minimum"
 ```
 ##
 Ranges are constructs that represent a minimum and a maximum number.
@@ -241,15 +250,6 @@ let min = (1..10).minimum;
 ```
 ```luau
 const min = ({ minimum = 1, maximum = 10 }).minimum
-```
-##
-```rs
-let range = 1..10;
-let name = nameof(range.minimum);
-```
-```luau
-const range = { minimum = 1, maximum = 10 }
-const name = "range.minimum"
 ```
 ##
 Enums are named compile-time constants.
@@ -492,6 +492,21 @@ type Foo = {
     read baz: number
 }
 type K = keyof<Foo>
+```
+## Result Pattern
+```rs
+fn unsafe_function(condition: bool): Result<number, string> ->
+    condition ? Result.ok(69) : Result.err("function failed!");
+    
+let result = unsafe_function(true);
+print(result.kind == ResultKind.Ok ? result.value : result.error);
+```
+```luau
+const function unsafe_function(condition: boolean): Result<number, string>
+	return if condition then { kind = 0, value = 69 } else { kind = 1, error = "function failed!" }
+end
+const result = unsafe_function(true)
+print(if result.kind == 0 then result.value else result.error)
 ```
 
 ---
