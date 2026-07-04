@@ -10,9 +10,11 @@ public sealed record TypedFlowAddress(Symbol? Symbol, TypedFlowAddress? Parent, 
 
     public bool Equals(TypedFlowAddress? other) =>
         other != null
+        && Equals(Symbol, other.Symbol)
+        && Equals(Parent, other.Parent)
         && FieldName == other.FieldName
-        && (Symbol?.Equals(other.Symbol) ?? other.Symbol == null)
-        && (Parent?.Equals(other.Parent) ?? other.Parent == null);
+        && Equals(ElementIndex, other.ElementIndex);
 
-    public override int GetHashCode() => HashCode.Combine(Symbol, FieldName, Parent);
+    public override int GetHashCode() =>
+        HashCode.Combine(Symbol, Parent, FieldName, ElementIndex);
 }
