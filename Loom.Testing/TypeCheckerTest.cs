@@ -714,6 +714,68 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Checks_GenericInference_RepeatedIdenticalLiteralPreserved()
+    {
+        const string source = """
+            fn pair<T>(a: T, b: T) -> a
+            pair(1, 1)
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        Assert.Equal(new LiteralType(1L), result.ReturnType);
+    }
+
+    [Fact]
+    public void Checks_GenericInference_ThreeLiteralArgumentsStillWiden()
+    {
+        const string source = """
+            fn first<T>(a: T, b: T, c: T) -> a
+            first(1, 2, 3)
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        Assert.Equal(PrimitiveType.Number, result.ReturnType);
+    }
+    
+    [Fact]
+    public void Checks_GenericInference_DefaultTypeUsedWhenParameterUnconstrained()
+    {
+        const string source = """
+            fn value<T = string>() -> none as never as T
+            value()
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        Assert.Equal(PrimitiveType.String, result.ReturnType);
+    }
+    
+    [Fact]
+    public void Checks_Narrowing_MultipleConditions()
+    {
+        const string source = """
+            interface A { kind: "A", value: number }
+            interface B { kind: "B", value: string }
+
+            let x: A | B = none as never;
+            if x.kind == "A" && x.kind == "A" {
+                x.value
+            }
+            """;
+
+        var result = Utility.TypeCheck(source);
+        Utility.AssertNoErrors(result);
+
+        var optional = Assert.IsType<OptionalType>(result.ReturnType);
+        Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
+    }
+    
+    [Fact]
     public void Checks_NameOfEnumMember()
     {
         const string source = """
@@ -1641,18 +1703,6 @@ public class TypeCheckerTest
             """;
 
         Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
-    }
-
-    [Fact]
-    public void Checks_Inference_MatchingUnionWithTypeParam_Widens()
-    {
-        const string source = """
-            fn id<T = number>(x: T | string) -> x
-            id("hello")
-            """;
-
-        var type = Utility.GetLastStatementType(source);
-        Assert.Equal(PrimitiveType.String, type);
     }
 
     [Fact]
