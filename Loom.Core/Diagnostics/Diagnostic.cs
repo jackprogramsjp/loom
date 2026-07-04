@@ -30,7 +30,7 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
         var lines = new List<string>([header, location, gutter]);
         if (startLine - 1 < sourceLines.Length && startLine - 1 > 0)
         {
-            lines.Add($"{Colors.Dim}{startLine - 1} │ {sourceLines[startLine - 2]}{Colors.Reset}");
+            lines.Add($"{Colors.Dim}{(startLine - 1).ToString().PadLeft(lineDigits)} │ {sourceLines[startLine - 2]}{Colors.Reset}");
             lines.Add(gutter);
         }
 

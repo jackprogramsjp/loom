@@ -40,18 +40,15 @@ public sealed partial class TypeChecker
         foreach (var member in enumDeclaration.Members)
         {
             var memberValue = nextValue;
-            if (member.EqualsValueClause != null)
+            if (member.EqualsValueClause != null && CheckEnumMemberIsConstant(member, member.EqualsValueClause.Value))
             {
                 var explicitType = Visit(member.EqualsValueClause);
-                if (CheckEnumMemberIsConstant(member, explicitType))
-                {
-                    memberValue = ExtractNumericLiteralValue(explicitType, nextValue);
-                    _semanticModel.TypeSolver.AddConstraint(explicitType, baseType, member.EqualsValueClause.Value);
-                }
+                memberValue = ExtractNumericLiteralValue(explicitType, nextValue);
+                _semanticModel.TypeSolver.AddConstraint(explicitType, baseType, member.EqualsValueClause.Value);
             }
 
             properties.Add(new ObjectProperty(false, member.Name.Text, new Types.LiteralType(memberValue)));
-            nextValue = memberValue + 1;
+            nextValue = Math.Floor(memberValue + 1);
         }
 
         return properties;
@@ -73,9 +70,9 @@ public sealed partial class TypeChecker
                 return null;
             }
 
-            var type = Visit(member.EqualsValueClause);
-            if (!CheckEnumMemberIsConstant(member, type)) continue;
+            if (!CheckEnumMemberIsConstant(member, member.EqualsValueClause.Value)) continue;
 
+            var type = Visit(member.EqualsValueClause);
             _semanticModel.TypeSolver.AddConstraint(type, baseType, member.EqualsValueClause.Value);
             properties.Add(new ObjectProperty(false, member.Name.Text, type));
         }
@@ -92,9 +89,9 @@ public sealed partial class TypeChecker
             _ => fallback
         };
 
-    private bool CheckEnumMemberIsConstant(EnumMember member, Type type)
+    private bool CheckEnumMemberIsConstant(EnumMember member, Expression expression)
     {
-        if (type is Types.LiteralType { Value: string or long or int or double })
+        if (_semanticModel.IsCompileTimeConstant(expression))
             return true;
 
         _diagnostics.Error(

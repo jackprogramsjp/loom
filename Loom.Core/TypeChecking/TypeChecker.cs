@@ -240,7 +240,7 @@ public sealed partial class TypeChecker
         return BindType(asExpression, castedType);
     }
 
-    public override Type VisitNameOf(NameOf nameOf) => new Types.LiteralType(nameOf.Name.ToString());
+    public override Type VisitNameOf(NameOf nameOf) => BindType(nameOf, new Types.LiteralType(nameOf.Name.ToString()));
 
     public override Type VisitInvocation(Invocation invocation)
     {
@@ -389,7 +389,22 @@ public sealed partial class TypeChecker
     public override Type VisitBinaryOperator(BinaryOperator binaryOperator)
     {
         var leftType = Visit(binaryOperator.Left);
-        var rightType = Visit(binaryOperator.Right);
+        Type rightType;
+        switch (binaryOperator.Operator.Kind)
+        {
+            case SyntaxKind.AmpersandAmpersand or SyntaxKind.AmpersandAmpersandEquals:
+                var (trueState, _) = _narrower.ComputeBranchStates(binaryOperator.Left, CurrentFlowState());
+                rightType = VisitWithFlowState(binaryOperator.Right, trueState);
+                break;
+            case SyntaxKind.PipePipe or SyntaxKind.PipePipeEquals:
+                var (_, falseState) = _narrower.ComputeBranchStates(binaryOperator.Left, CurrentFlowState());
+                rightType = VisitWithFlowState(binaryOperator.Right, falseState);
+                break;
+            default:
+                rightType = Visit(binaryOperator.Right);
+                break;
+        }
+
         var rule = BinaryOperatorBinder.GetRule(binaryOperator, leftType, rightType);
         if (rule != null)
         {
