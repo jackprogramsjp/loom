@@ -350,28 +350,66 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         }
     }
 
-    private Type? GetBaseExpressionType(Expression baseExpression, TypedFlowState currentState) =>
-        TryGetNarrowedType(baseExpression, currentState, out var narrowedType) ? narrowedType : semanticModel.GetDeclarationType(baseExpression);
+    private Type? GetBaseExpressionType(Expression expression, TypedFlowState currentState)
+    {
+        if (TryGetNarrowedType(expression, currentState, out var narrowed))
+            return narrowed;
+
+        switch (expression)
+        {
+            case Identifier:
+                return semanticModel.GetDeclarationType(expression);
+
+            case PropertyAccess property:
+            {
+                var parent = GetBaseExpressionType(property.Expression, currentState);
+                return parent == null
+                    ? null
+                    : GetTypeAtPath(parent, property.Names.ConvertAll(n => n.Name.Text));
+            }
+
+            case QualifiedName qualified:
+            {
+                var parent = GetBaseExpressionType(qualified.Identifier, currentState);
+                return parent == null
+                    ? null
+                    : GetTypeAtPath(parent, qualified.Names.ConvertAll(n => n.Name.Text));
+            }
+
+            case ElementAccess { IndexExpression: Literal { Value: not null and not bool } } element:
+            {
+                var parent = GetBaseExpressionType(element.Expression, currentState);
+                if (parent == null)
+                    return null;
+
+                var indexType = semanticModel.GetType(element.IndexExpression);
+                return GetMemberElementType(parent, indexType);
+            }
+
+            default:
+                return semanticModel.GetType(expression);
+        }
+    }
 
     private Type? TryResolveViaNarrowedPrefix(Expression expression, TypedFlowState current)
     {
-        Expression baseExpr;
+        Expression baseExpression;
         List<string> path;
         switch (expression)
         {
             case QualifiedName qualifiedName:
-                baseExpr = qualifiedName.Identifier;
+                baseExpression = qualifiedName.Identifier;
                 path = qualifiedName.Names.ConvertAll(n => n.Name.Text);
                 break;
             case PropertyAccess propertyAccess:
-                baseExpr = propertyAccess.Expression;
+                baseExpression = propertyAccess.Expression;
                 path = propertyAccess.Names.ConvertAll(n => n.Name.Text);
                 break;
             default:
                 return null;
         }
 
-        if (GetFlowAddress(baseExpr) is not { } address)
+        if (GetFlowAddress(baseExpression) is not { } address)
             return null;
 
         var narrowedBase = current.NarrowedTypes.GetValueOrDefault(address);
@@ -446,7 +484,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         {
             0 => PrimitiveType.Never,
             1 => types.First(),
-            _ => new Types.UnionType(types)
+            _ => new UnionType(types)
         };
 
     private static Type RemoveType(Type source, Type toRemove)
@@ -454,7 +492,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         if (source.Equals(toRemove))
             return PrimitiveType.Never;
 
-        if (source is not Types.UnionType union)
+        if (source is not UnionType union)
             return source;
 
         var remaining = union.Types.Where(t => !toRemove.IsAssignableTo(t)).ToList();
@@ -462,7 +500,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         {
             0 => PrimitiveType.Never,
             1 => remaining.First(),
-            _ => new Types.UnionType(remaining)
+            _ => new UnionType(remaining)
         };
     }
 
@@ -481,7 +519,7 @@ public sealed class TypeNarrower(SemanticModel semanticModel)
         var address = GetFlowAddress(baseExpr);
         return address == null
             ? null
-            : dotNames.Aggregate(address, (current, name) => TypedFlowAddress.Field(current, name.Name.Text));
+            : dotNames.Select(name => name.Name.Text).Aggregate(address, TypedFlowAddress.Field);
     }
 
     private TypedFlowAddress? GetElementAddress(ElementAccess elementAccess)
