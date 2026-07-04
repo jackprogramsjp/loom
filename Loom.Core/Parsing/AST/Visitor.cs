@@ -22,8 +22,8 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
 
     public virtual T VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) =>
-        CombineResults([Visit(interfaceInvocation.Name), VisitWithDefault(interfaceInvocation), Visit(interfaceInvocation.Body)]);
-    
+        CombineResults([Visit(interfaceInvocation.Name), VisitWithDefault(interfaceInvocation.TypeArguments), Visit(interfaceInvocation.Body)]);
+
     public virtual T VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) => VisitList(interfaceInvocationBody.Initializers);
 
     public virtual T VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
@@ -59,8 +59,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
 
     public virtual T VisitDeclare(Declare declare) => Visit(declare.Signature);
 
-    public virtual T VisitDeclareVariableSignature(DeclareVariableSignature declareVariableSignature) =>
-        VisitWithDefault(declareVariableSignature.ColonTypeClause);
+    public virtual T VisitDeclareVariableSignature(DeclareVariableSignature declareVariableSignature) => VisitWithDefault(declareVariableSignature.ColonTypeClause);
 
     public virtual T VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature) =>
         CombineResults(
@@ -71,8 +70,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
             ]
         );
 
-    public virtual T VisitTypeAlias(TypeAlias typeAlias) =>
-        CombineResults([VisitWithDefault(typeAlias.TypeParameters), Visit(typeAlias.EqualsTypeClause)]);
+    public virtual T VisitTypeAlias(TypeAlias typeAlias) => CombineResults([VisitWithDefault(typeAlias.TypeParameters), Visit(typeAlias.EqualsTypeClause)]);
 
     public virtual T VisitVariableDeclaration(VariableDeclaration variableDeclaration) =>
         CombineResults([VisitWithDefault(variableDeclaration.ColonTypeClause), VisitWithDefault(variableDeclaration.EqualsValueClause)]);
@@ -108,7 +106,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
 
     public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) =>
         CombineResults([Visit(assignmentOperator.Left), Visit(assignmentOperator.Right)]);
-    
+
     public virtual T VisitTernaryOperator(TernaryOperator ternaryOperator) =>
         CombineResults([Visit(ternaryOperator.Condition), Visit(ternaryOperator.ThenBranch), Visit(ternaryOperator.ElseBranch)]);
 
@@ -122,15 +120,16 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitKeyOf(KeyOf keyOf) => Visit(keyOf.Type);
 
     public virtual T VisitFunctionType(FunctionType functionType) =>
-        CombineResults(
-            [VisitWithDefault(functionType.TypeParameters), VisitWithDefault(functionType.Parameters), Visit(functionType.ReturnType)]
-        );
+        CombineResults([VisitWithDefault(functionType.TypeParameters), VisitWithDefault(functionType.Parameters), Visit(functionType.ReturnType)]);
 
     public virtual T VisitArrayType(ArrayType arrayType) => Visit(arrayType.ElementType);
     public virtual T VisitOptionalType(OptionalType optionalType) => Visit(optionalType.NonNullableType);
     public virtual T VisitUnionType(UnionType unionType) => VisitList(unionType.Types);
     public virtual T VisitIntersectionType(IntersectionType intersectionType) => VisitList(intersectionType.Types);
-    public virtual T VisitTypeParameter(TypeParameter typeParameter) => CombineResults([VisitWithDefault(typeParameter.ColonTypeClause), VisitWithDefault(typeParameter.EqualsTypeClause)]);
+
+    public virtual T VisitTypeParameter(TypeParameter typeParameter) =>
+        CombineResults([VisitWithDefault(typeParameter.ColonTypeClause), VisitWithDefault(typeParameter.EqualsTypeClause)]);
+
     public virtual T VisitTypeParameters(TypeParameters typeParameters) => VisitList(typeParameters.ParameterList);
     public virtual T VisitTypeArguments(TypeArguments typeArguments) => VisitList(typeArguments.ArgumentsList);
     public virtual T VisitColonTypeListClause(ColonTypeListClause colonTypeListClause) => VisitList(colonTypeListClause.Types);
@@ -148,10 +147,10 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
         where TResult : T =>
         node is null ? default : Visit<TResult>(node);
 
-    protected T? MaybeVisit(Node? node, T? visitDefault = default) => node is null ? visitDefault : Visit(node);
+    protected T? MaybeVisit(Node? node) => node is null ? default : Visit(node);
     private T VisitWithDefault(Node? node) => MaybeVisit(node) ?? DefaultValue(node);
 
-    protected T VisitList<TNode>(List<TNode> nodes)
+    private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>
         CombineResults(nodes.ConvertAll(Visit));
 }

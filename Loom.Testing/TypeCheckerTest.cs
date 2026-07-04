@@ -1472,20 +1472,6 @@ public class TypeCheckerTest
     public void Checks_DiscriminatedUnion_Narrowing(string resultKind, string property, string typeString)
     {
         var source = $$"""
-            enum ResultKind { Ok, Err }
-
-            interface ResultOk<T> {
-                kind: ResultKind["Ok"];
-                value: T;
-            }
-
-            interface ResultError<Error> {
-                kind: ResultKind["Err"];
-                error: Error;
-            }
-
-            type Result<T, Error> = ResultOk<T> | ResultError<Error>;
-
             fn ok<T, Error>(value: T): Result<T, Error> {
                 return new ResultOk { kind: ResultKind.Ok, value: value };
             }
@@ -1631,10 +1617,10 @@ public class TypeCheckerTest
     public void Checks_Inference_ContextualReturnType_OverridesDefaultTypeParameter()
     {
         const string source = """
-            interface Result<T, E> { value: T?, error: E? }
-            fn ok<T, E = string>(value: T): Result<T, E> -> new Result { value: value, error: none as never as E }
+            interface ResultThing<T, E> { value: T?, error: E? }
+            fn ok<T, E = string>(value: T): ResultThing<T, E> -> new ResultThing { value: value, error: none as never as E }
             enum MyErrors: string { Failed = "failed" }
-            fn compute: Result<number, MyErrors> {
+            fn compute: ResultThing<number, MyErrors> {
                 return ok(69)
             }
             """;
@@ -1646,8 +1632,8 @@ public class TypeCheckerTest
     public void Checks_Inference_MissingContext_FallsBackToDefaultTypeParameter()
     {
         const string source = """
-            interface Result<T, E> { value: T?, error: E? }
-            fn ok<T, E = string>(value: T): Result<T, E> -> new Result { value: value, error: none as never as E }
+            interface ResultThing<T, E> { value: T?, error: E? }
+            fn ok<T, E = string>(value: T): ResultThing<T, E> -> new ResultThing { value: value, error: none as never as E }
             ok(69)
             """;
 
@@ -1684,20 +1670,20 @@ public class TypeCheckerTest
     public void Checks_ReturnType_Inference()
     {
         const string source = """
-            interface Result<T, Error> {
+            interface ResultThing<T, Error> {
                 value: T?;
                 error: Error?;
             }
 
-            fn ok<T, Error>(value: T): Result<T, Error> {
-                return new Result { value: value, error: none as never as Error };
+            fn ok<T, Error>(value: T): ResultThing<T, Error> {
+                return new ResultThing { value: value, error: none as never as Error };
             }
 
             enum MyErrors: string {
                 DoSomethingFailed = "do_something failed to execute"
             }
 
-            fn do_something: Result<number, MyErrors> {
+            fn do_something: ResultThing<number, MyErrors> {
                 return ok(69);
             }
             """;
@@ -2226,9 +2212,9 @@ public class TypeCheckerTest
     public void Checks_GenericFunction_InferenceFromGenericTypeAliasWithMultipleParameters()
     {
         const string source = """
-            interface Result<T, E> { ok: T, err: E }
-            fn unwrap<T, E>(r: Result<T, E>) -> r.ok
-            unwrap(new Result { ok: 1, err: "oops" })
+            interface ResultThing<T, E> { ok: T, err: E }
+            fn unwrap<T, E>(r: ResultThing<T, E>) -> r.ok
+            unwrap(new ResultThing { ok: 1, err: "oops" })
             """;
 
         var type = Utility.GetLastStatementType(source);

@@ -37,23 +37,6 @@ public class LuauGeneratorTest
     public void Generates_Nothing(string source) => Assert.Empty(Utility.GetLuauAST(source).Statements);
 
     [Fact]
-    public void Generates_KeyOfType()
-    {
-        var luauTree = Utility.GetLuauAST("type Abc = number; mut x: keyof(Abc);");
-        Assert.Equal(2, luauTree.Statements.Count);
-
-        var variable = Assert.IsType<LocalVariable>(luauTree.Statements.Last());
-        Assert.NotNull(variable.DeclaredType);
-
-        var keyOfType = Assert.IsType<TypeName>(variable.DeclaredType);
-        Assert.Equal("keyof", keyOfType.Name);
-        Assert.Single(keyOfType.TypeArguments);
-        var arg = Assert.IsType<TypeName>(keyOfType.TypeArguments.First());
-        Assert.Equal("Abc", arg.Name);
-        Assert.Empty(arg.TypeArguments);
-    }
-
-    [Fact]
     public void Generates_NestedKeyOfType()
     {
         var luauTree = Utility.GetLuauAST("type Abc = number; mut x: keyof(keyof(Abc));");

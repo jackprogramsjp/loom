@@ -1,3 +1,1 @@
-fn do_something(): Result<number, string> {
-    return Result.err("function fucking died");
-}
+Result.err('stupid program')

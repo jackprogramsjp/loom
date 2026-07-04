@@ -23,7 +23,7 @@ internal static class Utility
     public static Type GetLastStatementType(string source) => TypeCheck(source).ReturnType;
     public static LuauTree GetLuauAST(string source, bool typeCheck = false) => Generate(source, typeCheck).LuauTree;
 
-    public static DiagnosticBag GetGeneratorDiagnostics(string source, bool typeCheck = false) => Generate(source).Diagnostics;
+    public static DiagnosticBag GetGeneratorDiagnostics(string source, bool typeCheck = false) => Generate(source, typeCheck).Diagnostics;
     private static LuauGeneratorResult Generate(string source, bool typeCheck = false)
     {
         var semanticModel = GetSemanticModel(source);
