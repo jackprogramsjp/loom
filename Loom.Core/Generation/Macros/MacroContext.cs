@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Loom.Luau.AST;
 using Loom.SemanticAnalysis;
 
@@ -15,15 +14,15 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
                 computed = literal.Value;
                 return true;
             
-            case UnaryOperator { Operator: "-" or "~" } unary:
+            case UnaryOperator { Operator: "-" } unary:
             {
                 if (!TryComputeConstantArithmetic(unary.Operand, out var operand))
                     return false;
                 
-                computed = unary.Operator == "-" ? -operand : ~(int)operand;
+                computed = -operand;
                 return true;
             }
-            case BinaryOperator { Operator: "+" or "-" or "*" or "/" or "//" or "^" or "%" or "&" or "|" or "~" } binary:
+            case BinaryOperator { Operator: "+" or "-" or "*" or "/" or "//" or "^" or "%" } binary:
             {
                 if (!TryComputeConstantArithmetic(binary.Left, out var left))
                     return false;

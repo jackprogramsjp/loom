@@ -116,8 +116,12 @@ public class MacroExpanderTest
     [InlineData("5", 5)]
     [InlineData("0", 1)]
     [InlineData("-10", 1)]
-    [InlineData("2 + 6 + 4", 10)]
+    [InlineData("2 + 6 - 4", 4)]
     [InlineData("3.5 * 2.5", 8.75)]
+    [InlineData("11 // 2", 5)]
+    [InlineData("11 / 2", 5.5)]
+    [InlineData("3 ^ 2", 9)]
+    [InlineData("12 % 3", 1)]
     public void Generates_Range_Clamp_Literal(string toClamp, double expected)
     {
         var source = $"(1..10).clamp({toClamp})";
