@@ -1,1 +1,2 @@
-const _ = 8.75
+const a = {1, 2, 3}
+print(table.concat(a, ", "))

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.TypeChecking.Types;
 using Type = Loom.TypeChecking.Types.Type;
@@ -16,6 +17,22 @@ internal sealed class ArrayMacroProvider : IMacroProvider
             case "length":
             {
                 expression = new UnaryOperator("#", target);
+                return true;
+            }
+        }
+
+        expression = null;
+        return false;
+    }
+
+    public bool TryInvocation(MacroContext context, string name, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
+    {
+        var array = MacroContext.GetCallObject(call);
+        switch (name)
+        {
+            case "join":
+            {
+                expression = LuauFactory.TableCall("concat", [array, ..call.Arguments]);
                 return true;
             }
         }

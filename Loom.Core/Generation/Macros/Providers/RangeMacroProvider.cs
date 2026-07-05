@@ -39,7 +39,7 @@ internal sealed class RangeMacroProvider : IMacroProvider
 
     public bool TryInvocation(MacroContext context, string name, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
     {
-        var range = GetCallObject(call);
+        var range = MacroContext.GetCallObject(call);
         switch (name)
         {
             case "clamp":
@@ -94,12 +94,4 @@ internal sealed class RangeMacroProvider : IMacroProvider
 
         return (minimum, maximum);
     }
-
-    private static LuauExpression GetCallObject(Call call) =>
-        call.Callee switch
-        {
-            PropertyAccess propertyAccess => propertyAccess.Target,
-            ElementAccess elementAccess => elementAccess.Target,
-            var callee => callee
-        };
 }

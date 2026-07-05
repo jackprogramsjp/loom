@@ -3,8 +3,11 @@ namespace Loom.TypeChecking.Types;
 public sealed class ArrayType(Type elementType, bool isMutable)
     : ObjectType(new ObjectIndexer(isMutable, PrimitiveType.Number, elementType), ObjectProperties)
 {
-    public static List<ObjectProperty> ObjectProperties => [new(false, "length", PrimitiveType.Number)];
-    
+    public static List<ObjectProperty> ObjectProperties =>
+    [
+        new(false, "length", PrimitiveType.Number), new(false, "join", new FunctionType([], [new OptionalType(PrimitiveType.String)], PrimitiveType.String))
+    ];
+
     public Type ElementType { get; } = elementType;
     public bool IsMutable { get; } = isMutable;
 

@@ -13,6 +13,7 @@
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=ffa170bc_002D97da_002D4b16_002Db048_002D47e2959d1093/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="TypeInferrerTest" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.TypeInferrerTest&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.LuauGeneratorTest.Generates_ElementAccess&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	

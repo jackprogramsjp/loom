@@ -5,6 +5,14 @@ namespace Loom.Generation.Macros;
 
 internal record MacroContext(SemanticModel SemanticModel, LuauState State)
 {
+    public static LuauExpression GetCallObject(Call call) =>
+        call.Callee switch
+        {
+            PropertyAccess propertyAccess => propertyAccess.Target,
+            ElementAccess elementAccess => elementAccess.Target,
+            var callee => callee
+        };
+    
     public static bool TryComputeConstantArithmetic(LuauExpression expression, out double computed)
     {
         computed = -1;

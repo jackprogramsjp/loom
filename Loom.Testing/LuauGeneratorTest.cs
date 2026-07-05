@@ -1879,10 +1879,10 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ElementAccess()
     {
-        var luauTree = Utility.GetLuauAST("abc[1]");
-        Assert.Single(luauTree.Statements);
+        var luauTree = Utility.GetLuauAST("let abc = [1,2,3]; abc[1]", true);
+        Assert.Equal(2, luauTree.Statements.Count);
 
-        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
         var elementAccess = Assert.IsType<ElementAccess>(variable.Initializer);
         var identifier = Assert.IsType<Identifier>(elementAccess.Target);
         var index = Assert.IsType<NumberLiteral>(elementAccess.Index);
