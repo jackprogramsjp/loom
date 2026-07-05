@@ -508,6 +508,17 @@ end
 const result = unsafe_function(true)
 print(if result.kind == 0 then result.value else result.error)
 ```
+## Array.join()
+```ts
+let arr = [1, 2, 3, 4];
+print(arr.join())
+print(arr.join(", "))
+```
+```luau
+const arr = {1, 2, 3, 4}
+print(table.concat(arr))
+print(table.concat(arr, ", "))
+```
 ##
 ```ts
 let arr = [1, 2, 3, 4];
