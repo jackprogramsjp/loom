@@ -50,6 +50,35 @@ public class MacroExpanderTest
         Assert.Equal(1, kindValue.Value);
         Assert.Equal("stupid program", errorValue.Value);
     }
+    
+    [Theory]
+    [InlineData("let a = [1, 2, 3]; let _ = a.join()")]
+    [InlineData("let a = [1, 2, 3]; let _ = a['join']()")]
+    [InlineData("let a = [1, 2, 3]; let _ = (a).join()")]
+    [InlineData("let a = [1, 2, 3]; let _ = a.join(', ')", ", ")]
+    [InlineData("let a = [1, 2, 3]; let _ = a['join'](', ')", ", ")]
+    [InlineData("let a = [1, 2, 3]; let _ = (a).join(', ')", ", ")]
+    public void Generates_Array_Join(string source, string? separator = null)
+    {
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var concatCall = Assert.IsType<Call>(variable.Initializer);
+        var concat = Assert.IsType<PropertyAccess>(concatCall.Callee);
+        var tableIdentifier = Assert.IsType<Identifier>(concat.Target);
+        Assert.Equal("table", tableIdentifier.Name);
+        Assert.Equal("concat", Assert.Single(concat.Names));
+        Assert.Equal(separator == null ? 1 : 2, concatCall.Arguments.Count);
+        
+        var arrayIdentifier = Assert.IsType<Identifier>(concatCall.Arguments.First());
+        Assert.Equal("a", arrayIdentifier.Name);
+
+        if (separator == null) return;
+        var separatorArgument = Assert.IsType<StringLiteral>(concatCall.Arguments.Last());
+        Assert.Equal(separator, separatorArgument.Value);
+    }
 
     [Theory]
     [InlineData("let a = [1, 2, 3]; a.length")]
