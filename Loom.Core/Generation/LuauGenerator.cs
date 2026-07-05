@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
+using Loom.Generation.Macros;
 using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
@@ -21,16 +22,24 @@ using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
 
 namespace Loom.Generation;
 
-public sealed partial class LuauGenerator(SemanticModel semanticModel)
-    : Visitor<LuauNode>(_ => new NoOpStatement())
+public sealed partial class LuauGenerator
+    : Visitor<LuauNode>
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly Macros _macros = new(semanticModel);
-    private LuauScope _scope = new();
+    private readonly LuauState _state = new();
+    private readonly MacroExpander _macroExpander;
+    private readonly SemanticModel _semanticModel;
+
+    public LuauGenerator(SemanticModel semanticModel)
+        : base(_ => new NoOpStatement())
+    {
+        _semanticModel = semanticModel;
+        _macroExpander = new MacroExpander(semanticModel, _state);
+    }
 
     public LuauGeneratorResult Generate()
     {
-        var luauTree = VisitTree(semanticModel.Tree);
+        var luauTree = VisitTree(_semanticModel.Tree);
         return new LuauGeneratorResult(luauTree, _diagnostics);
     }
 
@@ -40,7 +49,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
     {
         var names = @for.Names.ConvertAll(n => n.Token.Text);
         var body = GenerateChunk(@for.Body);
-        var collectionType = semanticModel.GetType(@for.CollectionExpression);
+        var collectionType = _semanticModel.GetType(@for.CollectionExpression);
         var collectionExpression = Visit(@for.CollectionExpression);
         if (names.Count == 2 && collectionType is ArrayType)
         {
@@ -68,7 +77,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
         }
         else
         {
-            var rangeIdentifier = PushToVariable("_range", collectionExpression);
+            var rangeIdentifier = _state.PushToVariable("_range", collectionExpression);
             var minimum = new Luau.AST.PropertyAccess(rangeIdentifier, ["minimum"]);
             var maximum = new Luau.AST.PropertyAccess(rangeIdentifier, ["maximum"]);
             start = minimum;
@@ -135,7 +144,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
 
     public override LuauNode VisitEnumDeclaration(EnumDeclaration enumDeclaration)
     {
-        if (semanticModel.GetType(enumDeclaration) is not ObjectType objectType)
+        if (_semanticModel.GetType(enumDeclaration) is not ObjectType objectType)
             return LuauFactory.EmptyVariable();
 
         var propertyUnion = objectType.PropertyUnion();
@@ -188,57 +197,24 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
         );
     }
 
-    public override LuauNode VisitQualifiedName(QualifiedName qualifiedName) =>
-        TryGetEnumConstant(qualifiedName, out var enumValue)
-            ? enumValue
-            : new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
+    public override LuauNode VisitQualifiedName(QualifiedName qualifiedName)
+    {
+        var luauAccess = new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
+        return _macroExpander.TryGetQualifiedNameMacro(qualifiedName, luauAccess, out var replacement) ? replacement : luauAccess;
+    }
 
-    public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess) =>
-        TryGetEnumConstant(propertyAccess, out var enumValue)
-            ? enumValue
-            : new Luau.AST.PropertyAccess(Visit(propertyAccess.Expression), propertyAccess.Names.ConvertAll(dotName => dotName.Name.Text));
+    public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess)
+    {
+        var luauAccess = new Luau.AST.PropertyAccess(Visit(propertyAccess.Expression), propertyAccess.Names.ConvertAll(dotName => dotName.Name.Text));
+        return _macroExpander.TryGetPropertyAccessMacro(propertyAccess, luauAccess, out var replacement) ? replacement : luauAccess;
+    }
 
     public override LuauNode VisitElementAccess(ElementAccess elementAccess)
     {
-        var target = Visit(elementAccess.Expression);
-        var targetType = semanticModel.GetType(elementAccess.Expression);
-        var indexType = semanticModel.GetType(elementAccess.IndexExpression);
-        if (!indexType.Equals(Intrinsics.Range))
-        {
-            if (TryGetEnumConstant(elementAccess, out var enumValue))
-                return enumValue;
-
-            var index = Visit(elementAccess.IndexExpression);
-            if (targetType.IsAssignableTo(TypeChecking.Types.PrimitiveType.String) && indexType.IsAssignableTo(TypeChecking.Types.PrimitiveType.Number))
-                return LuauFactory.StringCall("sub", [target, index, index]);
-
-            return new Luau.AST.ElementAccess(target, index);
-        }
-
-        var one = new NumberLiteral(1);
-        var length = PushToVariable("_length", new Luau.AST.UnaryOperator("#", target));
-        Call? minimum, maximum;
-
-        if (elementAccess.IndexExpression is RangeLiteral literal)
-        {
-            var rangeTable = Visit<Table>(literal);
-            var properties = rangeTable.Initializers.OfType<PropertyTableInitializer>().ToList();
-            var minimumLiteral = properties.First(p => p.PropertyName == "minimum").Value;
-            var maximumLiteral = properties.First(p => p.PropertyName == "maximum").Value;
-            minimum = LuauFactory.MathCall("clamp", [minimumLiteral, one, length]);
-            maximum = LuauFactory.MathCall("clamp", [maximumLiteral, one, length]);
-        }
-        else
-        {
-            var index = Visit(elementAccess.IndexExpression);
-            var range = PushToVariable("_range", index);
-            minimum = LuauFactory.MathCall("clamp", [new Luau.AST.PropertyAccess(range, ["minimum"]), one, length]);
-            maximum = LuauFactory.MathCall("clamp", [new Luau.AST.PropertyAccess(range, ["maximum"]), one, length]);
-        }
-
-        return targetType.IsAssignableTo(TypeChecking.Types.PrimitiveType.String)
-            ? LuauFactory.StringCall("sub", [target, minimum, maximum])
-            : LuauFactory.TableCall("move", [target, minimum, maximum, one, new Table([])]);
+        var luauAccess = new Luau.AST.ElementAccess(Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression));
+        return _macroExpander.TryGetElementAccessMacro(elementAccess, luauAccess, out var replacement)
+            ? replacement
+            : luauAccess;
     }
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -250,7 +226,8 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
         {
             var binary = (Luau.AST.BinaryOperator)VisitBinaryOperator(assignmentOperator);
             var assignmentStatement = new Luau.AST.ExpressionStatement(binary);
-            Prereq(assignmentStatement);
+            _state.Prereq(assignmentStatement);
+            
             return binary.Left;
         }
 
@@ -259,13 +236,15 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
         if (assignmentOperator.Parent is EqualsValueClause { Parent: NamedDeclaration declaration })
         {
             var identifierAssignment = new Luau.AST.BinaryOperator(left, "=", new Luau.AST.Identifier(declaration.Name.Text));
-            Postreq(new Luau.AST.ExpressionStatement(identifierAssignment));
+            _state.Postreq(new Luau.AST.ExpressionStatement(identifierAssignment));
+            
             return right;
         }
 
-        var assigned = PushToVariable("_assigned", right);
+        var assigned = _state.PushToVariable("_assigned", right);
         var boundAssignment = new Luau.AST.BinaryOperator(left, "=", assigned);
-        Prereq(new Luau.AST.ExpressionStatement(boundAssignment));
+        _state.Prereq(new Luau.AST.ExpressionStatement(boundAssignment));
+        
         return assigned;
     }
 
@@ -300,8 +279,8 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
             return LuauFactory.Bit32Call(name, arguments);
         }
 
-        var leftType = semanticModel.GetType(binaryOperator.Left);
-        var rightType = semanticModel.GetType(binaryOperator.Right);
+        var leftType = _semanticModel.GetType(binaryOperator.Left);
+        var rightType = _semanticModel.GetType(binaryOperator.Right);
         var @string = TypeChecking.Types.PrimitiveType.String;
         var isConcatenation = op.StartsWith('+') && leftType.IsAssignableTo(@string) && rightType.IsAssignableTo(@string);
         var mappedOperator = isConcatenation ? op.Replace("+", "..") : MapLuau.BinaryOperator(op);
@@ -318,7 +297,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
 
     public override LuauNode VisitTypeName(TypeName typeName)
     {
-        var symbol = semanticModel.GetSymbol(typeName);
+        var symbol = _semanticModel.GetSymbol(typeName);
         if (symbol == null)
         {
             _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
@@ -355,14 +334,14 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
         return true;
     }
 
-    private bool TryGetEnumConstant(Node node, [MaybeNullWhen(false)] out LuauNode constantType)
+    private bool TryGetEnumConstant(Expression expression, [MaybeNullWhen(false)] out LuauExpression constantType)
     {
         constantType = null;
-        var type = semanticModel.GetType(node);
-        if (type is not TypeChecking.Types.LiteralType { Value: long or int or double or string } literal)
+        var value = _semanticModel.GetConstantValue(expression);
+        if (value is not long or int or double or string)
             return false;
 
-        constantType = literal.Value is string s ? new StringLiteral(s) : new NumberLiteral(Convert.ToDouble(literal.Value));
+        constantType = value is string s ? new StringLiteral(s) : new NumberLiteral(Convert.ToDouble(value));
         return true;
     }
 
@@ -371,7 +350,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
     private List<LuauStatement> GenerateStatements(Expression expression)
     {
         var result = new List<LuauStatement>();
-        var (luauExpression, scope) = Capture(() => Visit(expression));
+        var (luauExpression, scope) = _state.Capture(() => Visit(expression));
         result.AddRange(scope.PrereqStatements);
         result.Add(new Luau.AST.Return(luauExpression));
         result.AddRange(scope.PostreqStatements);
@@ -382,7 +361,7 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
     private List<LuauStatement> GenerateStatements(Statement statement)
     {
         var result = new List<LuauStatement>();
-        var (luauStatement, scope) = Capture(() => Visit(statement));
+        var (luauStatement, scope) = _state.Capture(() => Visit(statement));
         result.AddRange(scope.PrereqStatements);
         result.Add(luauStatement);
         result.AddRange(scope.PostreqStatements);
@@ -398,36 +377,6 @@ public sealed partial class LuauGenerator(SemanticModel semanticModel)
 
         return result.FindAll(s => s is not NoOpStatement);
     }
-
-    private (T, LuauScope) Capture<T>(Func<T> callback)
-    {
-        T value = default!;
-        var scope = CaptureScope(() => value = callback());
-        return (value, scope);
-    }
-
-    private LuauScope CaptureScope(Action callback)
-    {
-        var captured = new LuauScope(_scope);
-        _scope = captured;
-        callback();
-        _scope = _scope.Parent!;
-
-        return captured;
-    }
-
-    private Luau.AST.Identifier PushToVariable(string name, LuauExpression expression, LuauType? type = null, bool isConst = true)
-    {
-        if (expression is Luau.AST.Identifier identifier)
-            return identifier;
-
-        var id = _scope.AddIdentifier(name);
-        Prereq(isConst ? new ConstVariable(id, type, expression) : new LocalVariable(id, type, expression));
-        return new Luau.AST.Identifier(id);
-    }
-
-    private void Prereq(params LuauStatement[] statements) => _scope.PrereqStatements.AddRange(statements);
-    private void Postreq(params LuauStatement[] statements) => _scope.PostreqStatements.AddRange(statements);
 
     private static LuauStatement WrapExpressionAsStatement(LuauExpression expression) =>
         IsUnorphanableExpression(expression)

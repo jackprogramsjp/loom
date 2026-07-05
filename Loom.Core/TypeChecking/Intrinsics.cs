@@ -14,7 +14,12 @@ public static class Intrinsics
         [],
         new ObjectType(
             null,
-            [new ObjectProperty(false, "minimum", PrimitiveType.Number), new ObjectProperty(false, "maximum", PrimitiveType.Number)]
+            [
+                new ObjectProperty(false, "minimum", PrimitiveType.Number),
+                new ObjectProperty(false, "maximum", PrimitiveType.Number),
+                new ObjectProperty(false, "length", PrimitiveType.Number),
+                new ObjectProperty(false, "clamp", new FunctionType([], [PrimitiveType.Number], PrimitiveType.Number))
+            ]
         )
     );
 
@@ -30,10 +35,11 @@ public static class Intrinsics
         var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" } };
         var compilationUnit = new CompilationUnit(loomConfig);
         var compiledFiles = compilationUnit.SourceFiles.Select(f =>
-        {
-            f.IsIntrinsic = true;
-            return compilationUnit.Compile(f);
-        });
+            {
+                f.IsIntrinsic = true;
+                return compilationUnit.Compile(f);
+            }
+        );
 
         var intrinsicSymbols = new HashSet<Symbol>();
         foreach (var compiledFile in compiledFiles)

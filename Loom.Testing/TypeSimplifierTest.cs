@@ -108,7 +108,7 @@ public class TypeSimplifierTest
         var intersection = new IntersectionType([firstObject, secondObject]);
         var simplified = TypeSimplifier.Simplify(intersection);
         var expectedIndexer = new ObjectIndexer(false, new LiteralType(1), PrimitiveType.Never);
-        var expectedObject = new ObjectType(expectedIndexer, []);
+        var expectedObject = new ObjectType(expectedIndexer, ArrayType.ObjectProperties);
 
         Assert.True(
             simplified.Equals(expectedObject),

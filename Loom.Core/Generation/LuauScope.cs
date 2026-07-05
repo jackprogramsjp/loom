@@ -4,7 +4,7 @@ namespace Loom.Generation;
 
 internal sealed class LuauScope(LuauScope? parent = null)
 {
-    private readonly Dictionary<string, int> _temporaryIds = [];
+    private readonly Dictionary<string, int> _nameCounts = [];
 
     public LuauScope? Parent { get; } = parent;
     public List<LuauStatement> PrereqStatements { get; } = [];
@@ -13,12 +13,12 @@ internal sealed class LuauScope(LuauScope? parent = null)
     public string AddIdentifier(string name)
     {
         if (TryGetId(name, out var temporaryId))
-            return name + "_" + (_temporaryIds[name] = temporaryId + 1);
+            return name + "_" + (_nameCounts[name] = temporaryId + 1);
 
-        _temporaryIds.Add(name, 0);
+        _nameCounts.Add(name, 0);
         return name;
     }
 
     private bool TryGetId(string name, out int temporaryId) =>
-        _temporaryIds.TryGetValue(name, out temporaryId) || Parent != null && Parent.TryGetId(name, out temporaryId);
+        _nameCounts.TryGetValue(name, out temporaryId) || Parent != null && Parent.TryGetId(name, out temporaryId);
 }

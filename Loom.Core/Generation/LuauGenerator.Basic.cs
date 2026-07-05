@@ -48,7 +48,7 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitInvocation(Invocation invocation)
     {
         var call = new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
-        return _macros.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
+        return _macroExpander.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
     }
 
     public override LuauNode VisitAsExpression(AsExpression asExpression) => new TypeCast(Visit(asExpression.Expression), Visit(asExpression.Type));

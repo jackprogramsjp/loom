@@ -1,6 +1,8 @@
 interface Range {
     minimum: number;
     maximum: number;
+    length: number;
+    clamp: fn(n: number): number;
 }
 
 interface Record<K, V> {

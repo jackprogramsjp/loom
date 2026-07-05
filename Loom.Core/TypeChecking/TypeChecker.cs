@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.SemanticAnalysis;
@@ -474,6 +473,8 @@ public sealed partial class TypeChecker
     }
 
     public override Type VisitLiteral(Literal literal) => BindType(literal, new Types.LiteralType(literal.Value));
+
+    public override Type VisitParenthesized(Parenthesized parenthesized) => BindType(parenthesized, Visit(parenthesized.Expression));
 
     public override Type VisitIdentifier(Identifier identifier)
     {
