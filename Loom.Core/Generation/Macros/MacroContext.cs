@@ -38,9 +38,6 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
                     "//" => Math.Floor(left / right),
                     "^" => Math.Pow(left, right),
                     "%" => left % right,
-                    "&" => (int)left & (int)right,
-                    "|" => (int)left | (int)right,
-                    "~" => (int)left ^ (int)right,
                     _ => -1
                 };
 

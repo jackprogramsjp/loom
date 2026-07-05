@@ -124,14 +124,18 @@ public class MacroExpanderTest
     [InlineData("12 % 3", 1)]
     public void Generates_Range_Clamp_Literal(string toClamp, double expected)
     {
-        var source = $"(1..10).clamp({toClamp})";
-        var luauTree = Utility.GetLuauAST(source, true);
-        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
-        Assert.Single(luauTree.Statements);
+        var accessKinds = new List<string> { ".clamp", "['clamp']" };
+        foreach (var access in accessKinds)
+        {
+            var source = $"(1..10){access}({toClamp})";
+            var luauTree = Utility.GetLuauAST(source, true);
+            Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+            Assert.Single(luauTree.Statements);
 
-        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
-        var value = Assert.IsType<NumberLiteral>(variable.Initializer);
-        Assert.Equal(expected, value.Value);
+            var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+            var value = Assert.IsType<NumberLiteral>(variable.Initializer);
+            Assert.Equal(expected, value.Value);
+        }
     }
 
     [Fact]
