@@ -45,8 +45,8 @@ internal sealed class RangeMacroProvider : IMacroProvider
             case "clamp":
                 var (minimum, maximum) = GetRangeBounds(context, range);
                 var value = call.Arguments.Single();
-                expression = value is NumberLiteral valueLiteral && minimum is NumberLiteral minimumLiteral && maximum is NumberLiteral maximumLiteral
-                    ? new NumberLiteral(Math.Clamp(valueLiteral.Value, minimumLiteral.Value, maximumLiteral.Value))
+                expression = MacroContext.TryComputeConstantArithmetic(value, out var valueConstant) && minimum is NumberLiteral minimumLiteral && maximum is NumberLiteral maximumLiteral
+                    ? new NumberLiteral(Math.Clamp(valueConstant, minimumLiteral.Value, maximumLiteral.Value))
                     : LuauFactory.MathCall(
                         "clamp",
                         [value, minimum, maximum]
