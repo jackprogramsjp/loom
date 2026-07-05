@@ -106,6 +106,130 @@ public class TypeInferrerTest
         var inferrer = new TypeInferrer(n => typeMap[n]);
         return inferrer.InferInterfaceTypeArguments(node, generic, interfaceType);
     }
+    
+    
+    [Fact]
+    public void InferInterfaceTypeArguments_EmptyInitializers_UsesDefaultTypes()
+    {
+        var typeParameter = TypeParameter("T", defaultType: PrimitiveType.String);
+        var objectType = ObjectType([ObjectProperty("Value", typeParameter)]);
+        var result = RunInterfaceInference("Container", [typeParameter], objectType, properties: [], indices: []);
+        Assert.Equal(PrimitiveType.String, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferInterfaceTypeArguments_IndexOnObjectWithoutIndexer_Ignored()
+    {
+        var typeParameter = TypeParameter("T", defaultType: PrimitiveType.String);
+        var objectType = ObjectType([ObjectProperty("Value", typeParameter)]); // no indexer
+        var result = RunInterfaceInference("Container", [typeParameter], objectType,
+            properties: [],
+            indices: [(PrimitiveType.Number, PrimitiveType.Bool)]);
+        Assert.Equal(PrimitiveType.String, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferInterfaceTypeArguments_ConflictingPropertyTypesWithoutCommonWidened_FirstBindingWins()
+    {
+        var typeParameter = TypeParameter("T");
+        var objectType = ObjectType([
+            ObjectProperty("First", typeParameter),
+            ObjectProperty("Second", typeParameter)
+        ]);
+        var result = RunInterfaceInference("Pair", [typeParameter], objectType,
+            properties: [("First", PrimitiveType.Number), ("Second", PrimitiveType.String)],
+            indices: []);
+        Assert.Equal(PrimitiveType.Number, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferInterfaceTypeArguments_MissingPropertyInArgument_FailsThatPairButOtherStillBinds()
+    {
+        var firstParameter = TypeParameter("T");
+        var secondParameter = TypeParameter("U");
+        var objectType = ObjectType([
+            ObjectProperty("Name", firstParameter),
+            ObjectProperty("Age", secondParameter)
+        ]);
+        var result = RunInterfaceInference("Rec", [firstParameter, secondParameter], objectType,
+            properties: [("Age", PrimitiveType.Number)], // "Name" missing
+            indices: []);
+        Assert.Equal(PrimitiveType.Unknown, result[firstParameter]);
+        Assert.Equal(PrimitiveType.Number, result[secondParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_NoTypeParameters_ReturnsEmptySubstitution()
+    {
+        var function = FunctionType([], [PrimitiveType.Number], PrimitiveType.Bool);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Number]);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_FewerArgumentsThanParameters_UsesDefaultsForMissing()
+    {
+        var firstParameter = TypeParameter("T", defaultType: PrimitiveType.String);
+        var secondParameter = TypeParameter("U", defaultType: PrimitiveType.Number);
+        var function = FunctionType([firstParameter, secondParameter], [firstParameter, secondParameter], firstParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Bool]);
+        Assert.Equal(PrimitiveType.Bool, result[firstParameter]);
+        Assert.Equal(PrimitiveType.Number, result[secondParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_MoreArgumentsThanParameters_ExtraIgnored()
+    {
+        var typeParameter = TypeParameter("T");
+        var function = FunctionType([typeParameter], [typeParameter], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function,
+            [PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Bool]);
+        Assert.Equal(PrimitiveType.Number, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_ContextualTypeWithConcreteReturnType_DoesNotThrow()
+    {
+        var function = FunctionType([], [PrimitiveType.Number], PrimitiveType.Bool);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Number], contextualType: PrimitiveType.String);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_MultipleOccurrencesConflicting_WidensToCommonType()
+    {
+        var typeParameter = TypeParameter("T");
+        var function = FunctionType([typeParameter], [typeParameter], typeParameter);
+        var literalInt = new LiteralType(10);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [literalInt], contextualType: PrimitiveType.Number);
+        Assert.True(result[typeParameter].Equals(PrimitiveType.Number) ||
+                    result[typeParameter].Equals(literalInt.Widen()));
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_FunctionParameterCountMismatch_NoInferenceFromThatPair()
+    {
+        var typeParameter = TypeParameter("T");
+        var innerFunction = FunctionType([typeParameter], [typeParameter], typeParameter);
+        var outerFunction = FunctionType([typeParameter], [innerFunction], typeParameter);
+        var argumentFunction = FunctionType([], [PrimitiveType.Number, PrimitiveType.String], PrimitiveType.Bool);
+        var result = TypeInferrer.InferFunctionTypeArguments(outerFunction, [argumentFunction]);
+        Assert.Equal(PrimitiveType.Unknown, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_NestedGenericType_InferMultipleParameters()
+    {
+        var keyParameter = TypeParameter("K");
+        var valueParameter = TypeParameter("V");
+        var mapGeneric = GenericType("Map", [keyParameter, valueParameter], PrimitiveType.Unknown);
+        var mapParameterType = new InstantiatedType(mapGeneric, [keyParameter, valueParameter]);
+        var function = FunctionType([keyParameter, valueParameter], [mapParameterType], mapParameterType);
+        var argumentMap = new InstantiatedType(mapGeneric, [PrimitiveType.String, PrimitiveType.Number]);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentMap]);
+        Assert.Equal(PrimitiveType.Unknown, result[keyParameter]);
+        Assert.Equal(PrimitiveType.Unknown, result[valueParameter]);
+    }
 
     [Fact]
     public void InferInterfaceTypeArguments_SingleProperty_BindsTypeParameter()
