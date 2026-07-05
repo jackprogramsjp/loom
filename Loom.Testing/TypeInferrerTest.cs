@@ -14,6 +14,7 @@ using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
 using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.Testing;
+
 using TypeParameterSubstitution = Dictionary<TypeParameter, Type>;
 
 [Collection("Assembly")]
@@ -34,21 +35,20 @@ public class TypeInferrerTest
         public override T Accept<T>(Visitor<T> visitor) => default!;
     }
 
-    private sealed class ExpressionStub() : Expression([], [])
+    private sealed class ExpressionStub()
+        : Expression([], [])
     {
         public override T Accept<T>(Visitor<T> visitor) => default!;
     }
 
-    private static TypeParameter TypeParameter(string name, Type? constraint = null, Type? defaultType = null) =>
-        new(name, constraint, defaultType);
+    private static TypeParameter TypeParameter(string name, Type? constraint = null, Type? defaultType = null) => new(name, constraint, defaultType);
 
     private static GenericType GenericType(string name, List<TypeParameter> parameters, Type underlying) =>
         new(new MockGenericNamedDeclaration(name), parameters, underlying);
 
     private static InterfaceType InterfaceType(ObjectType objectType) => new("", [], objectType);
 
-    private static ObjectType ObjectType(List<ObjectProperty> properties, ObjectIndexer? indexer = null) =>
-        new(indexer, properties);
+    private static ObjectType ObjectType(List<ObjectProperty> properties, ObjectIndexer? indexer = null) => new(indexer, properties);
 
     private static ObjectProperty ObjectProperty(string name, Type type) => new(false, name, type);
 
@@ -72,10 +72,13 @@ public class TypeInferrerTest
         {
             var expr = new ExpressionStub();
             typeMap[expr] = propType;
-            initializers.Add(new InterfaceInvocationPropertyInitializer(
-                TokenFactory.Identifier(name),
-                TokenFactory.Operator(SyntaxKind.Colon),
-                expr));
+            initializers.Add(
+                new InterfaceInvocationPropertyInitializer(
+                    TokenFactory.Identifier(name),
+                    TokenFactory.Operator(SyntaxKind.Colon),
+                    expr
+                )
+            );
         }
 
         foreach (var (keyType, valueType) in indices)
@@ -84,30 +87,125 @@ public class TypeInferrerTest
             var valueExpr = new ExpressionStub();
             typeMap[keyExpr] = keyType;
             typeMap[valueExpr] = valueType;
-            initializers.Add(new InterfaceInvocationIndexInitializer(
-                TokenFactory.Operator(SyntaxKind.LBracket),
-                TokenFactory.Operator(SyntaxKind.RBracket),
-                TokenFactory.Operator(SyntaxKind.Colon),
-                keyExpr,
-                valueExpr));
+            initializers.Add(
+                new InterfaceInvocationIndexInitializer(
+                    TokenFactory.Operator(SyntaxKind.LBracket),
+                    TokenFactory.Operator(SyntaxKind.RBracket),
+                    TokenFactory.Operator(SyntaxKind.Colon),
+                    keyExpr,
+                    valueExpr
+                )
+            );
         }
 
         var body = new InterfaceInvocationBody(
             TokenFactory.Operator(SyntaxKind.LBrace),
             TokenFactory.Operator(SyntaxKind.RBrace),
-            initializers);
+            initializers
+        );
 
         var node = new InterfaceInvocation(
             TokenFactory.Keyword(SyntaxKind.InterfaceKeyword),
             new Identifier(TokenFactory.Identifier(interfaceName)),
             null,
-            body);
+            body
+        );
 
         var inferrer = new TypeInferrer(n => typeMap[n]);
         return inferrer.InferInterfaceTypeArguments(node, generic, interfaceType);
     }
-    
-    
+
+    [Fact]
+    public void InferFunctionTypeArguments_InterfaceTypeParameterAndArgument_InferFromWrappedObjectType()
+    {
+        var typeParameter = TypeParameter("T");
+        var parameterObject = ObjectType([ObjectProperty("Value", typeParameter)]);
+        var parameterInterface = InterfaceType(parameterObject);
+        var argumentObject = ObjectType([ObjectProperty("Value", PrimitiveType.Number)]);
+        var argumentInterface = InterfaceType(argumentObject);
+        var function = FunctionType([typeParameter], [parameterInterface], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentInterface]);
+        Assert.Equal(PrimitiveType.Number, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_ObjectTypeWithIndexerInParameterAndArgument_InferKeyAndValue()
+    {
+        var keyParameter = TypeParameter("K");
+        var valueParameter = TypeParameter("V");
+        var parameterObject = ObjectType([], ObjectIndexer(keyParameter, valueParameter));
+        var argumentObject = ObjectType([], ObjectIndexer(PrimitiveType.String, PrimitiveType.Number));
+        var function = FunctionType([keyParameter, valueParameter], [parameterObject], parameterObject);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentObject]);
+        Assert.Equal(PrimitiveType.String, result[keyParameter]);
+        Assert.Equal(PrimitiveType.Number, result[valueParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_UnionTypesWithEqualArity_MatchesElementwise()
+    {
+        var typeParameter = TypeParameter("T");
+        var parameterUnion = new UnionType([typeParameter, PrimitiveType.Number]);
+        var argumentUnion = new UnionType([PrimitiveType.String, PrimitiveType.Number]);
+        var function = FunctionType([typeParameter], [parameterUnion], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentUnion]);
+        Assert.Equal(PrimitiveType.String, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_IntersectionTypesWithEqualArity_MatchesElementwise()
+    {
+        var typeParameter = TypeParameter("T");
+        var parameterIntersection = new IntersectionType([typeParameter, PrimitiveType.Number]);
+        var argumentIntersection = new IntersectionType([PrimitiveType.String, PrimitiveType.Number]);
+        var function = FunctionType([typeParameter], [parameterIntersection], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentIntersection]);
+        Assert.Equal(PrimitiveType.Never, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_ConcreteParameterAndAssignableLiteralArgument_DoesNotBindAnything()
+    {
+        var function = FunctionType([], [PrimitiveType.Number], PrimitiveType.Number);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [new LiteralType(42)]);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_GenericParameterWithArgumentsAndRawArgument_BindsFromArgumentGenericParameters()
+    {
+        var typeParameter = TypeParameter("T");
+        var listGeneric = GenericType("List", [typeParameter], PrimitiveType.Unknown);
+        var parameterType = new InstantiatedType(listGeneric, [typeParameter]);
+        var function = FunctionType([typeParameter], [parameterType], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [listGeneric]);
+        Assert.Contains(typeParameter, result.Keys);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_RawParameterAndGenericArgument_InferFromArgumentArguments()
+    {
+        var typeParameter = TypeParameter("T");
+        var listGeneric = GenericType("List", [typeParameter], typeParameter);
+        var argumentType = new InstantiatedType(listGeneric, [PrimitiveType.Number]);
+        var function = FunctionType([typeParameter], [listGeneric], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentType]);
+        Assert.Equal(PrimitiveType.Number, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_GenericDeclarationsDiffer_DoesNotInferAndReturnsDefault()
+    {
+        var typeParameter = TypeParameter("T");
+        var listGeneric = GenericType("List", [typeParameter], PrimitiveType.Unknown);
+        var otherGeneric = GenericType("Other", [typeParameter], PrimitiveType.Unknown);
+        var parameterType = new InstantiatedType(listGeneric, [typeParameter]);
+        var argumentType = new InstantiatedType(otherGeneric, [PrimitiveType.Number]);
+        var function = FunctionType([typeParameter], [parameterType], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentType]);
+        Assert.Equal(PrimitiveType.Unknown, result[typeParameter]);
+    }
+
     [Fact]
     public void InferInterfaceTypeArguments_EmptyInitializers_UsesDefaultTypes()
     {
@@ -121,10 +219,15 @@ public class TypeInferrerTest
     public void InferInterfaceTypeArguments_IndexOnObjectWithoutIndexer_Ignored()
     {
         var typeParameter = TypeParameter("T", defaultType: PrimitiveType.String);
-        var objectType = ObjectType([ObjectProperty("Value", typeParameter)]); // no indexer
-        var result = RunInterfaceInference("Container", [typeParameter], objectType,
+        var objectType = ObjectType([ObjectProperty("Value", typeParameter)]);
+        var result = RunInterfaceInference(
+            "Container",
+            [typeParameter],
+            objectType,
             properties: [],
-            indices: [(PrimitiveType.Number, PrimitiveType.Bool)]);
+            indices: [(PrimitiveType.Number, PrimitiveType.Bool)]
+        );
+
         Assert.Equal(PrimitiveType.String, result[typeParameter]);
     }
 
@@ -132,13 +235,15 @@ public class TypeInferrerTest
     public void InferInterfaceTypeArguments_ConflictingPropertyTypesWithoutCommonWidened_FirstBindingWins()
     {
         var typeParameter = TypeParameter("T");
-        var objectType = ObjectType([
-            ObjectProperty("First", typeParameter),
-            ObjectProperty("Second", typeParameter)
-        ]);
-        var result = RunInterfaceInference("Pair", [typeParameter], objectType,
+        var objectType = ObjectType([ObjectProperty("First", typeParameter), ObjectProperty("Second", typeParameter)]);
+        var result = RunInterfaceInference(
+            "Pair",
+            [typeParameter],
+            objectType,
             properties: [("First", PrimitiveType.Number), ("Second", PrimitiveType.String)],
-            indices: []);
+            indices: []
+        );
+
         Assert.Equal(PrimitiveType.Number, result[typeParameter]);
     }
 
@@ -147,13 +252,15 @@ public class TypeInferrerTest
     {
         var firstParameter = TypeParameter("T");
         var secondParameter = TypeParameter("U");
-        var objectType = ObjectType([
-            ObjectProperty("Name", firstParameter),
-            ObjectProperty("Age", secondParameter)
-        ]);
-        var result = RunInterfaceInference("Rec", [firstParameter, secondParameter], objectType,
-            properties: [("Age", PrimitiveType.Number)], // "Name" missing
-            indices: []);
+        var objectType = ObjectType([ObjectProperty("Name", firstParameter), ObjectProperty("Age", secondParameter)]);
+        var result = RunInterfaceInference(
+            "Rec",
+            [firstParameter, secondParameter],
+            objectType,
+            properties: [("Age", PrimitiveType.Number)],
+            indices: []
+        );
+
         Assert.Equal(PrimitiveType.Unknown, result[firstParameter]);
         Assert.Equal(PrimitiveType.Number, result[secondParameter]);
     }
@@ -182,8 +289,11 @@ public class TypeInferrerTest
     {
         var typeParameter = TypeParameter("T");
         var function = FunctionType([typeParameter], [typeParameter], typeParameter);
-        var result = TypeInferrer.InferFunctionTypeArguments(function,
-            [PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Bool]);
+        var result = TypeInferrer.InferFunctionTypeArguments(
+            function,
+            [PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Bool]
+        );
+
         Assert.Equal(PrimitiveType.Number, result[typeParameter]);
     }
 
@@ -202,8 +312,7 @@ public class TypeInferrerTest
         var function = FunctionType([typeParameter], [typeParameter], typeParameter);
         var literalInt = new LiteralType(10);
         var result = TypeInferrer.InferFunctionTypeArguments(function, [literalInt], contextualType: PrimitiveType.Number);
-        Assert.True(result[typeParameter].Equals(PrimitiveType.Number) ||
-                    result[typeParameter].Equals(literalInt.Widen()));
+        Assert.True(result[typeParameter].Equals(PrimitiveType.Number) || result[typeParameter].Equals(literalInt.Widen()));
     }
 
     [Fact]
@@ -222,13 +331,13 @@ public class TypeInferrerTest
     {
         var keyParameter = TypeParameter("K");
         var valueParameter = TypeParameter("V");
-        var mapGeneric = GenericType("Map", [keyParameter, valueParameter], PrimitiveType.Unknown);
+        var mapGeneric = GenericType("Map", [keyParameter, valueParameter], ObjectType([], new ObjectIndexer(false, keyParameter, valueParameter)));
         var mapParameterType = new InstantiatedType(mapGeneric, [keyParameter, valueParameter]);
         var function = FunctionType([keyParameter, valueParameter], [mapParameterType], mapParameterType);
         var argumentMap = new InstantiatedType(mapGeneric, [PrimitiveType.String, PrimitiveType.Number]);
         var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentMap]);
-        Assert.Equal(PrimitiveType.Unknown, result[keyParameter]);
-        Assert.Equal(PrimitiveType.Unknown, result[valueParameter]);
+        Assert.Equal(PrimitiveType.String, result[keyParameter]);
+        Assert.Equal(PrimitiveType.Number, result[valueParameter]);
     }
 
     [Fact]
@@ -236,9 +345,14 @@ public class TypeInferrerTest
     {
         var typeParameter = TypeParameter("T");
         var objectType = ObjectType([ObjectProperty("Value", typeParameter)]);
-        var result = RunInterfaceInference("Container", [typeParameter], objectType,
+        var result = RunInterfaceInference(
+            "Container",
+            [typeParameter],
+            objectType,
             properties: [("Value", PrimitiveType.Number)],
-            indices: []);
+            indices: []
+        );
+
         Assert.Equal(PrimitiveType.Number, result[typeParameter]);
     }
 
@@ -247,9 +361,14 @@ public class TypeInferrerTest
     {
         var typeParameter = TypeParameter("T", defaultType: PrimitiveType.String);
         var objectType = ObjectType([ObjectProperty("Existing", PrimitiveType.Number)]);
-        var result = RunInterfaceInference("Container", [typeParameter], objectType,
+        var result = RunInterfaceInference(
+            "Container",
+            [typeParameter],
+            objectType,
             properties: [("Missing", PrimitiveType.Bool)],
-            indices: []);
+            indices: []
+        );
+
         Assert.Equal(PrimitiveType.String, result[typeParameter]);
     }
 
@@ -259,9 +378,14 @@ public class TypeInferrerTest
         var keyParameter = TypeParameter("K");
         var valueParameter = TypeParameter("V");
         var objectType = ObjectType([], ObjectIndexer(keyParameter, valueParameter));
-        var result = RunInterfaceInference("Dictionary", [keyParameter, valueParameter], objectType,
+        var result = RunInterfaceInference(
+            "Dictionary",
+            [keyParameter, valueParameter],
+            objectType,
             properties: [],
-            indices: [(PrimitiveType.String, PrimitiveType.Number)]);
+            indices: [(PrimitiveType.String, PrimitiveType.Number)]
+        );
+
         Assert.Equal(PrimitiveType.String, result[keyParameter]);
         Assert.Equal(PrimitiveType.Number, result[valueParameter]);
     }
@@ -272,10 +396,17 @@ public class TypeInferrerTest
         var sharedParameter = TypeParameter("T");
         var objectType = ObjectType(
             [ObjectProperty("Name", sharedParameter)],
-            ObjectIndexer(PrimitiveType.String, sharedParameter));
-        var result = RunInterfaceInference("Record", [sharedParameter], objectType,
+            ObjectIndexer(PrimitiveType.String, sharedParameter)
+        );
+
+        var result = RunInterfaceInference(
+            "Record",
+            [sharedParameter],
+            objectType,
             properties: [("Name", PrimitiveType.Number)],
-            indices: [(PrimitiveType.String, PrimitiveType.Number)]);
+            indices: [(PrimitiveType.String, PrimitiveType.Number)]
+        );
+
         Assert.Equal(PrimitiveType.Number, result[sharedParameter]);
     }
 
@@ -283,15 +414,16 @@ public class TypeInferrerTest
     public void InferInterfaceTypeArguments_WideningWhenConflictingTypes_InferCommonSupertype()
     {
         var typeParameter = TypeParameter("T");
-        var objectType = ObjectType([
-            ObjectProperty("First", typeParameter),
-            ObjectProperty("Second", typeParameter)
-        ]);
-        var result = RunInterfaceInference("Pair", [typeParameter], objectType,
+        var objectType = ObjectType([ObjectProperty("First", typeParameter), ObjectProperty("Second", typeParameter)]);
+        var result = RunInterfaceInference(
+            "Pair",
+            [typeParameter],
+            objectType,
             properties: [("First", PrimitiveType.Number), ("Second", new LiteralType(42))],
-            indices: []);
-        Assert.True(result[typeParameter].Equals(PrimitiveType.Number) ||
-                    result[typeParameter].Equals(new LiteralType(42).Widen()));
+            indices: []
+        );
+
+        Assert.True(result[typeParameter].Equals(PrimitiveType.Number) || result[typeParameter].Equals(new LiteralType(42).Widen()));
     }
 
     [Fact]
@@ -413,11 +545,11 @@ public class TypeInferrerTest
     public void InferFunctionTypeArguments_GenericTypeArgument_InferTypeArgument()
     {
         var elementParameter = TypeParameter("T");
-        var listGeneric = GenericType("List", [elementParameter], PrimitiveType.Unknown);
+        var listGeneric = GenericType("List", [elementParameter], new ArrayType(elementParameter, false));
         var instantiatedParameter = new InstantiatedType(listGeneric, [elementParameter]);
         var instantiatedArgument = new InstantiatedType(listGeneric, [PrimitiveType.Number]);
         var function = FunctionType([elementParameter], [instantiatedParameter], elementParameter);
         var result = TypeInferrer.InferFunctionTypeArguments(function, [instantiatedArgument]);
-        Assert.Equal(PrimitiveType.Unknown, result[elementParameter]);
+        Assert.Equal(PrimitiveType.Number, result[elementParameter]);
     }
 }
