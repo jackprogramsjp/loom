@@ -6,7 +6,7 @@ namespace Loom.Testing;
 public class MacroExpanderTest
 {
     [Fact]
-    public void Generates_Result_Ok()
+    public void Generates_ResultStatic_Ok()
     {
         const string source = "Result.ok(69)";
         var luauTree = Utility.GetLuauAST(source, true);
@@ -29,7 +29,7 @@ public class MacroExpanderTest
     }
     
     [Fact]
-    public void Generates_Result_Err()
+    public void Generates_ResultStatic_Err()
     {
         const string source = "Result.err('stupid program')";
         var luauTree = Utility.GetLuauAST(source, true);
@@ -50,7 +50,89 @@ public class MacroExpanderTest
         Assert.Equal(1, kindValue.Value);
         Assert.Equal("stupid program", errorValue.Value);
     }
+
+    [Theory]
+    [InlineData("let a = [1, 2, 3]; a.length")]
+    [InlineData("let a = [1, 2, 3]; a['length']")]
+    [InlineData("let a = [1, 2, 3]; let _ = (a).length")]
+    public void Generates_Array_Length(string source)
+    {
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var unaryOperator = Assert.IsType<UnaryOperator>(variable.Initializer);
+        Assert.Equal("#", unaryOperator.Operator);
+    }
+
+    [Theory]
+    [InlineData("(1..10).length")]
+    [InlineData("(1..10)['length']")]
+    public void Generates_Range_Length_Literal(string source)
+    {
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Single(luauTree.Statements);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var binaryOperator = Assert.IsType<BinaryOperator>(variable.Initializer);
+        var one = Assert.IsType<NumberLiteral>(binaryOperator.Left);
+        var absCall = Assert.IsType<Call>(binaryOperator.Right);
+        Assert.Single(absCall.Arguments);
+        Assert.Equal("+", binaryOperator.Operator);
+
+        var subtractionBinary = Assert.IsType<BinaryOperator>(absCall.Arguments.First());
+        var ten = Assert.IsType<NumberLiteral>(subtractionBinary.Left);
+        var one2 = Assert.IsType<NumberLiteral>(subtractionBinary.Right);
+        Assert.Equal("-", subtractionBinary.Operator);
+        Assert.Equal(10d, ten.Value);
+        Assert.Equal(1d, one2.Value);
+        
+        var abs = Assert.IsType<PropertyAccess>(absCall.Callee);
+        var mathIdentifier = Assert.IsType<Identifier>(abs.Target);
+        Assert.Single(abs.Names);
+        Assert.Equal("math", mathIdentifier.Name);
+        Assert.Equal("abs", abs.Names.First());
+        Assert.Equal(1d, one.Value);
+    }
     
+    [Fact]
+    public void Generates_Range_Length()
+    {
+        const string source = "let r = 1..10; r.length";
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var binaryOperator = Assert.IsType<BinaryOperator>(variable.Initializer);
+        var one = Assert.IsType<NumberLiteral>(binaryOperator.Left);
+        var absCall = Assert.IsType<Call>(binaryOperator.Right);
+        Assert.Single(absCall.Arguments);
+        Assert.Equal("+", binaryOperator.Operator);
+
+        var subtractionBinary = Assert.IsType<BinaryOperator>(absCall.Arguments.First());
+        var maximumAccess = Assert.IsType<PropertyAccess>(subtractionBinary.Left);
+        var minimumAccess = Assert.IsType<PropertyAccess>(subtractionBinary.Right);
+        var rangeIdentifier = Assert.IsType<Identifier>(maximumAccess.Target);
+        var rangeIdentifier2 = Assert.IsType<Identifier>(minimumAccess.Target);
+        Assert.Equal("-", subtractionBinary.Operator);
+        Assert.Equal("r", rangeIdentifier.Name);
+        Assert.Equal("r", rangeIdentifier2.Name);
+        Assert.Single(maximumAccess.Names);
+        Assert.Single(minimumAccess.Names);
+        Assert.Equal("maximum", maximumAccess.Names.First());
+        Assert.Equal("minimum", minimumAccess.Names.First());
+        
+        var abs = Assert.IsType<PropertyAccess>(absCall.Callee);
+        var mathIdentifier = Assert.IsType<Identifier>(abs.Target);
+        Assert.Single(abs.Names);
+        Assert.Equal("math", mathIdentifier.Name);
+        Assert.Equal("abs", abs.Names.First());
+        Assert.Equal(1d, one.Value);
+    }
+
     [Fact]
     public void Generates_ArraySlice_RangeLiteral()
     {
