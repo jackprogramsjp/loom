@@ -120,19 +120,8 @@ public class MacroExpanderTest
         Assert.Single(luauTree.Statements);
 
         var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var clampCall = Assert.IsType<Call>(expressionStatement.Expression);
-        var value = Assert.IsType<NumberLiteral>(clampCall.Arguments[0]);
-        var minimum = Assert.IsType<NumberLiteral>(clampCall.Arguments[1]);
-        var maximum = Assert.IsType<NumberLiteral>(clampCall.Arguments[2]);
-        var clamp = Assert.IsType<PropertyAccess>(clampCall.Callee);
-        var mathIdentifier = Assert.IsType<Identifier>(clamp.Target);
-        Assert.Equal(3, clampCall.Arguments.Count);
-        Assert.Single(clamp.Names);
-        Assert.Equal("math", mathIdentifier.Name);
-        Assert.Equal("clamp", clamp.Names.First());
-        Assert.Equal(69d, value.Value);
-        Assert.Equal(1, minimum.Value);
-        Assert.Equal(10, maximum.Value);
+        var value = Assert.IsType<NumberLiteral>(expressionStatement.Expression);
+        Assert.Equal(10d, value.Value);
     }
 
     [Fact]
