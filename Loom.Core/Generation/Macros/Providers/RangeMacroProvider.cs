@@ -47,10 +47,7 @@ internal sealed class RangeMacroProvider : IMacroProvider
                 var value = call.Arguments.Single();
                 expression = MacroContext.TryComputeConstantArithmetic(value, out var valueConstant) && minimum is NumberLiteral minimumLiteral && maximum is NumberLiteral maximumLiteral
                     ? new NumberLiteral(Math.Clamp(valueConstant, minimumLiteral.Value, maximumLiteral.Value))
-                    : LuauFactory.MathCall(
-                        "clamp",
-                        [value, minimum, maximum]
-                    );
+                    : LuauFactory.MathClampCall(value, minimum, maximum);
 
                 return true;
         }
@@ -64,8 +61,8 @@ internal sealed class RangeMacroProvider : IMacroProvider
         var one = new NumberLiteral(1);
         var length = context.State.PushToVariable("_length", new UnaryOperator("#", access.Target));
         var (minimumValue, maximumValue) = GetRangeBounds(context, access.Index);
-        var minimum = LuauFactory.MathCall("clamp", [minimumValue, one, length]);
-        var maximum = LuauFactory.MathCall("clamp", [maximumValue, one, length]);
+        var minimum = LuauFactory.MathClampCall(minimumValue, one, length);
+        var maximum = LuauFactory.MathClampCall(maximumValue, one, length);
         expression = targetType.IsAssignableTo(PrimitiveType.String)
             ? LuauFactory.StringCall("sub", [access.Target, minimum, maximum])
             : LuauFactory.TableCall("move", [access.Target, minimum, maximum, one, new Table([])]);

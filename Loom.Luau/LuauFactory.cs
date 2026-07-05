@@ -6,6 +6,7 @@ public static class LuauFactory
 {
     public static Call Bit32Call(string name, List<LuauExpression> arguments) => LibraryCall("bit32", name, arguments);
     public static Call MathCall(string name, List<LuauExpression> arguments) => LibraryCall("math", name, arguments);
+    public static Call MathClampCall(LuauExpression value, LuauExpression minimum, LuauExpression maximum) => MathCall("clamp", [value, minimum, maximum]);
     public static Call TableCall(string name, List<LuauExpression> arguments) => LibraryCall("table", name, arguments);
     public static Call StringCall(string name, List<LuauExpression> arguments) => LibraryCall("string", name, arguments);
     public static Call TaskCall(string name, List<LuauExpression> arguments) => LibraryCall("task", name, arguments);
