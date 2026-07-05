@@ -8,11 +8,22 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
     public static LuauExpression GetCallObject(Call call) =>
         call.Callee switch
         {
-            PropertyAccess propertyAccess => propertyAccess.Target,
-            ElementAccess elementAccess => elementAccess.Target,
-            var callee => callee
+            PropertyAccess propertyAccess => UnwrapParentheses(propertyAccess.Target),
+            ElementAccess elementAccess => UnwrapParentheses(elementAccess.Target),
+            var callee => UnwrapParentheses(callee)
         };
-    
+
+    private static LuauExpression UnwrapParentheses(LuauExpression expression)
+    {
+        while (true)
+        {
+            if (expression is not Parenthesized parenthesized)
+                return expression;
+
+            expression = parenthesized.Expression;
+        }
+    }
+
     public static bool TryComputeConstantArithmetic(LuauExpression expression, out double computed)
     {
         computed = -1;
