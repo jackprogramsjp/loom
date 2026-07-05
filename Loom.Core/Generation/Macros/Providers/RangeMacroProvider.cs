@@ -18,14 +18,16 @@ internal sealed class RangeMacroProvider : IMacroProvider
             case "length":
             {
                 var (minimum, maximum) = GetRangeBounds(context, target);
-                expression = new BinaryOperator(
-                    new NumberLiteral(1),
-                    "+",
-                    LuauFactory.MathCall(
-                        "abs",
-                        [new BinaryOperator(maximum, "-", minimum)]
-                    )
-                );
+                expression = minimum is NumberLiteral minimumLiteral && maximum is NumberLiteral maximumLiteral
+                    ? new NumberLiteral(1 + Math.Abs(maximumLiteral.Value - minimumLiteral.Value))
+                    : new BinaryOperator(
+                        new NumberLiteral(1),
+                        "+",
+                        LuauFactory.MathCall(
+                            "abs",
+                            [new BinaryOperator(maximum, "-", minimum)]
+                        )
+                    );
 
                 return true;
             }
@@ -49,7 +51,7 @@ internal sealed class RangeMacroProvider : IMacroProvider
 
                 return true;
         }
-        
+
         expression = null;
         return false;
     }
@@ -89,7 +91,7 @@ internal sealed class RangeMacroProvider : IMacroProvider
 
         return (minimum, maximum);
     }
-    
+
     private static LuauExpression GetCallObject(Call call) =>
         call.Callee switch
         {

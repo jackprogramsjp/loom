@@ -76,25 +76,8 @@ public class MacroExpanderTest
         Assert.Single(luauTree.Statements);
 
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
-        var binaryOperator = Assert.IsType<BinaryOperator>(variable.Initializer);
-        var one = Assert.IsType<NumberLiteral>(binaryOperator.Left);
-        var absCall = Assert.IsType<Call>(binaryOperator.Right);
-        Assert.Single(absCall.Arguments);
-        Assert.Equal("+", binaryOperator.Operator);
-
-        var subtractionBinary = Assert.IsType<BinaryOperator>(absCall.Arguments.First());
-        var ten = Assert.IsType<NumberLiteral>(subtractionBinary.Left);
-        var one2 = Assert.IsType<NumberLiteral>(subtractionBinary.Right);
-        Assert.Equal("-", subtractionBinary.Operator);
-        Assert.Equal(10d, ten.Value);
-        Assert.Equal(1d, one2.Value);
-        
-        var abs = Assert.IsType<PropertyAccess>(absCall.Callee);
-        var mathIdentifier = Assert.IsType<Identifier>(abs.Target);
-        Assert.Single(abs.Names);
-        Assert.Equal("math", mathIdentifier.Name);
-        Assert.Equal("abs", abs.Names.First());
-        Assert.Equal(1d, one.Value);
+        var value = Assert.IsType<NumberLiteral>(variable.Initializer);
+        Assert.Equal(10d, value.Value);
     }
     
     [Fact]
