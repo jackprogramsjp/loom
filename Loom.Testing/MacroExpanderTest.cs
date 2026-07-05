@@ -111,17 +111,23 @@ public class MacroExpanderTest
         Assert.Equal("maximum", maximum.Names.First());
     }
 
-    [Fact]
-    public void Generates_Range_Clamp_Literal()
+    [Theory]
+    [InlineData("69", 10)]
+    [InlineData("5", 5)]
+    [InlineData("0", 1)]
+    [InlineData("-10", 1)]
+    [InlineData("2 + 6 + 4", 10)]
+    [InlineData("3.5 * 2.5", 8.75)]
+    public void Generates_Range_Clamp_Literal(string toClamp, double expected)
     {
-        const string source = "(1..10).clamp(69)";
+        var source = $"(1..10).clamp({toClamp})";
         var luauTree = Utility.GetLuauAST(source, true);
         Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
         Assert.Single(luauTree.Statements);
 
-        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
-        var value = Assert.IsType<NumberLiteral>(expressionStatement.Expression);
-        Assert.Equal(10d, value.Value);
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
+        var value = Assert.IsType<NumberLiteral>(variable.Initializer);
+        Assert.Equal(expected, value.Value);
     }
 
     [Fact]
