@@ -508,7 +508,51 @@ end
 const result = unsafe_function(true)
 print(if result.kind == 0 then result.value else result.error)
 ```
-
+##
+```ts
+let arr = [1, 2, 3, 4];
+print(arr.length)
+```
+```luau
+const arr = {1, 2, 3, 4}
+print(#rar)
+```
+##
+```rs
+print((1..10).length)
+```
+```luau
+print(10)
+```
+##
+```rs
+let range = 1..10;
+print(range.length)
+```
+```luau
+const range = { minimum = 1, maximum = 10 }
+print(1 + math.abs(range.maximum - range.minimum))
+```
+## Range.clamp()
+```rs
+print((1..10).clamp(5))
+print((1..10).clamp(-10))
+print((1..10).clamp(6.9 + 4.2))
+```
+```luau
+print(5)
+print(1)
+print(10)
+```
+##
+```rs
+let range = 1..10;
+print(range.clamp(69))
+```
+```luau
+const range = { minimum = 1, maximum = 10 }
+print(math.clamp(69, range.minimum, range.maximum))
+```
 ---
 
 ## Contributing
