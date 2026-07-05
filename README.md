@@ -515,7 +515,7 @@ print(arr.length)
 ```
 ```luau
 const arr = {1, 2, 3, 4}
-print(#rar)
+print(#arr)
 ```
 ##
 ```rs
