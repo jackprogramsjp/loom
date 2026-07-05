@@ -98,6 +98,61 @@ public class MacroExpanderTest
     }
     
     [Fact]
+    public void Generates_Range_Clamp()
+    {
+        const string source = "let r = 1..10; r.clamp(69)";
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var clampCall = Assert.IsType<Call>(expressionStatement.Expression);
+        var value = Assert.IsType<NumberLiteral>(clampCall.Arguments[0]);
+        var minimum = Assert.IsType<PropertyAccess>(clampCall.Arguments[1]);
+        var maximum = Assert.IsType<PropertyAccess>(clampCall.Arguments[2]);
+        var clamp = Assert.IsType<PropertyAccess>(clampCall.Callee);
+        var mathIdentifier = Assert.IsType<Identifier>(clamp.Target);
+        Assert.Equal(3, clampCall.Arguments.Count);
+        Assert.Single(clamp.Names);
+        Assert.Equal("math", mathIdentifier.Name);
+        Assert.Equal("clamp", clamp.Names.First());
+        Assert.Equal(69d, value.Value);
+        Assert.Single(minimum.Names);
+        Assert.Single(maximum.Names);
+
+        var rangeIdentifier = Assert.IsType<Identifier>(minimum.Target);
+        var rangeIdentifier2 = Assert.IsType<Identifier>(maximum.Target);
+        Assert.Equal("r", rangeIdentifier.Name);
+        Assert.Equal("r", rangeIdentifier2.Name);
+        Assert.Equal("minimum", minimum.Names.First());
+        Assert.Equal("maximum", maximum.Names.First());
+    }
+
+    [Fact]
+    public void Generates_Range_Clamp_Literal()
+    {
+        const string source = "(1..10).clamp(69)";
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Single(luauTree.Statements);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
+        var clampCall = Assert.IsType<Call>(expressionStatement.Expression);
+        var value = Assert.IsType<NumberLiteral>(clampCall.Arguments[0]);
+        var minimum = Assert.IsType<NumberLiteral>(clampCall.Arguments[1]);
+        var maximum = Assert.IsType<NumberLiteral>(clampCall.Arguments[2]);
+        var clamp = Assert.IsType<PropertyAccess>(clampCall.Callee);
+        var mathIdentifier = Assert.IsType<Identifier>(clamp.Target);
+        Assert.Equal(3, clampCall.Arguments.Count);
+        Assert.Single(clamp.Names);
+        Assert.Equal("math", mathIdentifier.Name);
+        Assert.Equal("clamp", clamp.Names.First());
+        Assert.Equal(69d, value.Value);
+        Assert.Equal(1, minimum.Value);
+        Assert.Equal(10, maximum.Value);
+    }
+
+    [Fact]
     public void Generates_Range_Length()
     {
         const string source = "let r = 1..10; r.length";
