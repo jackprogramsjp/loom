@@ -1,16 +1,6 @@
 using Loom.Debug;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
-using Loom.Text;
-using Loom.TypeChecking.Types;
-using ArrayType = Loom.Parsing.AST.ArrayType;
-using FunctionType = Loom.Parsing.AST.FunctionType;
-using IntersectionType = Loom.Parsing.AST.IntersectionType;
-using LiteralType = Loom.Parsing.AST.LiteralType;
-using OptionalType = Loom.Parsing.AST.OptionalType;
-using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
-using TypeName = Loom.Parsing.AST.TypeName;
-using UnionType = Loom.Parsing.AST.UnionType;
 
 namespace Loom.Testing;
 
@@ -72,9 +62,7 @@ public class ParserTest
         ["let x: keyof(T | number)", InternalCodes.UnexpectedToken, "Expected ')', got '|'."]
     ];
 
-    public static IEnumerable<object[]> SnapshotFiles =>
-        Directory.EnumerateFiles(AssemblyFixture.Snapshots + "/AST", $"*{FileManager.LoomExtension}")
-            .Select(path => new object[] { path, path.Replace(FileManager.LoomExtension, ".ast") });
+    public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("AST", ".ast");
 
     [Theory]
     [MemberData(nameof(ErrorTestCases))]

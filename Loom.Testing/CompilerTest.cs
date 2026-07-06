@@ -5,14 +5,20 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class CompilerTest
 {
-    [Fact]
-    public void BasicConstantVariable() => AssertCompiled("let x: bool = true;", "const x: boolean = true");
-    
-    [Fact]
-    public void WrapsOrphanedExpression() => AssertCompiled("69", "const _ = 69");
+    public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("Luau", ".luau");
 
-    private static void AssertCompiled(string source, string expected) => Assert.Equal(expected + '\n', Compile(source).RenderedLuau);
-    
+    [Theory]
+    [MemberData(nameof(SnapshotFiles))]
+    public void Compiles_Snapshots(string sourcePath, string snapshotPath)
+    {
+        var source = File.ReadAllText(sourcePath);
+        var snapshot = File.ReadAllText(snapshotPath);
+        AssertCompiled(source, snapshot);
+    }
+
+    private static void AssertCompiled(string source, string expected) =>
+        Assert.Equal(expected.Replace(Environment.NewLine, "\n") + '\n', Compile(source).RenderedLuau);
+
     private static CompiledFile Compile(string source)
     {
         var compilationUnit = new CompilationUnit(new LoomConfig());

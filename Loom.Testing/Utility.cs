@@ -74,8 +74,12 @@ internal static class Utility
         if (hint == null) return;
         Assert.Equal(hint, diagnostic.Hint);
     }
-
-    private static LexerResult Tokenize(string source, bool withTrivia = false) => new Lexer(TestFile(source)).Tokenize(withTrivia);
+    
+    public static IEnumerable<object[]> GetSnapshotFiles(string folderName, string targetExtension) =>
+        Directory.EnumerateFiles(AssemblyFixture.Snapshots + '/' + folderName, $"*{FileManager.LoomExtension}")
+            .Select(path => new object[] { path, path.Replace(FileManager.LoomExtension, targetExtension) });
 
     public static SourceFile TestFile(string source) => new("test", source);
+    
+    private static LexerResult Tokenize(string source, bool withTrivia = false) => new Lexer(TestFile(source)).Tokenize(withTrivia);
 }

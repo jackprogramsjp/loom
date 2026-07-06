@@ -1,0 +1,14 @@
+fn is_palindrome(original: number): bool {
+    mut n = original;
+    mut reversed = 0;
+    
+    while n > 0 {
+        reversed = reversed * 10 + (n % 10);
+        n //= 10;
+    }
+    
+    return original == reversed;
+}
+
+print(is_palindrome(69))
+print(is_palindrome(1991))

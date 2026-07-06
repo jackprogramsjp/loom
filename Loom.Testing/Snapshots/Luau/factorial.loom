@@ -1,0 +1,10 @@
+fn factorial(n: number): number {
+    mut result = 1;
+    for i : 2..n
+        result *= i;
+        
+    return result;
+}
+
+let result = factorial(5);
+print(result);
