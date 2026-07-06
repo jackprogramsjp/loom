@@ -286,20 +286,55 @@ public sealed partial class TypeChecker
         }
 
         var indexIsRangeOrNumber = indexType.IsAssignableTo(Intrinsics.Range) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
-        if (indexIsRangeOrNumber && type.IsAssignableTo(Types.PrimitiveType.String))
-        {
-            CheckInvalidAccessAssignment(elementAccess, type, indexType);
-            return BindType(elementAccess, Types.PrimitiveType.String);
-        }
+        if (!indexIsRangeOrNumber || !type.IsAssignableTo(Types.PrimitiveType.String))
+            return IndexType(elementAccess, type, indexType, $"Cannot index value of type '{type}'.");
 
+        CheckInvalidAccessAssignment(elementAccess, type, indexType);
+        return BindType(elementAccess, Types.PrimitiveType.String);
+    }
+
+    private Type IndexType(Node node, Type type, Type indexType, string errorMessage)
+    {
         if (type is InstantiatedType instantiated)
             type = instantiated.Expand();
 
-        if (type is ObjectType or InterfaceType)
-            return GetTypeAtIndex(elementAccess, type, indexType);
+        switch (type)
+        {
+            case Types.UnionType union:
+            {
+                var results = new List<Type>();
+                foreach (var member in union.Types)
+                {
+                    var memberType = GetTypeAtIndexSingle(node, member, indexType);
+                    if (Type.IsNever(memberType))
+                    {
+                        _diagnostics.Error(
+                            node,
+                            InternalCodes.InvalidAccess,
+                            $"Indexing '{indexType}' is not valid for union member '{member}'."
+                        );
+                        continue;
+                    }
 
-        _diagnostics.Error(elementAccess, InternalCodes.InvalidAccess, $"Cannot index value of type '{type}'.");
-        return BindType(elementAccess, Types.PrimitiveType.Never);
+                    if (!Type.IsUnknown(memberType))
+                        results.Add(memberType);
+                }
+
+                if (results.Count == 0)
+                    return BindType(node, Types.PrimitiveType.Never);
+
+                return BindType(
+                    node,
+                    TypeSimplifier.Simplify(new Types.UnionType(results))
+                );
+            }
+            
+            case ObjectType or InterfaceType:
+                return GetTypeAtIndex(node, type, indexType);
+        }
+        
+        _diagnostics.Error(node, InternalCodes.InvalidAccess, errorMessage);
+        return BindType(node, Types.PrimitiveType.Never);
     }
 
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -623,49 +658,11 @@ public sealed partial class TypeChecker
             return BindType(accessExpression, narrowedType);
 
         var type = Visit(targetExpression);
-        foreach (var dotName in names)
+        foreach (var indexType in names.Select(name => new Types.LiteralType(name.Name.Text)))
         {
-            if (type is Types.UnionType union)
-            {
-                var memberTypes = new List<Type>();
-                foreach (var member in union.Types)
-                {
-                    var memberType = GetTypeOfMember(targetExpression, member, dotName.Name.Text);
-                    if (memberType == null)
-                    {
-                        _diagnostics.Error(
-                            accessExpression,
-                            InternalCodes.InvalidAccess,
-                            $"Property '{dotName.Name.Text}' does not exist on member '{member}' of the union."
-                        );
-
-                        return BindType(accessExpression, Types.PrimitiveType.Never);
-                    }
-
-                    memberTypes.Add(memberType);
-                }
-
-                type = TypeSimplifier.Simplify(new Types.UnionType(memberTypes));
-            }
-            else
-            {
-                if (type is InstantiatedType instantiated)
-                    type = instantiated.Expand();
-
-                if (type is not (ObjectType or InterfaceType))
-                {
-                    _diagnostics.Error(
-                        accessExpression,
-                        InternalCodes.InvalidAccess,
-                        $"Cannot access property '{dotName.Name.Text}' on type '{type}'."
-                    );
-
-                    return BindType(accessExpression, Types.PrimitiveType.Never);
-                }
-
-                var indexType = new Types.LiteralType(dotName.Name.Text);
-                type = GetTypeAtIndex(accessExpression, type, indexType);
-            }
+            type = IndexType(accessExpression, type, indexType, $"Cannot access property '{indexType.Value}' on type '{type}'.");;
+            if (Type.IsNever(type))
+                return type;
         }
 
         return BindType(accessExpression, type);

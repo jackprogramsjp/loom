@@ -3217,15 +3217,15 @@ public class TypeCheckerTest
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
 
-    [Fact]
-    public void Checks_PropertyAccess_SingleDot_OnRange()
+    [Theory]
+    [InlineData(".minimum")]
+    [InlineData(".maximum")]
+    [InlineData("['minimum']")]
+    [InlineData("['maximum']")]
+    public void Checks_Access__OnRange(string access)
     {
-        var type = Utility.GetLastStatementType("(1..10).minimum");
+        var type = Utility.GetLastStatementType($"(1..10){access}");
         var primitive = Assert.IsType<PrimitiveType>(type);
-        Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
-
-        type = Utility.GetLastStatementType("(1..10).maximum");
-        primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(PrimitiveTypeKind.Number, primitive.Kind);
     }
 

@@ -1,5 +1,3 @@
-interface A { a: number[]; } 
-            interface B { b: A; } 
-            interface C { c: B; } 
-            let object = new C { c: new B { b: new A { a: [1, 2, 3] } } };
-            let _ = (object["c"]).b.a.join()
+let result = Result.ok(69);
+print(result.ok)
+print(result['ok'])
