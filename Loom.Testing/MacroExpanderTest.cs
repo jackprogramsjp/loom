@@ -50,7 +50,61 @@ public class MacroExpanderTest
         Assert.False(okValue.Value);
         Assert.Equal("stupid program", errorValue.Value);
     }
-    
+
+    [Fact]
+    public void Generates_Complex_Nested_Method()
+    {
+        const string source = """
+            interface A { a: number[]; } 
+            interface B { b: A; } 
+            interface C { c: B; } 
+            let object = new C { c: new B { b: new A { a: [1, 2, 3] } } };
+            let _ = (object["c"]).b.a.join()
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(5, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var concatCall = Assert.IsType<Call>(variable.Initializer);
+        var concat = Assert.IsType<PropertyAccess>(concatCall.Callee);
+        var tableIdentifier = Assert.IsType<Identifier>(concat.Target);
+        Assert.Equal("table", tableIdentifier.Name);
+        Assert.Equal("concat", Assert.Single(concat.Names));
+
+        var propertyAccess = Assert.IsType<PropertyAccess>(Assert.Single(concatCall.Arguments));
+        Assert.IsType<ElementAccess>(propertyAccess.Target);
+        Assert.Equal(2, propertyAccess.Names.Count);
+        Assert.Equal("b", propertyAccess.Names.First());
+        Assert.Equal("a", propertyAccess.Names.Last());
+    }
+
+    [Fact]
+    public void Generates_Complex_Nested_Property()
+    {
+        const string source = """
+            interface A { a: number[]; } 
+            interface B { b: A; } 
+            interface C { c: B; } 
+            let object = new C { c: new B { b: new A { a: [1, 2, 3] } } };
+            let _ = (object["c"]).b.a.length
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(5, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var unaryOperator = Assert.IsType<UnaryOperator>(variable.Initializer);
+        var propertyAccess = Assert.IsType<PropertyAccess>(unaryOperator.Operand);
+        var secondPropertyAccess = Assert.IsType<PropertyAccess>(propertyAccess.Target);
+        Assert.IsType<ElementAccess>(Assert.IsType<Parenthesized>(secondPropertyAccess.Target).Expression);
+        Assert.Equal("#", unaryOperator.Operator);
+        Assert.Equal("b", Assert.Single(secondPropertyAccess.Names));
+        Assert.Equal("a", Assert.Single(propertyAccess.Names));
+    }
+
     [Theory]
     [InlineData("let _ = c.a.join()")]
     [InlineData("let _ = c.a['join']()")]
@@ -71,7 +125,7 @@ public class MacroExpanderTest
         Assert.Equal("table", tableIdentifier.Name);
         Assert.Equal("concat", Assert.Single(concat.Names));
         Assert.Equal(separator == null ? 1 : 2, concatCall.Arguments.Count);
-        
+
         var access = Assert.IsType<PropertyAccess>(concatCall.Arguments.First());
         var containerIdentifier = Assert.IsType<Identifier>(access.Target);
         Assert.Equal("c", containerIdentifier.Name);
@@ -126,7 +180,7 @@ public class MacroExpanderTest
         var operand = unaryOperator.Operand;
         if (parenthesized)
             operand = Assert.IsType<Parenthesized>(operand).Expression;
-        
+
         var access = Assert.IsType<PropertyAccess>(operand);
         Assert.IsType<Identifier>(access.Target);
         Assert.Single(access.Names);
@@ -148,7 +202,7 @@ public class MacroExpanderTest
         var operand = unaryOperator.Operand;
         if (parenthesized)
             operand = Assert.IsType<Parenthesized>(operand).Expression;
-        
+
         Assert.Equal("a", Assert.IsType<Identifier>(operand).Name);
         Assert.Equal("#", unaryOperator.Operator);
     }

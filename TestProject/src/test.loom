@@ -1,15 +1,5 @@
-interface Container {
-    arr: number[];
-    range: Range;
-}
-
-let container = new Container { arr: [1, 2, 3], range: 1..10 };
-print(container.arr.length)
-print(container.arr.join())
-print(container.arr["length"])
-print(container.arr.length)
-print(container.range.length)
-print(container.range.clamp(69))
-print(container["range"]["clamp"](69))
-
-let r = 1..10; r.clamp(69)
+interface A { a: number[]; } 
+            interface B { b: A; } 
+            interface C { c: B; } 
+            let object = new C { c: new B { b: new A { a: [1, 2, 3] } } };
+            let _ = (object["c"]).b.a.join()

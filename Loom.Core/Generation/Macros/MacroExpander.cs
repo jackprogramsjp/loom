@@ -144,12 +144,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
             return false;
 
         if (macroIndex + 1 < names.Count)
-        {
-            expression = new Luau.AST.PropertyAccess(
-                expression,
-                luauAccess.Names.Skip(macroIndex + 1).ToList()
-            );
-        }
+            expression = new Luau.AST.PropertyAccess(expression, luauAccess.Names.Skip(macroIndex + 1).ToList());
 
         return true;
     }
