@@ -1,1 +1,5 @@
-let a = [1, 2, 3]; let _ = (a).join(', ')
+let result = Result.ok(69);
+if result.ok
+    print(result.value);
+else
+    print(result.error)

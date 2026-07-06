@@ -1467,21 +1467,17 @@ public class TypeCheckerTest
     }
 
     [Theory]
-    [InlineData("Ok", "value", "number")]
-    [InlineData("Err", "error", "\"do_something failed to execute\"")]
-    public void Checks_DiscriminatedUnion_Narrowing(string resultKind, string property, string typeString)
+    [InlineData(true, "value", "number")]
+    [InlineData(false, "error", "\"do_something failed to execute\"")]
+    public void Checks_DiscriminatedUnion_Narrowing(bool ok, string property, string typeString)
     {
         var source = $$"""
-            fn ok<T, Error>(value: T): Result<T, Error> {
-                return new ResultOk { kind: ResultKind.Ok, value: value };
-            }
-
             enum MyErrors: string {
                 DoSomethingFailed = "do_something failed to execute"
             }
 
-            let result = ok::<number, MyErrors>(69);
-            if result.kind == ResultKind.{{resultKind}}
+            let result = Result.ok::<number, MyErrors>(69);
+            if {{(ok ? "" : "!")}}result.ok
                 result.{{property}}
             """;
 

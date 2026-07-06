@@ -26,7 +26,5 @@ internal sealed class ResultStaticMacroProvider : IMacroProvider
     }
 
     private static Table CreateResultConstructor(Call call, bool isOk) =>
-        new(
-            [new PropertyTableInitializer("kind", new NumberLiteral(isOk ? 0 : 1)), new PropertyTableInitializer(isOk ? "value" : "error", call.Arguments.Single())]
-        );
+        new([new PropertyTableInitializer("ok", new BooleanLiteral(isOk)), new PropertyTableInitializer(isOk ? "value" : "error", call.Arguments.Single())]);
 }
