@@ -16,11 +16,12 @@
 - **Rich type inference** – Minimal annotations required
 - **Extended number literals** – Automatic math for units of time and frequency, as well as binary/octal/hex support
 - **Range expressions** – `1..10` for slicing and bounds
-- **`nameof` operator** – Get names as strings at compile time. See [example](#nameof)
+- **`nameof` operator** – Get names as strings at compile time. See [example](#nameof).
 - **Generic functions and types** – Full support for type parameters including constraints and defaults
 - **Result pattern for errors** – Error handling uses the result pattern from Rust, no more `pcall`s. See [example](#result-pattern).
 - **Indices starting at one** – Same as Luau for familiarity
 - **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
+- **Batteries included** - Comes with a set of built-in macros included with data-types such as [Array.join()](#arrayjoin) or [Range.clamp()](#rangeclamp)
 
 ## Upcoming Features
 - `typeof`
