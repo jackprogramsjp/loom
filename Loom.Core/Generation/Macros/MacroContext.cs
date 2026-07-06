@@ -8,7 +8,9 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
     public static LuauExpression GetCallObject(Call call) =>
         call.Callee switch
         {
-            PropertyAccess propertyAccess => UnwrapParentheses(propertyAccess.Target),
+            PropertyAccess propertyAccess => UnwrapParentheses(
+                propertyAccess.Names.Count > 2 ? new PropertyAccess(propertyAccess.Target, propertyAccess.Names.Skip(1).ToList()) : propertyAccess.Target
+            ),
             ElementAccess elementAccess => UnwrapParentheses(elementAccess.Target),
             var callee => UnwrapParentheses(callee)
         };
@@ -32,12 +34,12 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
             case NumberLiteral literal:
                 computed = literal.Value;
                 return true;
-            
+
             case UnaryOperator { Operator: "-" } unary:
             {
                 if (!TryComputeConstantArithmetic(unary.Operand, out var operand))
                     return false;
-                
+
                 computed = -operand;
                 return true;
             }
@@ -45,9 +47,10 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
             {
                 if (!TryComputeConstantArithmetic(binary.Left, out var left))
                     return false;
+
                 if (!TryComputeConstantArithmetic(binary.Right, out var right))
                     return false;
-                
+
                 computed = binary.Operator switch
                 {
                     "+" => left + right,
@@ -63,7 +66,7 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
                 return true;
             }
         }
-        
+
         return false;
     }
 }

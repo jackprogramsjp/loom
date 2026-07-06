@@ -6,10 +6,10 @@ internal sealed class LuauState
 {
     private LuauScope _scope = new();
     
-    public Identifier PushToVariable(string name, LuauExpression expression, LuauType? type = null, bool isConst = true)
+    public LuauExpression PushToVariable(string name, LuauExpression expression, LuauType? type = null, bool isConst = true)
     {
-        if (expression is Identifier identifier)
-            return identifier;
+        if (expression is Identifier or PropertyAccess)
+            return expression;
 
         var id = _scope.AddIdentifier(name);
         Prereq(isConst ? new ConstVariable(id, type, expression) : new LocalVariable(id, type, expression));
