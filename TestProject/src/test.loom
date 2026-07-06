@@ -1,5 +1,6 @@
-let result = Result.ok(69);
-if result.ok
-    print(result.value);
-else
-    print(result.error)
+interface Expression;
+
+interface Binary: Expression {
+  left: Expression;
+  right: Expression;
+}

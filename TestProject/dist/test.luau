@@ -1,6 +1,5 @@
-const result = { ok = true, value = 69 }
-if result.ok then
-  print(69)
-else
-  print(result.error)
-end
+type Expression = {}
+type Binary = Expression & {
+  read left: Expression,
+  read right: Expression,
+}
