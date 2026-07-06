@@ -714,6 +714,25 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Checks_InterfaceInvocation_ConstraintMembers()
+    {
+        const string source = """
+            interface Def {
+                [string | number]: number;
+                def: string;
+            }
+
+            interface Abc: Def {
+                abc: number;
+            }
+
+            let abc = new Abc { abc: 69, def: "foo", ["balls"]: 69, [69]: 420 };
+            """;
+        
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
+        Assert.IsType<InterfaceType>(result.ReturnType);
+    }
+    [Fact]
     public void Checks_GenericInference_RepeatedIdenticalLiteralPreserved()
     {
         const string source = """
@@ -721,9 +740,7 @@ public class TypeCheckerTest
             pair(1, 1)
             """;
 
-        var result = Utility.TypeCheck(source);
-        Utility.AssertNoErrors(result);
-
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         Assert.Equal(new LiteralType(1L), result.ReturnType);
     }
 
@@ -735,9 +752,7 @@ public class TypeCheckerTest
             first(1, 2, 3)
             """;
 
-        var result = Utility.TypeCheck(source);
-        Utility.AssertNoErrors(result);
-
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         Assert.Equal(PrimitiveType.Number, result.ReturnType);
     }
     
@@ -749,9 +764,7 @@ public class TypeCheckerTest
             value()
             """;
 
-        var result = Utility.TypeCheck(source);
-        Utility.AssertNoErrors(result);
-
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         Assert.Equal(PrimitiveType.String, result.ReturnType);
     }
     
@@ -768,9 +781,7 @@ public class TypeCheckerTest
             }
             """;
 
-        var result = Utility.TypeCheck(source);
-        Utility.AssertNoErrors(result);
-
+        var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
     }
