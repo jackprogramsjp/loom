@@ -59,7 +59,7 @@ public class MacroExpanderTest
             interface B { b: A; } 
             interface C { c: B; } 
             let object = new C { c: new B { b: new A { a: [1, 2, 3] } } };
-            let _ = (object["c"]).b.a.join()
+            let _ = object["c"].b.a.join()
             """;
 
         var luauTree = Utility.GetLuauAST(source, true);
@@ -88,7 +88,7 @@ public class MacroExpanderTest
             interface B { b: A; } 
             interface C { c: B; } 
             let object = new C { c: new B { b: new A { a: [1, 2, 3] } } };
-            let _ = (object["c"]).b.a.length
+            let _ = object["c"].b.a.length
             """;
 
         var luauTree = Utility.GetLuauAST(source, true);
@@ -99,7 +99,7 @@ public class MacroExpanderTest
         var unaryOperator = Assert.IsType<UnaryOperator>(variable.Initializer);
         var propertyAccess = Assert.IsType<PropertyAccess>(unaryOperator.Operand);
         var secondPropertyAccess = Assert.IsType<PropertyAccess>(propertyAccess.Target);
-        Assert.IsType<ElementAccess>(Assert.IsType<Parenthesized>(secondPropertyAccess.Target).Expression);
+        Assert.IsType<ElementAccess>(secondPropertyAccess.Target);
         Assert.Equal("#", unaryOperator.Operator);
         Assert.Equal("b", Assert.Single(secondPropertyAccess.Names));
         Assert.Equal("a", Assert.Single(propertyAccess.Names));
