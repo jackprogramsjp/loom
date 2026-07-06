@@ -7,6 +7,8 @@ public class CompilerTest
 {
     [Fact]
     public void BasicConstantVariable() => AssertCompiled("let x: bool = true;", "const x: boolean = true");
+    
+    [Fact]
     public void WrapsOrphanedExpression() => AssertCompiled("69", "const _ = 69");
 
     private static void AssertCompiled(string source, string expected) => Assert.Equal(expected + '\n', Compile(source).RenderedLuau);
