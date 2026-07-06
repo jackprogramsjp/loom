@@ -1,3 +1,7 @@
-const result = { ok = true, value = 69 }
-print(result.ok)
-print(result["ok"])
+type Def = {
+  read def: string,
+}
+type Abc = Def & {
+  read abc: number,
+}
+const abc = { abc = 69, def = "foo" }

@@ -1,3 +1,9 @@
-let result = Result.ok(69);
-print(result.ok)
-print(result['ok'])
+interface Def {
+    def: string;
+}
+
+interface Abc: Def {
+    abc: number;
+}
+
+let abc = new Abc { abc: 69, def: "foo" };

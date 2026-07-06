@@ -48,7 +48,6 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public Type PropertyKeyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(Type (p) => new LiteralType(p.Name))));
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
-    public ObjectProperty? GetProperty(Type type) => type is LiteralType { Value: string name } && Properties.Count > 0 ? GetProperty(name) : null;
     public ObjectProperty? GetProperty(string name) => Properties.Find(p => p.Name == name);
 
     public (ObjectBodyType? BodyType, string CannotFindReason) GetTypeAtIndex(Type indexType, Type? self = null)

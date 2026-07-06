@@ -11,6 +11,9 @@ public sealed class InterfaceType(string name, List<InterfaceType> constraints, 
             ? new IntersectionType([ObjectType, ..Constraints.Select(c => c.AssignabilityType)])
             : ObjectType;
 
+    public ObjectIndexer? Indexer { get; } = objectType.Indexer ?? constraints.Select(c => c.Indexer).FirstOrDefault(i => i != null);
+    public ObjectProperty? GetProperty(string name) => ObjectType.GetProperty(name) ?? Constraints.Select(c => c.GetProperty(name)).FirstOrDefault(p => p != null);
+
     public override bool Equals(Type? other) =>
         other is InterfaceType interfaceType
         && ListEquals(Constraints, interfaceType.Constraints)

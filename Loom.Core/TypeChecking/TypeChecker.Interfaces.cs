@@ -134,7 +134,7 @@ public sealed partial class TypeChecker
     private string? CheckPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer, InterfaceType interfaceType)
     {
         var name = propertyInitializer.Name.Text;
-        var property = interfaceType.ObjectType.GetProperty(name);
+        var property = interfaceType.GetProperty(name);
         if (property == null)
         {
             _diagnostics.Error(
@@ -153,7 +153,7 @@ public sealed partial class TypeChecker
 
     private void CheckIndexInitializer(InterfaceInvocationIndexInitializer initializer, InterfaceType interfaceType)
     {
-        var indexer = interfaceType.ObjectType.Indexer;
+        var indexer = interfaceType.Indexer;
         if (indexer == null)
         {
             _diagnostics.Error(
