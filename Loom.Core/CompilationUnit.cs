@@ -10,10 +10,10 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom;
 
-public sealed class CompilationUnit(LoomConfig loomLoomConfig)
+public sealed class CompilationUnit(LoomConfig loomConfig)
 {
-    public LoomConfig LoomConfig { get; } = loomLoomConfig;
-    public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(loomLoomConfig.Files.SourceDirectory);
+    public LoomConfig LoomConfig { get; } = loomConfig;
+    public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(loomConfig.Files.SourceDirectory);
     public Dictionary<Symbol, Type> Globals { get; } = [];
     
     public CompilationResult Compile()

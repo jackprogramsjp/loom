@@ -77,5 +77,5 @@ internal static class Utility
 
     private static LexerResult Tokenize(string source, bool withTrivia = false) => new Lexer(TestFile(source)).Tokenize(withTrivia);
 
-    private static SourceFile TestFile(string source) => new("test", source);
+    public static SourceFile TestFile(string source) => new("test", source);
 }
