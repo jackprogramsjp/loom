@@ -25,22 +25,10 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         expression = null;
-        if (!TryDecomposeInvocationTarget(
-                invocation.Expression,
-                luauCall.Callee,
-                out var provider,
-                out var member
-            ))
-        {
+        if (!TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member))
             return false;
-        }
 
-        return provider.TryInvocation(
-            _context,
-            member,
-            luauCall,
-            out expression
-        );
+        return provider.TryInvocation( _context,  member, luauCall, out expression);
     }
 
     public bool TryGetElementAccessMacro(ElementAccess access, Luau.AST.ElementAccess luauAccess, [MaybeNullWhen(false)] out LuauExpression expression)
@@ -70,12 +58,12 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     {
         switch (expression)
         {
-            case Identifier identifier:
-            {
-                provider = GetProvider(expression);
-                memberName = identifier.Name.Text;
-                return provider != null;
-            }
+            // case Identifier identifier:
+            // {
+            //     provider = GetProvider(expression);
+            //     memberName = identifier.Name.Text;
+            //     return provider != null;
+            // }
 
             case QualifiedName qualified:
             {
@@ -123,7 +111,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
                 return provider != null;
             }
         }
-        
+
         provider = null;
         memberName = null;
         return false;
@@ -204,41 +192,32 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         if (type is InstantiatedType instantiated)
             type = instantiated.Expand();
 
-        switch (type)
+        return type switch
         {
-            case UnionType union:
-            {
-                var members = union.Types
-                    .Select(t => GetMemberPropertyType(t, propertyName))
-                    .Where(t => t != null)
-                    .Cast<Type>()
-                    .ToList();
-
-                return members.Count switch
-                {
-                    0 => null,
-                    1 => members[0],
-                    _ => TypeSimplifier.Simplify(new UnionType(members))
-                };
-            }
-
-            case ObjectType objectType:
-                var (bodyType, _) = objectType.GetTypeAtIndex(new LiteralType(propertyName));
-                return bodyType?.ValueType;
-
-            case InterfaceType interfaceType:
-                var result = interfaceType.ObjectType.GetTypeAtIndex(new LiteralType(propertyName), interfaceType);
-                return result.BodyType?.ValueType;
-        }
-
-        return null;
+            UnionType union => ResolveUnionAccess(propertyName, union),
+            ObjectType objectType => objectType.GetTypeAtIndex(new LiteralType(propertyName)).BodyType?.ValueType,
+            InterfaceType interfaceType => interfaceType.ObjectType.GetTypeAtIndex(new LiteralType(propertyName), interfaceType).BodyType?.ValueType,
+            _ => null
+        };
     }
 
-    private bool TryGetNamedAccessMacro(
-        Expression objectExpression,
-        string name,
-        LuauExpression target,
-        [MaybeNullWhen(false)] out LuauExpression expression)
+    private static Type? ResolveUnionAccess(string propertyName, UnionType union)
+    {
+        var members = union.Types
+            .Select(t => GetMemberPropertyType(t, propertyName))
+            .Where(t => t != null)
+            .Cast<Type>()
+            .ToList();
+
+        return members.Count switch
+        {
+            0 => null,
+            1 => members[0],
+            _ => TypeSimplifier.Simplify(new UnionType(members))
+        };
+    }
+
+    private bool TryGetNamedAccessMacro(Expression objectExpression, string name, LuauExpression target, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         if (GetProvider(objectExpression) is { } provider)
             return provider.TryProperty(_context, name, target, out expression);
