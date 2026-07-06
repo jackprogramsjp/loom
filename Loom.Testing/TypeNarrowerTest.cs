@@ -466,8 +466,8 @@ public class TypeNarrowerTest
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
 
         var narrowed = narrower.TryGetNarrowedType(condition, trueState, out var trueType);
-        Assert.False(narrowed);
+        Assert.True(narrowed);
         narrowed = narrower.TryGetNarrowedType(condition, falseState, out var falseType);
-        Assert.False(narrowed);
+        Assert.True(narrowed);
     }
 }
