@@ -17,17 +17,18 @@ internal sealed class RangeMacroProvider : IMacroProvider
         {
             case "length":
             {
-                var (minimum, maximum) = GetRangeBounds(context, target);
-                expression = minimum is NumberLiteral minimumLiteral && maximum is NumberLiteral maximumLiteral
-                    ? new NumberLiteral(1 + Math.Abs(maximumLiteral.Value - minimumLiteral.Value))
-                    : new BinaryOperator(
-                        new NumberLiteral(1),
-                        "+",
-                        LuauFactory.MathCall(
-                            "abs",
-                            [new BinaryOperator(maximum, "-", minimum)]
-                        )
-                    );
+                var (minimumExpression, maximumExpression) = GetRangeBounds(context, target);
+                expression = MacroContext.TryComputeConstantArithmetic(minimumExpression, out var minimum)
+                    && MacroContext.TryComputeConstantArithmetic(maximumExpression, out var maximum)
+                        ? new NumberLiteral(1 + Math.Abs(maximum - minimum))
+                        : new BinaryOperator(
+                            new NumberLiteral(1),
+                            "+",
+                            LuauFactory.MathCall(
+                                "abs",
+                                [new BinaryOperator(maximumExpression, "-", minimumExpression)]
+                            )
+                        );
 
                 return true;
             }
@@ -43,11 +44,13 @@ internal sealed class RangeMacroProvider : IMacroProvider
         switch (name)
         {
             case "clamp":
-                var (minimum, maximum) = GetRangeBounds(context, range);
+                var (minimumExpression, maximumExpression) = GetRangeBounds(context, range);
                 var value = call.Arguments.Single();
-                expression = MacroContext.TryComputeConstantArithmetic(value, out var valueConstant) && minimum is NumberLiteral minimumLiteral && maximum is NumberLiteral maximumLiteral
-                    ? new NumberLiteral(Math.Clamp(valueConstant, minimumLiteral.Value, maximumLiteral.Value))
-                    : LuauFactory.MathClampCall(value, minimum, maximum);
+                expression = MacroContext.TryComputeConstantArithmetic(value, out var valueConstant)
+                    && MacroContext.TryComputeConstantArithmetic(minimumExpression, out var minimum)
+                    && MacroContext.TryComputeConstantArithmetic(maximumExpression, out var maximum)
+                        ? new NumberLiteral(Math.Clamp(valueConstant, minimum, maximum))
+                        : LuauFactory.MathClampCall(value, minimumExpression, maximumExpression);
 
                 return true;
         }

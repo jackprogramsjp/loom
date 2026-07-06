@@ -71,7 +71,7 @@ public sealed partial class LuauGenerator
         {
             start = Visit(range.Minimum);
             end = Visit(range.Maximum);
-            incrementBy = start is NumberLiteral { Value: var minimum } && end is NumberLiteral { Value: var maximum }
+            incrementBy = MacroContext.TryComputeConstantArithmetic(start, out var minimum) && MacroContext.TryComputeConstantArithmetic(end, out var maximum)
                 ? maximum < minimum ? negativeOne : null
                 : new IfExpression(new Luau.AST.BinaryOperator(end, "<", start), negativeOne, [], one);
         }
