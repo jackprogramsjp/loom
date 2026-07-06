@@ -27,7 +27,7 @@ public class MacroExpanderTest
         Assert.True(okValue.Value);
         Assert.Equal(69, value.Value);
     }
-    
+
     [Fact]
     public void Generates_ResultStatic_Err()
     {
@@ -52,15 +52,46 @@ public class MacroExpanderTest
     }
     
     [Theory]
-    [InlineData("let a = [1, 2, 3]; let _ = a.join()")]
-    [InlineData("let a = [1, 2, 3]; let _ = a['join']()")]
-    [InlineData("let a = [1, 2, 3]; let _ = (a).join()")]
-    [InlineData("let a = [1, 2, 3]; let _ = a.join(', ')", ", ")]
-    [InlineData("let a = [1, 2, 3]; let _ = a['join'](', ')", ", ")]
-    [InlineData("let a = [1, 2, 3]; let _ = (a).join(', ')", ", ")]
+    [InlineData("let _ = c.a.join()")]
+    [InlineData("let _ = c.a['join']()")]
+    [InlineData("let _ = (c.a).join()", null)]
+    [InlineData("let _ = c.a.join(', ')", ", ")]
+    [InlineData("let _ = c.a['join'](', ')", ", ")]
+    [InlineData("let _ = (c.a).join(', ')", ", ")]
+    public void Generates_Array_Join_Nested(string source, string? separator = null, bool parenthesized = false)
+    {
+        var luauTree = Utility.GetLuauAST($"interface C {{ a: number[]; }} let c = new C {{ a: [1, 2, 3] }}; {source}", true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(3, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var concatCall = Assert.IsType<Call>(variable.Initializer);
+        var concat = Assert.IsType<PropertyAccess>(concatCall.Callee);
+        var tableIdentifier = Assert.IsType<Identifier>(concat.Target);
+        Assert.Equal("table", tableIdentifier.Name);
+        Assert.Equal("concat", Assert.Single(concat.Names));
+        Assert.Equal(separator == null ? 1 : 2, concatCall.Arguments.Count);
+        
+        var access = Assert.IsType<PropertyAccess>(concatCall.Arguments.First());
+        var containerIdentifier = Assert.IsType<Identifier>(access.Target);
+        Assert.Equal("c", containerIdentifier.Name);
+        Assert.Equal("a", Assert.Single(access.Names));
+
+        if (separator == null) return;
+        var separatorArgument = Assert.IsType<StringLiteral>(concatCall.Arguments.Last());
+        Assert.Equal(separator, separatorArgument.Value);
+    }
+
+    [Theory]
+    [InlineData("let _ = a.join()")]
+    [InlineData("let _ = a['join']()")]
+    [InlineData("let _ = (a).join()")]
+    [InlineData("let _ = a.join(', ')", ", ")]
+    [InlineData("let _ = a['join'](', ')", ", ")]
+    [InlineData("let _ = (a).join(', ')", ", ")]
     public void Generates_Array_Join(string source, string? separator = null)
     {
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST($"let a = [1, 2, 3]; {source}", true);
         Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
         Assert.Equal(2, luauTree.Statements.Count);
 
@@ -71,7 +102,7 @@ public class MacroExpanderTest
         Assert.Equal("table", tableIdentifier.Name);
         Assert.Equal("concat", Assert.Single(concat.Names));
         Assert.Equal(separator == null ? 1 : 2, concatCall.Arguments.Count);
-        
+
         var arrayIdentifier = Assert.IsType<Identifier>(concatCall.Arguments.First());
         Assert.Equal("a", arrayIdentifier.Name);
 
@@ -81,17 +112,44 @@ public class MacroExpanderTest
     }
 
     [Theory]
-    [InlineData("let a = [1, 2, 3]; a.length")]
-    [InlineData("let a = [1, 2, 3]; a['length']")]
-    [InlineData("let a = [1, 2, 3]; let _ = (a).length")]
-    public void Generates_Array_Length(string source)
+    [InlineData("c.a.length")]
+    [InlineData("c.a['length']")]
+    [InlineData("let _ = (c.a).length", true)]
+    public void Generates_Array_Length_Nested(string source, bool parenthesized = false)
     {
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST($"interface C {{ a: number[]; }} let c = new C {{ a: [1, 2, 3] }}; {source}", true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(3, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var unaryOperator = Assert.IsType<UnaryOperator>(variable.Initializer);
+        var operand = unaryOperator.Operand;
+        if (parenthesized)
+            operand = Assert.IsType<Parenthesized>(operand).Expression;
+        
+        var access = Assert.IsType<PropertyAccess>(operand);
+        Assert.IsType<Identifier>(access.Target);
+        Assert.Single(access.Names);
+        Assert.Equal("#", unaryOperator.Operator);
+    }
+
+    [Theory]
+    [InlineData("a.length")]
+    [InlineData("a['length']")]
+    [InlineData("let _ = (a).length", true)]
+    public void Generates_Array_Length(string source, bool parenthesized = false)
+    {
+        var luauTree = Utility.GetLuauAST($"let a = [1, 2, 3]; {source}", true);
         Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
         Assert.Equal(2, luauTree.Statements.Count);
 
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
         var unaryOperator = Assert.IsType<UnaryOperator>(variable.Initializer);
+        var operand = unaryOperator.Operand;
+        if (parenthesized)
+            operand = Assert.IsType<Parenthesized>(operand).Expression;
+        
+        Assert.Equal("a", Assert.IsType<Identifier>(operand).Name);
         Assert.Equal("#", unaryOperator.Operator);
     }
 
@@ -108,7 +166,7 @@ public class MacroExpanderTest
         var value = Assert.IsType<NumberLiteral>(variable.Initializer);
         Assert.Equal(10d, value.Value);
     }
-    
+
     [Fact]
     public void Generates_Range_Clamp()
     {
@@ -194,7 +252,7 @@ public class MacroExpanderTest
         Assert.Single(minimumAccess.Names);
         Assert.Equal("maximum", maximumAccess.Names.First());
         Assert.Equal("minimum", minimumAccess.Names.First());
-        
+
         var abs = Assert.IsType<PropertyAccess>(absCall.Callee);
         var mathIdentifier = Assert.IsType<Identifier>(abs.Target);
         Assert.Single(abs.Names);
@@ -371,7 +429,7 @@ public class MacroExpanderTest
         Assert.Equal("minimum", minAccess.Names[0]);
         Assert.Equal("maximum", maxAccess.Names[0]);
     }
-    
+
     [Fact]
     public void Generates_StringSlice_Character()
     {

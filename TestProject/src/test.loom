@@ -10,6 +10,6 @@ print(container.arr["length"])
 print(container.arr.length)
 print(container.range.length)
 print(container.range.clamp(69))
-print(container.range["clamp"](69))
+print(container["range"]["clamp"](69))
 
 let r = 1..10; r.clamp(69)

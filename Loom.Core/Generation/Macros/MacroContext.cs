@@ -8,10 +8,12 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
     public static LuauExpression GetCallObject(Call call) =>
         call.Callee switch
         {
-            PropertyAccess propertyAccess => UnwrapParentheses(
-                propertyAccess.Names.Count > 2 ? new PropertyAccess(propertyAccess.Target, propertyAccess.Names.Skip(1).ToList()) : propertyAccess.Target
-            ),
             ElementAccess elementAccess => UnwrapParentheses(elementAccess.Target),
+            PropertyAccess propertyAccess =>
+                propertyAccess.Names.Count > 1
+                    ? new PropertyAccess(UnwrapParentheses(propertyAccess.Target), propertyAccess.Names.SkipLast(1).ToList())
+                    : UnwrapParentheses(propertyAccess.Target),
+            
             var callee => UnwrapParentheses(callee)
         };
 
