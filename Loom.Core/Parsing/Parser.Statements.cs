@@ -25,8 +25,15 @@ public sealed partial class Parser
             [SyntaxKind.BreakKeyword] = ParseBreak,
             [SyntaxKind.ContinueKeyword] = ParseContinue,
         };
-
+    
     private Statement ParseStatement()
+    {
+        var statement = ParseStatementCore();
+        Match(SyntaxKind.Semicolon);
+        return statement;
+    }
+
+    private Statement ParseStatementCore()
     {
         if (IsEof())
             return new ExpressionStatement(ParseExpression());
@@ -52,7 +59,7 @@ public sealed partial class Parser
 
     private Return ParseReturn(Token keyword)
     {
-        if (IsEof() || Current().Kind == SyntaxKind.RBrace || AtStatementKeyword())
+        if (IsEof() || Current().Kind is SyntaxKind.RBrace or SyntaxKind.Semicolon || AtStatementKeyword())
             return new Return(keyword, null);
 
         var expression = ParseExpression();

@@ -15,6 +15,7 @@ public sealed partial class Parser
         var typeParameters = ParseTypeParameters();
         var colonTypeListClause = ParseColonTypeListClause();
         var body = ParseInterfaceBody();
+        
         return new InterfaceDeclaration(
             sealedKeyword,
             interfaceKeyword,
@@ -46,7 +47,7 @@ public sealed partial class Parser
             var member = ParseInterfaceMember(Match(out var mutKeyword, SyntaxKind.MutKeyword) ? mutKeyword : null);
             if (member == null) return null;
             members.Add(member);
-            Match(SyntaxKind.Comma);
+            Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
         }
 
         return members;
