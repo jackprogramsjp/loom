@@ -67,8 +67,9 @@ public sealed partial class TypeChecker
 
         foreach (var tp in generic.Parameters)
         {
-            if (tp.Constraint != null && substitution.TryGetValue(tp, out var arg))
-                CheckTypeParameterConstraints(node, arg, tp);
+            if (tp.Constraint == null || !substitution.TryGetValue(tp, out var arg)) continue;
+            if (!CheckTypeParameterConstraints(node, arg, tp))
+                return false;
         }
 
         var substitutedObject = SubstituteObjectType(underlying.ObjectType, substitution);

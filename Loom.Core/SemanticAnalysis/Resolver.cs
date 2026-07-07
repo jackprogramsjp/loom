@@ -73,7 +73,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         {
             if (!DeclareVariable(name, name.Token.Text, SymbolKind.Variable, out var symbol))
                 return false;
-            
+
             MarkDefinitelyInitialized(symbol);
         }
 
@@ -173,12 +173,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitReturn(Return @return)
     {
-        if (_context == ResolverContext.Function)
+        if (@return.FirstAncestorOfType<FunctionDeclaration>() is { } functionDeclaration)
         {
             CurrentFlowState().IsUnreachable = true;
 
             var after = @return.FirstAncestorOfType<After>();
-            if (after == null || @return.FirstAncestorOfType<FunctionDeclaration>()?.FirstAncestorOfType<After>() == after)
+            if (after == null || functionDeclaration.FirstAncestorOfType<After>() == after)
                 return base.VisitReturn(@return);
 
             _diagnostics.Error(@return, InternalCodes.ReturnInAfter, "Cannot return a value from an 'after' statement body.");
@@ -563,7 +563,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false) =>
         DeclareVariable(node, node.Name.Text, symbolKind, out symbol, isMutable);
-    
+
     private bool DeclareVariable(Node node, string name, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
     {
         symbol = null;

@@ -51,7 +51,8 @@ public sealed partial class TypeChecker
 
         foreach (var tp in functionType.TypeParameters)
             if (substitution.TryGetValue(tp, out var substitutedType) && tp.Constraint != null)
-                CheckTypeParameterConstraints(invocation, substitutedType, tp);
+                if (!CheckTypeParameterConstraints(invocation, substitutedType, tp))
+                    return null;
 
         return substitution;
     }
@@ -75,16 +76,18 @@ public sealed partial class TypeChecker
         return BindType(node, instantiated);
     }
 
-    private void CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
+    private bool CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
     {
-        if (parameter.Constraint == null) return;
-        if (type.IsAssignableTo(parameter.Constraint)) return;
+        if (parameter.Constraint == null) return true;
+        if (type.IsAssignableTo(parameter.Constraint)) return true;
 
         _diagnostics.Error(
             node,
             InternalCodes.ConstraintViolation,
             $"Type '{type}' does not satisfy constraint '{parameter.Constraint}' for type parameter '{parameter.Name}'."
         );
+
+        return false;
     }
 
     private bool CheckGenericArity(Node node, List<Types.TypeParameter> parameters, List<Type> arguments, string genericKind)
@@ -129,11 +132,8 @@ public sealed partial class TypeChecker
     private static List<Type> SubstituteTypeParameters(List<Type> types, TypeParameterSubstitution substitution) =>
         types.ConvertAll(t => SubstituteTypeParameters(t, substitution));
 
-    private static Type SubstituteTypeParameters(Type type, TypeParameterSubstitution substitution)
-    {
-        if (type is Types.TypeParameter tp && substitution.TryGetValue(tp, out var substituted))
-            return substituted;
-
-        return TypeSolver.Transform(type, t => t is Types.TypeParameter tp2 && substitution.TryGetValue(tp2, out var s) ? s : t);
-    }
+    private static Type SubstituteTypeParameters(Type type, TypeParameterSubstitution substitution) =>
+        type is Types.TypeParameter tp && substitution.TryGetValue(tp, out var substituted)
+            ? substituted
+            : TypeSolver.Transform(type, t => t is Types.TypeParameter tp2 && substitution.TryGetValue(tp2, out var s) ? s : SubstituteTypeParameters(t, substitution));
 }

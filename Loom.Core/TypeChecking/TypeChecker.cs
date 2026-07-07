@@ -703,23 +703,6 @@ public sealed partial class TypeChecker
             _ => type
         };
 
-    private Type? GetTypeOfMember(Node node, Type type, string propertyName)
-    {
-        if (type is InstantiatedType instantiated)
-            type = instantiated.Expand();
-
-        switch (type)
-        {
-            case ObjectType objectType:
-                var (bodyType, _) = objectType.GetTypeAtIndex(new Types.LiteralType(propertyName));
-                return bodyType?.ValueType;
-            case InterfaceType interfaceType:
-                return GetTypeAtIndexInInterface(node, interfaceType, new Types.LiteralType(propertyName));
-            default:
-                return null;
-        }
-    }
-
     private Type GetTypeAtIndexInInterface(Node node, InterfaceType interfaceType, Type indexType)
     {
         var result = interfaceType.ObjectType.GetTypeAtIndex(indexType, interfaceType);

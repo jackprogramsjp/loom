@@ -65,7 +65,11 @@ public class TypeSolver(DiagnosticBag diagnostics)
                     genericType.Parameters,
                     fn(genericType.UnderlyingType)
                 ),
-                InstantiatedType instantiatedType => new InstantiatedType(instantiatedType.GenericType, instantiatedType.Arguments.ConvertAll(fn)),
+                InstantiatedType instantiatedType => new InstantiatedType(new GenericType(
+                    instantiatedType.GenericType.Declaration,
+                    instantiatedType.GenericType.Parameters,
+                    fn(instantiatedType.GenericType.UnderlyingType)
+                ), instantiatedType.Arguments.ConvertAll(fn)),
                 _ => defaultValue ?? type
             }
         );
