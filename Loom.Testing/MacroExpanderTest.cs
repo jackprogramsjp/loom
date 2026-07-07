@@ -160,7 +160,7 @@ public class MacroExpanderTest
     [InlineData("let _ = c.a.join(', ')", ", ")]
     [InlineData("let _ = c.a['join'](', ')", ", ")]
     [InlineData("let _ = (c.a).join(', ')", ", ")]
-    public void Generates_Array_Join_Nested(string source, string? separator = null, bool parenthesized = false)
+    public void Generates_Array_Join_Nested(string source, string? separator = null)
     {
         var luauTree = Utility.GetLuauAST($"interface C {{ a: number[]; }} let c = new C {{ a: [1, 2, 3] }}; {source}", true);
         Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
