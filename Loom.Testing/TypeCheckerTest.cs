@@ -103,6 +103,24 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let arr: number[] = [1, 2, 3]; arr[0] = 69;");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable index 'number'.");
     }
+    
+    [Theory]
+    [InlineData("type T = T")]
+    [InlineData("type T = T | number")]
+    [InlineData("type T = T & number")]
+    [InlineData("type T = none | string & bool & T | number")]
+    [InlineData("type X<T = T> = T")]
+    [InlineData("type X<T: number = T> = T")]
+    [InlineData("type X<T = T | number> = T")]
+    [InlineData("type X<T = T & number> = T")]
+    [InlineData("type X<T: string = T & number> = T")]
+    [InlineData("type X<T = none | string & bool & T | number> = T")]
+    [InlineData("type X<T: bool = none | string & bool & T | number> = T")]
+    public void ThrowsFor_CircularTypeAlias_Reference(string source)
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InfiniteType, "Type 'T' circularly references itself.");
+    }
 
     [Theory]
     [InlineData("1 + true")]
