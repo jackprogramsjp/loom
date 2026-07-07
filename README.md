@@ -565,6 +565,22 @@ print(range.clamp(69))
 const range = { minimum = 1, maximum = 10 }
 print(math.clamp(69, range.minimum, range.maximum))
 ```
+## string() & number()
+```rs
+let digits = string(69420);
+let n = number(digits);
+```
+```luau
+const digits = tostring(69420)
+const n = tonumber(digits)
+```
+##
+```rs
+let n = number("F00D", 16)
+```
+```luau
+const n = tonumber("F00D", 16)
+```
 ---
 
 ## Contributing
