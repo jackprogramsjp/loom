@@ -31,3 +31,6 @@ declare interface ResultStatic {
 }
 
 declare let Result: ResultStatic;
+
+declare fn string(value: unknown): string;
+declare fn number(value: unknown, radix: number?): number?;

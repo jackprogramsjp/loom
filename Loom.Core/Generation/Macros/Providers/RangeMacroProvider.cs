@@ -10,6 +10,7 @@ namespace Loom.Generation.Macros.Providers;
 internal sealed class RangeMacroProvider : IMacroProvider
 {
     public bool Supports(Type type) => type.Equals(Intrinsics.Range);
+    public bool Supports(Parsing.AST.Expression _) => false;
 
     public bool TryProperty(MacroContext context, string name, LuauExpression target, [MaybeNullWhen(false)] out LuauExpression expression)
     {

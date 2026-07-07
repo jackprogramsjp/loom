@@ -1,9 +1,4 @@
-interface Def {
-    [string]: number;
-}
-
-interface Abc: Def {
-    [number]: string;
-}
-
-let abc = new Abc { };
+let digits = string(1234);
+let n = number(digits);
+print(digits);
+print(n);

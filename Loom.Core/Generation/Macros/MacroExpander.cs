@@ -19,7 +19,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     private readonly MacroContext _context = new(semanticModel, state);
     private static readonly IMacroProvider[] _providers =
     [
-        new NumberMacroProvider(), new RangeMacroProvider(), new ArrayMacroProvider(), new ResultStaticMacroProvider()
+        new NumberMacroProvider(), new RangeMacroProvider(), new ArrayMacroProvider(), new ResultStaticMacroProvider(), new GlobalInvocationMacroProvider()
     ];
 
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)
@@ -28,7 +28,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         if (!TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member))
             return false;
 
-        return provider.TryInvocation( _context,  member, luauCall, out expression);
+        return provider.TryInvocation(_context, member, luauCall, out expression);
     }
 
     public bool TryGetElementAccessMacro(ElementAccess access, Luau.AST.ElementAccess luauAccess, [MaybeNullWhen(false)] out LuauExpression expression)
@@ -58,12 +58,12 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     {
         switch (expression)
         {
-            // case Identifier identifier:
-            // {
-            //     provider = GetProvider(expression);
-            //     memberName = identifier.Name.Text;
-            //     return provider != null;
-            // }
+            case Identifier identifier:
+            {
+                provider = GetProvider(expression);
+                memberName = identifier.Name.Text;
+                return provider != null;
+            }
 
             case QualifiedName qualified:
             {
@@ -232,6 +232,8 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         return true;
     }
 
-    private IMacroProvider? GetProvider(Expression receiver) => GetProvider(semanticModel.GetType(receiver));
+    private IMacroProvider? GetProvider(Expression receiver) =>
+        GetProvider(semanticModel.GetType(receiver)) ?? _providers.FirstOrDefault(provider => provider.Supports(receiver));
+
     private static IMacroProvider? GetProvider(Type type) => _providers.FirstOrDefault(provider => provider.Supports(type));
 }
