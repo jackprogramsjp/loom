@@ -30,11 +30,12 @@ internal static class AstTools
         return AstInspector.Inspect(tree);
     }
     
-    private static bool GenerateFileSnapshots(string loomFile, string snapshotsDirectory, bool skipExisting)
+    private static bool GenerateFileSnapshots(string loomFile, string snapshotsDirectory, bool skipUnchanged)
     {
+        var astString = GetAstString(loomFile);
         var baseName = Path.GetFileNameWithoutExtension(loomFile);
-        var outputFile = Path.Combine(snapshotsDirectory, $"{baseName}.ast");
-        if (skipExisting && File.Exists(outputFile))
+        var outputFilePath = Path.Combine(snapshotsDirectory, $"{baseName}.ast");
+        if (skipUnchanged && File.Exists(outputFilePath) && File.ReadAllText(outputFilePath) == astString)
         {
             Console.WriteLine($"Skipping {Path.GetFileName(loomFile)}.");
             return true;
@@ -43,7 +44,7 @@ internal static class AstTools
         Console.WriteLine($"Processing: {Path.GetFileName(loomFile)} -> {baseName}.ast");
         try
         {
-            File.WriteAllText(outputFile, GetAstString(loomFile), System.Text.Encoding.UTF8);
+            File.WriteAllText(outputFilePath, astString, System.Text.Encoding.UTF8);
         }
         catch (Exception ex)
         {
