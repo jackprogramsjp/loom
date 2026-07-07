@@ -618,13 +618,6 @@ public class TypeCheckerTest
     }
 
     [Fact]
-    public void ThrowsFor_CastToIntersectionType()
-    {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("69 as (number & string)");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '69' is not assignable to type 'never'.");
-    }
-
-    [Fact]
     public void ThrowsFor_ConstraintViolation_DeepInstantiation()
     {
         const string source = """
@@ -696,6 +689,44 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '42' is not assignable to type 'string'.");
     }
+    
+    [Fact]
+    public void ThrowsFor_Indexer_Override()
+    {
+        const string source = """
+            interface Def {
+                [string]: number;
+            }
+            
+            interface Abc: Def {
+                [number]: string;
+            }
+            
+            let abc = new Abc { };
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintIndexerOverride, "An indexer is already declared within constraint 'Def'.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_Property_Override()
+    {
+        const string source = """
+            interface Def {
+                abc: number;
+            }
+
+            interface Abc: Def {
+                abc: string;
+            }
+
+            let abc = new Abc { abc: 69 };
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintPropertyOverride, "Property 'abc' is already declared within constraint 'Def'.");
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -713,6 +744,13 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Fact]
+    public void Checks_CastToIntersectionType_Never()
+    {
+        var result = Utility.AssertNoErrors(Utility.TypeCheck("69 as (number & string)"));
+        Assert.Equal(PrimitiveType.Never, result.ReturnType);
+    }
+    
     [Fact]
     public void Checks_InterfaceInvocation_ConstraintMembers()
     {
