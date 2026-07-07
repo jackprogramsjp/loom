@@ -90,6 +90,7 @@ public enum SyntaxKind : ushort
     AsKeyword,
     NewKeyword,
     SealedKeyword,
+    TraitKeyword,
     ImplementKeyword,
 
     Identifier,

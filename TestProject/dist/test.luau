@@ -1,7 +1,7 @@
 type Def = {
-  read def: string,
+  read abc: string,
 }
 type Abc = Def & {
   read abc: number,
 }
-const abc = { abc = 69, def = "foo" }
+const abc = { abc = 69 }

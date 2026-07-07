@@ -30,6 +30,7 @@ public static class SyntaxFacts
             new("as", SyntaxKind.AsKeyword),
             new("new", SyntaxKind.NewKeyword),
             new("sealed", SyntaxKind.SealedKeyword),
+            new("trait", SyntaxKind.TraitKeyword),
             new("implement", SyntaxKind.ImplementKeyword),
         ]
     );

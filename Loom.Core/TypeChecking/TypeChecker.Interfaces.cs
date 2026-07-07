@@ -14,11 +14,11 @@ public sealed partial class TypeChecker
         var constraints = interfaceDeclaration.ColonTypeListClause?.Types.ConvertAll(Visit).OfType<InterfaceType>().ToList() ?? [];
         var typeParameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
         var indexerDeclaration = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
-        var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>() ?? [];
-        var indexer = ResolveInterfaceIndexer(indexerDeclaration);
-        var properties = ResolveInterfaceProperties(propertyDeclarations).ToList();
+        var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>().ToList() ?? [];
+        var indexer = ResolveInterfaceIndexer(constraints, indexerDeclaration);
+        var properties = ResolveInterfaceProperties(constraints, propertyDeclarations);
         var objectType = new ObjectType(indexer, properties);
-        var interfaceType = new InterfaceType(name, constraints, objectType); 
+        var interfaceType = new InterfaceType(name, constraints, objectType);
         if (typeParameters == null)
             return BindType(interfaceDeclaration, interfaceType);
 
@@ -31,7 +31,7 @@ public sealed partial class TypeChecker
         var type = Visit(node.Name);
         if (type.Equals(Intrinsics.Range))
             _diagnostics.Warn(node, InternalCodes.SimplifiableCode, "Use range literal.");
-        
+
         if (type is InterfaceType nonGeneric)
         {
             CheckInterfaceInvocationInitializers(node, nonGeneric);
@@ -76,13 +76,27 @@ public sealed partial class TypeChecker
         return true;
     }
 
-    private IEnumerable<ObjectProperty> ResolveInterfaceProperties(IEnumerable<PropertyDeclaration> propertyDeclarations) =>
-        from declaration in propertyDeclarations
-        let isMutable = declaration.MutKeyword != null
-        let valueType = Visit(declaration.ColonTypeClause)
-        select new ObjectProperty(isMutable, declaration.Name.Text, valueType);
+    private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
+    {
+        var properties = new List<ObjectProperty>();
+        foreach (var declaration in propertyDeclarations)
+        {
+            var name = declaration.Name.Text;
+            var isMutable = declaration.MutKeyword != null;
+            var valueType = Visit(declaration.ColonTypeClause);
+            if (constraints.Find(i => i.GetProperty(name) != null) is { } subclass)
+            {
+                _diagnostics.Error(declaration, InternalCodes.ImplicitFieldOverride, $"Property '{name}' is already declared within constraint '{subclass}'.");
+                return properties;
+            }
 
-    private ObjectIndexer? ResolveInterfaceIndexer(IndexerDeclaration? indexerDeclaration)
+            properties.Add(new ObjectProperty(isMutable, declaration.Name.Text, valueType));
+        }
+
+        return properties;
+    }
+
+    private ObjectIndexer? ResolveInterfaceIndexer(List<InterfaceType> constraints, IndexerDeclaration? indexerDeclaration)
     {
         if (indexerDeclaration == null)
             return null;
