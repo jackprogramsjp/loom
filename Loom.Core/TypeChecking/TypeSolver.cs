@@ -65,11 +65,14 @@ public class TypeSolver(DiagnosticBag diagnostics)
                     genericType.Parameters,
                     fn(genericType.UnderlyingType)
                 ),
-                InstantiatedType instantiatedType => new InstantiatedType(new GenericType(
-                    instantiatedType.GenericType.Declaration,
-                    instantiatedType.GenericType.Parameters,
-                    fn(instantiatedType.GenericType.UnderlyingType)
-                ), instantiatedType.Arguments.ConvertAll(fn)),
+                InstantiatedType instantiatedType => new InstantiatedType(
+                    new GenericType(
+                        instantiatedType.GenericType.Declaration,
+                        instantiatedType.GenericType.Parameters,
+                        fn(instantiatedType.GenericType.UnderlyingType)
+                    ),
+                    instantiatedType.Arguments.ConvertAll(fn)
+                ),
                 _ => defaultValue ?? type
             }
         );
@@ -120,17 +123,28 @@ public class TypeSolver(DiagnosticBag diagnostics)
             (TypeVariable v, _) => BindVariable(v, b, span, out updated),
             (_, TypeVariable v) => BindVariable(v, a, span, out updated),
             (InstantiatedType i1, InstantiatedType i2) => UnifyInstantiatedPair(i1, i2, span, out updated),
-            (InstantiatedType i, GenericType g) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
-            (GenericType g, InstantiatedType i) => UnifyInstantiatedWithGeneric(i, g, span, out updated),
             (FunctionType f1, FunctionType f2) => UnifyFunctionTypes(f1, f2, span, out updated),
             (ObjectType o1, ObjectType o2) => UnifyObjectTypes(o1, o2, span, out updated),
             (ObjectType o, InterfaceType i) => UnifyObjectWithInterface(o, i, span, out updated),
             (InterfaceType i, ObjectType o) => UnifyObjectWithInterface(o, i, span, out updated),
             (InterfaceType i1, InterfaceType i2) => UnifyInterfaceTypes(i1, i2, span, out updated),
+            (TypeParameter p1, TypeParameter p2) => UnifyTypeParameters(p1, p2, span, out updated),
 
             _ when a.IsAssignableTo(b) => true,
             _ => ReportTypeMismatch(a, b, span)
         };
+    }
+
+    private bool UnifyTypeParameters(TypeParameter p1, TypeParameter p2, LocationSpan span, out bool updated)
+    {
+        updated = false;
+        if (p1.Constraint != null && p2.Constraint != null && !p1.Constraint.IsAssignableTo(p2.Constraint))
+            return ReportTypeMismatch(p1, p2, span);
+
+        if (p1.Constraint == null || p2.Constraint == null)
+            return true;
+
+        return TryUnify(p1.Constraint, p2.Constraint, span, out updated);
     }
 
     private bool UnifyBothVariables(TypeVariable va, TypeVariable vb, out bool updated)
@@ -167,29 +181,6 @@ public class TypeSolver(DiagnosticBag diagnostics)
         for (var i = 0; i < a.Arguments.Count; i++)
         {
             if (!TryUnify(a.Arguments[i], b.Arguments[i], span, out var argUpdated))
-                success = false;
-            else if (argUpdated)
-                updated = true;
-        }
-
-        return success;
-    }
-
-    private bool UnifyInstantiatedWithGeneric(
-        InstantiatedType instantiated,
-        GenericType generic,
-        LocationSpan span,
-        out bool updated)
-    {
-        updated = false;
-        if (!instantiated.GenericType.Equals(generic) || instantiated.Arguments.Count != generic.Parameters.Count)
-            return ReportTypeMismatch(instantiated, generic, span);
-
-        var success = true;
-        for (var i = 0; i < instantiated.Arguments.Count; i++)
-        {
-            var paramVar = GetOrCreateParameterVariable(generic.Parameters[i]);
-            if (!TryUnify(instantiated.Arguments[i], paramVar, span, out var argUpdated))
                 success = false;
             else if (argUpdated)
                 updated = true;
@@ -291,6 +282,15 @@ public class TypeSolver(DiagnosticBag diagnostics)
         if (a.TypeParameters.Count != b.TypeParameters.Count || a.ParameterTypes.Count != b.ParameterTypes.Count)
             return ReportTypeMismatch(a, b, span);
 
+        var success = true;
+        for (var i = 0; i < a.TypeParameters.Count; i++)
+        {
+            if (!TryUnify(a.TypeParameters[i], b.TypeParameters[i], span, out var constraintUpdated))
+                success = false;
+            else if (constraintUpdated)
+                updated = true;
+        }
+
         var freshVars = a.TypeParameters.Select(_ => CreateTypeVariable()).ToList();
         var aMapping = a.TypeParameters.Zip(freshVars).ToDictionary(p => p.First, p => p.Second);
         var bMapping = b.TypeParameters.Zip(freshVars).ToDictionary(p => p.First, p => p.Second);
@@ -298,7 +298,6 @@ public class TypeSolver(DiagnosticBag diagnostics)
         var bParamTypes = b.ParameterTypes.ConvertAll(t => SubstituteTypeParameters(bMapping, t));
         var aReturnType = SubstituteTypeParameters(aMapping, a.ReturnType);
         var bReturnType = SubstituteTypeParameters(bMapping, b.ReturnType);
-        var success = true;
         for (var i = 0; i < aParamTypes.Count; i++)
         {
             if (!TryUnify(aParamTypes[i], bParamTypes[i], span, out var paramUpdated))
@@ -332,16 +331,6 @@ public class TypeSolver(DiagnosticBag diagnostics)
             TypeParameter tp => tp.Constraint != null && OccursIn(variable, tp.Constraint) || tp.DefaultType != null && OccursIn(variable, tp.DefaultType),
             _ => false
         };
-
-    private TypeVariable GetOrCreateParameterVariable(TypeParameter param)
-    {
-        if (_parameterVariables.TryGetValue(param, out var variable))
-            return variable;
-
-        variable = CreateTypeVariable();
-        _parameterVariables[param] = variable;
-        return variable;
-    }
 
     private void ApplySubstitutions()
     {

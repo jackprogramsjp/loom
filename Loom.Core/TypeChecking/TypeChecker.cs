@@ -313,6 +313,7 @@ public sealed partial class TypeChecker
                             InternalCodes.InvalidAccess,
                             $"Indexing '{indexType}' is not valid for union member '{member}'."
                         );
+
                         continue;
                     }
 
@@ -328,11 +329,11 @@ public sealed partial class TypeChecker
                     TypeSimplifier.Simplify(new Types.UnionType(results))
                 );
             }
-            
+
             case ObjectType or InterfaceType:
                 return GetTypeAtIndex(node, type, indexType);
         }
-        
+
         _diagnostics.Error(node, InternalCodes.InvalidAccess, errorMessage);
         return BindType(node, Types.PrimitiveType.Never);
     }
@@ -660,7 +661,8 @@ public sealed partial class TypeChecker
         var type = Visit(targetExpression);
         foreach (var indexType in names.Select(name => new Types.LiteralType(name.Name.Text)))
         {
-            type = IndexType(accessExpression, type, indexType, $"Cannot access property '{indexType.Value}' on type '{type}'.");;
+            type = IndexType(accessExpression, type, indexType, $"Cannot access property '{indexType.Value}' on type '{type}'.");
+            ;
             if (Type.IsNever(type))
                 return type;
         }

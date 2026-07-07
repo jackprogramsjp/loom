@@ -24,8 +24,14 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
             return false;
         }
 
-        if (TypeParameters.Where((t, i) => !t.Equals(functionType.TypeParameters[i])).Any())
+        if (TypeParameters
+            .Where((t, i) => functionType.TypeParameters[i].Constraint is { } constraint
+                && !(t.Constraint ?? PrimitiveType.Never).IsAssignableTo(constraint)
+            )
+            .Any())
+        {
             return false;
+        }
 
         return !ParameterTypes.Where((t, i) => !functionType.ParameterTypes[i].IsAssignableTo(t)).Any()
             && ReturnType.IsAssignableTo(functionType.ReturnType);
