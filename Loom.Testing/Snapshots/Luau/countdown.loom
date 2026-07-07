@@ -1,0 +1,10 @@
+fn countdown(n: number): string {
+    mut count = n;
+    mut result = "";
+    while n > 0 {
+        result += string(count) + " ";
+        count -= 1;
+    }
+    return result + "Go!";
+}
+print(countdown(10))
