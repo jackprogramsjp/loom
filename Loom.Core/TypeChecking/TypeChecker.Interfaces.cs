@@ -82,15 +82,15 @@ public sealed partial class TypeChecker
         foreach (var declaration in propertyDeclarations)
         {
             var name = declaration.Name.Text;
-            var isMutable = declaration.MutKeyword != null;
-            var valueType = Visit(declaration.ColonTypeClause);
             if (constraints.Find(i => i.GetProperty(name) != null) is { } subclass)
             {
-                _diagnostics.Error(declaration, InternalCodes.ImplicitFieldOverride, $"Property '{name}' is already declared within constraint '{subclass}'.");
+                _diagnostics.Error(declaration, InternalCodes.ConstraintPropertyOverride, $"Property '{name}' is already declared within constraint '{subclass}'.");
                 return properties;
             }
 
-            properties.Add(new ObjectProperty(isMutable, declaration.Name.Text, valueType));
+            var isMutable = declaration.MutKeyword != null;
+            var valueType = Visit(declaration.ColonTypeClause);
+            properties.Add(new ObjectProperty(isMutable, name, valueType));
         }
 
         return properties;
@@ -104,7 +104,11 @@ public sealed partial class TypeChecker
         var isMutable = indexerDeclaration.MutKeyword != null;
         var indexType = Visit(indexerDeclaration.IndexType);
         var valueType = Visit(indexerDeclaration.ColonTypeClause);
-        return new ObjectIndexer(isMutable, indexType, valueType);
+        if (constraints.Find(i => i.Indexer != null) is not { } subclass)
+            return new ObjectIndexer(isMutable, indexType, valueType);
+
+        _diagnostics.Error(indexerDeclaration, InternalCodes.ConstraintIndexerOverride, $"An indexer is already declared within constraint '{subclass}'.");
+        return null;
     }
 
     private void CheckInterfaceInvocationInitializers(InterfaceInvocation node, InterfaceType interfaceType)

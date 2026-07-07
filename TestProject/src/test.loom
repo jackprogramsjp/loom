@@ -1,9 +1,9 @@
 interface Def {
-    abc: string;
+    [string]: number;
 }
 
 interface Abc: Def {
-    abc: number;
+    [number]: string;
 }
 
-let abc = new Abc { abc: 69 };
+let abc = new Abc { };
