@@ -330,7 +330,9 @@ public class LexerTest
 
     [Theory]
     [InlineData("\"abcd\"")]
+    [InlineData(""" "\"abcd\"" """)]
     [InlineData("'abc'")]
+    [InlineData(@"'\'abc\''")]
     public void Tokenizes_Strings(string source)
     {
         var tokens = Utility.GetTokens(source);
@@ -338,6 +340,7 @@ public class LexerTest
 
         var token = tokens[0];
         Assert.Equal(SyntaxKind.StringLiteral, token.Kind);
+        Assert.Equal(source.Trim(), token.Text);
     }
 
     [Theory]
