@@ -1,0 +1,20 @@
+interface Entry<K, V> {
+    key: K;
+    value: V;
+}
+
+fn find<K, V>(entries: Entry<K, V>[], key: K): Result<V, string> {
+    for entry : entries
+        if entry.key == key
+            return Result.ok(entry.value);
+
+    return Result.err("missing key");
+}
+
+let entries = [
+    new Entry { key: "pi", value: 3.14159 } as Entry<string, number>,
+    new Entry { key: "e", value: 2.71828 } as Entry<string, number>
+];
+
+let result = find(entries, "pi");
+print(result.ok ? result.value : result.error);

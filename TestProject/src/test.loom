@@ -1,4 +1,1 @@
-let digits = string(1234);
-let n = number(digits);
-print(digits);
-print(n);
+let abc = "\"abc\"";

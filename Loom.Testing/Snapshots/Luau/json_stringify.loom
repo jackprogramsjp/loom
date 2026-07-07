@@ -1,0 +1,15 @@
+interface User {
+    name: string;
+    age: number;
+    tags: string[];
+}
+
+fn stringify(user: User): string ->
+    "{\n" +
+    "  name: '" + user.name + "',\n" +
+    "  age: " + string(user.age) + ",\n" +
+    "  tags: [" + user.tags.join(", ") + "]\n" +
+    "}";
+
+let user = new User { name: "Alice", age: 20, tags: ["admin", "staff"] };
+print(stringify(user));
