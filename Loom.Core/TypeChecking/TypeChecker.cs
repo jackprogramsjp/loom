@@ -232,7 +232,7 @@ public sealed partial class TypeChecker
     public override Type VisitAsExpression(AsExpression asExpression)
     {
         var expressionType = Visit(asExpression.Expression);
-        var castedType = Visit(asExpression.Type);
+        var castedType = TypeSimplifier.Simplify(Visit(asExpression.Type));
         if (Type.IsNotUnknown(expressionType) && Type.IsNotNever(castedType) && Type.IsNotUnknown(castedType))
             _semanticModel.TypeSolver.AddConstraint(expressionType, castedType, asExpression);
 
