@@ -6,6 +6,54 @@ namespace Loom.Testing;
 public class MacroExpanderTest
 {
     [Fact]
+    public void Generates_GlobalInvocation_Number_WithRadix()
+    {
+        const string source = "number('420', 16)";
+        var luauTree = Utility.GetLuauAST(source);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Single(luauTree.Statements);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var tonumberCall = Assert.IsType<Call>(expressionStatement.Expression);
+        var identifier = Assert.IsType<Identifier>(tonumberCall.Callee);
+        Assert.Equal("tonumber", identifier.Name);
+        
+        Assert.Equal(2, tonumberCall.Arguments.Count);
+        Assert.IsType<StringLiteral>(tonumberCall.Arguments.First());
+        Assert.IsType<NumberLiteral>(tonumberCall.Arguments.Last());
+    }
+    
+    [Fact]
+    public void Generates_GlobalInvocation_Number()
+    {
+        const string source = "number('420')";
+        var luauTree = Utility.GetLuauAST(source);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Single(luauTree.Statements);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var tonumberCall = Assert.IsType<Call>(expressionStatement.Expression);
+        var identifier = Assert.IsType<Identifier>(tonumberCall.Callee);
+        Assert.Equal("tonumber", identifier.Name);
+        Assert.IsType<StringLiteral>(Assert.Single(tonumberCall.Arguments));
+    }
+    
+    [Fact]
+    public void Generates_GlobalInvocation_String()
+    {
+        const string source = "string(69)";
+        var luauTree = Utility.GetLuauAST(source);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Single(luauTree.Statements);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var tostringCall = Assert.IsType<Call>(expressionStatement.Expression);
+        var identifier = Assert.IsType<Identifier>(tostringCall.Callee);
+        Assert.Equal("tostring", identifier.Name);
+        Assert.IsType<NumberLiteral>(Assert.Single(tostringCall.Arguments));
+    }
+    
+    [Fact]
     public void Generates_ResultStatic_Ok()
     {
         const string source = "Result.ok(69)";
