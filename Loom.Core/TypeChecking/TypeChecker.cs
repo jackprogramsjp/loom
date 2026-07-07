@@ -163,11 +163,15 @@ public sealed partial class TypeChecker
         if (typeAlias.TypeParameters == null)
         {
             var type = Visit(typeAlias.EqualsTypeClause);
+            _semanticModel.TypeSolver.CheckCircular(ref type, typeAlias.Name);
+
             return BindType(typeAlias, TypeSimplifier.Simplify(type));
         }
 
         var parameters = typeAlias.TypeParameters.ParameterList.ConvertAll(VisitTypeParameter);
         var underlyingType = Visit(typeAlias.EqualsTypeClause);
+        _semanticModel.TypeSolver.CheckCircular(ref underlyingType, typeAlias.Name);
+
         var genericType = new GenericType(typeAlias, parameters, TypeSimplifier.Simplify(underlyingType));
         return BindType(typeAlias, genericType);
     }
@@ -606,8 +610,12 @@ public sealed partial class TypeChecker
     {
         var defaultType = MaybeVisit(typeParameter.EqualsTypeClause);
         var constraint = MaybeVisit(typeParameter.ColonTypeClause);
-        if (defaultType != null && constraint != null)
-            _semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter.EqualsTypeClause!);
+        if (defaultType != null)
+        {
+            _semanticModel.TypeSolver.CheckCircular(ref defaultType, typeParameter.Name);
+            if (constraint != null)
+                _semanticModel.TypeSolver.AddConstraint(defaultType, constraint, typeParameter.EqualsTypeClause!);
+        }
 
         var parameter = new Types.TypeParameter(typeParameter.Name.Text, constraint, defaultType);
         return BindType(typeParameter, parameter);

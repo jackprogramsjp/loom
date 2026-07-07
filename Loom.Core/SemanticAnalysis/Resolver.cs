@@ -224,7 +224,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         if (!DeclareType(typeAlias))
             return false;
-
+            
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();

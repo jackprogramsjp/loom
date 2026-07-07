@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Text;
@@ -5,6 +6,7 @@ using Loom.TypeChecking.Types;
 using ArrayType = Loom.TypeChecking.Types.ArrayType;
 using FunctionType = Loom.TypeChecking.Types.FunctionType;
 using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
+using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 using Type = Loom.TypeChecking.Types.Type;
 using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
 using UnionType = Loom.TypeChecking.Types.UnionType;
@@ -34,8 +36,25 @@ public class TypeSolver(DiagnosticBag diagnostics)
     private readonly List<TypeConstraint> _constraints = [];
     private readonly Dictionary<NodeId, Type> _nodeTypes = [];
     private readonly Dictionary<int, Type> _substitutions = [];
-    private readonly Dictionary<TypeParameter, TypeVariable> _parameterVariables = [];
     private int _nextVariableId;
+
+    public bool CheckCircular(ref Type type, Token name)
+    {
+        switch (type)
+        {
+            case UnionType unionType:
+                return unionType.Types.Any(t => CheckCircular(ref t, name));
+            case IntersectionType intersectionType:
+                return intersectionType.Types.Any(t => CheckCircular(ref t, name));
+
+            case TypeVariable:
+                type = PrimitiveType.Never;
+                ReportInfiniteType(name.Span, name.Text);
+                return true;
+        }
+        
+        return false;
+    }
 
     public static Type Transform(Type type, Converter<Type, Type> fn, Type? defaultValue = null) =>
         TypeSimplifier.Simplify(
@@ -164,7 +183,7 @@ public class TypeSolver(DiagnosticBag diagnostics)
     {
         updated = false;
         if (OccursIn(variable, type))
-            return ReportInfiniteType(span);
+            return ReportInfiniteType(span, type.ToString());
 
         _substitutions[variable.Id] = type;
         updated = true;
@@ -374,9 +393,9 @@ public class TypeSolver(DiagnosticBag diagnostics)
         return false;
     }
 
-    private bool ReportInfiniteType(LocationSpan span)
+    internal bool ReportInfiniteType(LocationSpan span, string name)
     {
-        Diagnostics.Error(span, InternalCodes.InfiniteType, "Type is infinitely recursive.");
+        Diagnostics.Error(span, InternalCodes.InfiniteType, $"Type '{name}' circularly references itself.");
         return false;
     }
 

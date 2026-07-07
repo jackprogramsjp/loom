@@ -1,1 +1,2 @@
-const f: <T>(T & string) -> boolean = ((nil :: never) :: <T>(T & number) -> boolean)
+type X = X
+const x: X = 1
