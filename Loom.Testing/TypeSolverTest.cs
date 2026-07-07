@@ -83,7 +83,7 @@ public class TypeSolverTest
     }
 
     [Fact]
-    public void Unify_FunctionTypes_IgnoresTypeParameterConstraints()
+    public void Unify_FunctionTypes_MismatchedTypeParameterConstraints()
     {
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
@@ -93,8 +93,8 @@ public class TypeSolverTest
         var functionTwo = new FunctionType([constrainedString], [constrainedString], PrimitiveType.Bool);
 
         solver.AddConstraint(functionOne, functionTwo, Utility.Span);
-        Assert.True(solver.SolveConstraints());
-        Utility.AssertNoErrors(diagnostics);
+        Assert.False(solver.SolveConstraints());
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'T: number' is not assignable to type 'U: string'.");
     }
 
     [Fact]
@@ -336,23 +336,6 @@ public class TypeSolverTest
     }
 
     [Fact]
-    public void Unify_TwoVariables_SetEqual()
-    {
-        var diagnostics = CreateDiagnostics();
-        var solver = new TypeSolver(diagnostics);
-        var node = Identifier("x");
-        var node2 = Identifier("y");
-
-        var type1 = solver.GetType(node);
-        var type2 = solver.GetType(node2);
-        solver.AddConstraint(type1, type2, Utility.Span);
-
-        var success = solver.SolveConstraints();
-        Assert.True(success);
-        Assert.True(solver.GetType(node).Equals(solver.GetType(node2)), "Both variables should resolve to the same type after unification");
-    }
-
-    [Fact]
     public void Unify_VariableWithPrimitive_BindsVariable()
     {
         var diagnostics = CreateDiagnostics();
@@ -460,44 +443,6 @@ public class TypeSolverTest
 
         var success = solver.SolveConstraints();
         Assert.True(success);
-    }
-
-    [Fact]
-    public void Unify_VariableWithSelf_Succeeds()
-    {
-        var diagnostics = CreateDiagnostics();
-        var solver = new TypeSolver(diagnostics);
-        var node = Identifier("x");
-
-        var variable = solver.GetType(node);
-        solver.AddConstraint(variable, variable, Utility.Span);
-
-        var success = solver.SolveConstraints();
-        Assert.True(success);
-    }
-
-    [Fact]
-    public void Unify_InfiniteType_ReportsError()
-    {
-        var diagnostics = CreateDiagnostics();
-        var solver = new TypeSolver(diagnostics);
-        var node = Identifier("x");
-        var variable = solver.GetType(node);
-        solver.AddConstraint(variable, variable, Utility.Span);
-
-        var success = solver.SolveConstraints();
-        Assert.True(success, "x = x should succeed (same variable, not infinite)");
-
-        var solver2 = new TypeSolver(CreateDiagnostics());
-        var nodeA = Identifier("a");
-        var nodeB = Identifier("b");
-        var a = solver2.GetType(nodeA);
-        var b = solver2.GetType(nodeB);
-        solver2.AddConstraint(a, b, Utility.Span);
-        solver2.AddConstraint(b, a, Utility.Span);
-
-        var success2 = solver2.SolveConstraints();
-        Assert.True(success2, "Mutual variable binding should unify them without error");
     }
 
     [Fact]

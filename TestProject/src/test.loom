@@ -1,1 +1,1 @@
-let abc = "\"abc\"";
+let f: fn<T: string>(p: T): bool = none as never as fn<T: number>(p: T): bool
