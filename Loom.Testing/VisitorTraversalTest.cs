@@ -71,7 +71,7 @@ public class VisitorTraversalTest
     [Fact]
     public void KeyOf_VisitsType() =>
         AssertVisitOrder(
-            "type X = keyof number;",
+            "type X = keyof(number);",
             "TypeAlias",
             "EqualsTypeClause",
             "KeyOf",

@@ -1,2 +1,1 @@
-type X = X;
-let x: X = 1
+type X = keyof(number);
