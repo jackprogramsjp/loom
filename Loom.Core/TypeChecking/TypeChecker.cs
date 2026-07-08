@@ -467,7 +467,7 @@ public sealed partial class TypeChecker
         }
 
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
-        var hint = FormatBinaryHint(binaryOperator, leftType, rightType, suggestion);
+        var hint = Diagnostic.FormatBinaryHint(binaryOperator, leftType, rightType, suggestion);
         _diagnostics.Error(
             binaryOperator,
             InternalCodes.InvalidBinaryOp,
@@ -486,7 +486,7 @@ public sealed partial class TypeChecker
             return rule.ReturnType;
 
         var suggestion = UnaryOperatorBinder.GetSuggestion(unaryOperator, operandType);
-        var hint = FormatUnaryHint(unaryOperator, operandType, suggestion);
+        var hint = Diagnostic.FormatUnaryHint(unaryOperator, operandType, suggestion);
         _diagnostics.Error(unaryOperator, InternalCodes.InvalidUnaryOp, $"No unary operation for {unaryOperator.Operator.Text}{operandType.Widen()}.", hint);
 
         return BindType(unaryOperator, Types.PrimitiveType.Never);
@@ -847,34 +847,5 @@ public sealed partial class TypeChecker
     {
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
         return BindType(node, Types.PrimitiveType.Never);
-    }
-
-    private static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
-    {
-        if (suggestion == null)
-            return null;
-
-        var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
-        if (suggestion.OperatorKind != op.Operator.Kind)
-            return $"did you mean '{op.Left} {suggestedOp} {op.Right}'?";
-
-        if (!left.IsAssignableTo(suggestion.LeftType) && right.IsAssignableTo(suggestion.RightType))
-            return $"left should be '{suggestion.LeftType}', not '{left}'";
-
-        if (left.IsAssignableTo(suggestion.LeftType) && !right.IsAssignableTo(suggestion.RightType))
-            return $"right should be '{suggestion.RightType}', not '{right}'";
-
-        return $"left should be '{suggestion.LeftType}' and right should be '{suggestion.RightType}'";
-    }
-
-    private static string? FormatUnaryHint(UnaryOperator op, Type operand, UnaryOperatorRule? suggestion)
-    {
-        if (suggestion == null)
-            return null;
-
-        var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
-        return suggestion.OperatorKind != op.Operator.Kind
-            ? $"did you mean '{suggestedOp}{op.Operand}'?"
-            : $"operand should be '{suggestion.OperandType}', not '{operand}'";
     }
 }

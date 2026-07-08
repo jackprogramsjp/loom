@@ -1,10 +1,43 @@
+using Loom.Parsing.AST;
 using Loom.Text;
+using Loom.TypeChecking;
 using Loom.Utility;
+using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Diagnostics;
 
+
 public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {
+    internal static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
+    {
+        if (suggestion == null)
+            return null;
+
+        var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
+        if (suggestion.OperatorKind != op.Operator.Kind)
+            return $"did you mean '{op.Left} {suggestedOp} {op.Right}'?";
+
+        if (!left.IsAssignableTo(suggestion.LeftType) && right.IsAssignableTo(suggestion.RightType))
+            return $"left should be '{suggestion.LeftType}', not '{left}'";
+
+        if (left.IsAssignableTo(suggestion.LeftType) && !right.IsAssignableTo(suggestion.RightType))
+            return $"right should be '{suggestion.RightType}', not '{right}'";
+
+        return $"left should be '{suggestion.LeftType}' and right should be '{suggestion.RightType}'";
+    }
+
+    internal static string? FormatUnaryHint(UnaryOperator op, Type operand, UnaryOperatorRule? suggestion)
+    {
+        if (suggestion == null)
+            return null;
+
+        var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
+        return suggestion.OperatorKind != op.Operator.Kind
+            ? $"did you mean '{suggestedOp}{op.Operand}'?"
+            : $"operand should be '{suggestion.OperandType}', not '{operand}'";
+    }
+    
     public override string ToString()
     {
         var (severityColor, underlineColor, severityLabel) = Severity switch
