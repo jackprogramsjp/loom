@@ -1,5 +1,5 @@
 using Loom.Parsing.AST;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
 using LiteralType = Loom.TypeChecking.Types.LiteralType;

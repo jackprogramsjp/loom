@@ -1,6 +1,6 @@
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 
 namespace Loom.Testing;
 
@@ -8,39 +8,6 @@ namespace Loom.Testing;
 public class ResolverTest
 {
     #region ThrowsFor
-    [Theory]
-    [InlineData("mut x; x;")]
-    [InlineData("mut x: number; { let x = 42; }; x;")]
-    [InlineData("mut x: number; { x; }")]
-    [InlineData("mut x: number; let arr = [0]; arr[0] = 42; x;")]
-    public void ThrowsFor_UseOfUninitialized(string source)
-    {
-        var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfUninitialized, "Use of uninitialized variable 'x'.");
-    }
-
-    [Theory]
-    [InlineData("mut x: number; if true x = 69; x;")]
-    [InlineData("mut x: number; if true x = 69 else if true x = 420; x;")]
-    [InlineData(
-        """
-                    mut x: number;
-                    if outer {
-                        if inner {
-                            x = 42;
-                        }
-                    } else {
-                        x = 0;
-                    }
-                    x;
-        """
-    )]
-    public void ThrowsFor_UseOfMaybeUninitialized(string source)
-    {
-        var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
-    }
-
     [Fact]
     public void ThrowsFor_UninitializedConst()
     {
@@ -208,13 +175,6 @@ public class ResolverTest
     }
 
     [Fact]
-    public void ThrowsFor_VariableInitializedInWhile_IsNotDefinitelyInitializedAfterLoop()
-    {
-        var diagnostics = Utility.GetSemanticModel("mut x: number; while true { x = 1; break; } x;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
-    }
-
-    [Fact]
     public void ThrowsFor_BreakOutsideLoop()
     {
         var diagnostics = Utility.GetSemanticModel("break").Diagnostics;
@@ -281,13 +241,6 @@ public class ResolverTest
     }
 
     [Fact]
-    public void ThrowsFor_VariableInitializedInAfterBody_UsedAfter()
-    {
-        var diagnostics = Utility.GetSemanticModel("mut x: number; after 1s { x = 42; } x;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
-    }
-
-    [Fact]
     public void ThrowsFor_VariableDeclaredInAfterBody_UsedOutside()
     {
         var diagnostics = Utility.GetSemanticModel("after 1s { let x = 42; } x;").Diagnostics;
@@ -313,13 +266,6 @@ public class ResolverTest
     {
         var diagnostics = Utility.GetSemanticModel("fn abc { after 1s { return 69 } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ReturnInAfter, "Cannot return a value from an 'after' statement body.");
-    }
-    
-    [Fact]
-    public void ThrowsFor_VariableInitializedInForBody_UsedAfter()
-    {
-        var diagnostics = Utility.GetSemanticModel("mut x: number; for _ : 1..10 { x = 42; } x;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
     }
     
     [Fact]
@@ -364,17 +310,6 @@ public class ResolverTest
         Utility.AssertDiagnostic(diagnostics, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
     }
     #endregion ThrowsFor
-
-    [Theory]
-    [InlineData("fn foo { return 42; let x = 1 }")]
-    [InlineData("while true { break; let unreachable = 1; }")]
-    [InlineData("while true { continue; let unreachable = 1; }")]
-    [InlineData("fn test() { after 1s { return 42; let x = 1; } }")]
-    public void WarnsFor_UnreachableCode(string source)
-    {
-        var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
-    }
     
     [Fact]
     public void WarnsFor_UseExpressionBody()

@@ -1,6 +1,6 @@
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 using Loom.Text;
 using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
@@ -55,7 +55,7 @@ public sealed partial class TypeChecker
             tree,
             tree.Statements.Count > 0
                 ? _semanticModel.GetType(tree.Statements.Last())
-                : Types.PrimitiveType.Never
+                : Types.PrimitiveType.Void
         );
     }
 

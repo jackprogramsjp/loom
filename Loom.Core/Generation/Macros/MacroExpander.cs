@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Loom.Generation.Macros.Providers;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 using Loom.TypeChecking;
 using Loom.TypeChecking.Types;
 using ElementAccess = Loom.Parsing.AST.ElementAccess;

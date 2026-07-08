@@ -1,11 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
+using Loom.FlowAnalysis;
 using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Text;
 using Loom.TypeChecking;
 
-namespace Loom.SemanticAnalysis;
+namespace Loom.Resolving;
 
 public sealed class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
     : Visitor<bool>(_ => true)
@@ -14,18 +15,15 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     private readonly SymbolTable _allDeclarations = [];
     private readonly SymbolTable _allReferences = [];
     private readonly Stack<ResolverScope> _scopes = [];
-    private readonly Stack<FlowState> _flowStates = [];
     private ResolverContext _context = ResolverContext.None;
 
     public SemanticModel Resolve()
     {
         var semanticModel = new SemanticModel(parserResult.Tree, _diagnostics, _allDeclarations, _allReferences);
         PushScope();
-        PushFlowState(new FlowState([], []));
         DeclareIntrinsicSymbols(semanticModel);
         DeclareGlobalSymbols(semanticModel);
         VisitTree(parserResult.Tree);
-        PopFlowState();
         PopScope();
 
         return semanticModel;
@@ -38,122 +36,44 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitBlock(Block block)
     {
         PushScope();
-        var parentState = CurrentFlowState();
-        var blockState = PushInheritedFlowState();
         var result = ResolveStatements(block.Statements);
-        MergeFlowState(blockState, target: parentState);
-        PopFlowState();
         PopScope();
 
         return result;
-    }
-
-    public override bool VisitAfter(After after)
-    {
-        Visit(after.Duration);
-        var before = new FlowState(CurrentFlowState());
-        var bodyState = PushFlowAndVisitBranch(after.Body, before);
-        if (bodyState == null)
-            return false;
-
-        var definitely = new HashSet<Symbol>(before.DefinitelyInitialized);
-        var maybe = new HashSet<Symbol>(before.MaybeInitialized.Concat(bodyState.DefinitelyInitialized.Intersect(before.DefinitelyInitialized)));
-        maybe.UnionWith(bodyState.MaybeInitialized);
-
-        PopFlowState();
-        _flowStates.Push(new FlowState(definitely, maybe, before.IsUnreachable));
-        return true;
     }
 
     public override bool VisitFor(For @for)
     {
         Visit(@for.CollectionExpression);
         PushScope();
-        foreach (var name in @for.Names)
-        {
-            if (!DeclareVariable(name, name.Token.Text, SymbolKind.Variable, out var symbol))
-                return false;
-
-            MarkDefinitelyInitialized(symbol);
-        }
-
-        var beforeLoop = new FlowState(CurrentFlowState());
-        var lastContext = _context;
-        _context = ResolverContext.Loop;
-        var bodyState = PushFlowAndVisitBranch(@for.Body, beforeLoop);
-        _context = lastContext;
-
-        if (bodyState == null)
+        if (@for.Names.Any(name => !DeclareVariable(name, name.Token.Text, SymbolKind.Variable, out _)))
             return false;
 
-        var definitely = new HashSet<Symbol>(beforeLoop.DefinitelyInitialized);
-        var maybe = new HashSet<Symbol>(beforeLoop.MaybeInitialized);
-        maybe.UnionWith(bodyState.MaybeInitialized);
-
-        PopFlowState();
-        _flowStates.Push(new FlowState(definitely, maybe, beforeLoop.IsUnreachable));
+        var lastContext = _context;
+        _context = ResolverContext.Loop;
+        Visit(@for.Body);
+        _context = lastContext;
+        
         PopScope();
-
         return true;
     }
 
     public override bool VisitWhile(While @while)
     {
         Visit(@while.Condition);
-        var beforeLoop = new FlowState(CurrentFlowState());
+        
         var lastContext = _context;
         _context = ResolverContext.Loop;
-        var bodyState = PushFlowAndVisitBranch(@while.Body, beforeLoop);
+        Visit(@while.Body);
         _context = lastContext;
 
-        if (bodyState == null)
-            return false;
-
-        var definitely = new HashSet<Symbol>(beforeLoop.DefinitelyInitialized.Concat(bodyState.DefinitelyInitialized.Intersect(beforeLoop.DefinitelyInitialized)));
-        var maybe = new HashSet<Symbol>(beforeLoop.MaybeInitialized);
-        maybe.UnionWith(bodyState.MaybeInitialized);
-
-        PopFlowState();
-        _flowStates.Push(new FlowState(definitely, maybe, beforeLoop.IsUnreachable));
-        return true;
-    }
-
-    public override bool VisitIf(If @if)
-    {
-        Visit(@if.Condition);
-        var beforeIf = new FlowState(CurrentFlowState());
-        var thenState = PushFlowAndVisitBranch(@if.ThenBranch, beforeIf);
-        if (thenState == null) return false;
-
-        FlowState elseState;
-        if (@if.ElseBranch != null)
-        {
-            var state = PushFlowAndVisitBranch(@if.ElseBranch.Branch, beforeIf);
-            if (state == null) return false;
-            elseState = state;
-        }
-        else
-        {
-            elseState = new FlowState(beforeIf);
-        }
-
-        var definitely = new HashSet<Symbol>(beforeIf.DefinitelyInitialized.Concat(thenState.DefinitelyInitialized.Intersect(elseState.DefinitelyInitialized)));
-        var maybe = new HashSet<Symbol>(beforeIf.MaybeInitialized);
-        maybe.UnionWith(thenState.MaybeInitialized);
-        maybe.UnionWith(elseState.MaybeInitialized);
-
-        PopFlowState();
-        _flowStates.Push(new FlowState(definitely, maybe, beforeIf.IsUnreachable || thenState.IsUnreachable && elseState.IsUnreachable));
         return true;
     }
 
     public override bool VisitContinue(Continue @continue)
     {
         if (_context == ResolverContext.Loop)
-        {
-            CurrentFlowState().IsUnreachable = true;
             return base.VisitContinue(@continue);
-        }
 
         _diagnostics.Error(@continue, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
         return false;
@@ -162,10 +82,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitBreak(Break @break)
     {
         if (_context == ResolverContext.Loop)
-        {
-            CurrentFlowState().IsUnreachable = true;
             return base.VisitBreak(@break);
-        }
 
         _diagnostics.Error(@break, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
         return false;
@@ -175,8 +92,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         if (@return.FirstAncestorOfType<FunctionDeclaration>() is { } functionDeclaration)
         {
-            CurrentFlowState().IsUnreachable = true;
-
             var after = @return.FirstAncestorOfType<After>();
             if (after == null || functionDeclaration.FirstAncestorOfType<After>() == after)
                 return base.VisitReturn(@return);
@@ -199,22 +114,17 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             return false;
         }
 
-        if (!DeclareVariable(functionDeclaration, SymbolKind.Function, out var symbol))
+        if (!DeclareVariable(functionDeclaration, SymbolKind.Function, out _))
             return false;
 
-        MarkDefinitelyInitialized(symbol);
         PushScope();
-
         var lastContext = _context;
         _context = ResolverContext.Function;
-        PushInheritedFlowState();
         if (functionDeclaration.Body is Block { Statements: [Return] })
             _diagnostics.Warn(functionDeclaration, InternalCodes.RedundantCode, "Use expression body.");
 
         base.VisitFunctionDeclaration(functionDeclaration);
-        PopFlowState();
         _context = lastContext;
-
         PopScope();
 
         return true;
@@ -224,7 +134,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         if (!DeclareType(typeAlias))
             return false;
-            
+
         PushScope();
         base.VisitTypeAlias(typeAlias);
         PopScope();
@@ -235,38 +145,27 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
         var isMutable = variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword;
-        if (!DeclareVariable(variableDeclaration, SymbolKind.Variable, out var symbol, isMutable))
+        if (!DeclareVariable(variableDeclaration, SymbolKind.Variable, out _, isMutable))
             return false;
 
         base.VisitVariableDeclaration(variableDeclaration);
-        if (variableDeclaration.EqualsValueClause != null)
-        {
-            MarkDefinitelyInitialized(symbol);
-        }
-        else if (!isMutable)
-        {
-            _diagnostics.Error(variableDeclaration, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
-            return false;
-        }
+        if (variableDeclaration.EqualsValueClause != null || isMutable)
+            return true;
 
-        return true;
+        _diagnostics.Error(variableDeclaration, InternalCodes.MustHaveInitializer, "Immutable declarations must be initialized.");
+        return false;
     }
 
     public override bool VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
-        if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol))
-            return false;
-
         var isSealed = interfaceDeclaration.SealedKeyword != null;
-        if (!DeclareInterface(interfaceDeclaration, isSealed, out var symbol))
+        if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out var valueSymbol)
+            || !DeclareInterface(interfaceDeclaration, isSealed, out var symbol)
+            || !ResolveInterfaceBody(interfaceDeclaration.Body, valueSymbol.Name)
+            || !ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
+        {
             return false;
-
-        MarkDefinitelyInitialized(valueSymbol);
-        if (!ResolveInterfaceBody(interfaceDeclaration.Body, valueSymbol.Name))
-            return false;
-
-        if (!ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
-            return false;
+        }
 
         PushScope();
         base.VisitInterfaceDeclaration(interfaceDeclaration);
@@ -301,7 +200,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (!DeclareVariable(declareFunctionSignature, SymbolKind.Function, out var symbol))
             return false;
 
-        MarkDefinitelyInitialized(symbol);
         PushScope();
         base.VisitDeclareFunctionSignature(declareFunctionSignature);
         PopScope();
@@ -323,11 +221,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         }
 
         var isMutable = declareVariableSignature.Keyword.Kind == SyntaxKind.MutKeyword;
-        if (!DeclareVariable(declareVariableSignature, SymbolKind.Variable, out var symbol, isMutable))
-            return false;
-
-        MarkDefinitelyInitialized(symbol);
-        return base.VisitDeclareVariableSignature(declareVariableSignature);
+        return DeclareVariable(declareVariableSignature, SymbolKind.Variable, out _, isMutable) && base.VisitDeclareVariableSignature(declareVariableSignature);
     }
 
     public override bool VisitFunctionType(FunctionType functionType)
@@ -358,7 +252,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
         var symbol = new Symbol(parameter, SymbolKind.Parameter, name);
         DeclareSymbol(symbol);
-        MarkDefinitelyInitialized(symbol);
 
         if (parameter.EqualsValueClause != null || parameter.ColonTypeClause != null)
             return base.VisitParameter(parameter);
@@ -367,14 +260,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return false;
     }
 
-    public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration)
-    {
-        if (!DeclareVariable(enumDeclaration, SymbolKind.Variable, out var symbol) || !DeclareType(enumDeclaration, SymbolKind.EnumType))
-            return false;
-
-        MarkDefinitelyInitialized(symbol);
-        return true;
-    }
+    public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration) =>
+        DeclareVariable(enumDeclaration, SymbolKind.Variable, out _) && DeclareType(enumDeclaration, SymbolKind.EnumType);
 
     public override bool VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
@@ -405,13 +292,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
         var name = identifier.Name.Text;
         var symbol = LookupValueSymbol(name);
-        if (symbol == null)
-            return base.VisitAssignmentOperator(assignmentOperator);
-
-        if (assignmentOperator.Operator.Kind == SyntaxKind.Equals)
-            MarkDefinitelyInitialized(symbol);
-
-        if (symbol is { IsMutable: true })
+        if (symbol is null or { IsMutable: true })
             return base.VisitAssignmentOperator(assignmentOperator);
 
         _diagnostics.Error(
@@ -431,16 +312,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (symbol == null)
         {
             _diagnostics.Error(identifier, InternalCodes.CannotFindName, $"Cannot find name '{name}'.");
-            return false;
-        }
-
-        if (symbol.IsValueSymbol && !IsDefinitelyInitialized(symbol))
-        {
-            if (IsMaybeInitialized(symbol))
-                _diagnostics.Error(identifier, InternalCodes.UseOfMaybeUninitialized, $"Variable '{name}' might not be initialized on this path.");
-            else
-                _diagnostics.Error(identifier, InternalCodes.UseOfUninitialized, $"Use of uninitialized variable '{name}'.");
-
             return false;
         }
 
@@ -531,9 +402,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool ResolveStatement(Statement statement)
     {
-        if (CurrentFlowState().IsUnreachable)
-            _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
-
         if (!parserResult.Tree.File.IsDeclaration || statement is Declare or TypeAlias)
         {
             Visit(statement);
@@ -663,49 +531,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private static SymbolLookup GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
-    private void MarkDefinitelyInitialized(Symbol symbol)
-    {
-        if (symbol.IsTypeSymbol)
-        {
-            _diagnostics.CompilerError(symbol.Declaration, "Attempt to mark symbol as initialized - but symbol is not a value symbol");
-            return;
-        }
-
-        var state = CurrentFlowState();
-        state.DefinitelyInitialized.Add(symbol);
-        state.MaybeInitialized.Add(symbol);
-    }
-
-    /// <summary>Merges <paramref name="source"/> into <paramref name="target"/>.</summary>
-    private static void MergeFlowState(FlowState source, FlowState target)
-    {
-        foreach (var v in source.DefinitelyInitialized)
-            target.DefinitelyInitialized.Add(v);
-
-        foreach (var v in source.MaybeInitialized)
-            target.MaybeInitialized.Add(v);
-    }
-
-    /// <summary>Pushes a copy of the current flow state and returns that copy.</summary>
-    private FlowState PushInheritedFlowState()
-    {
-        var state = new FlowState(CurrentFlowState());
-        PushFlowState(state);
-        return state;
-    }
-
-    /// <summary>
-    /// Visits a branch with a fresh inherited state copied from <paramref name="inherited"/>,
-    /// then pops that state and returns its final content (or null if visit failed).
-    /// </summary>
-    private FlowState? PushFlowAndVisitBranch(Statement node, FlowState inherited)
-    {
-        PushFlowState(new FlowState(inherited));
-        var ok = ResolveStatement(node);
-        var state = PopFlowState();
-        return ok ? state : null;
-    }
-
     private bool ReportNonInterfaceConstraint(TypeExpression constraint)
     {
         _diagnostics.Error(
@@ -729,18 +554,9 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     private void DeclareIntrinsicSymbols(SemanticModel semanticModel)
     {
         foreach (var symbol in Intrinsics.Register(semanticModel))
-        {
             DeclareSymbol(symbol);
-            if (symbol.IsValueSymbol)
-                MarkDefinitelyInitialized(symbol);
-        }
     }
 
-    private void PushFlowState(FlowState state) => _flowStates.Push(state);
-    private bool IsDefinitelyInitialized(Symbol symbol) => CurrentFlowState().DefinitelyInitialized.Contains(symbol);
-    private bool IsMaybeInitialized(Symbol symbol) => CurrentFlowState().MaybeInitialized.Contains(symbol);
-    private FlowState CurrentFlowState() => _flowStates.Peek();
-    private FlowState PopFlowState() => _flowStates.Pop();
     private ResolverScope CurrentScope() => _scopes.Peek();
     private void PopScope() => _scopes.Pop();
     private void PushScope() => _scopes.Push(new ResolverScope());

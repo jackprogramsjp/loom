@@ -1,4 +1,4 @@
-namespace Loom.SemanticAnalysis;
+namespace Loom.Resolving;
 
 public enum SymbolKind : byte
 {

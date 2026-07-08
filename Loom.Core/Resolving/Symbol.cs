@@ -1,7 +1,7 @@
 using Loom.Parsing.AST;
 using Loom.Text;
 
-namespace Loom.SemanticAnalysis;
+namespace Loom.Resolving;
 
 public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutable = false) : IEquatable<Symbol>
 {

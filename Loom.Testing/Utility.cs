@@ -1,4 +1,5 @@
 using Loom.Diagnostics;
+using Loom.FlowAnalysis;
 using Loom.Generation;
 using Loom.Lexing;
 using Loom.Luau;
@@ -6,7 +7,7 @@ using Loom.Luau.AST;
 using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Projects;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 using Loom.Text;
 using Loom.TypeChecking;
 using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
@@ -49,6 +50,13 @@ internal static class Utility
         var compilationUnit = new CompilationUnit(new LoomConfig());
         return new Resolver(parserResult, compilationUnit).Resolve();
     }
+    
+    public static FlowAnalyzerResult FlowAnalyze(string source)
+    {
+        var semanticModel = GetSemanticModel(source);
+        return new FlowAnalyzer(semanticModel).Analyze(semanticModel.Tree);
+    }
+    
     public static TypeChecker GetTypeChecker(string source) => new(GetSemanticModel(source));
     public static TypeCheckerResult TypeCheck(string source) => GetTypeChecker(source).Check();
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;

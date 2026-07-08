@@ -1,0 +1,54 @@
+using Loom.Diagnostics;
+
+namespace Loom.Testing;
+
+[Collection("Assembly")]
+public class FlowAnalyzerTest
+{
+    [Theory]
+    [InlineData("fn foo { return 42; let x = 1 }")]
+    [InlineData("while true { break; let unreachable = 1; }")]
+    [InlineData("while true { continue; let unreachable = 1; }")]
+    [InlineData("fn test() { after 1s { return 42; let x = 1; } }")]
+    public void WarnsFor_UnreachableCode(string source)
+    {
+        var diagnostics = Utility.FlowAnalyze(source).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
+    }
+
+    [Theory]
+    [InlineData("mut x; x;")]
+    [InlineData("mut x: number; { let x = 42; }; x;")]
+    [InlineData("mut x: number; { x; }")]
+    [InlineData("mut x: number; let arr = [0]; arr[0] = 42; x;")]
+    public void ThrowsFor_UseOfUninitialized(string source)
+    {
+        var diagnostics = Utility.FlowAnalyze(source).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfUninitialized, "Use of uninitialized variable 'x'.");
+    }
+
+    [Theory]
+    [InlineData("mut x: number; for _ : 1..10 { x = 42; } x;")]
+    [InlineData("mut x: number; after 1s { x = 42; } x;")]
+    [InlineData("mut x: number; while true { x = 1; break; } x;")]
+    [InlineData("mut x: number; if true x = 69; x;")]
+    [InlineData("mut x: number; if true x = 69 else if true x = 420; x;")]
+    [InlineData(
+        """
+        mut x: number;
+        if outer {
+            if inner {
+                x = 42;
+            }
+        } else {
+            x = 0;
+        }
+        x;
+        """
+    )]
+    public void ThrowsFor_UseOfMaybeUninitialized(string source)
+    {
+        var diagnostics = Utility.FlowAnalyze(source).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
+    }
+}

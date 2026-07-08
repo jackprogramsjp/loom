@@ -1,6 +1,3 @@
 namespace Loom.Diagnostics;
 
-public class DiagnosedResult(DiagnosticBag diagnostics)
-{
-    public DiagnosticBag Diagnostics { get; } = diagnostics;
-}
+public record DiagnosedResult(DiagnosticBag Diagnostics);

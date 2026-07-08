@@ -1,5 +1,5 @@
 using Loom.Luau.AST;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 
 namespace Loom.Generation.Macros;
 

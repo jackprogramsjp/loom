@@ -1,8 +1,9 @@
 using Loom.Diagnostics;
+using Loom.FlowAnalysis;
 using Loom.Generation;
 using Loom.Lexing;
 using Loom.Parsing;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 using Loom.Text;
 using Loom.TypeChecking;
 
@@ -21,6 +22,7 @@ public sealed class Compiler(CompilationUnit unit, SourceFile file)
             var parserResult = trackDiagnostics(parser.Parse());
             var resolver = new Resolver(parserResult, unit);
             var semanticModel = trackDiagnostics(resolver.Resolve());
+            var flowAnalyzer = new FlowAnalyzer(semanticModel);
             var typeChecker = new TypeChecker(semanticModel);
             var typeCheckerResult = trackDiagnostics(typeChecker.Check());
             var generator = new LuauGenerator(semanticModel);

@@ -13,26 +13,27 @@ using UnionType = Loom.TypeChecking.Types.UnionType;
 
 namespace Loom.TypeChecking;
 
-public class TypeSolver(DiagnosticBag diagnostics)
-    : DiagnosedResult(diagnostics)
+public sealed class TypeSolver(DiagnosticBag diagnostics)
 {
-    private record TypeConstraint
+    private sealed record TypeConstraint
     {
-        public TypeConstraint(Type Actual, Type Expected, LocationSpan Span)
-        {
-            ArgumentNullException.ThrowIfNull(Actual);
-            ArgumentNullException.ThrowIfNull(Expected);
-            ArgumentNullException.ThrowIfNull(Span);
-            this.Actual = Actual;
-            this.Expected = Expected;
-            this.Span = Span;
-        }
-
         public Type Actual { get; }
         public Type Expected { get; }
         public LocationSpan Span { get; }
+        
+        public TypeConstraint(Type actual, Type expected, LocationSpan span)
+        {
+            ArgumentNullException.ThrowIfNull(actual);
+            ArgumentNullException.ThrowIfNull(expected);
+            ArgumentNullException.ThrowIfNull(span);
+            Actual = actual;
+            Expected = expected;
+            Span = span;
+        }
     }
 
+    public DiagnosticBag Diagnostics { get; } = diagnostics;
+    
     private readonly List<TypeConstraint> _constraints = [];
     private readonly Dictionary<NodeId, Type> _nodeTypes = [];
     private readonly Dictionary<int, Type> _substitutions = [];

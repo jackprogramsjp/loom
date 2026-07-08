@@ -1,17 +1,14 @@
-global using SymbolTable = System.Collections.Generic.Dictionary<Loom.Parsing.AST.NodeId, System.Collections.Generic.List<Loom.SemanticAnalysis.Symbol>>;
+global using SymbolTable = System.Collections.Generic.Dictionary<Loom.Parsing.AST.NodeId, System.Collections.Generic.List<Loom.Resolving.Symbol>>;
 using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.TypeChecking;
 using Type = Loom.TypeChecking.Types.Type;
 
-namespace Loom.SemanticAnalysis;
+namespace Loom.Resolving;
 
-public sealed class SemanticModel(Tree tree, DiagnosticBag diagnostics, SymbolTable declarations, SymbolTable references)
-    : DiagnosedResult(diagnostics)
+public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolTable Declarations, SymbolTable References)
+    : DiagnosedResult(Diagnostics)
 {
-    public Tree Tree { get; internal set; } = tree;
-    public SymbolTable Declarations { get; } = declarations;
-    public SymbolTable References { get; } = references;
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
 
     public bool IsCompileTimeConstant(Expression expression) =>

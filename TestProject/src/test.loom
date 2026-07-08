@@ -1,1 +1,4 @@
-type X = keyof(number);
+fn abc {
+    return 69;
+    print('hi')
+}

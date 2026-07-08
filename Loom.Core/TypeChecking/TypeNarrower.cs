@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.FlowAnalysis;
 using Loom.Parsing;
 using Loom.Parsing.AST;
-using Loom.SemanticAnalysis;
+using Loom.Resolving;
 using Loom.Text;
 using Loom.TypeChecking.Types;
 using LiteralType = Loom.TypeChecking.Types.LiteralType;
@@ -141,7 +142,7 @@ public sealed class TypeNarrower
         return result;
     }
 
-    private static Type? ResolveEffectiveType(TypedFlowAddress address, TypedFlowState state)
+    private static Type? ResolveEffectiveType(FlowAddress address, TypedFlowState state)
     {
         if (state.NarrowedTypes.TryGetValue(address, out var direct))
             return direct;
@@ -292,7 +293,7 @@ public sealed class TypeNarrower
         while (currentType is not UnionType && pathIndex < propertyPath.Count)
         {
             var name = propertyPath[pathIndex];
-            var nextAddress = TypedFlowAddress.Field(unionAddress, name);
+            var nextAddress = FlowAddress.Field(unionAddress, name);
             currentType = currentState.NarrowedTypes.TryGetValue(nextAddress, out var narrowedStep)
                 ? narrowedStep
                 : GetMemberPropertyType(currentType, name);
@@ -445,7 +446,7 @@ public sealed class TypeNarrower
         var narrowedIndex = narrowedBase != null ? 0 : -1;
         for (var i = 0; i < path.Count; i++)
         {
-            address = TypedFlowAddress.Field(address, path[i]);
+            address = FlowAddress.Field(address, path[i]);
             if (!current.NarrowedTypes.TryGetValue(address, out var narrowed)) continue;
 
             narrowedBase = narrowed;
@@ -570,7 +571,7 @@ public sealed class TypeNarrower
         };
     }
 
-    private TypedFlowAddress? GetFlowAddress(Expression expr) =>
+    private FlowAddress? GetFlowAddress(Expression expr) =>
         expr switch
         {
             Identifier identifier => GetIdentifierFlowAddress(identifier),
@@ -580,28 +581,28 @@ public sealed class TypeNarrower
             _ => null
         };
 
-    private TypedFlowAddress? BuildFieldChain(Expression baseExpr, List<DotName> dotNames)
+    private FlowAddress? BuildFieldChain(Expression baseExpr, List<DotName> dotNames)
     {
         var address = GetFlowAddress(baseExpr);
         return address == null
             ? null
-            : dotNames.Select(name => name.Name.Text).Aggregate(address, TypedFlowAddress.Field);
+            : dotNames.Select(name => name.Name.Text).Aggregate(address, FlowAddress.Field);
     }
 
-    private TypedFlowAddress? GetElementAddress(ElementAccess elementAccess)
+    private FlowAddress? GetElementAddress(ElementAccess elementAccess)
     {
         if (GetFlowAddress(elementAccess.Expression) is not { } baseAddress)
             return null;
 
         if (elementAccess.IndexExpression is Literal { Value: not null and not bool } literal)
-            return TypedFlowAddress.Element(baseAddress, literal.Value);
+            return FlowAddress.Element(baseAddress, literal.Value);
 
         return null;
     }
 
-    private TypedFlowAddress? GetIdentifierFlowAddress(Identifier identifier)
+    private FlowAddress? GetIdentifierFlowAddress(Identifier identifier)
     {
         var symbol = _semanticModel.GetSymbol(identifier);
-        return symbol != null ? TypedFlowAddress.Variable(symbol) : null;
+        return symbol != null ? FlowAddress.Variable(symbol) : null;
     }
 }
