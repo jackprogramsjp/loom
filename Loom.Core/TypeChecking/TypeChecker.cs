@@ -79,7 +79,7 @@ public sealed partial class TypeChecker
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement) => BindType(expressionStatement, Visit(expressionStatement.Expression));
     public override Type VisitBlock(Block block) => BindType(block, CheckStatements(block, block.Statements).LastOrDefault(Types.PrimitiveType.Void));
-
+    
     public override Type VisitFor(For @for)
     {
         var collectionType = Visit(@for.CollectionExpression);
@@ -102,14 +102,11 @@ public sealed partial class TypeChecker
             return BindType(@for, Types.PrimitiveType.Never);
         }
 
-        if (collectionType.Equals(Intrinsics.Range))
-        {
-            BindType(@for.Names[0], elementType);
-            return BindType(@for, Visit(@for.Body));
-        }
-
         switch (collectionType)
         {
+            case var _ when collectionType.Equals(Intrinsics.Range):
+                BindType(@for.Names[0], elementType);
+                break;
             case Types.ArrayType:
                 BindType(@for.Names[0], elementType);
                 if (@for.Names.Count > 1)
@@ -126,8 +123,12 @@ public sealed partial class TypeChecker
                 break;
             }
         }
-
-        return BindType(@for, Visit(@for.Body));
+        
+        var bodyType = Visit(@for.Body);
+        var bodyExit = _exitStates.GetValueOrDefault(@for.Body, _flowState);
+        _exitStates[@for] = MergeExitStates(_flowState, bodyExit);
+        
+        return BindType(@for, bodyType);
     }
 
     public override Type VisitAfter(After after)
@@ -144,7 +145,11 @@ public sealed partial class TypeChecker
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
 
         var (trueState, _) = _narrower.ComputeBranchStates(@while.Condition, _flowState);
-        return BindType(@while, Visit(@while.Body, trueState));
+        var bodyType = Visit(@while.Body, trueState);
+        var bodyExit = _exitStates.GetValueOrDefault(@while.Body, trueState);
+
+        _exitStates[@while] = MergeExitStates(_flowState, bodyExit);
+        return BindType(@while, bodyType);
     }
 
     public override Type VisitIf(If @if)
@@ -153,9 +158,13 @@ public sealed partial class TypeChecker
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
 
         var (trueState, falseState) = _narrower.ComputeBranchStates(@if.Condition, _flowState);
-        var thenBranchType = Visit(@if.ThenBranch, trueState);
-        var elseBranchType = @if.ElseBranch != null ? Visit(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
-        return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType])));
+        var thenType = Visit(@if.ThenBranch, trueState);
+        var thenExit = _exitStates.GetValueOrDefault(@if.ThenBranch, trueState);
+        var elseExit = @if.ElseBranch != null ? _exitStates.GetValueOrDefault(@if.ElseBranch, falseState) : falseState;
+        var elseType = @if.ElseBranch != null ? Visit(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
+
+        _exitStates[@if] = MergeExitStates(thenExit, elseExit);
+        return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenType, elseType])));
     }
 
     public override Type VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -835,6 +844,13 @@ public sealed partial class TypeChecker
             Return or Break or Continue => new FlowState(entryState) { IsUnreachable = true },
             _ => entryState
         };
+
+    private FlowState MergeExitStates(FlowState left, FlowState right) =>
+        left.IsUnreachable
+            ? right
+            : right.IsUnreachable
+                ? left
+                : left.Merge(right);
 
     private Type GetReturnType(FunctionDeclaration functionDeclaration)
     {
