@@ -1,5 +1,8 @@
 fn abc {
-    let r = Result.ok(69);
-    if !r.ok return;
-    print(r.value)
+    mut x: number;
+    while true {
+        break;
+        x = 69;
+    }
+    x;
 }

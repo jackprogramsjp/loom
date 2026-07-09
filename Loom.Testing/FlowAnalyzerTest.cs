@@ -33,6 +33,7 @@ public class FlowAnalyzerTest
     [InlineData("mut x: number; if true x = 69; x += 1")]
     [InlineData("mut x: number; for _ : 1..10 { x = 42; } x;")]
     [InlineData("mut x: number; after 1s { x = 42; } x;")]
+    [InlineData("mut x: number; while true { x = 1; } x;")]
     [InlineData("mut x: number; while true { x = 1; break; } x;")]
     [InlineData("mut x: number; while true { x = 1; break; } x += 69;")]
     [InlineData("mut x: number; if true x = 69; x;")]
@@ -40,12 +41,38 @@ public class FlowAnalyzerTest
     [InlineData(
         """
         mut x: number;
-        if outer {
-            if inner {
+        if true {
+            if true {
                 x = 42;
             }
         } else {
             x = 0;
+        }
+        x;
+        """
+    )]
+    [InlineData(
+        """
+        mut x: number;
+        while true {
+            if true {
+                x = 1;
+                break;
+            }
+        }
+        x;
+        """
+    )]
+    [InlineData(
+        """
+        mut x: number;
+        while true {
+            while true {
+                x = 1;
+                break;
+            }
+
+            break;
         }
         x;
         """
@@ -72,4 +99,45 @@ public class FlowAnalyzerTest
         var diagnostics = Utility.FlowAnalyze(source).AnalyzerResult.Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable variable 'x'.");
     }
+
+    [Theory]
+    [InlineData(
+        """
+        mut x: number;
+        if outer {
+            if inner {
+                return;
+            }
+            x = 1;
+        } else {
+            x = 2;
+        }
+
+        x;
+        """
+    )]
+    [InlineData(
+        """
+        mut x: number;
+        if cond
+            x = 1;
+        else
+            x = 2;
+        x;
+        """
+    )]
+    [InlineData(
+        """
+        mut x: number;
+        if cond {
+            x = 1;
+        } else if other {
+            x = 2;
+        } else {
+            x = 3;
+        }
+        x;
+        """
+    )]
+    public void Allows(string source) => Utility.AssertNoErrors(Utility.FlowAnalyze(source).AnalyzerResult);
 }
