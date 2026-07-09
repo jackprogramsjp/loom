@@ -23,6 +23,7 @@ public sealed partial class TypeChecker
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<Node, FlowState> _exitStates = [];
+    private readonly Stack<List<FlowState>> _loopExitScopes = [];
     private readonly SemanticModel _semanticModel;
     private readonly FlowAnalyzer _flowAnalyzer;
     private readonly TypeInferrer _inferrer;
@@ -79,7 +80,19 @@ public sealed partial class TypeChecker
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement) => BindType(expressionStatement, Visit(expressionStatement.Expression));
     public override Type VisitBlock(Block block) => BindType(block, CheckStatements(block, block.Statements).LastOrDefault(Types.PrimitiveType.Void));
-    
+
+    public override Type VisitBreak(Break @break)
+    {
+        _loopExitScopes.Peek().Add(_flowState);
+        return BindType(@break, Types.PrimitiveType.Void);
+    }
+
+    public override Type VisitContinue(Continue @continue)
+    {
+        _loopExitScopes.Peek().Add(_flowState);
+        return BindType(@continue, Types.PrimitiveType.Void);
+    }
+
     public override Type VisitFor(For @for)
     {
         var collectionType = Visit(@for.CollectionExpression);
@@ -121,13 +134,13 @@ public sealed partial class TypeChecker
                     BindType(@for.Names[1], elementType);
 
                 break;
-            }
+            } 
         }
-        
-        var bodyType = Visit(@for.Body);
-        var bodyExit = _exitStates.GetValueOrDefault(@for.Body, _flowState);
-        _exitStates[@for] = MergeExitStates(_flowState, bodyExit);
-        
+
+        _loopExitScopes.Push([]);
+        var bodyType = CheckBody(@for.Body, _flowState);
+        AssignLoopExitState(@for);
+
         return BindType(@for, bodyType);
     }
 
@@ -144,11 +157,11 @@ public sealed partial class TypeChecker
         var conditionType = Visit(@while.Condition);
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
 
+        _loopExitScopes.Push([]);
         var (trueState, _) = _narrower.ComputeBranchStates(@while.Condition, _flowState);
-        var bodyType = Visit(@while.Body, trueState);
-        var bodyExit = _exitStates.GetValueOrDefault(@while.Body, trueState);
+        var bodyType = CheckBody(@while.Body, trueState);
+        AssignLoopExitState(@while);
 
-        _exitStates[@while] = MergeExitStates(_flowState, bodyExit);
         return BindType(@while, bodyType);
     }
 
@@ -158,10 +171,10 @@ public sealed partial class TypeChecker
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
 
         var (trueState, falseState) = _narrower.ComputeBranchStates(@if.Condition, _flowState);
-        var thenType = Visit(@if.ThenBranch, trueState);
+        var thenType = CheckBody(@if.ThenBranch, trueState);
         var thenExit = _exitStates.GetValueOrDefault(@if.ThenBranch, trueState);
         var elseExit = @if.ElseBranch != null ? _exitStates.GetValueOrDefault(@if.ElseBranch, falseState) : falseState;
-        var elseType = @if.ElseBranch != null ? Visit(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
+        var elseType = @if.ElseBranch != null ? CheckBody(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
 
         _exitStates[@if] = MergeExitStates(thenExit, elseExit);
         return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenType, elseType])));
@@ -837,6 +850,18 @@ public sealed partial class TypeChecker
         return types;
     }
 
+    private Type CheckBody(Statement body, FlowState current)
+    {
+        var type = Visit(body, current);
+        if (body is Block)
+            return type;
+        
+        var exit = GetStatementExitState(body, current);
+        _exitStates[body] = exit;
+        
+        return type;
+    }
+
     private FlowState GetStatementExitState(Statement statement, FlowState entryState) =>
         statement switch
         {
@@ -844,8 +869,15 @@ public sealed partial class TypeChecker
             Return or Break or Continue => new FlowState(entryState) { IsUnreachable = true },
             _ => entryState
         };
+    
+    private void AssignLoopExitState(Node node)
+    {
+        var exits = _loopExitScopes.Pop();
+        var bodyExit = exits.Aggregate(_flowState, MergeExitStates);
+        _exitStates[node] = bodyExit;
+    }
 
-    private FlowState MergeExitStates(FlowState left, FlowState right) =>
+    private static FlowState MergeExitStates(FlowState left, FlowState right) =>
         left.IsUnreachable
             ? right
             : right.IsUnreachable

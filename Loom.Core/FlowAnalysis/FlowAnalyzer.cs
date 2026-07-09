@@ -7,8 +7,8 @@ namespace Loom.FlowAnalysis;
 
 public sealed class FlowAnalyzer(SemanticModel semanticModel)
 {
-    private readonly Stack<List<FlowState>?> _loopExitScopes = new();
     private readonly DiagnosticBag _diagnostics = new();
+    private readonly Stack<List<FlowState>?> _loopExitScopes = [];
     private readonly Dictionary<Node, FlowState> _states = [];
 
     public FlowState GetState(Node node) => _states.TryGetValue(node, out var existingState) ? existingState : new FlowState();
