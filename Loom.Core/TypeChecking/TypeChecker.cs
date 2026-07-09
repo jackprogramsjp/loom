@@ -22,6 +22,7 @@ public sealed partial class TypeChecker
     : Visitor<Type>
 {
     private readonly DiagnosticBag _diagnostics = new();
+    private readonly Dictionary<Node, FlowState> _exitStates = [];
     private readonly SemanticModel _semanticModel;
     private readonly FlowAnalyzer _flowAnalyzer;
     private readonly TypeInferrer _inferrer;
@@ -49,7 +50,7 @@ public sealed partial class TypeChecker
     }
 
     protected override Type Visit(Node node) => Visit(node, _flowState);
-    
+
     private Type Visit(Node node, FlowState? state)
     {
         var lastState = _flowState;
@@ -62,7 +63,7 @@ public sealed partial class TypeChecker
             var baseState = _flowAnalyzer.GetState(node);
             _flowState = new FlowState(baseState.DefinitelyInitialized, baseState.MaybeInitialized, baseState.IsUnreachable, lastState.NarrowedTypes);
         }
-        
+
         var result = node.Accept(this);
         _flowState = lastState;
 
@@ -72,22 +73,12 @@ public sealed partial class TypeChecker
     public override Type VisitTree(Tree tree)
     {
         _flowState = _flowAnalyzer.GetState(tree);
-        base.VisitTree(tree);
-        return BindType(
-            tree,
-            tree.Statements.Count > 0
-                ? _semanticModel.GetType(tree.Statements.Last())
-                : Types.PrimitiveType.Void
-        );
+        var types = CheckStatements(tree, tree.Statements);
+        return BindType(tree, types.LastOrDefault(Types.PrimitiveType.Void));
     }
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement) => BindType(expressionStatement, Visit(expressionStatement.Expression));
-
-    public override Type VisitBlock(Block block)
-    {
-        var types = block.Statements.ConvertAll(Visit);
-        return BindType(block, types.LastOrDefault(Types.PrimitiveType.Void));
-    }
+    public override Type VisitBlock(Block block) => BindType(block, CheckStatements(block, block.Statements).LastOrDefault(Types.PrimitiveType.Void));
 
     public override Type VisitFor(For @for)
     {
@@ -232,7 +223,7 @@ public sealed partial class TypeChecker
         var type = declare.Signature switch
         {
             InterfaceDeclaration interfaceDeclaration => Visit(interfaceDeclaration),
-            DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause!),
+            DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause),
             DeclareFunctionSignature functionSignature => new Types.FunctionType(
                 functionSignature.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [],
                 functionSignature.Parameters?.ParameterList.ConvertAll(Visit) ?? [],
@@ -684,7 +675,6 @@ public sealed partial class TypeChecker
         foreach (var indexType in names.Select(name => new Types.LiteralType(name.Name.Text)))
         {
             type = IndexType(accessExpression, type, indexType, $"Cannot access property '{indexType.Value}' on type '{type}'.");
-            ;
             if (Type.IsNever(type))
                 return type;
         }
@@ -823,6 +813,28 @@ public sealed partial class TypeChecker
         AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
         return BindType(invocation, functionType.ReturnType);
     }
+
+    private List<Type> CheckStatements(Node node, List<Statement> statements)
+    {
+        var current = _flowState;
+        var types = new List<Type>(statements.Count);
+        foreach (var statement in statements)
+        {
+            types.Add(Visit(statement, current));
+            current = GetStatementExitState(statement, current);
+        }
+
+        _exitStates[node] = current;
+        return types;
+    }
+
+    private FlowState GetStatementExitState(Statement statement, FlowState entryState) =>
+        statement switch
+        {
+            Block or If or While or For or After => _exitStates.GetValueOrDefault(statement, entryState),
+            Return or Break or Continue => new FlowState(entryState) { IsUnreachable = true },
+            _ => entryState
+        };
 
     private Type GetReturnType(FunctionDeclaration functionDeclaration)
     {

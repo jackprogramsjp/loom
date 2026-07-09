@@ -46,7 +46,8 @@ public sealed class Compiler(CompilationUnit unit, SourceFile file)
                 ReturnType = typeCheckerResult.ReturnType,
                 SemanticModel = semanticModel,
                 Tree = parserResult.Tree,
-                Tokens = lexerResult.Tokens
+                Tokens = lexerResult.Tokens,
+                TopLevelFlowState = flowAnalyzerResult.FlowState
             };
         }
         catch (Exception e)

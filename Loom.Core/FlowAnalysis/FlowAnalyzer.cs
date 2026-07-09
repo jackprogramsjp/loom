@@ -7,6 +7,7 @@ namespace Loom.FlowAnalysis;
 
 public sealed class FlowAnalyzer(SemanticModel semanticModel)
 {
+    private readonly Stack<List<FlowState>?> _loopExitScopes = new();
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<Node, FlowState> _states = [];
 
@@ -32,7 +33,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             ExpressionStatement expressionStatement => AnalyzeExpressionStatement(expressionStatement, state),
             _ => new FlowState(statement.Children.OfType<Statement>().Select(e => state = AnalyzeStatement(e, state)).LastOrDefault(new FlowState()))
         };
-        
+
         if (state.IsUnreachable)
             _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
 
@@ -69,25 +70,24 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
 
     private FlowState AnalyzeIf(If @if, FlowState state)
     {
-        BindState(@if.Condition, state);
         AnalyzeExpression(@if.Condition, state);
         var thenState = AnalyzeStatement(@if.ThenBranch, new FlowState(state));
         var elseState = @if.ElseBranch != null ? AnalyzeStatement(@if.ElseBranch.Branch, new FlowState(state)) : new FlowState(state);
-        return BindState(@if, state.Merge(thenState.Merge(elseState)));
+        return BindState(@if, thenState.Merge(elseState));
     }
-    
+
     private FlowState AnalyzeAfter(After after, FlowState state)
     {
         var bodyState = new FlowState(AnalyzeExpression(after.Duration, state));
-        var body = AnalyzeStatement(after.Body, bodyState);
+        var (body, _) = CaptureExitStates(after.Body, bodyState, null);
         return BindState(after, state.Merge(body));
     }
 
     private FlowState AnalyzeWhile(While @while, FlowState state)
     {
         var bodyState = new FlowState(AnalyzeExpression(@while.Condition, state));
-        var body = AnalyzeStatement(@while.Body, bodyState);
-        return BindState(@while, state.Merge(body));
+        var (body, breakStates) = CaptureExitStates(@while.Body, bodyState, []);
+        return BindState(@while, ComputeLoopExitState(state, body, breakStates));
     }
 
     private FlowState AnalyzeFor(For @for, FlowState state)
@@ -99,11 +99,19 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             bodyState.MaybeInitialized.Add(symbol);
         }
 
-        var body = AnalyzeStatement(@for.Body, bodyState);
-        return BindState(@for, state.Merge(body));
+        var (body, breakStates) = CaptureExitStates(@for.Body, bodyState, []);
+        return BindState(@for, ComputeLoopExitState(state, body, breakStates));
     }
-    
-    private FlowState AnalyzeBreak(Break @break, FlowState state) => BindState(@break, new FlowState(state) { IsUnreachable = true });
+
+    private FlowState AnalyzeBreak(Break @break, FlowState state)
+    {
+        var result = new FlowState(state) { IsUnreachable = true };
+        if (_loopExitScopes.Count > 0 && _loopExitScopes.Peek() is { } scope)
+            scope.Add(result);
+
+        return BindState(@break, result);
+    }
+
     private FlowState AnalyzeContinue(Continue @continue, FlowState state) => BindState(@continue, new FlowState(state) { IsUnreachable = true });
 
     private FlowState AnalyzeReturn(Return @return, FlowState state) =>
@@ -117,22 +125,43 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
 
     private FlowState AnalyzeAssignment(AssignmentOperator assignment, FlowState state)
     {
-        state = AnalyzeExpression(assignment.Right, state);
         if (assignment.Left is Identifier identifier)
         {
             var symbol = semanticModel.GetSymbol(identifier);
-            if (symbol == null || assignment.Operator.Kind != SyntaxKind.Equals)
+            if (symbol == null)
                 return BindState(assignment, state);
 
+            if (assignment.Operator.Kind != SyntaxKind.Equals)
+            {
+                state = AnalyzeIdentifier(identifier, state);
+                state = AnalyzeExpression(assignment.Right, state);
+                CheckReassignment(assignment, identifier, symbol, state);
+                return BindState(assignment, state);
+            }
+
+            CheckReassignment(assignment, identifier, symbol, state);
+            state = AnalyzeExpression(assignment.Right, state);
             state.DefinitelyInitialized.Add(symbol);
             state.MaybeInitialized.Add(symbol);
         }
         else
         {
             state = AnalyzeExpression(assignment.Left, state);
+            state = AnalyzeExpression(assignment.Right, state);
         }
-
+        
         return BindState(assignment, state);
+    }
+
+    private void CheckReassignment(AssignmentOperator assignment, Identifier identifier, Symbol symbol, FlowState state)
+    {
+        if (symbol.IsMutable) return;
+        _diagnostics.Error(
+            assignment,
+            InternalCodes.AssignToImmutable,
+            $"Cannot assign to immutable variable '{identifier}'.",
+            $"did you mean to declare '{identifier}' as mutable?"
+        );
     }
 
     private FlowState AnalyzeIdentifier(Identifier identifier, FlowState state)
@@ -147,6 +176,29 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             _diagnostics.Error(identifier, InternalCodes.UseOfUninitialized, $"Use of uninitialized variable '{symbol.Name}'.");
 
         return BindState(identifier, state);
+    }
+
+    private (FlowState State, List<FlowState> ExitStates) CaptureExitStates(Statement statement, FlowState bodyState, List<FlowState>? initial)
+    {
+        _loopExitScopes.Push(initial);
+        var body = AnalyzeStatement(statement, bodyState);
+        return (body, _loopExitScopes.Pop()!);
+    }
+
+    private static FlowState ComputeLoopExitState(FlowState entryState, FlowState bodyState, List<FlowState> breakStates)
+    {
+        var exitPaths = breakStates.Prepend(entryState);
+        var definitely = exitPaths.Aggregate<FlowState, HashSet<Symbol>?>(
+            null,
+            (current, exit) => current == null ? [..exit.DefinitelyInitialized] : [..current.Intersect(exit.DefinitelyInitialized)]
+        );
+
+        var maybe = new HashSet<Symbol>(entryState.MaybeInitialized);
+        maybe.UnionWith(bodyState.MaybeInitialized);
+        foreach (var exit in breakStates)
+            maybe.UnionWith(exit.MaybeInitialized);
+
+        return new FlowState(definitely ?? [], maybe, isUnreachable: entryState.IsUnreachable);
     }
 
     private FlowState BindState(Node node, FlowState state)

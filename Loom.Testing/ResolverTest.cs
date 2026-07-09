@@ -65,13 +65,6 @@ public class ResolverTest
     }
 
     [Fact]
-    public void ThrowsFor_AssignToImmutable()
-    {
-        var diagnostics = Utility.GetSemanticModel("let x = 1; x = 69").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable variable 'x'.");
-    }
-
-    [Fact]
     public void ThrowsFor_DynamicEnumAccess()
     {
         var diagnostics = Utility.GetSemanticModel("enum Abc { A, B, C }; Abc").Diagnostics;
@@ -125,13 +118,6 @@ public class ResolverTest
     {
         var diagnostics = Utility.GetSemanticModel("let x = 1; declare fn x(): void;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'x' is already declared in this scope.");
-    }
-
-    [Fact]
-    public void ThrowsFor_AssignToDeclaredImmutableVariable()
-    {
-        var diagnostics = Utility.GetSemanticModel("declare let x: number; x = 42;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable variable 'x'.");
     }
 
     [Fact]
@@ -258,6 +244,13 @@ public class ResolverTest
     public void ThrowsFor_BreakInsideAfter()
     {
         var diagnostics = Utility.GetSemanticModel("after 1s { break }").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_BreakInsideAfter_NestedInLoop()
+    {
+        var diagnostics = Utility.GetSemanticModel("while true { after 1s { break } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
     }
     

@@ -18,6 +18,7 @@ public class FlowAnalyzerTest
 
     [Theory]
     [InlineData("mut x; x;")]
+    [InlineData("mut x: number; x += 1;")]
     [InlineData("mut x: number; { let x = 42; }; x;")]
     [InlineData("mut x: number; { x; }")]
     [InlineData("mut x: number; let arr = [0]; arr[0] = 42; x;")]
@@ -28,9 +29,12 @@ public class FlowAnalyzerTest
     }
 
     [Theory]
+    [InlineData("mut x: number; if true { x = 69; } x += 1")]
+    [InlineData("mut x: number; if true x = 69; x += 1")]
     [InlineData("mut x: number; for _ : 1..10 { x = 42; } x;")]
     [InlineData("mut x: number; after 1s { x = 42; } x;")]
     [InlineData("mut x: number; while true { x = 1; break; } x;")]
+    [InlineData("mut x: number; while true { x = 1; break; } x += 69;")]
     [InlineData("mut x: number; if true x = 69; x;")]
     [InlineData("mut x: number; if true x = 69 else if true x = 420; x;")]
     [InlineData(
@@ -50,5 +54,22 @@ public class FlowAnalyzerTest
     {
         var diagnostics = Utility.FlowAnalyze(source).AnalyzerResult.Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
+    }
+    
+    [Theory]
+    [InlineData("let x = 1; x = 69")]
+    [InlineData("let x = 1; x += 69")]
+    [InlineData("let x = 1; { x = 69 }")]
+    [InlineData("let x = 1; { x += 69 }")]
+    [InlineData("for x : 1..10 { x = 69 }")]
+    [InlineData("for x : 1..10 { x += 69 }")]
+    [InlineData("declare let x: number; x = 42")]
+    [InlineData("declare let x: number; x += 69")]
+    [InlineData("declare let x: number; { x = 69 }")]
+    [InlineData("declare let x: number; { x += 69 }")]
+    public void ThrowsFor_AssignToImmutable(string source)
+    {
+        var diagnostics = Utility.FlowAnalyze(source).AnalyzerResult.Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable variable 'x'.");
     }
 }

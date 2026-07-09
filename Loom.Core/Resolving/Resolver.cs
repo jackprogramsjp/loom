@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
-using Loom.FlowAnalysis;
 using Loom.Parsing;
 using Loom.Parsing.AST;
 using Loom.Text;
@@ -40,6 +39,18 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         PopScope();
 
         return result;
+    }
+
+    public override bool VisitAfter(After after)
+    {
+        Visit(after.Duration);
+        
+        var lastContext = _context;
+        _context = ResolverContext.Scheduler;
+        Visit(after.Body);
+        _context = lastContext;
+
+        return true;
     }
 
     public override bool VisitFor(For @for)
@@ -283,26 +294,6 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         }
 
         return base.VisitInterfaceInvocation(interfaceInvocation);
-    }
-
-    public override bool VisitAssignmentOperator(AssignmentOperator assignmentOperator)
-    {
-        if (assignmentOperator.Left is not Identifier identifier)
-            return base.VisitAssignmentOperator(assignmentOperator);
-
-        var name = identifier.Name.Text;
-        var symbol = LookupValueSymbol(name);
-        if (symbol is null or { IsMutable: true })
-            return base.VisitAssignmentOperator(assignmentOperator);
-
-        _diagnostics.Error(
-            assignmentOperator,
-            InternalCodes.AssignToImmutable,
-            $"Cannot assign to immutable variable '{name}'.",
-            $"did you mean to declare '{name}' as mutable?"
-        );
-
-        return false;
     }
 
     public override bool VisitIdentifier(Identifier identifier)
