@@ -1,4 +1,4 @@
-namespace Loom.Utility;
+namespace Loom.Diagnostics;
 
 public static class Colors
 {

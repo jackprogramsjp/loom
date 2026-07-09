@@ -10,9 +10,10 @@ using static SyntaxKind;
 public static class LexerRules
 {
     private const string Int = @"\d[\d_]*\d*_*";
-    private const string FloatScientific = $"({Float}[eE]{Int})";
+    private const string FloatScientific = $"({Float}{Exponent})";
     private const string Float = $@"({Int}\.{Int}|\.{Int}|{Int}\.{Int})";
-    private const string IntScientific = $"({Int}[eE]{Int})";
+    private const string IntScientific = $"({Int}{Exponent})";
+    private const string Exponent = $"[eE]-?{Int}";
     private const string HexInt = "(0[xX][a-fA-F0-9_]+)";
     private const string BinaryInt = "(0[bB][01_]+)";
     private const string OctalInt = "(0[oO][0-7_]+)";
@@ -61,7 +62,7 @@ public static class LexerRules
             m => $"Malformed octal literal '{m}': expected at least one octal digit after '0o'."
         ),
         DiagnosticRule(
-            @"\d[\d_]*(?:\.\d[\d_]*)?[eE](?![\d_])",
+            @"\d[\d_]*(?:\.\d[\d_]*)?[eE](?:-(?![\d_])|(?!-?[\d_]))",
             InternalCodes.MalformedNumber,
             m => $"Malformed scientific notation '{m}': expected one or more digits after the exponent."
         ),

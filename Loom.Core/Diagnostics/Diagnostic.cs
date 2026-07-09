@@ -1,7 +1,6 @@
 using Loom.Parsing.AST;
 using Loom.Text;
 using Loom.TypeChecking;
-using Loom.Utility;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Diagnostics;

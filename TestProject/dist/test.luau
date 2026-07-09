@@ -1,4 +1,1 @@
-const x: number? = 69
-if x ~= nil then
-  print(x + 420)
-end
+const _ = 1.05e-09

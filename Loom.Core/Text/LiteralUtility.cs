@@ -1,7 +1,6 @@
 using System.Globalization;
-using Loom.Text;
 
-namespace Loom.Parsing;
+namespace Loom.Text;
 
 public static class LiteralUtility
 {
@@ -20,7 +19,8 @@ public static class LiteralUtility
 #pragma warning restore CA1859
     {
         var value = ParseNumberValue(token);
-        if (Math.Abs(Math.Floor(value) - value) < 1e-7)
+        const double epsilon = 2.220446049250313e-16;
+        if (Math.Abs(Math.Floor(value) - value) < epsilon)
             return (long)value;
         
         return value;
