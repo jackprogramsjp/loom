@@ -12,7 +12,7 @@ public class FlowAnalyzerTest
     [InlineData("fn test() { after 1s { return 42; let x = 1; } }")]
     public void WarnsFor_UnreachableCode(string source)
     {
-        var diagnostics = Utility.FlowAnalyze(source).Diagnostics;
+        var diagnostics = Utility.FlowAnalyze(source).AnalyzerResult.Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UnreachableCode, "Unreachable code detected.");
     }
 
@@ -23,7 +23,7 @@ public class FlowAnalyzerTest
     [InlineData("mut x: number; let arr = [0]; arr[0] = 42; x;")]
     public void ThrowsFor_UseOfUninitialized(string source)
     {
-        var diagnostics = Utility.FlowAnalyze(source).Diagnostics;
+        var diagnostics = Utility.FlowAnalyze(source).AnalyzerResult.Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfUninitialized, "Use of uninitialized variable 'x'.");
     }
 
@@ -48,7 +48,7 @@ public class FlowAnalyzerTest
     )]
     public void ThrowsFor_UseOfMaybeUninitialized(string source)
     {
-        var diagnostics = Utility.FlowAnalyze(source).Diagnostics;
+        var diagnostics = Utility.FlowAnalyze(source).AnalyzerResult.Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
     }
 }

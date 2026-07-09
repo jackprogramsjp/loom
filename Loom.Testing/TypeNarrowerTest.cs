@@ -1,3 +1,4 @@
+using Loom.FlowAnalysis;
 using Loom.Parsing.AST;
 using Loom.Resolving;
 using Loom.TypeChecking;
@@ -12,13 +13,15 @@ public class TypeNarrowerTest
 {
     private static (SemanticModel model, Expression condition) GetCondition(string source)
     {
-        var model = Utility.GetSemanticModel(source);
-        new TypeChecker(model).Check();
-        var ifNode = model.Tree.GetDescendants<If>().FirstOrDefault() ?? model.Tree.GetDescendants<While>().FirstOrDefault() as Statement;
+        var (_, semanticModel, flowAnalyzer) = Utility.FlowAnalyze(source);
+        new TypeChecker(semanticModel, flowAnalyzer).Check();
+        
+        var tree = semanticModel.Tree;
+        var ifNode = tree.GetDescendants<If>().FirstOrDefault() ?? tree.GetDescendants<While>().FirstOrDefault() as Statement;
 
         Assert.NotNull(ifNode);
         var condition = ifNode is If ifStmt ? ifStmt.Condition : ((While)ifNode).Condition;
-        return (model, condition);
+        return (semanticModel, condition);
     }
 
     [Fact]
@@ -32,7 +35,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
@@ -54,7 +57,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
         var right = binaryOp.Right;
@@ -72,7 +75,7 @@ public class TypeNarrowerTest
         const string source = "if 1 == 2 { }";
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
         var exception = Record.Exception(() => narrower.ComputeBranchStates(condition, current));
@@ -93,7 +96,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
@@ -112,7 +115,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
@@ -131,7 +134,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
@@ -157,7 +160,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -184,7 +187,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -207,7 +210,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -235,7 +238,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -263,7 +266,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -291,7 +294,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -320,7 +323,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -348,7 +351,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -377,7 +380,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
@@ -403,7 +406,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -433,7 +436,7 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var binaryOp = Assert.IsType<BinaryOperator>(condition);
         var left = binaryOp.Left;
@@ -461,13 +464,13 @@ public class TypeNarrowerTest
 
         var (model, condition) = GetCondition(source2);
         var narrower = new TypeNarrower(model);
-        var current = new TypedFlowState();
+        var current = new FlowState();
 
         var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
 
-        var narrowed = narrower.TryGetNarrowedType(condition, trueState, out var trueType);
+        var narrowed = narrower.TryGetNarrowedType(condition, trueState, out _);
         Assert.True(narrowed);
-        narrowed = narrower.TryGetNarrowedType(condition, falseState, out var falseType);
+        narrowed = narrower.TryGetNarrowedType(condition, falseState, out _);
         Assert.True(narrowed);
     }
 }

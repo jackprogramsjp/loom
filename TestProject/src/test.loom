@@ -1,4 +1,3 @@
-fn abc {
-    return 69;
-    print('hi')
-}
+let x: string | number = 420;
+if x == 69
+    print(string(x))

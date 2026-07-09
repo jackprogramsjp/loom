@@ -14,7 +14,7 @@ namespace Loom.TypeChecking;
 
 public sealed class TypeNarrower
 {
-    public sealed record BranchStates(TypedFlowState True, TypedFlowState False);
+    public record struct BranchStates(FlowState True, FlowState False);
 
     private readonly Literal _trueLiteral = new(TokenFactory.Keyword(SyntaxKind.TrueLiteral), true);
     private readonly SemanticModel _semanticModel;
@@ -25,7 +25,7 @@ public sealed class TypeNarrower
         _semanticModel.TypeSolver.SetType(_trueLiteral, new LiteralType(true));
     }
 
-    public bool TryGetNarrowedType(Expression expression, TypedFlowState current, [MaybeNullWhen(false)] out Type narrowedType)
+    public bool TryGetNarrowedType(Expression expression, FlowState current, [MaybeNullWhen(false)] out Type narrowedType)
     {
         if (GetFlowAddress(expression) is { } address && current.NarrowedTypes.TryGetValue(address, out var narrowed))
         {
@@ -45,7 +45,7 @@ public sealed class TypeNarrower
         return false;
     }
 
-    public BranchStates ComputeBranchStates(Expression condition, TypedFlowState current) =>
+    public BranchStates ComputeBranchStates(Expression condition, FlowState current) =>
         condition switch
         {
             BinaryOperator { Operator.Kind: SyntaxKind.EqualsEquals or SyntaxKind.BangEquals } binary => NarrowEquality(binary, current),
@@ -56,14 +56,14 @@ public sealed class TypeNarrower
             _ => NarrowBooleanCondition(condition, current)
         };
 
-    private BranchStates NarrowBooleanCondition(Expression expression, TypedFlowState current)
+    private BranchStates NarrowBooleanCondition(Expression expression, FlowState current)
     {
         var type = GetBaseExpressionType(expression, current);
         if (type == null || !type.IsAssignableTo(PrimitiveType.Bool))
-            return new BranchStates(new TypedFlowState(current), new TypedFlowState(current));
+            return new BranchStates(new FlowState(current), new FlowState(current));
 
-        var trueState = new TypedFlowState(current);
-        var falseState = new TypedFlowState(current);
+        var trueState = new FlowState(current);
+        var falseState = new FlowState(current);
         ApplyBinaryNarrowing(
             expression,
             _trueLiteral,
@@ -76,10 +76,10 @@ public sealed class TypeNarrower
         return new BranchStates(trueState, falseState);
     }
 
-    private BranchStates NarrowEquality(BinaryOperator binaryOperator, TypedFlowState current)
+    private BranchStates NarrowEquality(BinaryOperator binaryOperator, FlowState current)
     {
-        var trueState = new TypedFlowState(current);
-        var falseState = new TypedFlowState(current);
+        var trueState = new FlowState(current);
+        var falseState = new FlowState(current);
 
         if (TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expression, out var literal)
             || TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expression, out literal))
@@ -97,7 +97,7 @@ public sealed class TypeNarrower
         return new BranchStates(trueState, falseState);
     }
 
-    private BranchStates NarrowLogicalAnd(BinaryOperator andOp, TypedFlowState current)
+    private BranchStates NarrowLogicalAnd(BinaryOperator andOp, FlowState current)
     {
         var (leftTrue, leftFalse) = ComputeBranchStates(andOp.Left, current);
         var (rightTrue, _) = ComputeBranchStates(andOp.Right, leftTrue);
@@ -105,7 +105,7 @@ public sealed class TypeNarrower
         return new BranchStates(rightTrue, falseState);
     }
 
-    private BranchStates NarrowLogicalOr(BinaryOperator orOp, TypedFlowState current)
+    private BranchStates NarrowLogicalOr(BinaryOperator orOp, FlowState current)
     {
         var (leftTrue, leftFalse) = ComputeBranchStates(orOp.Left, current);
         var (_, rightFalse) = ComputeBranchStates(orOp.Right, leftFalse);
@@ -113,21 +113,21 @@ public sealed class TypeNarrower
         return new BranchStates(trueState, rightFalse);
     }
 
-    private BranchStates NarrowLogicalNot(UnaryOperator notOp, TypedFlowState current)
+    private BranchStates NarrowLogicalNot(UnaryOperator notOp, FlowState current)
     {
         var (trueState, falseState) = ComputeBranchStates(notOp.Operand, current);
         return new BranchStates(falseState, trueState);
     }
 
-    private TypedFlowState ApplyBranchState(Expression expr, TypedFlowState state, bool useTrue = false)
+    private FlowState ApplyBranchState(Expression expr, FlowState state, bool useTrue = false)
     {
         var (trueState, falseState) = ComputeBranchStates(expr, state);
         return useTrue ? trueState : falseState;
     }
 
-    private static TypedFlowState MergeStates(TypedFlowState a, TypedFlowState b)
+    private static FlowState MergeStates(FlowState a, FlowState b)
     {
-        var result = new TypedFlowState(a);
+        var result = new FlowState(a);
         foreach (var key in a.NarrowedTypes.Keys.Concat(b.NarrowedTypes.Keys).Distinct())
         {
             var aType = ResolveEffectiveType(key, a);
@@ -142,7 +142,7 @@ public sealed class TypeNarrower
         return result;
     }
 
-    private static Type? ResolveEffectiveType(FlowAddress address, TypedFlowState state)
+    private static Type? ResolveEffectiveType(FlowAddress address, FlowState state)
     {
         if (state.NarrowedTypes.TryGetValue(address, out var direct))
             return direct;
@@ -181,9 +181,9 @@ public sealed class TypeNarrower
         Expression expression,
         Expression literal,
         SyntaxKind operatorKind,
-        TypedFlowState currentState,
-        TypedFlowState trueState,
-        TypedFlowState falseState)
+        FlowState currentState,
+        FlowState trueState,
+        FlowState falseState)
     {
         var address = GetFlowAddress(expression);
         if (address == null) return;
@@ -277,9 +277,9 @@ public sealed class TypeNarrower
         List<string> propertyPath,
         Type literalType,
         bool isEquals,
-        TypedFlowState currentState,
-        TypedFlowState trueState,
-        TypedFlowState falseState)
+        FlowState currentState,
+        FlowState trueState,
+        FlowState falseState)
     {
         var baseAddress = GetFlowAddress(baseExpression);
         if (baseAddress == null) return;
@@ -343,9 +343,9 @@ public sealed class TypeNarrower
         Type indexType,
         Type literalType,
         bool isEquals,
-        TypedFlowState currentState,
-        TypedFlowState trueState,
-        TypedFlowState falseState)
+        FlowState currentState,
+        FlowState trueState,
+        FlowState falseState)
     {
         var baseAddress = GetFlowAddress(baseExpression);
         if (baseAddress == null) return;
@@ -380,7 +380,7 @@ public sealed class TypeNarrower
         }
     }
 
-    private Type? GetBaseExpressionType(Expression expression, TypedFlowState currentState)
+    private Type? GetBaseExpressionType(Expression expression, FlowState currentState)
     {
         if (TryGetNarrowedType(expression, currentState, out var narrowed))
             return narrowed;
@@ -421,7 +421,7 @@ public sealed class TypeNarrower
         }
     }
 
-    private Type? TryResolveViaNarrowedPrefix(Expression expression, TypedFlowState current)
+    private Type? TryResolveViaNarrowedPrefix(Expression expression, FlowState current)
     {
         Expression baseExpression;
         List<string> path;

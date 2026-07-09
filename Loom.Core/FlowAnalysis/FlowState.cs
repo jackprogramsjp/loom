@@ -11,8 +11,6 @@ public sealed class FlowState(
     Dictionary<FlowAddress, Type>? narrowedTypes = null
 )
 {
-    public static readonly FlowState Empty = new([], []);
-
     public HashSet<Symbol> DefinitelyInitialized { get; } = [..definitelyInitialized ?? []];
     public HashSet<Symbol> MaybeInitialized { get; } = [..maybeInitialized ?? []];
     public bool IsUnreachable { get; init; } = isUnreachable;

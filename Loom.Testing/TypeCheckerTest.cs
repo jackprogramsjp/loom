@@ -3289,7 +3289,7 @@ public class TypeCheckerTest
     [InlineData(".maximum")]
     [InlineData("['minimum']")]
     [InlineData("['maximum']")]
-    public void Checks_Access__OnRange(string access)
+    public void Checks_Access_OnRange(string access)
     {
         var type = Utility.GetLastStatementType($"(1..10){access}");
         var primitive = Assert.IsType<PrimitiveType>(type);

@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Diagnostics;
+using Loom.FlowAnalysis;
 using Loom.Parsing.AST;
 using Loom.Resolving;
 using Loom.Text;
@@ -20,17 +22,20 @@ public sealed partial class TypeChecker
     : Visitor<Type>
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly Stack<TypedFlowState> _flowStates = [];
     private readonly SemanticModel _semanticModel;
+    private readonly FlowAnalyzer _flowAnalyzer;
     private readonly TypeInferrer _inferrer;
     private readonly TypeNarrower _narrower;
+    private FlowState _flowState;
 
-    public TypeChecker(SemanticModel semanticModel)
+    public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)
     {
         _semanticModel = semanticModel;
+        _flowAnalyzer = flowAnalyzer;
         _inferrer = new TypeInferrer(Visit);
         _narrower = new TypeNarrower(semanticModel);
+        _flowState = null!;
     }
 
     public TypeCheckerResult Check()
@@ -43,14 +48,31 @@ public sealed partial class TypeChecker
         return new TypeCheckerResult(type, diagnostics);
     }
 
-    protected override Type Visit(Node node) => node.Accept(this);
+    protected override Type Visit(Node node) => Visit(node, _flowState);
+    
+    private Type Visit(Node node, FlowState? state)
+    {
+        var lastState = _flowState;
+        if (state != null)
+        {
+            _flowState = state;
+        }
+        else
+        {
+            var baseState = _flowAnalyzer.GetState(node);
+            _flowState = new FlowState(baseState.DefinitelyInitialized, baseState.MaybeInitialized, baseState.IsUnreachable, lastState.NarrowedTypes);
+        }
+        
+        var result = node.Accept(this);
+        _flowState = lastState;
+
+        return result;
+    }
 
     public override Type VisitTree(Tree tree)
     {
-        _flowStates.Push(new TypedFlowState());
+        _flowState = _flowAnalyzer.GetState(tree);
         base.VisitTree(tree);
-        _flowStates.Pop();
-
         return BindType(
             tree,
             tree.Statements.Count > 0
@@ -130,8 +152,8 @@ public sealed partial class TypeChecker
         var conditionType = Visit(@while.Condition);
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @while.Condition);
 
-        var (trueState, _) = _narrower.ComputeBranchStates(@while.Condition, CurrentFlowState());
-        return BindType(@while, VisitWithFlowState(@while.Body, trueState));
+        var (trueState, _) = _narrower.ComputeBranchStates(@while.Condition, _flowState);
+        return BindType(@while, Visit(@while.Body, trueState));
     }
 
     public override Type VisitIf(If @if)
@@ -139,9 +161,9 @@ public sealed partial class TypeChecker
         var conditionType = Visit(@if.Condition);
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, @if.Condition);
 
-        var (trueState, falseState) = _narrower.ComputeBranchStates(@if.Condition, CurrentFlowState());
-        var thenBranchType = VisitWithFlowState(@if.ThenBranch, trueState);
-        var elseBranchType = @if.ElseBranch != null ? VisitWithFlowState(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
+        var (trueState, falseState) = _narrower.ComputeBranchStates(@if.Condition, _flowState);
+        var thenBranchType = Visit(@if.ThenBranch, trueState);
+        var elseBranchType = @if.ElseBranch != null ? Visit(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
         return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenBranchType, elseBranchType])));
     }
 
@@ -278,7 +300,7 @@ public sealed partial class TypeChecker
 
     public override Type VisitElementAccess(ElementAccess elementAccess)
     {
-        if (_narrower.TryGetNarrowedType(elementAccess, CurrentFlowState(), out var narrowedType))
+        if (TryGetNarrowedType(elementAccess, out var narrowedType))
             return BindType(elementAccess, narrowedType);
 
         var type = Visit(elementAccess.Expression);
@@ -418,9 +440,9 @@ public sealed partial class TypeChecker
         var conditionType = Visit(ternaryOperator.Condition);
         _semanticModel.TypeSolver.AddConstraint(conditionType, Types.PrimitiveType.Bool, ternaryOperator.Condition);
 
-        var (trueState, falseState) = _narrower.ComputeBranchStates(ternaryOperator.Condition, CurrentFlowState());
-        var thenBranchType = VisitWithFlowState(ternaryOperator.ThenBranch, trueState);
-        var elseBranchType = VisitWithFlowState(ternaryOperator.ElseBranch, falseState);
+        var (trueState, falseState) = _narrower.ComputeBranchStates(ternaryOperator.Condition, _flowState);
+        var thenBranchType = Visit(ternaryOperator.ThenBranch, trueState);
+        var elseBranchType = Visit(ternaryOperator.ElseBranch, falseState);
         var union = new Types.UnionType([thenBranchType, elseBranchType]);
         return BindType(ternaryOperator, TypeSimplifier.Simplify(union));
     }
@@ -432,12 +454,12 @@ public sealed partial class TypeChecker
         switch (binaryOperator.Operator.Kind)
         {
             case SyntaxKind.AmpersandAmpersand or SyntaxKind.AmpersandAmpersandEquals:
-                var (trueState, _) = _narrower.ComputeBranchStates(binaryOperator.Left, CurrentFlowState());
-                rightType = VisitWithFlowState(binaryOperator.Right, trueState);
+                var (trueState, _) = _narrower.ComputeBranchStates(binaryOperator.Left, _flowState);
+                rightType = Visit(binaryOperator.Right, trueState);
                 break;
             case SyntaxKind.PipePipe or SyntaxKind.PipePipeEquals:
-                var (_, falseState) = _narrower.ComputeBranchStates(binaryOperator.Left, CurrentFlowState());
-                rightType = VisitWithFlowState(binaryOperator.Right, falseState);
+                var (_, falseState) = _narrower.ComputeBranchStates(binaryOperator.Left, _flowState);
+                rightType = Visit(binaryOperator.Right, falseState);
                 break;
             default:
                 rightType = Visit(binaryOperator.Right);
@@ -516,9 +538,12 @@ public sealed partial class TypeChecker
 
     public override Type VisitParenthesized(Parenthesized parenthesized) => BindType(parenthesized, Visit(parenthesized.Expression));
 
+    private bool TryGetNarrowedType(Expression expression, [MaybeNullWhen(false)] out Type narrowedType) =>
+        _narrower.TryGetNarrowedType(expression, _flowState, out narrowedType);
+
     public override Type VisitIdentifier(Identifier identifier)
     {
-        if (_narrower.TryGetNarrowedType(identifier, CurrentFlowState(), out var narrowedType))
+        if (TryGetNarrowedType(identifier, out var narrowedType))
             return BindType(identifier, narrowedType);
 
         var symbol = _semanticModel.GetSymbol(identifier);
@@ -621,17 +646,6 @@ public sealed partial class TypeChecker
         return BindType(typeParameter, parameter);
     }
 
-    private TypedFlowState CurrentFlowState() => _flowStates.Peek();
-
-    private Type VisitWithFlowState(Node node, TypedFlowState state)
-    {
-        _flowStates.Push(state);
-        var type = Visit(node);
-        _flowStates.Pop();
-
-        return type;
-    }
-
     private Type? GetContextualType(Expression expression) =>
         expression.Parent switch
         {
@@ -663,7 +677,7 @@ public sealed partial class TypeChecker
 
     private Type GetTypeOfNamedAccess(Expression accessExpression, Expression targetExpression, List<DotName> names)
     {
-        if (_narrower.TryGetNarrowedType(accessExpression, CurrentFlowState(), out var narrowedType))
+        if (TryGetNarrowedType(accessExpression, out var narrowedType))
             return BindType(accessExpression, narrowedType);
 
         var type = Visit(targetExpression);

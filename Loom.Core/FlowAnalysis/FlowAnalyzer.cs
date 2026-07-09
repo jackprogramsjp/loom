@@ -2,7 +2,6 @@ using Loom.Diagnostics;
 using Loom.Parsing.AST;
 using Loom.Resolving;
 using Loom.Text;
-using Loom.TypeChecking;
 
 namespace Loom.FlowAnalysis;
 
@@ -10,10 +9,9 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<Node, FlowState> _states = [];
-    private readonly TypeNarrower _narrower = new(semanticModel);
 
-    public FlowState GetState(Node node) => _states.TryGetValue(node, out var existingState) ? existingState : FlowState.Empty;
-    public FlowAnalyzerResult Analyze(Tree tree) => new(BindState(tree, AnalyzeStatements(tree.Statements, FlowState.Empty)), _diagnostics);
+    public FlowState GetState(Node node) => _states.TryGetValue(node, out var existingState) ? existingState : new FlowState();
+    public FlowAnalyzerResult Analyze() => new(BindState(semanticModel.Tree, AnalyzeStatements(semanticModel.Tree.Statements, new FlowState())), _diagnostics);
 
     private FlowState AnalyzeStatements(IReadOnlyList<Statement> statements, FlowState state) =>
         statements.Aggregate(state, (current, statement) => AnalyzeStatement(statement, current));
@@ -32,7 +30,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             While @while => AnalyzeWhile(@while, state),
             For @for => AnalyzeFor(@for, state),
             ExpressionStatement expressionStatement => AnalyzeExpressionStatement(expressionStatement, state),
-            _ => statement.Children.OfType<Statement>().Select(e => state = AnalyzeStatement(e, state)).LastOrDefault(FlowState.Empty)
+            _ => new FlowState(statement.Children.OfType<Statement>().Select(e => state = AnalyzeStatement(e, state)).LastOrDefault(new FlowState()))
         };
         
         if (state.IsUnreachable)
@@ -48,7 +46,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         {
             AssignmentOperator assignmentOperator => AnalyzeAssignment(assignmentOperator, state),
             Identifier identifier => AnalyzeIdentifier(identifier, state),
-            _ => expression.Children.Select(e => state = AnalyzeExpression(e, state)).LastOrDefault(FlowState.Empty)
+            _ => new FlowState(expression.Children.Select(e => state = AnalyzeExpression(e, state)).LastOrDefault(new FlowState()))
         };
     }
 

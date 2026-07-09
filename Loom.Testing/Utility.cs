@@ -10,7 +10,6 @@ using Loom.Projects;
 using Loom.Resolving;
 using Loom.Text;
 using Loom.TypeChecking;
-using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
 using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Testing;
@@ -27,14 +26,14 @@ internal static class Utility
     public static DiagnosticBag GetGeneratorDiagnostics(string source, bool typeCheck = false) => Generate(source, typeCheck).Diagnostics;
     private static LuauGeneratorResult Generate(string source, bool typeCheck = false)
     {
-        var semanticModel = GetSemanticModel(source);
+        var result = FlowAnalyze(source);
         if (typeCheck)
         {
-            var typeChecker = new TypeChecker(semanticModel);
+            var typeChecker = new TypeChecker(result.SemanticModel, result.Analyzer);
             typeChecker.Check();
         }
 
-        return new LuauGenerator(semanticModel).Generate();
+        return new LuauGenerator(result.SemanticModel).Generate();
     }
 
     public static DiagnosticBag GetLexerDiagnostics(string source) => Tokenize(source).Diagnostics;
@@ -51,13 +50,20 @@ internal static class Utility
         return new Resolver(parserResult, compilationUnit).Resolve();
     }
     
-    public static FlowAnalyzerResult FlowAnalyze(string source)
+    public static (FlowAnalyzerResult AnalyzerResult, SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(string source)
     {
         var semanticModel = GetSemanticModel(source);
-        return new FlowAnalyzer(semanticModel).Analyze(semanticModel.Tree);
+        var flowAnalyzer = new FlowAnalyzer(semanticModel);
+        var result = flowAnalyzer.Analyze();
+        return (result, semanticModel, flowAnalyzer);
+    }
+
+    private static TypeChecker GetTypeChecker(string source)
+    {
+        var (_, semanticModel, flowAnalyzer) = FlowAnalyze(source);
+        return new TypeChecker(semanticModel, flowAnalyzer);
     }
     
-    public static TypeChecker GetTypeChecker(string source) => new(GetSemanticModel(source));
     public static TypeCheckerResult TypeCheck(string source) => GetTypeChecker(source).Check();
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;
 

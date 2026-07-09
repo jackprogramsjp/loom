@@ -6,7 +6,6 @@ using Type = Loom.TypeChecking.Types.Type;
 
 namespace Loom.Diagnostics;
 
-
 public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {
     internal static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
