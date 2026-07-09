@@ -2203,6 +2203,121 @@ public class TypeCheckerTest
         Assert.Contains(union.Types, t => t.Equals(PrimitiveType.String));
     }
 
+    [Theory]
+    [InlineData(
+        """
+        fn abc(x: number?) {
+            if x == none return;
+            x + 69;
+        }
+        """
+    )]
+    [InlineData(
+        """
+        fn abc(x: number?) {
+            if x == none { return; }
+            x + 69;
+        }
+        """
+    )]
+    [InlineData(
+        """
+        fn abc {
+            let x = none as never as Result<number, string>;
+            if !x.ok return;
+            x.value;
+        }
+        """
+    )]
+    [InlineData(
+        """
+        fn abc {
+            let x = none as never as Result<number, string>;
+            if x.ok {
+                x.value;
+                return;
+            }
+            
+            x.error
+        }
+        """
+    )]
+    public void Checks_NarrowingAfter_EarlyReturn(string source)
+    {
+        var diagnostics = Utility.TypeCheck(source).Diagnostics;
+        Utility.AssertNoErrors(diagnostics);
+    }
+    
+    [Theory]
+    [InlineData(
+        """
+        mut x: number?;
+        while true {
+            if x == none break;
+            x + 69;
+        }
+        x;
+        """
+    )]
+    [InlineData(
+        """
+        let x: number?[] = [];
+        for n : x {
+            if n == none { break }
+            n + 69;
+        }
+        """
+    )]
+    [InlineData(
+        """
+        let x = Result.ok(69);
+        while true {
+            if !x.ok break;
+            x.value;
+        }
+        """
+    )]
+    public void Checks_NarrowingAfter_LoopBreakGuard(string source)
+    {
+        var diagnostics = Utility.TypeCheck(source).Diagnostics;
+        Utility.AssertNoErrors(diagnostics);
+    }
+    
+    [Theory]
+    [InlineData(
+        """
+        mut x: number?;
+        while true {
+            if x == none { continue; }
+            x + 69;
+        }
+        x;
+        """
+    )]
+    [InlineData(
+        """
+        let x = Result.ok(69);
+        while true {
+            if x.ok continue;
+            x.error;
+        }
+        """
+    )]
+    [InlineData(
+        """
+        let x: number?[] = [];
+        for n : x {
+            if n == none continue;
+            n + 69;
+        }
+        """
+    )]
+    public void Checks_NarrowingAfter_LoopContinueGuard(string source)
+    {
+        var diagnostics = Utility.TypeCheck(source).Diagnostics;
+        Utility.AssertNoErrors(diagnostics);
+    }
+    
     [Fact]
     public void Checks_Narrowing_ElementAccessWithLiteralIndex()
     {
@@ -2580,7 +2695,7 @@ public class TypeCheckerTest
     public void Checks_While_PropagatesBodyType()
     {
         var type = Utility.GetLastStatementType("while true { 42; break }");
-        Assert.True(Type.IsNever(type), $"Expected 'never', got '{type}'");
+        Assert.True(Type.IsNone(type), $"Expected 'void', got '{type}'");
     }
 
     [Fact]

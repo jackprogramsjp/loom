@@ -1,8 +1,2 @@
-fn abc {
-    mut x: number;
-    while true {
-        break;
-        x = 69;
-    }
-    x;
-}
+let x: number? = 69;
+if x != none print(x + 420);

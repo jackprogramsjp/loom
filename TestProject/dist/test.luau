@@ -1,7 +1,4 @@
-const function abc()
-  const r = { ok = true, value = 69 }
-  if not r.ok then
-    return
-  end
-  print(69)
+const x: number? = 69
+if x ~= nil then
+  print(x + 420)
 end
