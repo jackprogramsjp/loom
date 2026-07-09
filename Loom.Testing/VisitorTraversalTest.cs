@@ -111,6 +111,16 @@ public class VisitorTraversalTest
             "Return",
             "Literal"
         );
+    
+    [Fact]
+    public void ReturnInsideFunction_NoExpression() =>
+        AssertVisitOrder(
+            "fn f() { return }",
+            "FunctionDeclaration",
+            "Parameters",
+            "Block",
+            "Return"
+        );
 
     [Fact]
     public void Block_VisitsStatements() =>

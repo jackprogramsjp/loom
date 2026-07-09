@@ -1,2 +1,1 @@
-let x: number? = 69;
-if x != none print(x + 420);
+69 + 'a'

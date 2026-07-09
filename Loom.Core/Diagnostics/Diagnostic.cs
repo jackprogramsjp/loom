@@ -8,22 +8,41 @@ namespace Loom.Diagnostics;
 
 public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {
+    private int StartLine => Span.Start.Line;
+    private int EndLine => Span.End.Line;
+    private int StartCharacter => Span.Start.Character;
+    private int EndCharacter => Span.End.Character;
+    private int LineDigits => EndLine.ToString().Length;
+    private string[] SourceLines => Span.File.SourceText.Split(Environment.NewLine);
+    private string GutterIndent => new(' ', LineDigits);
+    private string Gutter => $"{Colors.Dim}{GutterIndent} │{Colors.Reset}";
+
+    private readonly DiagnosticSeverityStyle _severityStyle = Severity switch
+    {
+        DiagnosticSeverity.Error => new DiagnosticSeverityStyle(Colors.Red, Colors.Magenta, "error"),
+        DiagnosticSeverity.Warn => new DiagnosticSeverityStyle(Colors.Yellow, Colors.Yellow, "warning"),
+        DiagnosticSeverity.Info => new DiagnosticSeverityStyle(Colors.Blue, Colors.Cyan, "info"),
+        DiagnosticSeverity.Debug => new DiagnosticSeverityStyle(Colors.Magenta, Colors.Magenta, "debug"),
+        _ => new DiagnosticSeverityStyle(Colors.White, Colors.Gray, "unknown")
+    };
+
     internal static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {
         if (suggestion == null)
             return null;
 
-        var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
         if (suggestion.OperatorKind != op.Operator.Kind)
-            return $"did you mean '{op.Left} {suggestedOp} {op.Right}'?";
+            return $"did you mean '{op.Left} {SyntaxFacts.GetOperatorText(suggestion.OperatorKind)} {op.Right}'?";
 
-        if (!left.IsAssignableTo(suggestion.LeftType) && right.IsAssignableTo(suggestion.RightType))
-            return $"left should be '{suggestion.LeftType}', not '{left}'";
-
-        if (left.IsAssignableTo(suggestion.LeftType) && !right.IsAssignableTo(suggestion.RightType))
-            return $"right should be '{suggestion.RightType}', not '{right}'";
-
-        return $"left should be '{suggestion.LeftType}' and right should be '{suggestion.RightType}'";
+        var leftWrong = !left.IsAssignableTo(suggestion.LeftType);
+        var rightWrong = !right.IsAssignableTo(suggestion.RightType);
+        return (leftWrong, rightWrong) switch
+        {
+            (true, true) => $"expected '{suggestion.LeftType} {op.Operator.Text} {suggestion.RightType}', not '{left} {op.Operator.Text} {right}'",
+            (true, false) => $"expected left operand of type '{suggestion.LeftType}', not '{left}'",
+            (false, true) => $"expected right operand of type '{suggestion.RightType}', not '{right}'",
+            _ => null
+        };
     }
 
     internal static string? FormatUnaryHint(UnaryOperator op, Type operand, UnaryOperatorRule? suggestion)
@@ -34,91 +53,102 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
         var suggestedOp = SyntaxFacts.GetOperatorText(suggestion.OperatorKind);
         return suggestion.OperatorKind != op.Operator.Kind
             ? $"did you mean '{suggestedOp}{op.Operand}'?"
-            : $"operand should be '{suggestion.OperandType}', not '{operand}'";
+            : $"expected operand of type '{suggestion.OperandType}', not '{operand}'";
     }
-    
+
     public override string ToString()
     {
-        var (severityColor, underlineColor, severityLabel) = Severity switch
+        var lines = new List<string> { FormatHeader(), FormatLocation(), Gutter };
+        AppendSource(lines);
+        AppendHint(lines);
+        lines.Add(Gutter);
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private void AppendSource(List<string> lines)
+    {
+        AppendPreviousSourceLine(lines);
+        AppendHighlightedLines(lines);
+    }
+
+    private void AppendHint(List<string> lines)
+    {
+        if (Hint == null)
         {
-            DiagnosticSeverity.Error => (Colors.Red, Colors.Magenta, "error"),
-            DiagnosticSeverity.Warn => (Colors.Yellow, Colors.Yellow, "warning"),
-            DiagnosticSeverity.Info => (Colors.Blue, Colors.Cyan, "info"),
-            DiagnosticSeverity.Debug => (Colors.Magenta, Colors.Magenta, "debug"),
-            _ => (Colors.White, Colors.Gray, "unknown")
+            AppendNextSourceLine(lines);
+            return;
+        }
+
+        var pad = StartLine == EndLine ? new string(' ', StartCharacter) : "";
+        lines.Add(
+            $"{Gutter}{pad} {_severityStyle.UnderlineColor}╰─{Colors.Reset}  {_severityStyle.PrimaryColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
+        );
+        AppendNextSourceLine(lines);
+    }
+
+    private void AppendHighlightedLines(List<string> lines)
+    {
+        var pad = new string(' ', StartCharacter);
+        for (var line = StartLine; line <= EndLine; line++)
+        {
+            var source = SourceLines[line - 1];
+            var number = line.ToString().PadLeft(LineDigits);
+            lines.Add($"{Colors.Bold}{number} │{Colors.Reset} {source}");
+            lines.Add(BuildUnderline(line, source, pad));
+        }
+    }
+
+    private void AppendPreviousSourceLine(List<string> lines)
+    {
+        if (StartLine <= 1) return;
+        lines.Add($"{Colors.Dim}{(StartLine - 1).ToString().PadLeft(LineDigits)} │ {SourceLines[StartLine - 2]}{Colors.Reset}");
+        lines.Add(Gutter);
+    }
+
+    private void AppendNextSourceLine(List<string> lines)
+    {
+        if (EndLine >= SourceLines.Length) return;
+        if (Hint != null)
+            lines.Add(Gutter);
+
+        lines.Add($"{Gutter} {Colors.Dim}{SourceLines[EndLine]}{Colors.Reset}");
+    }
+
+    private string BuildUnderline(int line, string source, string firstLinePad)
+    {
+        var subtract = Hint != null
+            ? Math.Min(EndCharacter - StartCharacter, 1)
+            : 0;
+
+        var prepend = Hint != null
+            ? line != EndLine && StartLine != EndLine
+                ? "─"
+                : "┬"
+            : "";
+
+        var pad = line == StartLine ? firstLinePad : "";
+        var length = line switch
+        {
+            _ when StartLine == EndLine => EndCharacter - StartCharacter - subtract,
+            _ when line == StartLine => source.Length - StartCharacter - subtract,
+            _ when line == EndLine => EndCharacter - subtract,
+            _ => source.Length - subtract
         };
 
-        var startLine = Span.Start.Line;
-        var endLine = Span.End.Line;
-        var startChar = Span.Start.Character;
-        var endChar = Span.End.Character;
-        var lineDigits = endLine.ToString().Length;
-        var gutterIndent = new string(' ', lineDigits);
-        var codePart = string.IsNullOrEmpty(Code) ? "" : $" {Colors.Dim}({Code}){Colors.Reset}{severityColor}";
-        var header = $"{severityColor}{Colors.Bold}{severityLabel}{Colors.Reset}{severityColor}{codePart}:{Colors.Reset} {Colors.Gray}{Message}{Colors.Reset}";
-        var location = $"{Colors.Dim}{gutterIndent} ╭─{Colors.Reset} {Colors.Orange}{Span}{Colors.Reset}";
-        var sourceLines = Span.File.SourceText.Split(Environment.NewLine);
-        var gutter = $"{Colors.Dim}{gutterIndent} │{Colors.Reset}";
-        var lines = new List<string>([header, location, gutter]);
-        if (startLine - 1 < sourceLines.Length && startLine - 1 > 0)
-        {
-            lines.Add($"{Colors.Dim}{(startLine - 1).ToString().PadLeft(lineDigits)} │ {sourceLines[startLine - 2]}{Colors.Reset}");
-            lines.Add(gutter);
-        }
+        return $"{Gutter} {Colors.Bold}{pad}{_severityStyle.UnderlineColor}{prepend}{new string('─', Math.Max(length, 0))}{Colors.Reset}";
+    }
 
-        const char underlineChar = '\u2500';
-        var hasHint = !string.IsNullOrEmpty(Hint);
-        var pad = new string(' ', startChar);
-        var noPad = false;
-        for (var line = startLine; line <= endLine; line++)
-        {
-            var lineIndex = line - 1;
-            var lineContent = sourceLines[lineIndex];
-            var lineNumber = line.ToString().PadLeft(lineDigits);
-            var lineSubtraction = hasHint ? Math.Min(endChar - startChar, 1) : 0;
-            var linePrepend = hasHint ? line != endLine && startLine != endLine ? "─" : "┬" : "";
-            if (line == startLine && line == endLine)
-            {
-                var underline = $"{pad}{underlineColor}{linePrepend}{new string(underlineChar, endChar - startChar - lineSubtraction)}{Colors.Reset}";
-                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
-                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
-            }
-            else if (line == startLine)
-            {
-                var underline = $"{pad}{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - startChar - lineSubtraction)}{Colors.Reset}";
-                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
-                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
-            }
-            else if (line == endLine)
-            {
-                noPad = true;
-                var underline = $"{underlineColor}{linePrepend}{new string(underlineChar, endChar - lineSubtraction)}{Colors.Reset}";
-                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
-                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
-            }
-            else
-            {
-                noPad = true;
-                var underline = $"{underlineColor}{linePrepend}{new string(underlineChar, lineContent.Length - lineSubtraction)}{Colors.Reset}";
-                lines.Add($"{Colors.Bold}{lineNumber} │{Colors.Reset} {lineContent}");
-                lines.Add($"{gutter} {Colors.Bold}{underline}{Colors.Reset}");
-            }
-        }
+    private string FormatLocation() => $"{Colors.Dim}{GutterIndent} ╭─{Colors.Reset} {Colors.Orange}{Span}{Colors.Reset}";
 
-        if (hasHint)
-            lines.Add(
-                $"{gutter}{(noPad ? "" : pad)} {underlineColor}╰─{Colors.Reset}  {severityColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
-            );
+    private string FormatHeader()
+    {
+        var code = string.IsNullOrEmpty(Code)
+            ? ""
+            : $" {Colors.Dim}({Code}){Colors.Reset}{_severityStyle.PrimaryColor}";
 
-        if (endLine < sourceLines.Length)
-        {
-            if (hasHint)
-                lines.Add(gutter);
-            
-            lines.Add($"{gutter} {Colors.Dim}{sourceLines[endLine]}{Colors.Reset}");
-        }
-        
-        lines.Add(gutter);
-        return string.Join(Environment.NewLine, lines);
+        return $"{_severityStyle.PrimaryColor}{Colors.Bold}{_severityStyle.Label}"
+            + $"{Colors.Reset}{_severityStyle.PrimaryColor}{code}:{Colors.Reset} "
+            + $"{Colors.Gray}{Message}{Colors.Reset}";
     }
 }
