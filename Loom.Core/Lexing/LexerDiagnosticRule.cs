@@ -11,5 +11,6 @@ public sealed record LexerDiagnosticRule(
     Regex Pattern,
     string DiagnosticCode,
     Func<string, string> MessageFactory,
-    DiagnosticSeverity Severity = DiagnosticSeverity.Error
+    DiagnosticSeverity Severity = DiagnosticSeverity.Error,
+    string? Hint = null
 );

@@ -67,10 +67,12 @@ public sealed class Lexer(SourceFile file)
             if (!match.Success || match.Index != _position) continue;
 
             Advance(match.Value);
-            _diagnostics.Error(
+            _diagnostics.Report(
                 GetSpan(start),
+                rule.Severity,
                 rule.DiagnosticCode,
-                rule.MessageFactory(match.Value)
+                rule.MessageFactory(match.Value),
+                rule.Hint
             );
             return true;
         }

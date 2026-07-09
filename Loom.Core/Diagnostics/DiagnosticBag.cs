@@ -41,7 +41,7 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
 
     public override string ToString() => string.Join('\n', Set);
 
-    private void Report(LocationSpan span, DiagnosticSeverity severity, string? code, string message, string? hint) =>
+    internal void Report(LocationSpan span, DiagnosticSeverity severity, string? code, string message, string? hint) =>
         Report(new Diagnostic(span, severity, code, message, hint));
 
     private void Report(Diagnostic diagnostic)
