@@ -303,10 +303,13 @@ public sealed partial class LuauGenerator
             _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
             return new NilLiteral();
         }
-
-        var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
+        
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
         var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
+        if (symbol.IsIntrinsic)
+            return new QualifiedTypeName(["Loom"], luauTypeName);
+
+        var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
 

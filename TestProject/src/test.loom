@@ -1,1 +1,1 @@
-after 10s { [1,2,3].length }
+let x: Range = 1..10;
