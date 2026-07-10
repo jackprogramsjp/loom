@@ -23,13 +23,6 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class LuauGeneratorTest
 {
-    [Fact]
-    public void ThrowsFor_BitwiseAssignment_NotImplemented()
-    {
-        var diagnostics = Utility.GetGeneratorDiagnostics("mut x = 1; x &= 2");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.NotImplemented, "Luau generation for bitwise assignment operators is not yet supported.");
-    }
-
     [Theory]
     [InlineData("declare let x: number;")]
     [InlineData("declare mut x: number;")]
@@ -636,18 +629,73 @@ public class LuauGeneratorTest
         Assert.Equal(2, ((NumberLiteral)binary.Right).Value);
         Assert.Equal("+=", binary.Operator);
     }
+    
+    [Fact]
+    public void Generates_BitwiseAssignment_Nested()
+    {
+        var luauTree = Utility.GetLuauAST("mut x = 1; x &= 2 | 3");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
+        var binary = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", binary.Operator);
+        Assert.IsType<Identifier>(binary.Left);
+        
+        var bandCall = Assert.IsType<Call>(binary.Right);
+        var band = Assert.IsType<PropertyAccess>(bandCall.Callee);
+        Assert.Equal(2, bandCall.Arguments.Count);
+        Assert.Equal("bit32", Assert.IsType<Identifier>(band.Target).Name);
+        Assert.Equal("band", Assert.Single(band.Names));
+        Assert.Equal("x", Assert.IsType<Identifier>(bandCall.Arguments[0]).Name);
+        
+        var borCall = Assert.IsType<Call>(bandCall.Arguments[1]);
+        var bor = Assert.IsType<PropertyAccess>(borCall.Callee);
+        Assert.Equal(2, borCall.Arguments.Count);
+        Assert.Equal("bit32", Assert.IsType<Identifier>(bor.Target).Name);
+        Assert.Equal("bor", Assert.Single(bor.Names));
+        Assert.Equal(2, Assert.IsType<NumberLiteral>(borCall.Arguments[0]).Value);
+        Assert.Equal(3, Assert.IsType<NumberLiteral>(borCall.Arguments[1]).Value);
+    }
+    
+    [Fact]
+    public void Generates_BitwiseAssignment_Flattened()
+    {
+        var luauTree = Utility.GetLuauAST("mut x = 1; x &= 2 & 3");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
+        var binary = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", binary.Operator);
+        Assert.IsType<Identifier>(binary.Left);
+        
+        var bandCall = Assert.IsType<Call>(binary.Right);
+        var band = Assert.IsType<PropertyAccess>(bandCall.Callee);
+        Assert.Equal(3, bandCall.Arguments.Count);
+        Assert.Equal("bit32", Assert.IsType<Identifier>(band.Target).Name);
+        Assert.Equal("band", Assert.Single(band.Names));
+        Assert.Equal("x", Assert.IsType<Identifier>(bandCall.Arguments[0]).Name);
+        Assert.Equal(2, Assert.IsType<NumberLiteral>(bandCall.Arguments[1]).Value);
+        Assert.Equal(3, Assert.IsType<NumberLiteral>(bandCall.Arguments[2]).Value);
+    }
 
     [Fact]
-    public void Generates_BitwiseAssignment_NotImplemented()
+    public void Generates_BitwiseAssignment_Basic()
     {
         var luauTree = Utility.GetLuauAST("mut x = 1; x &= 2");
         Assert.Equal(2, luauTree.Statements.Count);
 
-        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
-        var binary = Assert.IsType<BinaryOperator>(variable.Initializer);
-        Assert.Equal("???", binary.Operator);
+        var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
+        var binary = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
+        Assert.Equal("=", binary.Operator);
         Assert.IsType<Identifier>(binary.Left);
-        Assert.IsType<NumberLiteral>(binary.Right);
+        
+        var bandCall = Assert.IsType<Call>(binary.Right);
+        var band = Assert.IsType<PropertyAccess>(bandCall.Callee);
+        Assert.Equal(2, bandCall.Arguments.Count);
+        Assert.Equal("bit32", Assert.IsType<Identifier>(band.Target).Name);
+        Assert.Equal("band", Assert.Single(band.Names));
+        Assert.Equal("x", Assert.IsType<Identifier>(bandCall.Arguments[0]).Name);
+        Assert.Equal(2, Assert.IsType<NumberLiteral>(bandCall.Arguments[1]).Value);
     }
 
     [Fact]
