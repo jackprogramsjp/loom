@@ -721,6 +721,24 @@ public class LuauGeneratorTest
         Assert.Equal(PrimitiveTypeKind.Number, returnType.Kind);
     }
     
+    [Fact]
+    public void Generates_Runtime_ImportWhenNecessary()
+    {
+        var luauTree = Utility.GetLuauAST("let x: Range = 1..10;", disableRuntimeLib: false);
+        Assert.Equal(2, luauTree.Statements.Count);
+        
+        var importVariable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
+        Assert.Equal(LuauFactory.RuntimeImportName, importVariable.Name);
+        Assert.Null(importVariable.DeclaredType);
+        Assert.Equal("require", Assert.IsType<Identifier>(Assert.IsType<Call>(importVariable.Initializer).Callee).Name);
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        var qualifiedType = Assert.IsType<QualifiedTypeName>(variable.DeclaredType);
+        Assert.Equal(LuauFactory.RuntimeImportName, Assert.Single(qualifiedType.Qualifications));
+        Assert.Equal("Range", qualifiedType.FinalName.Name);
+        Assert.Empty(qualifiedType.FinalName.TypeArguments);
+    }
+    
     [Theory]
     [InlineData("Range")]
     [InlineData("Result")]
@@ -731,7 +749,7 @@ public class LuauGeneratorTest
         
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
         var qualifiedType = Assert.IsType<QualifiedTypeName>(variable.DeclaredType);
-        Assert.Equal("Loom", Assert.Single(qualifiedType.Qualifications));
+        Assert.Equal(LuauFactory.RuntimeImportName, Assert.Single(qualifiedType.Qualifications));
         Assert.Equal(typeName, qualifiedType.FinalName.Name);
         Assert.Empty(qualifiedType.FinalName.TypeArguments);
     }

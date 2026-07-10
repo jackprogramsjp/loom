@@ -1,6 +1,6 @@
 ﻿using Tomlyn.Serialization;
 
-namespace Loom.Projects;
+namespace Loom.Config;
 
 // ReSharper disable file ClassNeverInstantiated.Global
 public sealed class FilesConfig

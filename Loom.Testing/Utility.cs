@@ -1,3 +1,4 @@
+using Loom.Config;
 using Loom.Diagnostics;
 using Loom.FlowAnalysis;
 using Loom.Generation;
@@ -6,7 +7,6 @@ using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing;
 using Loom.Parsing.AST;
-using Loom.Projects;
 using Loom.Resolving;
 using Loom.Text;
 using Loom.TypeChecking;
@@ -21,12 +21,15 @@ internal static class Utility
     public static IReadOnlyList<Token> GetTokens(string source, bool withTrivia = false) => Tokenize(source, withTrivia).Tokens;
     public static Tree GetAST(string source) => Parse(source).Tree;
     public static Type GetLastStatementType(string source) => TypeCheck(source).ReturnType;
-    public static LuauTree GetLuauAST(string source, bool typeCheck = false) => Generate(source, typeCheck).LuauTree;
+
+    public static LuauTree GetLuauAST(string source, bool typeCheck = false, bool disableRuntimeLib = true) =>
+        Generate(source, typeCheck, disableRuntimeLib).LuauTree;
 
     public static DiagnosticBag GetGeneratorDiagnostics(string source, bool typeCheck = false) => Generate(source, typeCheck).Diagnostics;
-    private static LuauGeneratorResult Generate(string source, bool typeCheck = false)
+
+    private static LuauGeneratorResult Generate(string source, bool typeCheck = false, bool disableRuntimeLib = true)
     {
-        var result = FlowAnalyze(source);
+        var result = FlowAnalyze(source, disableRuntimeLib);
         if (typeCheck)
         {
             var typeChecker = new TypeChecker(result.SemanticModel, result.Analyzer);
@@ -40,19 +43,22 @@ internal static class Utility
     public static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
 
-    public static SemanticModel GetSemanticModel(string source, bool isDeclaration = false)
+    public static SemanticModel GetSemanticModel(string source, bool isDeclaration = false, bool disableRuntimeLib = true)
     {
         var parserResult = Parse(source);
         if (isDeclaration)
             parserResult.Tree.File.IsDeclaration = true;
-        
+
         var compilationUnit = new CompilationUnit(new LoomConfig());
-        return new Resolver(parserResult, compilationUnit).Resolve();
+        var semanticModel = new Resolver(parserResult, compilationUnit).Resolve();
+        semanticModel.DisableRuntimeLibraryImport = disableRuntimeLib;
+
+        return semanticModel;
     }
-    
-    public static (FlowAnalyzerResult AnalyzerResult, SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(string source)
+
+    public static (FlowAnalyzerResult AnalyzerResult, SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(string source, bool disableRuntimeLib = true)
     {
-        var semanticModel = GetSemanticModel(source);
+        var semanticModel = GetSemanticModel(source, disableRuntimeLib: disableRuntimeLib);
         var flowAnalyzer = new FlowAnalyzer(semanticModel);
         var result = flowAnalyzer.Analyze();
         return (result, semanticModel, flowAnalyzer);
@@ -63,7 +69,7 @@ internal static class Utility
         var (_, semanticModel, flowAnalyzer) = FlowAnalyze(source);
         return new TypeChecker(semanticModel, flowAnalyzer);
     }
-    
+
     public static TypeCheckerResult TypeCheck(string source) => GetTypeChecker(source).Check();
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;
 
@@ -84,16 +90,16 @@ internal static class Utility
         var diagnostic = diagnostics.Find(d => d.Code == code);
         Assert.NotNull(diagnostic);
         Assert.Equal(message, diagnostic.Message);
-        
+
         if (hint == null) return;
         Assert.Equal(hint, diagnostic.Hint);
     }
-    
+
     public static IEnumerable<object[]> GetSnapshotFiles(string folderName, string targetExtension) =>
         Directory.EnumerateFiles(AssemblyFixture.Snapshots + '/' + folderName, $"*{FileManager.LoomExtension}")
             .Select(path => new object[] { path, path.Replace(FileManager.LoomExtension, targetExtension) });
 
     public static SourceFile TestFile(string source) => new("test", source);
-    
+
     private static LexerResult Tokenize(string source, bool withTrivia = false) => new Lexer(TestFile(source)).Tokenize(withTrivia);
 }

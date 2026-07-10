@@ -299,7 +299,7 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_RuntimeStatement_InDeclarationFile()
     {
-        var diagnostics = Utility.GetSemanticModel("let x = 1;", true).Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("let x = 1;", isDeclaration: true).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
     }
     #endregion ThrowsFor

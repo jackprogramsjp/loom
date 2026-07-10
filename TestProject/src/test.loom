@@ -1,1 +1,1 @@
-let x: Range = 1..10;
+let x = 'a' + string(123)

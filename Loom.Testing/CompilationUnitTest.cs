@@ -1,11 +1,12 @@
+using Loom.Config;
 using Loom.Luau.AST;
-using Loom.Projects;
 using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
 
 namespace Loom.Testing;
 
+[Collection("Assembly")]
 public class CompilationUnitTest
 {
     [Fact]

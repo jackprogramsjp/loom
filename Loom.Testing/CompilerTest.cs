@@ -1,4 +1,4 @@
-using Loom.Projects;
+using Loom.Config;
 
 namespace Loom.Testing;
 

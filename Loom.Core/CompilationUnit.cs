@@ -1,8 +1,8 @@
+using Loom.Config;
 using Loom.Diagnostics;
 using Loom.Generation;
 using Loom.Lexing;
 using Loom.Parsing;
-using Loom.Projects;
 using Loom.Resolving;
 using Loom.Text;
 using Loom.TypeChecking;

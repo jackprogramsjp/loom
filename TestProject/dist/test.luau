@@ -1,1 +1,1 @@
-const x: Loom.Range = { minimum = 1, maximum = 10 }
+const x = "a" .. tostring(123)

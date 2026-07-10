@@ -1,4 +1,4 @@
-using Loom.Projects;
+using Loom.Config;
 using Loom.Resolving;
 using Loom.TypeChecking.Types;
 using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;

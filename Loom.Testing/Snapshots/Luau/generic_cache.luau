@@ -1,3 +1,4 @@
+const Loom = require("@game/ReplicatedStorage/include/loom_runtime")
 type Entry<K, V> = {
   read key: K,
   read value: V,

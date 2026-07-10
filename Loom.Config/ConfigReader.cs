@@ -1,6 +1,6 @@
 using Tomlyn;
 
-namespace Loom.Projects;
+namespace Loom.Config;
 
 public static class ConfigReader
 {

@@ -17,7 +17,7 @@ namespace Loom.Generation.Macros;
 internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state)
 {
     private readonly MacroContext _context = new(semanticModel, state);
-    private static readonly IMacroProvider[] _providers =
+    private static readonly IReadOnlyCollection<IMacroProvider> _providers =
     [
         new NumberMacroProvider(), new RangeMacroProvider(), new ArrayMacroProvider(), new ResultStaticMacroProvider(), new GlobalInvocationMacroProvider()
     ];
@@ -25,10 +25,8 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         expression = null;
-        if (!TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member))
-            return false;
-
-        return provider.TryInvocation(_context, member, luauCall, out expression);
+        return TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member)
+            && provider.TryInvocation(_context, member.Trim(), luauCall, out expression);
     }
 
     public bool TryGetElementAccessMacro(ElementAccess access, Luau.AST.ElementAccess luauAccess, [MaybeNullWhen(false)] out LuauExpression expression)
