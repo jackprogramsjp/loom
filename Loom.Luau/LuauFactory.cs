@@ -4,6 +4,8 @@ namespace Loom.Luau;
 
 public static class LuauFactory
 {
+    public const string RuntimeImportName = "Loom";
+
     public static Call Bit32Call(string name, List<LuauExpression> arguments) => LibraryCall("bit32", name, arguments);
     public static Call MathCall(string name, List<LuauExpression> arguments) => LibraryCall("math", name, arguments);
     public static Call MathClampCall(LuauExpression value, LuauExpression minimum, LuauExpression maximum) => MathCall("clamp", [value, minimum, maximum]);
@@ -14,5 +16,7 @@ public static class LuauFactory
     private static Call LibraryCall(string libraryName, string name, List<LuauExpression> arguments) =>
         new(new PropertyAccess(new Identifier(libraryName), [name]), arguments);
 
+    public static Call RequireCall(string path) => new(new Identifier("require"), [new StringLiteral(path)]);
+    public static ConstVariable RuntimeImport(string runtimeLibPath) => new(RuntimeImportName, null, RequireCall(runtimeLibPath));
     public static LuauNode EmptyVariable() => new ConstVariable("_", null, new NilLiteral());
 }

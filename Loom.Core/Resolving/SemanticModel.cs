@@ -9,6 +9,12 @@ namespace Loom.Resolving;
 public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolTable Declarations, SymbolTable References)
     : DiagnosedResult(Diagnostics)
 {
+    public bool DisableRuntimeLibraryImport { get; set; }
+    public bool MustImportRuntimeLibrary =>
+        !DisableRuntimeLibraryImport
+        && !Tree.File.IsIntrinsic
+        && References.Any(pair => !NodeId.Map[pair.Key].File.IsIntrinsic && pair.Value.Any(s => s.File.Name == "runtime.loom" && s.IsIntrinsic));
+
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
 
     public bool IsCompileTimeConstant(Expression expression) =>

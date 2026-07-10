@@ -1,0 +1,27 @@
+## This file contains definitions that should import the runtime library if they are used.
+
+interface Range {
+    minimum: number;
+    maximum: number;
+    length: number;
+    clamp: fn(n: number): number;
+}
+
+interface ResultOk<T> {
+    ok: true;
+    value: T;
+}
+
+interface ResultError<Error> {
+    ok: false;
+    error: Error;
+}
+
+type Result<T, Error> = ResultOk<T> | ResultError<Error>;
+
+declare interface ResultStatic {
+    ok: fn<T, Error>(value: T): Result<T, Error>;
+    err: fn<T, Error>(error: Error): Result<T, Error>;
+}
+
+declare let Result: ResultStatic;

@@ -40,6 +40,9 @@ public sealed partial class LuauGenerator
     public LuauGeneratorResult Generate()
     {
         var luauTree = VisitTree(_semanticModel.Tree);
+        if (_semanticModel.MustImportRuntimeLibrary)
+            luauTree.Statements.Insert(0, LuauFactory.RuntimeImport("@game/ReplicatedStorage/include/loom_runtime")); // TODO: rojo resolver; issue #21
+
         return new LuauGeneratorResult(luauTree, _diagnostics);
     }
 
@@ -250,41 +253,47 @@ public sealed partial class LuauGenerator
 
     public override LuauNode VisitBinaryOperator(BinaryOperator binaryOperator)
     {
-        var left = Visit(binaryOperator.Left);
-        var right = Visit(binaryOperator.Right);
-        var op = binaryOperator.Operator.Text;
         if (SyntaxFacts.IsBitwiseOperator(binaryOperator.Operator.Kind))
-        {
-            if (op.EndsWith('='))
-            {
-                _diagnostics.NotImplemented(
-                    binaryOperator,
-                    "Luau generation for bitwise assignment operators is not yet supported.",
-                    $"use '{binaryOperator.Left} = {binaryOperator.Left} {op.Replace("=", "")} {binaryOperator.Right}'"
-                );
+            return GenerateBitwiseOperator(binaryOperator);
 
-                return new Luau.AST.BinaryOperator(left, "???", right);
-            }
-
-            var name = MapLuau.BitwiseOperator(op);
-            var arguments = new List<LuauExpression>();
-            var leftUpdated = AddBit32Arguments(left, name, arguments);
-            var rightUpdated = AddBit32Arguments(right, name, arguments);
-            if (!leftUpdated)
-                arguments.Add(left);
-
-            if (!rightUpdated)
-                arguments.Add(right);
-
-            return LuauFactory.Bit32Call(name, arguments);
-        }
-
+        var op = binaryOperator.Operator.Text;
         var leftType = _semanticModel.GetType(binaryOperator.Left);
         var rightType = _semanticModel.GetType(binaryOperator.Right);
         var @string = TypeChecking.Types.PrimitiveType.String;
         var isConcatenation = op.StartsWith('+') && leftType.IsAssignableTo(@string) && rightType.IsAssignableTo(@string);
+        var left = Visit(binaryOperator.Left);
+        var right = Visit(binaryOperator.Right);
         var mappedOperator = isConcatenation ? op.Replace("+", "..") : MapLuau.BinaryOperator(op);
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
+    }
+
+    private LuauNode GenerateBitwiseOperator(BinaryOperator binaryOperator)
+    {
+        var left = Visit(binaryOperator.Left);
+        var right = Visit(binaryOperator.Right);
+        var op = binaryOperator.Operator.Text;
+        if (op.EndsWith('='))
+        {
+            _diagnostics.NotImplemented(
+                binaryOperator,
+                "Luau generation for bitwise assignment operators is not yet supported.",
+                $"use '{binaryOperator.Left} = {binaryOperator.Left} {op.Replace("=", "")} {binaryOperator.Right}'"
+            );
+
+            return new Luau.AST.BinaryOperator(left, "???", right);
+        }
+
+        var name = MapLuau.BitwiseOperator(op);
+        var arguments = new List<LuauExpression>();
+        var leftUpdated = AddBit32Arguments(left, name, arguments);
+        var rightUpdated = AddBit32Arguments(right, name, arguments);
+        if (!leftUpdated)
+            arguments.Add(left);
+
+        if (!rightUpdated)
+            arguments.Add(right);
+
+        return LuauFactory.Bit32Call(name, arguments);
     }
 
     public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
@@ -303,11 +312,11 @@ public sealed partial class LuauGenerator
             _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
             return new NilLiteral();
         }
-        
+
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
         var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
         if (symbol.IsIntrinsic)
-            return new QualifiedTypeName(["Loom"], luauTypeName);
+            return new QualifiedTypeName([LuauFactory.RuntimeImportName], luauTypeName);
 
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;

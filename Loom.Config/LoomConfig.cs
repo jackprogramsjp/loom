@@ -14,5 +14,5 @@ public sealed class LoomConfig
     [TomlIgnore] public string ProjectDirectory { get; set; } = "?";
 
     public bool NoEmit { get; set; }
-    public FilesConfig Files { get; set; } = new();
+    public FilesConfig Files { get; init; } = new();
 }
