@@ -227,7 +227,7 @@ public sealed partial class LuauGenerator
             var binary = (Luau.AST.BinaryOperator)VisitBinaryOperator(assignmentOperator);
             var assignmentStatement = new Luau.AST.ExpressionStatement(binary);
             _state.Prereq(assignmentStatement);
-            
+
             return binary.Left;
         }
 
@@ -237,14 +237,14 @@ public sealed partial class LuauGenerator
         {
             var identifierAssignment = new Luau.AST.BinaryOperator(left, "=", new Luau.AST.Identifier(declaration.Name.Text));
             _state.Postreq(new Luau.AST.ExpressionStatement(identifierAssignment));
-            
+
             return right;
         }
 
         var assigned = _state.PushToVariable("_assigned", right);
         var boundAssignment = new Luau.AST.BinaryOperator(left, "=", assigned);
         _state.Prereq(new Luau.AST.ExpressionStatement(boundAssignment));
-        
+
         return assigned;
     }
 
@@ -376,6 +376,14 @@ public sealed partial class LuauGenerator
             result.AddRange(GenerateStatements(statement));
 
         return result.FindAll(s => s is not NoOpStatement);
+    }
+
+    private List<LuauExpression> WrapFunctionArgument(Statement body, LuauType? returnType = null)
+    {
+        var chunk = GenerateChunk(body);
+        return chunk is { Statements: [Luau.AST.ExpressionStatement { Expression: Call { IsMethod: false } call }] }
+            ? [call.Callee, ..call.Arguments]
+            : [new AnonymousFunction(null, [], returnType ?? new UnitType(), chunk)];
     }
 
     private static LuauStatement WrapExpressionAsStatement(LuauExpression expression) =>

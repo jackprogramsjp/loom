@@ -286,9 +286,9 @@ public class LuauGeneratorTest
     }
 
     [Fact]
-    public void Generates_AfterStatement_WithExpressionBody()
+    public void Generates_AfterStatement_WithCallExpressionBody()
     {
-        var luauTree = Utility.GetLuauAST("after 1s foo()");
+        var luauTree = Utility.GetLuauAST("after 1s foo(69)");
         Assert.Single(luauTree.Statements);
 
         var exprStmt = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
@@ -298,22 +298,16 @@ public class LuauGeneratorTest
         Assert.Equal("task", target.Name);
         Assert.Single(propAccess.Names);
         Assert.Equal("delay", propAccess.Names.First());
-        Assert.Equal(2, call.Arguments.Count);
+        Assert.Equal(3, call.Arguments.Count);
 
-        var duration = Assert.IsType<NumberLiteral>(call.Arguments.First());
+        var duration = Assert.IsType<NumberLiteral>(call.Arguments[0]);
         Assert.Equal(1, duration.Value);
 
-        var anonFn = Assert.IsType<AnonymousFunction>(call.Arguments.Last());
-        Assert.Null(anonFn.TypeParameters);
-        Assert.Empty(anonFn.Parameters);
-        Assert.IsType<UnitType>(anonFn.ReturnType);
-        Assert.Single(anonFn.Body.Statements);
+        var fnIdentifier = Assert.IsType<Identifier>(call.Arguments[1]);
+        Assert.Equal("foo", fnIdentifier.Name);
 
-        var bodyStmt = anonFn.Body.Statements.First();
-        var innerCall = Assert.IsType<Call>(Assert.IsType<ExpressionStatement>(bodyStmt).Expression);
-        var innerIdent = Assert.IsType<Identifier>(innerCall.Callee);
-        Assert.Equal("foo", innerIdent.Name);
-        Assert.Empty(innerCall.Arguments);
+        var argument = Assert.IsType<NumberLiteral>(call.Arguments[2]);
+        Assert.Equal(69, argument.Value);
     }
 
     [Fact]
@@ -370,28 +364,26 @@ public class LuauGeneratorTest
         Assert.Single(luauTree.Statements);
 
         var outerCall = Assert.IsType<Call>(Assert.IsType<ExpressionStatement>(luauTree.Statements.First()).Expression);
-        var outerAnon = Assert.IsType<AnonymousFunction>(outerCall.Arguments[1]);
-        Assert.Single(outerAnon.Body.Statements);
+        Assert.Equal(4, outerCall.Arguments.Count);
+        
+        var outerDuration = Assert.IsType<NumberLiteral>(outerCall.Arguments[0]);
+        Assert.Equal(1, outerDuration.Value);
+        
+        var outerProperty = Assert.IsType<PropertyAccess>(outerCall.Arguments[1]);
+        Assert.Equal("task", Assert.IsType<Identifier>(outerProperty.Target).Name);
+        Assert.Equal("delay", outerProperty.Names.First());
 
-        var innerExpr = Assert.IsType<ExpressionStatement>(outerAnon.Body.Statements.First());
-        var innerCall = Assert.IsType<Call>(innerExpr.Expression);
-        var innerProp = Assert.IsType<PropertyAccess>(innerCall.Callee);
-        Assert.Equal("task", ((Identifier)innerProp.Target).Name);
-        Assert.Equal("delay", innerProp.Names.First());
-
-        var innerDuration = Assert.IsType<NumberLiteral>(innerCall.Arguments.First());
+        var innerDuration = Assert.IsType<NumberLiteral>(outerCall.Arguments[2]);
         Assert.Equal(2, innerDuration.Value);
 
-        var innerAnon = Assert.IsType<AnonymousFunction>(innerCall.Arguments.Last());
-        Assert.Single(innerAnon.Body.Statements);
-        var innerBodyCall = Assert.IsType<Call>(Assert.IsType<ExpressionStatement>(innerAnon.Body.Statements.First()).Expression);
-        Assert.Equal("foo", ((Identifier)innerBodyCall.Callee).Name);
+        var fnIdentifier = Assert.IsType<Identifier>(outerCall.Arguments[3]);
+        Assert.Equal("foo", fnIdentifier.Name);
     }
 
     [Fact]
     public void Generates_AfterStatement_WithVariableReferenceInBody()
     {
-        var luauTree = Utility.GetLuauAST("let x = 42; after 1s { print(x) }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("let x = 42; after 1s { let y = x + 69; print(y) }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         var varDecl = Assert.IsType<ConstVariable>(luauTree.Statements.First());
@@ -400,14 +392,16 @@ public class LuauGeneratorTest
         var exprStmt = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
         var call = Assert.IsType<Call>(exprStmt.Expression);
         var anonFn = Assert.IsType<AnonymousFunction>(call.Arguments.Last());
-        Assert.Single(anonFn.Body.Statements);
-
-        var printCall = Assert.IsType<Call>(Assert.IsType<ExpressionStatement>(anonFn.Body.Statements.First()).Expression);
+        Assert.Equal(2, anonFn.Body.Statements.Count);
+        Assert.IsType<ConstVariable>(anonFn.Body.Statements.First());
+        
+        var callStatement = Assert.IsType<ExpressionStatement>(anonFn.Body.Statements.Last());
+        var printCall = Assert.IsType<Call>(callStatement.Expression);
         var callee = Assert.IsType<Identifier>(printCall.Callee);
         Assert.Equal("print", callee.Name);
         Assert.Single(printCall.Arguments);
         var arg = Assert.IsType<Identifier>(printCall.Arguments.First());
-        Assert.Equal("x", arg.Name);
+        Assert.Equal("y", arg.Name);
     }
 
     [Fact]

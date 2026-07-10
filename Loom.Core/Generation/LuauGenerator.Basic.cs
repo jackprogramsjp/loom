@@ -1,12 +1,9 @@
 using Loom.Luau;
 using Loom.Luau.AST;
 using Loom.Parsing.AST;
-using Loom.TypeChecking;
-using Loom.TypeChecking.Types;
 using ArrayType = Loom.Parsing.AST.ArrayType;
 using Break = Loom.Parsing.AST.Break;
 using Continue = Loom.Parsing.AST.Continue;
-using ElementAccess = Loom.Parsing.AST.ElementAccess;
 using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
 using FunctionType = Loom.Parsing.AST.FunctionType;
 using Identifier = Loom.Parsing.AST.Identifier;
@@ -18,7 +15,6 @@ using Parenthesized = Loom.Parsing.AST.Parenthesized;
 using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
 using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
 using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
-using PropertyAccess = Loom.Parsing.AST.PropertyAccess;
 using Return = Loom.Parsing.AST.Return;
 using TypeParameter = Loom.Parsing.AST.TypeParameter;
 using TypeParameters = Loom.Parsing.AST.TypeParameters;
@@ -35,9 +31,7 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitWhile(While @while) => new WhileStatement(Visit(@while.Condition), GenerateChunk(@while.Body));
 
     public override LuauNode VisitAfter(After after) =>
-        new Luau.AST.ExpressionStatement(
-            LuauFactory.TaskCall("delay", [Visit(after.Duration), new AnonymousFunction(null, [], new UnitType(), GenerateChunk(after.Body))])
-        );
+        new Luau.AST.ExpressionStatement(LuauFactory.TaskCall("delay", [Visit(after.Duration), ..WrapFunctionArgument(after.Body)]));
 
     public override LuauNode VisitParameter(Parameter parameter) => new Luau.AST.Parameter(parameter.Name.Text, MaybeVisit<LuauType>(parameter.ColonTypeClause));
     public override LuauNode VisitReturn(Return @return) => new Luau.AST.Return(MaybeVisit<LuauExpression>(@return.Expression));
