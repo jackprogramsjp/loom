@@ -16,12 +16,12 @@ internal static class MapLuau
     public static string BitwiseOperator(string op) =>
         op switch
         {
-            "&" => "band",
-            "|" => "bor",
-            "~" => "bxor",
-            "<<" => "lshift",
-            ">>>" => "rshift",
-            ">>" => "arshift",
+            "&" or "&=" => "band",
+            "|" or "|=" => "bor",
+            "~" or "~=" => "bxor",
+            "<<" or "<<=" => "lshift",
+            ">>>" or ">>>=" => "rshift",
+            ">>" or ">>=" => "arshift",
             _ => op
         };
 

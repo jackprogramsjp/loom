@@ -4,7 +4,9 @@
 const Loom = {}
 
 export type Range = { minimum: number, maximum: number }
-export type Result<T, Error> = { ok: true, value: T } | { ok: false, error: Error }
+export type ResultOk<T> = { ok: true, value: T }
+export type ResultError<Error> = { ok: false, error: Error }
+export type Result<T, Error> = ResultOk<T> | ResultError<Error>
 
 export type Event<A...> = {
 	connect: (Event<A...>, (A...) -> ()) -> (),

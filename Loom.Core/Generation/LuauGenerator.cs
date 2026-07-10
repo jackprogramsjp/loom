@@ -273,15 +273,7 @@ public sealed partial class LuauGenerator
         var right = Visit(binaryOperator.Right);
         var op = binaryOperator.Operator.Text;
         if (op.EndsWith('='))
-        {
-            _diagnostics.NotImplemented(
-                binaryOperator,
-                "Luau generation for bitwise assignment operators is not yet supported.",
-                $"use '{binaryOperator.Left} = {binaryOperator.Left} {op.Replace("=", "")} {binaryOperator.Right}'"
-            );
-
-            return new Luau.AST.BinaryOperator(left, "???", right);
-        }
+            return GenerateBitwiseAssignmentOperator(op, left, right);
 
         var name = MapLuau.BitwiseOperator(op);
         var arguments = new List<LuauExpression>();
@@ -294,6 +286,17 @@ public sealed partial class LuauGenerator
             arguments.Add(right);
 
         return LuauFactory.Bit32Call(name, arguments);
+    }
+
+    private static Luau.AST.BinaryOperator GenerateBitwiseAssignmentOperator(string op, LuauExpression left, LuauExpression right)
+    {
+        var name = MapLuau.BitwiseOperator(op);
+        var arguments = new List<LuauExpression> { left };
+        var rightUpdated = AddBit32Arguments(right, name, arguments);
+        if (!rightUpdated)
+            arguments.Add(right);
+
+        return new Luau.AST.BinaryOperator(left, "=", LuauFactory.Bit32Call(name, arguments));
     }
 
     public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)

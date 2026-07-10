@@ -1,6 +1,2 @@
-task.delay(0.5, function(): ()
-  print("im")
-  print("so")
-  print("epic")
-end)
-task.delay(10, print, "big dawg")
+local x = 69
+x = bit32.band(x, bit32.bor(420, 67))

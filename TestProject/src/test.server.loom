@@ -1,7 +1,2 @@
-after 500ms {
-    print("im")
-    print("so")
-    print("epic")
-}
-
-after 10s print("big dawg")
+mut x = 69;
+x &= 420 & 67;
