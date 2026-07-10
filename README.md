@@ -430,8 +430,18 @@ after 100ms {
 }
 ```
 ```luau
-task.delay(0.1, function(): ()
-    print("done!")
+task.delay(0.1, print, "done!")
+```
+```cs
+after 250ms {
+    let computed = 69 + 420;
+	print(computed);
+}
+```
+```luau
+task.delay(0.25, function(): ()
+	const computed = 69 + 420
+    print(computed)
 end)
 ```
 ##
