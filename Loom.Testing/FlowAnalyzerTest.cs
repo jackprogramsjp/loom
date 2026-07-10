@@ -17,6 +17,7 @@ public class FlowAnalyzerTest
     }
 
     [Theory]
+    [InlineData("let x = x;")]
     [InlineData("mut x; x;")]
     [InlineData("mut x: number; x += 1;")]
     [InlineData("mut x: number; { let x = 42; }; x;")]
@@ -82,7 +83,7 @@ public class FlowAnalyzerTest
         var diagnostics = Utility.FlowAnalyze(source).AnalyzerResult.Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.UseOfMaybeUninitialized, "Variable 'x' might not be initialized on this path.");
     }
-    
+
     [Theory]
     [InlineData("let x = 1; x = 69")]
     [InlineData("let x = 1; x += 69")]
@@ -101,6 +102,8 @@ public class FlowAnalyzerTest
     }
 
     [Theory]
+    [InlineData("fn abc(x: number) -> print(x)")]
+    [InlineData("fn abc(x: number) -> abc(x)")]
     [InlineData(
         """
         mut x: number;

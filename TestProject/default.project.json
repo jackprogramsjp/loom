@@ -1,0 +1,21 @@
+{
+  "name": "loom test project",
+  "globIgnorePaths": [
+    "**/loom-config.toml"
+  ],
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Loom": {
+        "$path": "dist"
+      }
+    },
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "include": {
+        "$path": "../Loom.CLI/Include"
+      }
+    }
+  }
+}

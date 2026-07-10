@@ -23,6 +23,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         {
             Block block => AnalyzeBlock(block, state),
             VariableDeclaration variableDeclaration => AnalyzeVariableDeclaration(variableDeclaration, state),
+            FunctionDeclaration functionDeclaration => AnalyzeFunctionDeclaration(functionDeclaration, state),
             Return @return => AnalyzeReturn(@return, state),
             Break @break => AnalyzeBreak(@break, state),
             Continue @continue => AnalyzeContinue(@continue, state),
@@ -31,7 +32,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             While @while => AnalyzeWhile(@while, state),
             For @for => AnalyzeFor(@for, state),
             ExpressionStatement expressionStatement => AnalyzeExpressionStatement(expressionStatement, state),
-            _ => new FlowState(statement.Children.OfType<Statement>().Select(e => state = AnalyzeStatement(e, state)).LastOrDefault(new FlowState()))
+            _ => new FlowState(statement.Children.OfType<Statement>().Select(e => state = AnalyzeStatement(e, state)).LastOrDefault(state))
         };
 
         if (state.IsUnreachable)
@@ -47,11 +48,35 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         {
             AssignmentOperator assignmentOperator => AnalyzeAssignment(assignmentOperator, state),
             Identifier identifier => AnalyzeIdentifier(identifier, state),
-            _ => new FlowState(expression.Children.Select(e => state = AnalyzeExpression(e, state)).LastOrDefault(new FlowState()))
+            _ => new FlowState(expression.Children.Select(e => state = AnalyzeExpression(e, state)).LastOrDefault(state))
         };
     }
 
     private FlowState AnalyzeBlock(Block block, FlowState state) => BindState(block, AnalyzeStatements(block.Statements, state));
+    
+    private FlowState AnalyzeFunctionDeclaration(FunctionDeclaration functionDeclaration, FlowState state)
+    {
+        var newState = new FlowState(state);
+        if (semanticModel.GetDeclarationSymbol(functionDeclaration) is { } symbol)
+        {
+            newState.DefinitelyInitialized.Add(symbol);
+            newState.MaybeInitialized.Add(symbol);
+        }
+        
+        var functionState = new FlowState(newState);
+        if (functionDeclaration.Parameters != null)
+        {
+            foreach (var parameter in functionDeclaration.Parameters.ParameterList)
+            {
+                if (semanticModel.GetDeclarationSymbol(parameter) is not { } parameterSymbol) continue;
+                functionState.DefinitelyInitialized.Add(parameterSymbol);
+                functionState.MaybeInitialized.Add(parameterSymbol);
+            }
+        }
+
+        AnalyzeStatement(functionDeclaration.Body, functionState);
+        return BindState(functionDeclaration, newState);
+    }
 
     private FlowState AnalyzeVariableDeclaration(VariableDeclaration variableDeclaration, FlowState state)
     {

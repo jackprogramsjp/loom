@@ -23,6 +23,9 @@ public class CompilerTest
     {
         var compilationUnit = new CompilationUnit(new LoomConfig());
         var compiler = new Compiler(compilationUnit, Utility.TestFile(source));
-        return compiler.Compile();
+        var file = compiler.Compile();
+        Utility.AssertNoErrors(file.Diagnostics);
+
+        return file;
     }
 }
