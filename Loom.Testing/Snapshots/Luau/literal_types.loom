@@ -1,0 +1,5 @@
+type A = 69;
+type B = 69 | 420;
+type C = "abcdef";
+type D = true;
+type E = none;

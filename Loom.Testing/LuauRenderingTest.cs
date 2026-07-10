@@ -150,6 +150,14 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_AnonymousFunction_Basic()
+    {
+        var parameters = new List<Parameter>();
+        var fn = new AnonymousFunction(null, parameters, null, new Chunk([new Return(new BinaryOperator(new Identifier("a"), "+", new Identifier("b")))]));
+        Assert.Equal("function()\n  return a + b\nend", fn.Render());
+    }
+
+    [Fact]
     public void Renders_Function()
     {
         var parameters = new List<Parameter> { new("a", PrimitiveType.Number), new("b", new TypeName("T")) };
@@ -460,7 +468,11 @@ public class LuauRenderingTest
     public void Renders_PrimitiveType(PrimitiveTypeKind kind) => Assert.Equal(kind.ToString().ToLower(), new PrimitiveType(kind).Render());
 
     [Fact]
-    public void Renders_TypeName_Generic() => Assert.Equal("Namespace.Sub.Id<number, boolean>", new QualifiedTypeName(["Namespace", "Sub"], new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean])).Render());
+    public void Renders_TypeName_Generic() =>
+        Assert.Equal(
+            "Namespace.Sub.Id<number, boolean>",
+            new QualifiedTypeName(["Namespace", "Sub"], new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean])).Render()
+        );
 
     [Fact]
     public void Renders_TypeName() => Assert.Equal("Hello", new TypeName("Hello").Render());
