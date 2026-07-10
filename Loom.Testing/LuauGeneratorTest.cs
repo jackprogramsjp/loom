@@ -720,6 +720,21 @@ public class LuauGeneratorTest
         var returnType = Assert.IsType<PrimitiveType>(fnType.ReturnType);
         Assert.Equal(PrimitiveTypeKind.Number, returnType.Kind);
     }
+    
+    [Theory]
+    [InlineData("Range")]
+    [InlineData("Result")]
+    public void Generates_Qualified_IntrinsicType(string typeName)
+    {
+        var luauTree = Utility.GetLuauAST($"let x: {typeName};");
+        Assert.Single(luauTree.Statements);
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
+        var qualifiedType = Assert.IsType<QualifiedTypeName>(variable.DeclaredType);
+        Assert.Equal("Loom", Assert.Single(qualifiedType.Qualifications));
+        Assert.Equal(typeName, qualifiedType.FinalName.Name);
+        Assert.Empty(qualifiedType.FinalName.TypeArguments);
+    }
 
     [Fact]
     public void Generates_VariableDeclaration_WithoutInitializer()

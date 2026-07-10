@@ -16,10 +16,10 @@ public class LuauRenderingTest
         var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
         Assert.Equal("(x :: number)", typeCast.Render());
     }
-    
+
     [Fact]
     public void Renders_Return() => Assert.Equal("return 69", new Return(new NumberLiteral(69)).Render());
-    
+
     [Fact]
     public void Renders_Return_Empty() => Assert.Equal("return", new Return().Render());
 
@@ -281,7 +281,7 @@ public class LuauRenderingTest
         Assert.Equal("abc()", emptyCall.Render());
         Assert.Equal("abc(\"foo\")", call.Render());
     }
-    
+
     [Fact]
     public void Renders_PropertyAccess_SingleName_DefaultDot()
     {
@@ -296,16 +296,14 @@ public class LuauRenderingTest
             new Identifier("obj"),
             ["a", "b", "c"]
         );
+
         Assert.Equal("obj.a.b.c", access.Render());
     }
 
     [Fact]
     public void Renders_PropertyAccess_SingleName_ColonOperator()
     {
-        var access = new PropertyAccess(new Identifier("obj"), ["method"])
-        {
-            Operator = ':'
-        };
+        var access = new PropertyAccess(new Identifier("obj"), ["method"]) { Operator = ':' };
         Assert.Equal("obj:method", access.Render());
     }
 
@@ -316,6 +314,7 @@ public class LuauRenderingTest
             new Identifier("abc"),
             ["foo", "bar"]
         ) { Operator = ':' };
+
         Assert.Equal("abc.foo:bar", access.Render());
     }
 
@@ -327,6 +326,7 @@ public class LuauRenderingTest
             "+",
             new Identifier("b")
         );
+
         var access = new PropertyAccess(target, ["length"]);
         Assert.Equal("(a + b).length", access.Render());
     }
@@ -460,10 +460,13 @@ public class LuauRenderingTest
     public void Renders_PrimitiveType(PrimitiveTypeKind kind) => Assert.Equal(kind.ToString().ToLower(), new PrimitiveType(kind).Render());
 
     [Fact]
-    public void Renders_TypeName_Generic() => Assert.Equal("Id<number, boolean>", new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean]).Render());
+    public void Renders_TypeName_Generic() => Assert.Equal("Namespace.Sub.Id<number, boolean>", new QualifiedTypeName(["Namespace", "Sub"], new TypeName("Id", [PrimitiveType.Number, PrimitiveType.Boolean])).Render());
 
     [Fact]
     public void Renders_TypeName() => Assert.Equal("Hello", new TypeName("Hello").Render());
+
+    [Fact]
+    public void Renders_QualifiedTypeName() => Assert.Equal("Namespace.Sub.Hello", new QualifiedTypeName(["Namespace", "Sub"], new TypeName("Hello")).Render());
 
     [Fact]
     public void Renders_StringLiteralType() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteralType("abc").Render());

@@ -2,7 +2,7 @@ type Entry<K, V> = {
   read key: K,
   read value: V,
 }
-const function find<K, V>(entries: { Entry<K, V> }, key: K): Result<V, string>
+const function find<K, V>(entries: { Entry<K, V> }, key: K): Loom.Result<V, string>
   for _, entry in entries do
     if entry.key == key then
       return { ok = true, value = entry.value }
