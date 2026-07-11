@@ -236,6 +236,60 @@ public class MacroExpanderTest
     }
 
     [Theory]
+    [InlineData("a.push(4)", "insert", 2)]
+    [InlineData("a['push'](4)", "insert", 2)]
+    [InlineData("a.insert(1, 4)", "insert", 3)]
+    [InlineData("a.pop()", "remove", 1)]
+    [InlineData("a.remove(1)", "remove", 2)]
+    [InlineData("a.index_of(2)", "find", 2)]
+    public void Generates_Array_Mutation_And_Search(string call, string luauFunction, int argumentCount)
+    {
+        var source = $"let a = mut [1, 2, 3]; {call}";
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var statement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var tableCall = Assert.IsType<Call>(statement.Expression);
+        var callee = Assert.IsType<PropertyAccess>(tableCall.Callee);
+        var tableIdentifier = Assert.IsType<Identifier>(callee.Target);
+        Assert.Equal("table", tableIdentifier.Name);
+        Assert.Equal(luauFunction, Assert.Single(callee.Names));
+        Assert.Equal(argumentCount, tableCall.Arguments.Count);
+        Assert.Equal("a", Assert.IsType<Identifier>(tableCall.Arguments.First()).Name);
+    }
+
+    [Theory]
+    [InlineData("a.has(2)")]
+    [InlineData("a['has'](2)")]
+    public void Generates_Array_Has(string call)
+    {
+        var source = $"let a = [1, 2, 3]; {call}";
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var binaryOperator = Assert.IsType<BinaryOperator>(variable.Initializer);
+        Assert.Equal("~=", binaryOperator.Operator);
+        Assert.IsType<NilLiteral>(binaryOperator.Right);
+
+        var tableCall = Assert.IsType<Call>(binaryOperator.Left);
+        var callee = Assert.IsType<PropertyAccess>(tableCall.Callee);
+        Assert.Equal("table", Assert.IsType<Identifier>(callee.Target).Name);
+        Assert.Equal("find", Assert.Single(callee.Names));
+        Assert.Equal("a", Assert.IsType<Identifier>(tableCall.Arguments.First()).Name);
+    }
+
+    [Fact]
+    public void ImmutableArray_DoesNotSupport_Mutation()
+    {
+        const string source = "let a = [1, 2, 3]; a.push(4)";
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Assert.NotEmpty(diagnostics.Set);
+    }
+
+    [Theory]
     [InlineData("a.length")]
     [InlineData("a['length']")]
     [InlineData("let _ = (a).length", true)]
