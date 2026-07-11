@@ -540,6 +540,26 @@ const arr = {1, 2, 3, 4}
 print(#arr)
 ```
 ##
+Mutable arrays support in-place methods (`push`, `pop`, `insert`, `remove`), and every array supports `index_of` and `has`.
+```rs
+let arr = mut [1, 2, 3];
+arr.push(4);
+arr.insert(1, 0);
+arr.pop();
+arr.remove(1);
+print(arr.index_of(2));
+print(arr.has(2))
+```
+```luau
+const arr = {1, 2, 3}
+table.insert(arr, 4)
+table.insert(arr, 1, 0)
+table.remove(arr)
+table.remove(arr, 1)
+print(table.find(arr, 2))
+print(table.find(arr, 2) ~= nil)
+```
+##
 ```rs
 print((1..10).length)
 ```
