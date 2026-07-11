@@ -39,7 +39,49 @@ public class ResolverTest
     [Fact]
     public void ThrowsFor_DuplicateEnumTypeName()
     {
-        var diagnostics = Utility.GetSemanticModel("type Abc = number[] enum Abc{}").Diagnostics;
+        var diagnostics = Utility.GetSemanticModel("type Abc = number[]; enum Abc {}").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateInterface()
+    {
+        var diagnostics = Utility.GetSemanticModel("interface Abc; interface Abc;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Interface 'Abc' is already declared in this scope.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateInterfaceTypeName()
+    {
+        var diagnostics = Utility.GetSemanticModel("type Abc = number; interface Abc;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateInterfaceVariableName()
+    {
+        var diagnostics = Utility.GetSemanticModel("let Abc = 69; interface Abc;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'Abc' is already declared in this scope.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateTrait()
+    {
+        var diagnostics = Utility.GetSemanticModel("trait Abc {} trait Abc {}").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Trait 'Abc' is already declared in this scope.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateTraitTypeName()
+    {
+        var diagnostics = Utility.GetSemanticModel("type Abc = number; trait Abc {}").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateTraitInterface()
+    {
+        var diagnostics = Utility.GetSemanticModel("trait Abc {} interface Abc {}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
     }
 
@@ -48,6 +90,41 @@ public class ResolverTest
     {
         var diagnostics = Utility.GetSemanticModel("fn foo(x: number, x: string) {}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Parameter 'x' is already declared for this function.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateDeclareVariable()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare let x: number; declare let x: number;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'x' is already declared in this scope.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DuplicateDeclareFunction()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare fn f(): void; declare fn f(): void;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'f' is already declared in this scope.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DuplicateDeclareFunctionParameter()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare fn f(x: number, x: string): void;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Parameter 'x' is already declared for this function.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateDeclareInterface()
+    {
+        var diagnostics = Utility.GetSemanticModel("declare interface Abc; declare interface Abc;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Interface 'Abc' is already declared in this scope.");
+    }
+    
+    [Fact]
+    public void ThrowsFor_DuplicateDeclareInterfaceTypeName()
+    {
+        var diagnostics = Utility.GetSemanticModel("type Abc = number; declare interface Abc;").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
     }
 
     [Fact]
@@ -83,27 +160,6 @@ public class ResolverTest
     {
         var diagnostics = Utility.GetSemanticModel("return 42;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ReturnOutsideFunction, "Return statements can only be used inside of functions.");
-    }
-
-    [Fact]
-    public void ThrowsFor_DuplicateDeclareVariable()
-    {
-        var diagnostics = Utility.GetSemanticModel("declare let x: number; declare let x: number;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'x' is already declared in this scope.");
-    }
-
-    [Fact]
-    public void ThrowsFor_DuplicateDeclareFunction()
-    {
-        var diagnostics = Utility.GetSemanticModel("declare fn f(): void; declare fn f(): void;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'f' is already declared in this scope.");
-    }
-
-    [Fact]
-    public void ThrowsFor_DuplicateDeclareFunctionParameter()
-    {
-        var diagnostics = Utility.GetSemanticModel("declare fn f(x: number, x: string): void;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Parameter 'x' is already declared for this function.");
     }
 
     [Fact]

@@ -43,12 +43,11 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitTraitDeclaration(TraitDeclaration traitDeclaration)
     {
-        if (!DeclareType(traitDeclaration, SymbolKind.Trait)
-            || !ResolveTraitBody(traitDeclaration.Body, traitDeclaration.Name.Text))
+        if (!DeclareTrait(traitDeclaration) || !ResolveTraitBody(traitDeclaration.Body, traitDeclaration.Name.Text))
         {
             return false;
         }
-        
+
         PushScope();
         base.VisitTraitDeclaration(traitDeclaration);
         PopScope();
@@ -347,7 +346,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     }
 
     public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter) && base.VisitTypeParameter(typeParameter);
-    
+
     private bool ResolveTraitBody(TraitBody body, string name)
     {
         var methodNames = body.Members.Select(p => p.Name.Text);
@@ -434,14 +433,30 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return false;
     }
 
+    private bool DeclareTrait(TraitDeclaration traitDeclaration)
+    {
+        var scope = CurrentScope();
+        var name = traitDeclaration.Name.Text;
+        if (scope.TypeLookup.TryGetValue(name, out var symbols))
+        {
+            var kindName = symbols is [.., TraitSymbol] ? "Trait" : "Type";
+            _diagnostics.Error(traitDeclaration.Name, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
+            return false;
+        }
+
+        DeclareSymbol(new TraitSymbol(traitDeclaration, name));
+        return true;
+    }
+
     private bool DeclareInterface(InterfaceDeclaration interfaceDeclaration, bool isSealed, [MaybeNullWhen(false)] out InterfaceSymbol interfaceSymbol)
     {
         interfaceSymbol = null;
         var scope = CurrentScope();
         var name = interfaceDeclaration.Name.Text;
-        if (scope.TypeLookup.ContainsKey(name))
+        if (scope.TypeLookup.TryGetValue(name, out var symbols))
         {
-            _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"Interface '{name}' is already declared in this scope.");
+            var kindName = symbols is [.., InterfaceSymbol] ? "Interface" : "Type";
+            _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
             return false;
         }
 
@@ -458,9 +473,10 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         symbol = null;
         var scope = CurrentScope();
-        if (scope.VariableLookup.ContainsKey(name))
+        if (scope.VariableLookup.TryGetValue(name, out var symbols))
         {
-            _diagnostics.Error(node, InternalCodes.DuplicateName, $"Variable '{name}' is already declared in this scope.");
+            var kindName = scope.TypeLookup.GetValueOrDefault(name, []) is [.., InterfaceSymbol] ? "Interface" : "Variable";
+            _diagnostics.Error(node, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
             return false;
         }
 

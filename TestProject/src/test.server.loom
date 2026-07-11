@@ -1,5 +1,2 @@
-trait Shoot {
-    fn shoot: void;
-}
-
-type X = Shoot
+let X = 69;
+interface X;
