@@ -357,10 +357,10 @@ public class LuauGeneratorTest
 
         var outerCall = Assert.IsType<Call>(Assert.IsType<ExpressionStatement>(luauTree.Statements.First()).Expression);
         Assert.Equal(4, outerCall.Arguments.Count);
-        
+
         var outerDuration = Assert.IsType<NumberLiteral>(outerCall.Arguments[0]);
         Assert.Equal(1, outerDuration.Value);
-        
+
         var outerProperty = Assert.IsType<PropertyAccess>(outerCall.Arguments[1]);
         Assert.Equal("task", Assert.IsType<Identifier>(outerProperty.Target).Name);
         Assert.Equal("delay", outerProperty.Names.First());
@@ -386,7 +386,7 @@ public class LuauGeneratorTest
         var anonFn = Assert.IsType<AnonymousFunction>(call.Arguments.Last());
         Assert.Equal(2, anonFn.Body.Statements.Count);
         Assert.IsType<ConstVariable>(anonFn.Body.Statements.First());
-        
+
         var callStatement = Assert.IsType<ExpressionStatement>(anonFn.Body.Statements.Last());
         var printCall = Assert.IsType<Call>(callStatement.Expression);
         var callee = Assert.IsType<Identifier>(printCall.Callee);
@@ -489,6 +489,73 @@ public class LuauGeneratorTest
 
         var outerContinue = Assert.IsType<Luau.AST.Continue>(outerBody.Statements[1]);
         Assert.Equal("continue", outerContinue.Render());
+    }
+
+    [Fact]
+    public void Generates_TraitDeclaration()
+    {
+        var luauTree = Utility.GetLuauAST("trait T { fn method(): number }", typeCheck: true);
+        Assert.Single(luauTree.Statements);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        Assert.Equal("T", typeAlias.Name);
+        Assert.Empty(typeAlias.TypeParameters.Parameters);
+
+        var tableType = Assert.IsType<TableType>(typeAlias.Type);
+        Assert.Single(tableType.Properties);
+
+        var prop = tableType.Properties.First();
+        Assert.Equal("method", prop.Name);
+        Assert.Equal(LuauVisibility.Read, prop.Visibility);
+
+        var fnType = Assert.IsType<FunctionType>(prop.Type);
+        Assert.Empty(fnType.ParameterTypes);
+        Assert.IsType<PrimitiveType>(fnType.ReturnType);
+        Assert.Equal(PrimitiveTypeKind.Number, ((PrimitiveType)fnType.ReturnType).Kind);
+    }
+
+    [Fact]
+    public void Generates_TraitDeclaration_WithParameters()
+    {
+        var luauTree = Utility.GetLuauAST("trait T { fn method(x: number, y: string): bool }", typeCheck: true);
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
+        var tableType = Assert.IsType<TableType>(typeAlias.Type);
+        var prop = tableType.Properties.Single();
+        var fnType = Assert.IsType<FunctionType>(prop.Type);
+        Assert.Equal(2, fnType.ParameterTypes.Count);
+        Assert.IsType<PrimitiveType>(fnType.ParameterTypes[0]);
+        Assert.IsType<PrimitiveType>(fnType.ParameterTypes[1]);
+        Assert.IsType<PrimitiveType>(fnType.ReturnType);
+    }
+
+    [Fact]
+    public void Generates_TraitDeclaration_Generic()
+    {
+        var luauTree = Utility.GetLuauAST("trait T<T> { fn method(value: T): T }", typeCheck: true);
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
+        Assert.Single(typeAlias.TypeParameters.Parameters);
+        var param = typeAlias.TypeParameters.Parameters[0];
+        Assert.Equal("T", param.Name);
+        var tableType = Assert.IsType<TableType>(typeAlias.Type);
+        var prop = tableType.Properties.Single();
+        var fnType = Assert.IsType<FunctionType>(prop.Type);
+        Assert.Single(fnType.ParameterTypes);
+        var paramType = Assert.IsType<TypeName>(fnType.ParameterTypes[0]);
+        Assert.Equal("T", paramType.Name);
+        var returnType = Assert.IsType<TypeName>(fnType.ReturnType);
+        Assert.Equal("T", returnType.Name);
+    }
+
+    [Fact]
+    public void Generates_TraitDeclaration_MultipleMethods()
+    {
+        var luauTree = Utility.GetLuauAST("trait T { fn a(): number; fn b(): string }", typeCheck: true);
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
+        var tableType = Assert.IsType<TableType>(typeAlias.Type);
+        Assert.Equal(2, tableType.Properties.Count);
+        Assert.Equal("a", tableType.Properties[0].Name);
+        Assert.Equal("b", tableType.Properties[1].Name);
+        Assert.All(tableType.Properties, p => Assert.IsType<FunctionType>(p.Type));
     }
 
     [Fact]
@@ -628,7 +695,7 @@ public class LuauGeneratorTest
         Assert.Equal(2, ((NumberLiteral)binary.Right).Value);
         Assert.Equal("+=", binary.Operator);
     }
-    
+
     [Fact]
     public void Generates_BitwiseAssignment_Nested()
     {
@@ -639,14 +706,14 @@ public class LuauGeneratorTest
         var binary = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
         Assert.Equal("=", binary.Operator);
         Assert.IsType<Identifier>(binary.Left);
-        
+
         var bandCall = Assert.IsType<Call>(binary.Right);
         var band = Assert.IsType<PropertyAccess>(bandCall.Callee);
         Assert.Equal(2, bandCall.Arguments.Count);
         Assert.Equal("bit32", Assert.IsType<Identifier>(band.Target).Name);
         Assert.Equal("band", Assert.Single(band.Names));
         Assert.Equal("x", Assert.IsType<Identifier>(bandCall.Arguments[0]).Name);
-        
+
         var borCall = Assert.IsType<Call>(bandCall.Arguments[1]);
         var bor = Assert.IsType<PropertyAccess>(borCall.Callee);
         Assert.Equal(2, borCall.Arguments.Count);
@@ -655,7 +722,7 @@ public class LuauGeneratorTest
         Assert.Equal(2, Assert.IsType<NumberLiteral>(borCall.Arguments[0]).Value);
         Assert.Equal(3, Assert.IsType<NumberLiteral>(borCall.Arguments[1]).Value);
     }
-    
+
     [Fact]
     public void Generates_BitwiseAssignment_Flattened()
     {
@@ -666,7 +733,7 @@ public class LuauGeneratorTest
         var binary = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
         Assert.Equal("=", binary.Operator);
         Assert.IsType<Identifier>(binary.Left);
-        
+
         var bandCall = Assert.IsType<Call>(binary.Right);
         var band = Assert.IsType<PropertyAccess>(bandCall.Callee);
         Assert.Equal(3, bandCall.Arguments.Count);
@@ -693,7 +760,7 @@ public class LuauGeneratorTest
         var binary = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
         Assert.Equal("=", binary.Operator);
         Assert.IsType<Identifier>(binary.Left);
-        
+
         var bandCall = Assert.IsType<Call>(binary.Right);
         var band = Assert.IsType<PropertyAccess>(bandCall.Callee);
         Assert.Equal(2, bandCall.Arguments.Count);
@@ -773,25 +840,25 @@ public class LuauGeneratorTest
         var returnType = Assert.IsType<PrimitiveType>(fnType.ReturnType);
         Assert.Equal(PrimitiveTypeKind.Number, returnType.Kind);
     }
-    
+
     [Fact]
     public void Generates_Runtime_ImportWhenNecessary()
     {
         var luauTree = Utility.GetLuauAST("let x: Range = 1..10;", disableRuntimeLib: false);
         Assert.Equal(2, luauTree.Statements.Count);
-        
+
         var importVariable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
         Assert.Equal(LuauFactory.RuntimeImportName, importVariable.Name);
         Assert.Null(importVariable.DeclaredType);
         Assert.Equal("require", Assert.IsType<Identifier>(Assert.IsType<Call>(importVariable.Initializer).Callee).Name);
-        
+
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         var qualifiedType = Assert.IsType<QualifiedTypeName>(variable.DeclaredType);
         Assert.Equal(LuauFactory.RuntimeImportName, Assert.Single(qualifiedType.Qualifications));
         Assert.Equal("Range", qualifiedType.FinalName.Name);
         Assert.Empty(qualifiedType.FinalName.TypeArguments);
     }
-    
+
     [Theory]
     [InlineData("Range")]
     [InlineData("Result")]
@@ -799,7 +866,7 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST($"let x: {typeName};");
         Assert.Single(luauTree.Statements);
-        
+
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[0]);
         var qualifiedType = Assert.IsType<QualifiedTypeName>(variable.DeclaredType);
         Assert.Equal(LuauFactory.RuntimeImportName, Assert.Single(qualifiedType.Qualifications));
@@ -1754,7 +1821,7 @@ public class LuauGeneratorTest
         var declaration = Assert.IsType<ConstVariable>(body.Statements[0]);
         Assert.Equal("_assigned", declaration.Name);
         Assert.IsType<NumberLiteral>(declaration.Initializer);
-        
+
         var expressionStatement = Assert.IsType<ExpressionStatement>(body.Statements[1]);
         var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
         Assert.Equal("=", assignment.Operator);
@@ -1792,7 +1859,7 @@ public class LuauGeneratorTest
 
         var body = function.Body;
         Assert.Equal(2, body.Statements.Count);
-        
+
         var expressionStatement = Assert.IsType<ExpressionStatement>(body.Statements[0]);
         var assignment = Assert.IsType<BinaryOperator>(expressionStatement.Expression);
         Assert.Equal("=", assignment.Operator);

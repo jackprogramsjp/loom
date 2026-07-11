@@ -135,7 +135,7 @@ public sealed partial class TypeChecker
                     BindType(@for.Names[1], elementType);
 
                 break;
-            } 
+            }
         }
 
         _loopExitScopes.Push([]);
@@ -247,17 +247,20 @@ public sealed partial class TypeChecker
         {
             InterfaceDeclaration interfaceDeclaration => Visit(interfaceDeclaration),
             DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause),
-            DeclareFunctionSignature functionSignature => new Types.FunctionType(
-                functionSignature.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [],
-                functionSignature.Parameters?.ParameterList.ConvertAll(Visit) ?? [],
-                Visit(functionSignature.ReturnType)
-            ),
+            DeclareFunctionSignature functionSignature => Visit(functionSignature),
             _ => Types.PrimitiveType.Never
         };
 
         BindType(declare.Signature, type);
         return BindType(declare, type);
     }
+
+    public override Type VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature) =>
+        new Types.FunctionType(
+            declareFunctionSignature.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [],
+            declareFunctionSignature.Parameters?.ParameterList.ConvertAll(Visit) ?? [],
+            Visit(declareFunctionSignature.ReturnType)
+        );
 
     public override Type VisitParameter(Parameter parameter)
     {
@@ -856,10 +859,10 @@ public sealed partial class TypeChecker
         var type = Visit(body, current);
         if (body is Block)
             return type;
-        
+
         var exit = GetStatementExitState(body, current);
         _exitStates[body] = exit;
-        
+
         return type;
     }
 
@@ -870,7 +873,7 @@ public sealed partial class TypeChecker
             Return or Break or Continue => new FlowState(entryState) { IsUnreachable = true },
             _ => entryState
         };
-    
+
     private void AssignLoopExitState(Node node)
     {
         var exits = _loopExitScopes.Pop();

@@ -1,2 +1,5 @@
-mut x = 69;
-x &= 420 | 67;
+trait Shoot {
+    fn shoot: void;
+}
+
+type X = Shoot

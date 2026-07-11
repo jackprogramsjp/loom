@@ -20,17 +20,11 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitWhile(While @while) => CombineResults([Visit(@while.Condition), Visit(@while.Body)]);
     public virtual T VisitIf(If @if) => CombineResults([Visit(@if.Condition), Visit(@if.ThenBranch), VisitWithDefault(@if.ElseBranch)]);
     public virtual T VisitElseBranch(ElseBranch elseBranch) => Visit(elseBranch.Branch);
+    
+    public virtual T VisitTraitBody(TraitBody traitBody) => VisitList(traitBody.Members);
 
-    public virtual T VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) =>
-        CombineResults([Visit(interfaceInvocation.Name), VisitWithDefault(interfaceInvocation.TypeArguments), Visit(interfaceInvocation.Body)]);
-
-    public virtual T VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) => VisitList(interfaceInvocationBody.Initializers);
-
-    public virtual T VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
-        CombineResults([Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression)]);
-
-    public virtual T VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
-        Visit(propertyInitializer.Expression);
+    public virtual T VisitTraitDeclaration(TraitDeclaration traitDeclaration) =>
+        CombineResults([VisitWithDefault(traitDeclaration.TypeParameters), Visit(traitDeclaration.Body)]);
 
     public virtual T VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration) =>
         CombineResults([Visit(indexerDeclaration.IndexType), Visit(indexerDeclaration.ColonTypeClause)]);
@@ -86,6 +80,17 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitExpressionStatement(ExpressionStatement expressionStatement) => Visit(expressionStatement.Expression);
     public virtual T VisitReturn(Return @return) => VisitWithDefault(@return.Expression);
     public virtual T VisitExpressionBody(ExpressionBody expressionBody) => Visit(expressionBody.Expression);
+    
+    public virtual T VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) =>
+        CombineResults([Visit(interfaceInvocation.Name), VisitWithDefault(interfaceInvocation.TypeArguments), Visit(interfaceInvocation.Body)]);
+
+    public virtual T VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) => VisitList(interfaceInvocationBody.Initializers);
+
+    public virtual T VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
+        CombineResults([Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression)]);
+
+    public virtual T VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
+        Visit(propertyInitializer.Expression);
 
     public virtual T VisitRangeLiteral(RangeLiteral rangeLiteral) => CombineResults([Visit(rangeLiteral.Minimum), Visit(rangeLiteral.Maximum)]);
     public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);
@@ -148,7 +153,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
         node is null ? default : Visit<TResult>(node);
 
     protected T? MaybeVisit(Node? node) => node is null ? default : Visit(node);
-    private T VisitWithDefault(Node? node) => MaybeVisit(node) ?? DefaultValue(node);
+    protected T VisitWithDefault(Node? node) => MaybeVisit(node) ?? DefaultValue(node);
 
     private T VisitList<TNode>(List<TNode> nodes)
         where TNode : Node =>

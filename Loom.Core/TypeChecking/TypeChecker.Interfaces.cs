@@ -8,6 +8,20 @@ namespace Loom.Core.TypeChecking;
 
 public sealed partial class TypeChecker
 {
+    public override Type VisitTraitDeclaration(TraitDeclaration traitDeclaration)
+    {
+        var name = traitDeclaration.Name.Text;
+        var typeParameters = traitDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
+        var properties = ResolveTraitProperties(traitDeclaration.Body.Members);
+        var objectType = new ObjectType(null, properties);
+        var interfaceType = new InterfaceType(name, [], objectType);
+        if (typeParameters == null)
+            return BindType(traitDeclaration, interfaceType);
+
+        var genericType = new GenericType(traitDeclaration, typeParameters, interfaceType);
+        return BindType(traitDeclaration, genericType);
+    }
+
     public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
         var name = interfaceDeclaration.Name.Text;
@@ -76,6 +90,14 @@ public sealed partial class TypeChecker
         substituted = new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
         return true;
     }
+
+    private List<ObjectProperty> ResolveTraitProperties(List<DeclareFunctionSignature> signatures) =>
+    (
+        from signature in signatures
+        let name = signature.Name.Text
+        let fnType = Visit(signature)
+        select new ObjectProperty(false, name, fnType)
+    ).ToList();
 
     private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
     {

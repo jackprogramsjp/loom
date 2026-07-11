@@ -59,7 +59,15 @@ public class ParserTest
         ["let x: number |", InternalCodes.UnexpectedEof, "Expected type, got EOF."],
         ["let x: number &", InternalCodes.UnexpectedEof, "Expected type, got EOF."],
         ["let x: (number", InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 7, got EOF."],
-        ["let x: keyof(T | number)", InternalCodes.UnexpectedToken, "Expected ')', got '|'."]
+        ["let x: keyof(T | number)", InternalCodes.UnexpectedToken, "Expected ')', got '|'."],
+        ["trait { }", InternalCodes.UnexpectedToken, "Expected trait name, got '{'."],
+        ["trait Foo { fn bar() }", InternalCodes.MissingDeclareFnReturnType, "Declared function signatures must have a return type."],
+        ["trait Foo { fn bar(x): void }", InternalCodes.MissingDeclareFnParameterType, "Parameters must have types in declared function signatures."],
+        [
+            "trait Foo { fn bar(x: number = 5): void }",
+            InternalCodes.UseOfDeclareFnParameterDefaults,
+            "Parameters may not have default values in declared function signatures."
+        ],
     ];
 
     public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("AST", ".ast");
@@ -71,7 +79,7 @@ public class ParserTest
         var diagnostics = Utility.GetParserDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, code, expectedMessage, hint);
     }
-    
+
     [Theory]
     [MemberData(nameof(SnapshotFiles))]
     public void Parser_Snapshots(string sourcePath, string snapshotPath)
@@ -79,7 +87,7 @@ public class ParserTest
         var source = File.ReadAllText(sourcePath);
         var result = Utility.Parse(source);
         Utility.AssertNoErrors(result);
-        
+
         var actual = AstInspector.Inspect(result.Tree).Replace(Environment.NewLine, "\n");
         var expected = File.ReadAllText(snapshotPath).Replace(Environment.NewLine, "\n");
         Assert.Equal(expected, actual);
@@ -124,7 +132,7 @@ public class ParserTest
         var @if = Assert.IsType<If>(tree.Statements.First());
         Assert.IsType<NullStatement>(@if.ThenBranch);
     }
-    
+
     [Theory]
     [InlineData("123", 123L)]
     [InlineData("1e3", 100L)]

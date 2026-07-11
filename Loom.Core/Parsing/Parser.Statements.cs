@@ -16,6 +16,7 @@ public sealed partial class Parser
             [SyntaxKind.TypeKeyword] = ParseTypeAlias,
             [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
             [SyntaxKind.DeclareKeyword] = ParseDeclareStatement,
+            [SyntaxKind.TraitKeyword] = ParseTraitDeclaration,
             [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.SealedKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.IfKeyword] = ParseIf,

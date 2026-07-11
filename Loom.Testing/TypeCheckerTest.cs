@@ -103,7 +103,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("let arr: number[] = [1, 2, 3]; arr[0] = 69;");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AssignToImmutable, "Cannot assign to immutable index 'number'.");
     }
-    
+
     [Theory]
     [InlineData("type T = T")]
     [InlineData("type T = T | number")]
@@ -707,7 +707,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type '42' is not assignable to type 'string'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Indexer_Override()
     {
@@ -715,18 +715,18 @@ public class TypeCheckerTest
             interface Def {
                 [string]: number;
             }
-            
+
             interface Abc: Def {
                 [number]: string;
             }
-            
+
             let abc = new Abc { };
             """;
 
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintIndexerOverride, "An indexer is already declared within constraint 'Def'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Property_Override()
     {
@@ -763,12 +763,87 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Checks_Trait_EmptyObject()
+    {
+        var type = Utility.GetLastStatementType("trait Empty { }");
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal(ObjectType.Empty, interfaceType.ObjectType);
+    }
+    
+    [Fact]
+    public void Checks_Trait_MethodsBecomeObjectProperties()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            trait Math {
+                fn add(a: number, b: number): number
+                fn negate(x: number): number
+            }
+            """
+        );
+
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Collection(
+            interfaceType.ObjectType.Properties,
+            p => Assert.Equal("add", p.Name),
+            p => Assert.Equal("negate", p.Name)
+        );
+    }
+
+    [Fact]
+    public void Checks_Trait_ProducesGenericType()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            trait Iterator<T> {
+                fn next(): T
+            }
+            """
+        );
+
+        var generic = Assert.IsType<GenericType>(type);
+        Assert.Single(generic.Parameters);
+
+        var underlying = Assert.IsType<InterfaceType>(generic.UnderlyingType);
+        Assert.Equal("Iterator", underlying.Name);
+
+        var next = underlying.ObjectType.Properties.Single();
+        var fn = Assert.IsType<FunctionType>(next.ValueType);
+        var parameter = Assert.IsType<TypeParameter>(fn.ReturnType);
+        Assert.Equal("T", parameter.Name);
+        Assert.Null(parameter.Constraint);
+        Assert.Null(parameter.DefaultType);
+    }
+
+    [Fact]
+    public void Checks_Trait_ProducesInterfaceType()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            trait Iterator {
+                fn next(): number
+            }
+            """
+        );
+
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("Iterator", interfaceType.Name);
+        Assert.Single(interfaceType.ObjectType.Properties);
+
+        var next = interfaceType.ObjectType.Properties.Single();
+        Assert.Equal("next", next.Name);
+
+        var fn = Assert.IsType<FunctionType>(next.ValueType);
+        Assert.Equal(PrimitiveType.Number, fn.ReturnType);
+    }
+
+    [Fact]
     public void Checks_CastToIntersectionType_Never()
     {
         var result = Utility.AssertNoErrors(Utility.TypeCheck("69 as (number & string)"));
         Assert.Equal(PrimitiveType.Never, result.ReturnType);
     }
-    
+
     [Fact]
     public void Checks_InterfaceInvocation_ConstraintMembers()
     {
@@ -784,10 +859,11 @@ public class TypeCheckerTest
 
             let abc = new Abc { abc: 69, def: "foo", ["balls"]: 69, [69]: 420 };
             """;
-        
+
         var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         Assert.IsType<InterfaceType>(result.ReturnType);
     }
+
     [Fact]
     public void Checks_GenericInference_RepeatedIdenticalLiteralPreserved()
     {
@@ -811,7 +887,7 @@ public class TypeCheckerTest
         var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         Assert.Equal(PrimitiveType.Number, result.ReturnType);
     }
-    
+
     [Fact]
     public void Checks_GenericInference_DefaultTypeUsedWhenParameterUnconstrained()
     {
@@ -823,7 +899,7 @@ public class TypeCheckerTest
         var result = Utility.AssertNoErrors(Utility.TypeCheck(source));
         Assert.Equal(PrimitiveType.String, result.ReturnType);
     }
-    
+
     [Fact]
     public void Checks_Narrowing_MultipleConditions()
     {
@@ -841,7 +917,7 @@ public class TypeCheckerTest
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
     }
-    
+
     [Fact]
     public void Checks_NameOfEnumMember()
     {
@@ -856,7 +932,7 @@ public class TypeCheckerTest
 
         Assert.Equal(new LiteralType("Color.Red"), result.ReturnType);
     }
-    
+
     [Fact]
     public void Checks_Narrowing_NestedPropertyByEnum()
     {
@@ -880,7 +956,7 @@ public class TypeCheckerTest
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
     }
-    
+
     [Fact]
     public void Checks_Narrowing_ElementAccessByEnum()
     {
@@ -903,7 +979,7 @@ public class TypeCheckerTest
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
     }
-    
+
     [Fact]
     public void Checks_Narrowing_PropertyByEnum()
     {
@@ -925,7 +1001,7 @@ public class TypeCheckerTest
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
         Assert.Equal(PrimitiveType.Number, optional.NonNullableType);
     }
-    
+
     [Fact]
     public void Checks_Narrowing_ElementAccessOfProperty()
     {
@@ -2247,7 +2323,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.TypeCheck(source).Diagnostics;
         Utility.AssertNoErrors(diagnostics);
     }
-    
+
     [Theory]
     [InlineData(
         """
@@ -2282,7 +2358,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.TypeCheck(source).Diagnostics;
         Utility.AssertNoErrors(diagnostics);
     }
-    
+
     [Theory]
     [InlineData(
         """
@@ -2317,7 +2393,7 @@ public class TypeCheckerTest
         var diagnostics = Utility.TypeCheck(source).Diagnostics;
         Utility.AssertNoErrors(diagnostics);
     }
-    
+
     [Fact]
     public void Checks_Narrowing_ElementAccessWithLiteralIndex()
     {

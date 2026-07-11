@@ -16,7 +16,7 @@ public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutab
     public bool IsTypeSymbol { get; } = IsTypeKind(kind);
     public bool IsValueSymbol { get; } = IsValueKind(kind);
 
-    internal static bool IsTypeKind(SymbolKind kind) => kind is SymbolKind.Interface or SymbolKind.Type or SymbolKind.EnumType;
+    internal static bool IsTypeKind(SymbolKind kind) => kind is SymbolKind.Interface or SymbolKind.Type or SymbolKind.EnumType or SymbolKind.Trait;
     internal static bool IsValueKind(SymbolKind kind) => kind is SymbolKind.Variable or SymbolKind.Function or SymbolKind.Parameter;
     
     public bool Equals(Symbol? symbol) => symbol != null && GetHashCode() == symbol.GetHashCode() && symbol.Declaration.Id == Declaration.Id;

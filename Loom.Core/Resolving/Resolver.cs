@@ -11,8 +11,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     : Visitor<bool>(_ => true)
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly Dictionary<NodeId, List<Symbol>> _allDeclarations = [];
-    private readonly Dictionary<NodeId, List<Symbol>> _allReferences = [];
+    private readonly SymbolTable _allDeclarations = [];
+    private readonly SymbolTable _allReferences = [];
     private readonly Stack<ResolverScope> _scopes = [];
     private ResolverContext _context = ResolverContext.None;
 
@@ -41,10 +41,25 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return result;
     }
 
+    public override bool VisitTraitDeclaration(TraitDeclaration traitDeclaration)
+    {
+        if (!DeclareType(traitDeclaration, SymbolKind.Trait)
+            || !ResolveTraitBody(traitDeclaration.Body, traitDeclaration.Name.Text))
+        {
+            return false;
+        }
+        
+        PushScope();
+        base.VisitTraitDeclaration(traitDeclaration);
+        PopScope();
+
+        return true;
+    }
+
     public override bool VisitAfter(After after)
     {
         Visit(after.Duration);
-        
+
         var lastContext = _context;
         _context = ResolverContext.Scheduler;
         Visit(after.Body);
@@ -64,7 +79,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         _context = ResolverContext.Loop;
         Visit(@for.Body);
         _context = lastContext;
-        
+
         PopScope();
         return true;
     }
@@ -72,7 +87,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitWhile(While @while)
     {
         Visit(@while.Condition);
-        
+
         var lastContext = _context;
         _context = ResolverContext.Loop;
         Visit(@while.Body);
@@ -332,6 +347,22 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     }
 
     public override bool VisitTypeParameter(TypeParameter typeParameter) => DeclareType(typeParameter) && base.VisitTypeParameter(typeParameter);
+    
+    private bool ResolveTraitBody(TraitBody body, string name)
+    {
+        var methodNames = body.Members.Select(p => p.Name.Text);
+        var duplicates = methodNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        if (duplicates.Count <= 0)
+            return true;
+
+        foreach (var duplicate in duplicates)
+        {
+            var property = body.Members.FindLast(m => m.Name.Text == duplicate)!;
+            _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Method '{duplicate}' already exists on trait '{name}'");
+        }
+
+        return false;
+    }
 
     private bool ResolveInterfaceBody(InterfaceBody? body, string name)
     {
@@ -393,7 +424,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool ResolveStatement(Statement statement)
     {
-        if (!parserResult.Tree.File.IsDeclaration || statement is Declare or TypeAlias)
+        if (!parserResult.Tree.File.IsDeclaration || statement is Declare or TypeAlias or TraitDeclaration)
         {
             Visit(statement);
             return true;
@@ -520,7 +551,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return !lookup.TryGetValue(name, out var symbols) ? null : symbols.First();
     }
 
-    private static Dictionary<string, List<Symbol>> GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
+    private static Dictionary<string, List<Symbol>> GetLookup(SymbolKind kind, ResolverScope scope) =>
+        Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
     private bool ReportNonInterfaceConstraint(TypeExpression constraint)
     {

@@ -13,11 +13,13 @@ using BinaryOperator = Loom.Core.Parsing.AST.BinaryOperator;
 using ElementAccess = Loom.Core.Parsing.AST.ElementAccess;
 using Expression = Loom.Core.Parsing.AST.Expression;
 using ExpressionStatement = Loom.Core.Parsing.AST.ExpressionStatement;
+using FunctionType = Loom.Luau.AST.FunctionType;
 using Identifier = Loom.Core.Parsing.AST.Identifier;
 using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
 using TypeAlias = Loom.Core.Parsing.AST.TypeAlias;
 using TypeName = Loom.Core.Parsing.AST.TypeName;
 using TypeParameter = Loom.Core.Parsing.AST.TypeParameter;
+using TypeParameters = Loom.Core.Parsing.AST.TypeParameters;
 using UnaryOperator = Loom.Core.Parsing.AST.UnaryOperator;
 
 namespace Loom.Core.Generation;
@@ -173,6 +175,25 @@ public sealed partial class LuauGenerator
         );
     }
 
+    public override LuauNode VisitTraitDeclaration(TraitDeclaration traitDeclaration)
+    {
+        var signatures = traitDeclaration.Body.Members;
+        var properties = signatures.ConvertAll(signature => new TableTypeProperty(
+                LuauVisibility.Read,
+                signature.Name.Text,
+                new FunctionType(
+                    GenerateTypeParameters(signature.TypeParameters),
+                    signature.Parameters?.ParameterList.FindAll(p => p.ColonTypeClause != null).ConvertAll(p => Visit(p.ColonTypeClause!.Type)) ?? [],
+                    Visit(signature.ReturnType)
+                )
+            )
+        );
+
+        var tableType = new TableType(null, properties);
+        var typeParameters = GenerateTypeParameters(traitDeclaration.TypeParameters);
+        return new Luau.AST.TypeAlias(traitDeclaration.Name.Text, typeParameters, tableType);
+    }
+
     public override LuauNode VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
         var indexer = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
@@ -190,7 +211,7 @@ public sealed partial class LuauGenerator
             .ToList();
 
         var tableType = new TableType(tableIndexer, properties);
-        var typeParameters = MaybeVisit<Luau.AST.TypeParameters>(interfaceDeclaration.TypeParameters) ?? new Luau.AST.TypeParameters();
+        var typeParameters = GenerateTypeParameters(interfaceDeclaration.TypeParameters);
         return new Luau.AST.TypeAlias(
             interfaceDeclaration.Name.Text,
             typeParameters,
@@ -349,16 +370,8 @@ public sealed partial class LuauGenerator
         return true;
     }
 
-    private bool TryGetEnumConstant(Expression expression, [MaybeNullWhen(false)] out LuauExpression constantType)
-    {
-        constantType = null;
-        var value = _semanticModel.GetConstantValue(expression);
-        if (value is not long or int or double or string)
-            return false;
-
-        constantType = value is string s ? new StringLiteral(s) : new NumberLiteral(Convert.ToDouble(value));
-        return true;
-    }
+    private Luau.AST.TypeParameters GenerateTypeParameters(TypeParameters? typeParameters) =>
+        MaybeVisit<Luau.AST.TypeParameters>(typeParameters) ?? new Luau.AST.TypeParameters();
 
     private Chunk GenerateChunk(Statement statement) => statement is Block block ? VisitBlock(block) : new Chunk(GenerateStatements(statement));
 

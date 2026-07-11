@@ -302,6 +302,23 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("let x = 1;", isDeclaration: true).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
     }
+    
+    [Fact]
+    public void ThrowsFor_Trait_DuplicateMethod()
+    {
+        var diagnostics = Utility.GetSemanticModel("""
+            trait Iterator {
+                fn next(): number
+                fn next(): string
+            }
+            """).Diagnostics;
+
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.DuplicateName,
+            "Method 'next' already exists on trait 'Iterator'"
+        );
+    }
     #endregion ThrowsFor
     
     [Fact]
@@ -312,6 +329,46 @@ public class ResolverTest
     }
 
     #region Resolves
+    [Fact]
+    public void Resolves_TraitTypeParameter()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel("""
+                trait Iterator<T> {
+                    fn next(): T
+                }
+                """));
+
+        var trait = Assert.IsType<TraitDeclaration>(model.Tree.Statements.Single());
+        var member = Assert.Single(trait.Body.Members);
+        var returnType = Assert.IsType<TypeName>(member.ReturnType!.Type);
+        var symbol = model.GetSymbol(returnType);
+
+        Assert.NotNull(symbol);
+        Assert.Equal(SymbolKind.Type, symbol.Kind);
+        Assert.Equal("T", symbol.Name);
+    }
+    
+    [Fact]
+    public void Resolves_TraitTypeReference()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel("""
+                trait Iterator {
+                    fn next(): number
+                }
+
+                mut x: Iterator
+                """));
+
+        var declaration = Assert.IsType<VariableDeclaration>(model.Tree.Statements.Last());
+        var typeName = Assert.IsType<TypeName>(declaration.ColonTypeClause!.Type);
+        var symbol = model.GetSymbol(typeName);
+        Assert.NotNull(symbol);
+        Assert.Equal("Iterator", symbol.Name);
+        Assert.Equal(SymbolKind.Trait, symbol.Kind);
+    }
+    
     [Fact]
     public void Resolves_TypeParameter_InFunctionSignature()
     {
@@ -613,6 +670,27 @@ public class ResolverTest
     [InlineData("Range")]
     [InlineData("Record<string, bool>")]
     public void Declares_IntrinsicType_Symbols(string name) => Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
+    
+    [Fact]
+    public void Declares_TraitSymbol()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel("""
+                trait Iterator {
+                    fn next(): number
+                }
+                """));
+
+        var trait = Assert.IsType<TraitDeclaration>(model.Tree.Statements.Single());
+
+        var symbol = model.GetDeclarationSymbol(trait, SymbolKind.Trait);
+        Assert.NotNull(symbol);
+        Assert.Equal("Iterator", symbol.Name);
+        Assert.Equal(SymbolKind.Trait, symbol.Kind);
+        Assert.Equal(trait, symbol.Declaration);
+        Assert.False(symbol.IsIntrinsic);
+        Assert.False(symbol.IsMutable);
+    }
 
     [Fact]
     public void Declares_VariableSymbol()

@@ -1,0 +1,154 @@
+﻿TraitDeclaration(
+  Body: TraitBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      DeclareFunctionSignature(
+        Parameters: null
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Void
+          )
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "shoot")
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "Shoot")
+)
+TraitDeclaration(
+  Body: TraitBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      DeclareFunctionSignature(
+        Parameters: null
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "T")
+            TypeArguments: null
+          )
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "shoot")
+      )
+    ]
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Shoot")
+)
+TraitDeclaration(
+  Body: TraitBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      DeclareFunctionSignature(
+        Parameters(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ParameterList: [
+            Parameter(
+              ColonTypeClause(
+                ColonToken: Token(Colon, ":")
+                Type: TypeName(
+                  Name: Token(Identifier, "U")
+                  TypeArguments: null
+                )
+              )
+              EqualsValueClause: null
+              Name: Token(Identifier, "p")
+            )
+          ]
+        )
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "T")
+            TypeArguments: null
+          )
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "shoot")
+      )
+    ]
+  )
+  TypeParameters(
+    LeftArrow: Token(LArrow, "<")
+    RightArrow: Token(RArrow, ">")
+    ParameterList: [
+      TypeParameter(
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+        EqualsTypeClause: null
+        Name: Token(Identifier, "T")
+      )
+      TypeParameter(
+        ColonTypeClause: null
+        EqualsTypeClause: null
+        Name: Token(Identifier, "U")
+      )
+    ]
+  )
+  Name: Token(Identifier, "Shoot")
+)
+TraitDeclaration(
+  Body: TraitBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      DeclareFunctionSignature(
+        Parameters: null
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Void
+          )
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "step1")
+      )
+      DeclareFunctionSignature(
+        Parameters: null
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Void
+          )
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "step2")
+      )
+      DeclareFunctionSignature(
+        Parameters: null
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Void
+          )
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "step3")
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "Stuff")
+)
