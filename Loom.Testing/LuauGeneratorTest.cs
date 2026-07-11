@@ -678,10 +678,16 @@ public class LuauGeneratorTest
         Assert.Equal(3, Assert.IsType<NumberLiteral>(bandCall.Arguments[2]).Value);
     }
 
-    [Fact]
-    public void Generates_BitwiseAssignment_Basic()
+    [Theory]
+    [InlineData("&", "band")]
+    [InlineData("|", "bor")]
+    [InlineData("~", "bxor")]
+    [InlineData(">>", "arshift")]
+    [InlineData(">>>", "rshift")]
+    [InlineData("<<", "lshift")]
+    public void Generates_MappedBitwiseAssignment(string op, string fnName)
     {
-        var luauTree = Utility.GetLuauAST("mut x = 1; x &= 2");
+        var luauTree = Utility.GetLuauAST($"mut x = 1; x {op}= 2");
         Assert.Equal(2, luauTree.Statements.Count);
 
         var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[1]);
@@ -693,7 +699,7 @@ public class LuauGeneratorTest
         var band = Assert.IsType<PropertyAccess>(bandCall.Callee);
         Assert.Equal(2, bandCall.Arguments.Count);
         Assert.Equal("bit32", Assert.IsType<Identifier>(band.Target).Name);
-        Assert.Equal("band", Assert.Single(band.Names));
+        Assert.Equal(fnName, Assert.Single(band.Names));
         Assert.Equal("x", Assert.IsType<Identifier>(bandCall.Arguments[0]).Name);
         Assert.Equal(2, Assert.IsType<NumberLiteral>(bandCall.Arguments[1]).Value);
     }
@@ -2053,20 +2059,19 @@ public class LuauGeneratorTest
         var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
         var call = Assert.IsType<Call>(expressionStatement.Expression);
         Assert.IsType<PropertyAccess>(call.Callee);
-
         Assert.Equal(isConcatenated ? 4 : 2, call.Arguments.Count);
     }
 
     [Theory]
-    [InlineData("a & b", "band")]
-    [InlineData("a | b", "bor")]
-    [InlineData("a ~ b", "bxor")]
-    [InlineData("a << b", "lshift")]
-    [InlineData("a >> b", "arshift")]
-    [InlineData("a >>> b", "rshift")]
-    public void Generates_MappedBitwiseOperators(string source, string expectedMethod)
+    [InlineData("&", "band")]
+    [InlineData("|", "bor")]
+    [InlineData("~", "bxor")]
+    [InlineData("<<", "lshift")]
+    [InlineData(">>", "arshift")]
+    [InlineData(">>>", "rshift")]
+    public void Generates_MappedBitwiseOperators(string op, string expectedMethod)
     {
-        var luauTree = Utility.GetLuauAST(source);
+        var luauTree = Utility.GetLuauAST($"a {op} b");
         Assert.Single(luauTree.Statements);
 
         var expressionStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements.First());
