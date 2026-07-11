@@ -1,4 +1,3 @@
-using Loom.Diagnostics;
 using Loom.Luau;
 using Loom.Luau.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;

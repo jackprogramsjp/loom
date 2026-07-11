@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Diagnostics;
-using Loom.Lexing;
-using Loom.Parsing.AST;
-using Loom.Text;
+using Loom.Core.Diagnostics;
+using Loom.Core.Lexing;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 
-namespace Loom.Parsing;
+namespace Loom.Core.Parsing;
 
 public sealed partial class Parser(LexerResult lexerResult)
 {

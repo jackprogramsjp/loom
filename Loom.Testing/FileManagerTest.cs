@@ -1,3 +1,5 @@
+using Loom.Core;
+
 namespace Loom.Testing;
 
 [Collection("Assembly")]

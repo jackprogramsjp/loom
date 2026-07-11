@@ -1,4 +1,4 @@
-namespace Loom.Resolving;
+namespace Loom.Core.Resolving;
 
 public enum ResolverContext : byte
 {

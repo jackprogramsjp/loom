@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public abstract class InterfaceInvocationInitializer(Expression expression, IEnumerable<Token?> otherTokens, IEnumerable<Node?>? extraChildren = null)
     : Expression([..otherTokens, ..expression.Tokens], [..extraChildren ?? [], expression])

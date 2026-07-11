@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class EqualsValueClause(Token equalsToken, Expression value)
     : Node([equalsToken, ..value.Tokens], [value])

@@ -1,10 +1,10 @@
-using Loom.FlowAnalysis;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.TypeChecking;
-using Loom.TypeChecking.Types;
-using LiteralType = Loom.TypeChecking.Types.LiteralType;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
+using Loom.Core.FlowAnalysis;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.TypeChecking;
+using Loom.Core.TypeChecking.Types;
+using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 
 namespace Loom.Testing;
 

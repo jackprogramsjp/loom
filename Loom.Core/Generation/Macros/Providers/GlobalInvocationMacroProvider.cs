@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Luau.AST;
-using Type = Loom.TypeChecking.Types.Type;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.Generation.Macros.Providers;
+namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class GlobalInvocationMacroProvider : IMacroProvider
 {

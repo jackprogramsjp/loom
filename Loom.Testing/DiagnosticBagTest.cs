@@ -1,6 +1,6 @@
-using Loom.Diagnostics;
-using Loom.Parsing.AST;
-using Loom.Text;
+using Loom.Core.Diagnostics;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 
 namespace Loom.Testing;
 

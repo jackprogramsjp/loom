@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public abstract class NamedDeclaration(List<Token> otherTokens, Token name, params Node?[] children)
     : Statement(

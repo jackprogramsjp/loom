@@ -1,26 +1,26 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Diagnostics;
-using Loom.Generation.Macros;
+using Loom.Core.Diagnostics;
+using Loom.Core.Generation.Macros;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking;
+using Loom.Core.TypeChecking.Types;
 using Loom.Luau;
 using Loom.Luau.AST;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.Text;
-using Loom.TypeChecking;
-using Loom.TypeChecking.Types;
-using ArrayType = Loom.TypeChecking.Types.ArrayType;
-using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
-using ElementAccess = Loom.Parsing.AST.ElementAccess;
-using Expression = Loom.Parsing.AST.Expression;
-using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
-using Identifier = Loom.Parsing.AST.Identifier;
-using PropertyAccess = Loom.Parsing.AST.PropertyAccess;
-using TypeAlias = Loom.Parsing.AST.TypeAlias;
-using TypeName = Loom.Parsing.AST.TypeName;
-using TypeParameter = Loom.Parsing.AST.TypeParameter;
-using UnaryOperator = Loom.Parsing.AST.UnaryOperator;
+using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
+using BinaryOperator = Loom.Core.Parsing.AST.BinaryOperator;
+using ElementAccess = Loom.Core.Parsing.AST.ElementAccess;
+using Expression = Loom.Core.Parsing.AST.Expression;
+using ExpressionStatement = Loom.Core.Parsing.AST.ExpressionStatement;
+using Identifier = Loom.Core.Parsing.AST.Identifier;
+using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
+using TypeAlias = Loom.Core.Parsing.AST.TypeAlias;
+using TypeName = Loom.Core.Parsing.AST.TypeName;
+using TypeParameter = Loom.Core.Parsing.AST.TypeParameter;
+using UnaryOperator = Loom.Core.Parsing.AST.UnaryOperator;
 
-namespace Loom.Generation;
+namespace Loom.Core.Generation;
 
 public sealed partial class LuauGenerator
     : Visitor<LuauNode>

@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class After(Token keyword, Expression duration, Statement body)
     : Statement([keyword, ..duration.Tokens, ..body.Tokens], [duration, body])

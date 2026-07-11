@@ -1,4 +1,4 @@
-namespace Loom.TypeChecking.Types;
+namespace Loom.Core.TypeChecking.Types;
 
 public sealed class LiteralType(object? value)
     : PrimitiveType(GetPrimitiveKind(value))

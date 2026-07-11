@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class TernaryOperator(Token question, Token colon, Expression condition, Expression thenBranch, Expression elseBranch)
     : Expression([..condition.Tokens, question, ..thenBranch.Tokens, colon, ..elseBranch.Tokens], [condition, thenBranch, elseBranch])

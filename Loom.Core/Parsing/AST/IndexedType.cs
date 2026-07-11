@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class IndexedType(Token leftBracket, Token rightBracket, TypeExpression type, TypeExpression indexType)
     : TypeExpression([..type.Tokens, leftBracket, ..indexType.Tokens, rightBracket], [type, indexType])

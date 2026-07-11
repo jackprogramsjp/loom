@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class If(Token keyword, Expression condition, Statement thenBranch, ElseBranch? elseBranch)
     : Statement([keyword, ..condition.Tokens, ..thenBranch.Tokens, ..elseBranch?.Tokens ?? []], [condition, thenBranch, elseBranch])

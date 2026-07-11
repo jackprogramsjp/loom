@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Loom.Text;
+namespace Loom.Core.Text;
 
 public static class LiteralUtility
 {

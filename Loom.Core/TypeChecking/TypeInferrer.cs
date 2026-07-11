@@ -1,19 +1,19 @@
-using Loom.Parsing.AST;
-using Loom.TypeChecking.Types;
-using ArrayType = Loom.TypeChecking.Types.ArrayType;
-using FunctionType = Loom.TypeChecking.Types.FunctionType;
-using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
-using OptionalType = Loom.TypeChecking.Types.OptionalType;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
-using Type = Loom.TypeChecking.Types.Type;
-using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
-using UnionType = Loom.TypeChecking.Types.UnionType;
+using Loom.Core.Parsing.AST;
+using Loom.Core.TypeChecking.Types;
+using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
+using FunctionType = Loom.Core.TypeChecking.Types.FunctionType;
+using IntersectionType = Loom.Core.TypeChecking.Types.IntersectionType;
+using OptionalType = Loom.Core.TypeChecking.Types.OptionalType;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
+using Type = Loom.Core.TypeChecking.Types.Type;
+using TypeParameter = Loom.Core.TypeChecking.Types.TypeParameter;
+using UnionType = Loom.Core.TypeChecking.Types.UnionType;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 public sealed class TypeInferrer(Func<Node, Type> getType)
 {
-    public TypeParameterSubstitution InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
+    public Dictionary<TypeParameter, Type> InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
     {
         var objectType = underlying.ObjectType;
         var pairs = new List<(Type parameterType, Type argumentType)>();
@@ -41,12 +41,12 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
             }
         }
 
-        var inferred = new TypeParameterSubstitution();
+        var inferred = new Dictionary<TypeParameter, Type>();
         var visited = new HashSet<(Type, Type)>();
         foreach (var (parameterType, argumentType) in pairs)
             TryInferTypes(parameterType, argumentType, inferred, visited);
 
-        var substitution = new TypeParameterSubstitution();
+        var substitution = new Dictionary<TypeParameter, Type>();
         foreach (var typeParameter in generic.Parameters)
         {
             substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
@@ -57,12 +57,12 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return substitution;
     }
 
-    public static TypeParameterSubstitution InferFunctionTypeArguments(
+    public static Dictionary<TypeParameter, Type> InferFunctionTypeArguments(
         FunctionType functionType,
         List<Type> argumentTypes,
         Type? contextualType = null)
     {
-        var inferred = new TypeParameterSubstitution();
+        var inferred = new Dictionary<TypeParameter, Type>();
         var visited = new HashSet<(Type, Type)>();
         for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
             TryInferTypes(functionType.ParameterTypes[i], argumentTypes[i], inferred, visited);
@@ -70,7 +70,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         if (contextualType != null)
             TryInferTypes(functionType.ReturnType, contextualType, inferred, visited);
 
-        var substitution = new TypeParameterSubstitution();
+        var substitution = new Dictionary<TypeParameter, Type>();
         foreach (var typeParameter in functionType.TypeParameters)
         {
             substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
@@ -81,7 +81,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return substitution;
     }
 
-    private static bool TryInferTypes(Type parameterType, Type argumentType, TypeParameterSubstitution inferredTypes, HashSet<(Type, Type)> visitedPairs)
+    private static bool TryInferTypes(Type parameterType, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes, HashSet<(Type, Type)> visitedPairs)
     {
         parameterType = ExpandAliases(parameterType);
         argumentType = ExpandAliases(argumentType);
@@ -135,7 +135,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         };
     }
 
-    private static bool TryInferFromUnion(UnionType union, Type argumentType, TypeParameterSubstitution inferredTypes)
+    private static bool TryInferFromUnion(UnionType union, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes)
     {
         if (argumentType is UnionType)
             return false;
@@ -144,7 +144,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return typeParams.Count == 1 && BindTypeParameter(typeParams[0], argumentType, inferredTypes);
     }
 
-    private static bool TryInferFromIntersection(IntersectionType union, Type argumentType, TypeParameterSubstitution inferredTypes)
+    private static bool TryInferFromIntersection(IntersectionType union, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes)
     {
         if (argumentType is IntersectionType)
             return false;
@@ -153,7 +153,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return typeParams.Count == 1 && BindTypeParameter(typeParams[0], argumentType, inferredTypes);
     }
 
-    private static bool BindTypeParameter(TypeParameter typeParameter, Type argumentType, TypeParameterSubstitution inferredTypes)
+    private static bool BindTypeParameter(TypeParameter typeParameter, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes)
     {
         if (inferredTypes.TryGetValue(typeParameter, out var existingType))
         {
@@ -176,7 +176,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
     private static bool MatchObjectTypes(
         ObjectType parameterObject,
         ObjectType argumentObject,
-        TypeParameterSubstitution inferredTypes,
+        Dictionary<TypeParameter, Type> inferredTypes,
         HashSet<(Type, Type)> visitedPairs)
     {
         foreach (var parameterProperty in parameterObject.Properties)
@@ -201,7 +201,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
     private static bool MatchFunctionTypes(
         FunctionType parameterFunction,
         FunctionType argumentFunction,
-        TypeParameterSubstitution inferredTypes,
+        Dictionary<TypeParameter, Type> inferredTypes,
         HashSet<(Type, Type)> visitedPairs)
     {
         if (parameterFunction.ParameterTypes.Count != argumentFunction.ParameterTypes.Count)
@@ -214,21 +214,21 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
     private static bool MatchUnionTypes(
         UnionType parameterUnion,
         UnionType argumentUnion,
-        TypeParameterSubstitution inferredTypes,
+        Dictionary<TypeParameter, Type> inferredTypes,
         HashSet<(Type, Type)> visitedPairs) =>
         !parameterUnion.Types.Where((t, index) => !TryInferTypes(t, argumentUnion.Types[index], inferredTypes, visitedPairs)).Any();
 
     private static bool MatchIntersectionTypes(
         IntersectionType parameterIntersection,
         IntersectionType argumentIntersection,
-        TypeParameterSubstitution inferredTypes,
+        Dictionary<TypeParameter, Type> inferredTypes,
         HashSet<(Type, Type)> visitedPairs) =>
         !parameterIntersection.Types.Where((t, index) => !TryInferTypes(t, argumentIntersection.Types[index], inferredTypes, visitedPairs)).Any();
 
     private static bool TryMatchGenericTypes(
         Type parameterType,
         Type argumentType,
-        TypeParameterSubstitution inferredTypes,
+        Dictionary<TypeParameter, Type> inferredTypes,
         HashSet<(Type, Type)> visitedPairs,
         out bool result)
     {

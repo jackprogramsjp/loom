@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public abstract class GenericNamedDeclaration(List<Token> otherTokens, Token keyword, Token name, TypeParameters? typeParameters, params Node?[] extraChildren)
     : DeclareSignature([..otherTokens, keyword], name, [typeParameters, ..extraChildren])

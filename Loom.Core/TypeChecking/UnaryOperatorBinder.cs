@@ -1,9 +1,9 @@
-using Loom.Parsing.AST;
-using Loom.Text;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
-using Type = Loom.TypeChecking.Types.Type;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 internal static class UnaryOperatorBinder
 {

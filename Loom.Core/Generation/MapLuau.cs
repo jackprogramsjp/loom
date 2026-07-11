@@ -1,4 +1,4 @@
-namespace Loom.Generation;
+namespace Loom.Core.Generation;
 
 internal static class MapLuau
 {

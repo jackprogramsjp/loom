@@ -1,9 +1,9 @@
 using Loom.Config;
-using Loom.Resolving;
-using Loom.TypeChecking.Types;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
+using Loom.Core.Resolving;
+using Loom.Core.TypeChecking.Types;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 public static class Intrinsics
 {

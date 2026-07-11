@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
-using Loom.Diagnostics;
-using Loom.Text;
+using Loom.Core.Diagnostics;
+using Loom.Core.Text;
 
-namespace Loom.Lexing;
+namespace Loom.Core.Lexing;
 
 public sealed class Lexer(SourceFile file)
 {

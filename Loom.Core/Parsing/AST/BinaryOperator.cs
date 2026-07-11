@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class BinaryOperator(Token @operator, Expression left, Expression right)
     : Expression([..left.Tokens, @operator, ..right.Tokens], [left, right])

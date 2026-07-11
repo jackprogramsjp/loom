@@ -1,7 +1,7 @@
-using Loom.Parsing.AST;
-using Loom.Text;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 
-namespace Loom.Diagnostics;
+namespace Loom.Core.Diagnostics;
 
 public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
 {

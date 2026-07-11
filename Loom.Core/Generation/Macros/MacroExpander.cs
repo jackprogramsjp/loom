@@ -1,18 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Generation.Macros.Providers;
+using Loom.Core.Generation.Macros.Providers;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.TypeChecking;
+using Loom.Core.TypeChecking.Types;
 using Loom.Luau.AST;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.TypeChecking;
-using Loom.TypeChecking.Types;
-using ElementAccess = Loom.Parsing.AST.ElementAccess;
-using Identifier = Loom.Parsing.AST.Identifier;
-using LiteralType = Loom.TypeChecking.Types.LiteralType;
-using PropertyAccess = Loom.Parsing.AST.PropertyAccess;
-using Type = Loom.TypeChecking.Types.Type;
-using UnionType = Loom.TypeChecking.Types.UnionType;
+using ElementAccess = Loom.Core.Parsing.AST.ElementAccess;
+using Identifier = Loom.Core.Parsing.AST.Identifier;
+using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
+using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
+using Type = Loom.Core.TypeChecking.Types.Type;
+using UnionType = Loom.Core.TypeChecking.Types.UnionType;
 
-namespace Loom.Generation.Macros;
+namespace Loom.Core.Generation.Macros;
 
 internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state)
 {

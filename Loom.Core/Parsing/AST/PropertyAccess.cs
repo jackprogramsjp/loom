@@ -1,4 +1,4 @@
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class PropertyAccess(Expression expression, List<DotName> names) : AssignmentTarget([..expression.Tokens, ..names.SelectMany(n => n.Tokens)], [expression])
 {

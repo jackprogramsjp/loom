@@ -1,4 +1,4 @@
-namespace Loom.TypeChecking.Types;
+namespace Loom.Core.TypeChecking.Types;
 
 public sealed class ArrayType(Type elementType, bool isMutable)
     : ObjectType(new ObjectIndexer(isMutable, PrimitiveType.Number, elementType), ObjectProperties)

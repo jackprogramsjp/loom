@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public abstract class Name(Token token, List<Token?>? extraTokens = null, List<Node?>? extraChildren = null)
     : AssignmentTarget([token, ..extraTokens ?? []], extraChildren ?? [])

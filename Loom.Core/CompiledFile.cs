@@ -1,14 +1,13 @@
 using System.Text;
-using Loom.Debug;
-using Loom.Diagnostics;
-using Loom.FlowAnalysis;
+using Loom.Core.Diagnostics;
+using Loom.Core.FlowAnalysis;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
 using Loom.Luau.AST;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.Text;
-using Type = Loom.TypeChecking.Types.Type;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom;
+namespace Loom.Core;
 
 public sealed class CompiledFile(SourceFile sourceFile)
 {

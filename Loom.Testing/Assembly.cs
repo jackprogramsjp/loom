@@ -1,4 +1,4 @@
-using Loom.Diagnostics;
+using Loom.Core.Diagnostics;
 using GC = System.GC;
 
 namespace Loom.Testing;

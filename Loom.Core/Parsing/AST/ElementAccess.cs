@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class ElementAccess(Token leftBracket, Token rightBracket, Expression expression, Expression indexExpression)
     : AssignmentTarget([..expression.Tokens, leftBracket, ..indexExpression.Tokens, rightBracket], [expression, indexExpression])

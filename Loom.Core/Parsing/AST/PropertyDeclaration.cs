@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class PropertyDeclaration(Token? mutKeyword, Token name, ColonTypeClause colonTypeClause)
     : InterfaceMember([mutKeyword, name, ..colonTypeClause.Tokens], [colonTypeClause])

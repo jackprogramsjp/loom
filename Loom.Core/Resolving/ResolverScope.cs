@@ -1,6 +1,6 @@
-global using SymbolLookup = System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Loom.Resolving.Symbol>>;
+global using SymbolLookup = System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Loom.Core.Resolving.Symbol>>;
 
-namespace Loom.Resolving;
+namespace Loom.Core.Resolving;
 
 internal sealed record ResolverScope
 {

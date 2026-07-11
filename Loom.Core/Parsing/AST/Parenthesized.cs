@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class Parenthesized(Token leftParen, Token rightParen, Expression expression)
     : Expression([leftParen, ..expression.Tokens, rightParen], [expression])

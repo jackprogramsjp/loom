@@ -1,4 +1,4 @@
-namespace Loom.Lexing;
+namespace Loom.Core.Lexing;
 
 public enum LexerRuleKind : byte
 {

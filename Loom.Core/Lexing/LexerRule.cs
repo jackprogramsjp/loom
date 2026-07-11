@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Lexing;
+namespace Loom.Core.Lexing;
 
 public sealed record LexerRule(LexerRuleKind Kind, SyntaxKind Syntax, string Pattern)
 {

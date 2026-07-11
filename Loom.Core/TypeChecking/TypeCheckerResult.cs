@@ -1,6 +1,6 @@
-using Loom.Diagnostics;
+using Loom.Core.Diagnostics;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 public sealed record TypeCheckerResult(Types.Type ReturnType, DiagnosticBag Diagnostics)
     : DiagnosedResult(Diagnostics);

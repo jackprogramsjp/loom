@@ -1,8 +1,9 @@
 using Loom.Config;
+using Loom.Core;
 using Loom.Luau.AST;
-using BinaryOperator = Loom.Parsing.AST.BinaryOperator;
-using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
+using BinaryOperator = Loom.Core.Parsing.AST.BinaryOperator;
+using ExpressionStatement = Loom.Core.Parsing.AST.ExpressionStatement;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 
 namespace Loom.Testing;
 

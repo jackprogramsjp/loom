@@ -1,18 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Diagnostics;
-using Loom.Parsing;
-using Loom.Parsing.AST;
-using Loom.Text;
-using Loom.TypeChecking;
+using Loom.Core.Diagnostics;
+using Loom.Core.Parsing;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking;
 
-namespace Loom.Resolving;
+namespace Loom.Core.Resolving;
 
 public sealed class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
     : Visitor<bool>(_ => true)
 {
     private readonly DiagnosticBag _diagnostics = new();
-    private readonly SymbolTable _allDeclarations = [];
-    private readonly SymbolTable _allReferences = [];
+    private readonly Dictionary<NodeId, List<Symbol>> _allDeclarations = [];
+    private readonly Dictionary<NodeId, List<Symbol>> _allReferences = [];
     private readonly Stack<ResolverScope> _scopes = [];
     private ResolverContext _context = ResolverContext.None;
 
@@ -520,7 +520,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return !lookup.TryGetValue(name, out var symbols) ? null : symbols.First();
     }
 
-    private static SymbolLookup GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
+    private static Dictionary<string, List<Symbol>> GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
     private bool ReportNonInterfaceConstraint(TypeExpression constraint)
     {

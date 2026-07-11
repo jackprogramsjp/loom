@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.Core.TypeChecking;
 using Loom.Luau;
 using Loom.Luau.AST;
-using Loom.TypeChecking;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
-using Type = Loom.TypeChecking.Types.Type;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.Generation.Macros.Providers;
+namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class RangeMacroProvider : IMacroProvider
 {

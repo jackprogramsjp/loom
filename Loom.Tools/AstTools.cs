@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Debug;
-using Loom.Lexing;
-using Loom.Parsing;
+using Loom.Core;
+using Loom.Core.Debug;
+using Loom.Core.Lexing;
+using Loom.Core.Parsing;
 
 namespace Loom.Tools;
 

@@ -1,7 +1,7 @@
-using Loom.Parsing.AST;
-using Loom.Text;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 
-namespace Loom.Resolving;
+namespace Loom.Core.Resolving;
 
 public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutable = false) : IEquatable<Symbol>
 {

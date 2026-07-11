@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class While(Token keyword, Expression condition, Statement body)
     : Statement([keyword, ..condition.Tokens, ..body.Tokens], [condition, body])

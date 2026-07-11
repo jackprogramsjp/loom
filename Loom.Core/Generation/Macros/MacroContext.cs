@@ -1,7 +1,7 @@
+using Loom.Core.Resolving;
 using Loom.Luau.AST;
-using Loom.Resolving;
 
-namespace Loom.Generation.Macros;
+namespace Loom.Core.Generation.Macros;
 
 internal record MacroContext(SemanticModel SemanticModel, LuauState State)
 {

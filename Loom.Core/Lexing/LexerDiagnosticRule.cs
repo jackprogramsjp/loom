@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
-using Loom.Diagnostics;
+using Loom.Core.Diagnostics;
 
-namespace Loom.Lexing;
+namespace Loom.Core.Lexing;
 
 /// <summary>
 /// A recovery rule that matches malformed or incomplete input, emits a targeted

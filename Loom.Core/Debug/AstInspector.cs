@@ -1,8 +1,8 @@
 using System.Reflection;
-using Loom.Parsing.AST;
-using Loom.Text;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 
-namespace Loom.Debug;
+namespace Loom.Core.Debug;
 
 public static class AstInspector
 {

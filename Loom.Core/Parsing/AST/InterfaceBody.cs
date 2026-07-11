@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class InterfaceBody(Token leftBrace, Token rightBrace, List<InterfaceMember> members)
     : Statement([leftBrace, rightBrace, ..members.SelectMany(m => m.Tokens)], members)

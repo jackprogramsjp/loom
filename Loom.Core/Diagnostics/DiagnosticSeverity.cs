@@ -1,4 +1,4 @@
-namespace Loom.Diagnostics;
+namespace Loom.Core.Diagnostics;
 
 public enum DiagnosticSeverity : byte
 {

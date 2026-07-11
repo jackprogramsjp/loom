@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class EnumDeclaration(Token keyword, Token name, Token leftBrace, Token rightBrace, ColonTypeClause? colonTypeClause, List<EnumMember> members)
     : NamedDeclaration([keyword, leftBrace, rightBrace], name, [colonTypeClause, ..members])

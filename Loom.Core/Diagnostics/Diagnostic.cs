@@ -1,9 +1,9 @@
-using Loom.Parsing.AST;
-using Loom.Text;
-using Loom.TypeChecking;
-using Type = Loom.TypeChecking.Types.Type;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.Diagnostics;
+namespace Loom.Core.Diagnostics;
 
 public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {

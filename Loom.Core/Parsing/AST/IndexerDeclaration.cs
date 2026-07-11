@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class IndexerDeclaration(Token? mutKeyword, Token leftBracket, Token rightBracket, TypeExpression indexType, ColonTypeClause colonTypeClause)
     : InterfaceMember([mutKeyword, leftBracket, ..indexType.Tokens, rightBracket, ..colonTypeClause.Tokens], [indexType, colonTypeClause])

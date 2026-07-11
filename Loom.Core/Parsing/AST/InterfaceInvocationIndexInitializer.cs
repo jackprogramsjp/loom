@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class InterfaceInvocationIndexInitializer(Token leftBracket, Token rightBracket, Token colon, Expression indexExpression, Expression expression)
     : InterfaceInvocationInitializer(expression, [leftBracket, rightBracket, colon, ..indexExpression.Tokens], [indexExpression])

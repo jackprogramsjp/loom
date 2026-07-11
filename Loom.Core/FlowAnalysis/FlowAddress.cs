@@ -1,6 +1,6 @@
-using Loom.Resolving;
+using Loom.Core.Resolving;
 
-namespace Loom.FlowAnalysis;
+namespace Loom.Core.FlowAnalysis;
 
 public sealed record FlowAddress(Symbol? Symbol, FlowAddress? Parent, string? FieldName, object? ElementIndex)
 {

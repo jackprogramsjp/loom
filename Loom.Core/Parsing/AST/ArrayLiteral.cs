@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class ArrayLiteral(Token? mutKeyword, Token leftBracket, Token rightBracket, List<Expression> expressions)
     : Expression([mutKeyword, leftBracket, ..expressions.SelectMany(p => p.Tokens), rightBracket], expressions)

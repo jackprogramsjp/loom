@@ -1,13 +1,13 @@
-using Loom.Diagnostics;
-using Loom.Parsing.AST;
-using Loom.TypeChecking;
-using Loom.TypeChecking.Types;
-using ArrayType = Loom.TypeChecking.Types.ArrayType;
-using FunctionType = Loom.TypeChecking.Types.FunctionType;
-using IntersectionType = Loom.TypeChecking.Types.IntersectionType;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
-using TypeParameter = Loom.TypeChecking.Types.TypeParameter;
-using UnionType = Loom.TypeChecking.Types.UnionType;
+using Loom.Core.Diagnostics;
+using Loom.Core.Parsing.AST;
+using Loom.Core.TypeChecking;
+using Loom.Core.TypeChecking.Types;
+using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
+using FunctionType = Loom.Core.TypeChecking.Types.FunctionType;
+using IntersectionType = Loom.Core.TypeChecking.Types.IntersectionType;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
+using TypeParameter = Loom.Core.TypeChecking.Types.TypeParameter;
+using UnionType = Loom.Core.TypeChecking.Types.UnionType;
 
 namespace Loom.Testing;
 

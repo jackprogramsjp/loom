@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class ColonTypeListClause(Token colonToken, List<TypeExpression> types)
     : TypeExpression([colonToken, ..types.SelectMany(t => t.Tokens)], types)

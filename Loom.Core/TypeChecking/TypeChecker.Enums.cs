@@ -1,9 +1,9 @@
-using Loom.Diagnostics;
-using Loom.Parsing.AST;
-using Loom.TypeChecking.Types;
-using Type = Loom.TypeChecking.Types.Type;
+using Loom.Core.Diagnostics;
+using Loom.Core.Parsing.AST;
+using Loom.Core.TypeChecking.Types;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 public sealed partial class TypeChecker
 {

@@ -1,6 +1,6 @@
 // ReSharper disable VirtualMemberNeverOverridden.Global
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public abstract class Visitor<T>(Func<Node?, T> defaultValue)
 {

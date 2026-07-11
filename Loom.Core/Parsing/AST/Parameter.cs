@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class Parameter(Token name, ColonTypeClause? colonTypeClause, EqualsValueClause? equalsValueClause)
     : NamedDeclaration([..colonTypeClause?.Tokens ?? [], ..equalsValueClause?.Tokens ?? []], name, colonTypeClause, equalsValueClause)

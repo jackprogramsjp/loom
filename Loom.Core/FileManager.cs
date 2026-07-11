@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom;
+namespace Loom.Core;
 
 public static class FileManager
 {

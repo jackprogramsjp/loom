@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class InterfaceInvocationBody(Token leftBrace, Token rightBrace, List<InterfaceInvocationInitializer> initializers)
     : Expression([leftBrace, rightBrace, ..initializers.SelectMany(i => i.Tokens)], initializers)

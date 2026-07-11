@@ -1,4 +1,4 @@
-namespace Loom.Text;
+namespace Loom.Core.Text;
 
 public static class SyntaxFacts
 {

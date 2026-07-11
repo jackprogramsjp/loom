@@ -1,7 +1,7 @@
-using Loom.Text;
-using Type = Loom.TypeChecking.Types.Type;
+using Loom.Core.Text;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 internal sealed record BinaryOperatorRule(SyntaxKind OperatorKind, Type LeftType, Type? RightType = null, Type? ReturnType = null)
 {

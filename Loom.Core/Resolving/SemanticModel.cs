@@ -1,10 +1,10 @@
-global using SymbolTable = System.Collections.Generic.Dictionary<Loom.Parsing.AST.NodeId, System.Collections.Generic.List<Loom.Resolving.Symbol>>;
-using Loom.Diagnostics;
-using Loom.Parsing.AST;
-using Loom.TypeChecking;
-using Type = Loom.TypeChecking.Types.Type;
+global using SymbolTable = System.Collections.Generic.Dictionary<Loom.Core.Parsing.AST.NodeId, System.Collections.Generic.List<Loom.Core.Resolving.Symbol>>;
+using Loom.Core.Diagnostics;
+using Loom.Core.Parsing.AST;
+using Loom.Core.TypeChecking;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.Resolving;
+namespace Loom.Core.Resolving;
 
 public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolTable Declarations, SymbolTable References)
     : DiagnosedResult(Diagnostics)

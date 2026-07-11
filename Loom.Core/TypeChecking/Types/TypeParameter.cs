@@ -1,4 +1,4 @@
-namespace Loom.TypeChecking.Types;
+namespace Loom.Core.TypeChecking.Types;
 
 public sealed class TypeParameter(string name, Type? constraint = null, Type? defaultType = null) : Type
 {

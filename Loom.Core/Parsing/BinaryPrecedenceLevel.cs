@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing;
+namespace Loom.Core.Parsing;
 
 internal sealed record BinaryPrecedenceLevel(bool RightAssociative, Predicate<SyntaxKind> Matches)
 {

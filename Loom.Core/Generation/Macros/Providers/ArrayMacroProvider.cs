@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Luau;
 using Loom.Luau.AST;
-using ArrayType = Loom.TypeChecking.Types.ArrayType;
-using Type = Loom.TypeChecking.Types.Type;
+using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
+using Type = Loom.Core.TypeChecking.Types.Type;
 using UnaryOperator = Loom.Luau.AST.UnaryOperator;
 
-namespace Loom.Generation.Macros.Providers;
+namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class ArrayMacroProvider : IMacroProvider
 {

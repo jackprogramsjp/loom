@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public sealed class For(Token keyword, List<Identifier> names, Token colon, Expression collectionExpression, Statement body)
     : Statement([keyword, ..names.SelectMany(n => n.Tokens), colon, ..collectionExpression.Tokens, ..body.Tokens], [collectionExpression, body])

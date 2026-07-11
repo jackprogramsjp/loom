@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class TypeParameters(Token leftArrow, Token rightArrow, List<TypeParameter> parameterList)
     : Node([leftArrow, ..parameterList.SelectMany(p => p.Tokens), rightArrow], parameterList)

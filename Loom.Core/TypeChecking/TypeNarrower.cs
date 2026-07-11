@@ -1,16 +1,16 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.FlowAnalysis;
-using Loom.Parsing;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.Text;
-using Loom.TypeChecking.Types;
-using LiteralType = Loom.TypeChecking.Types.LiteralType;
-using PrimitiveType = Loom.TypeChecking.Types.PrimitiveType;
-using Type = Loom.TypeChecking.Types.Type;
-using UnionType = Loom.TypeChecking.Types.UnionType;
+using Loom.Core.FlowAnalysis;
+using Loom.Core.Parsing;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking.Types;
+using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
+using Type = Loom.Core.TypeChecking.Types.Type;
+using UnionType = Loom.Core.TypeChecking.Types.UnionType;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 public sealed class TypeNarrower
 {

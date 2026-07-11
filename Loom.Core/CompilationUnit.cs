@@ -1,14 +1,10 @@
 using Loom.Config;
-using Loom.Diagnostics;
-using Loom.Generation;
-using Loom.Lexing;
-using Loom.Parsing;
-using Loom.Resolving;
-using Loom.Text;
-using Loom.TypeChecking;
-using Type = Loom.TypeChecking.Types.Type;
+using Loom.Core.Diagnostics;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom;
+namespace Loom.Core;
 
 public sealed class CompilationUnit(LoomConfig loomConfig)
 {

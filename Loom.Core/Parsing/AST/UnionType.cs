@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class UnionType(List<Token> pipes, List<TypeExpression> types)
     : TypeExpression([..pipes, ..types.SelectMany(t => t.Tokens)], types)

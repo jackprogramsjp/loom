@@ -1,4 +1,4 @@
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class ExpressionStatement(Expression expression)
     : Statement(expression.Tokens, [expression])

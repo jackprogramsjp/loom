@@ -1,22 +1,23 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Diagnostics;
-using Loom.FlowAnalysis;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.Text;
-using Loom.TypeChecking.Types;
-using ArrayType = Loom.Parsing.AST.ArrayType;
-using FunctionType = Loom.Parsing.AST.FunctionType;
-using IntersectionType = Loom.Parsing.AST.IntersectionType;
-using LiteralType = Loom.Parsing.AST.LiteralType;
-using OptionalType = Loom.Parsing.AST.OptionalType;
-using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
-using Type = Loom.TypeChecking.Types.Type;
-using TypeName = Loom.Parsing.AST.TypeName;
-using TypeParameter = Loom.Parsing.AST.TypeParameter;
-using UnionType = Loom.Parsing.AST.UnionType;
+using Loom.Core.Diagnostics;
+using Loom.Core.FlowAnalysis;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking.Types;
+using ArrayType = Loom.Core.Parsing.AST.ArrayType;
+using FunctionType = Loom.Core.Parsing.AST.FunctionType;
+using IntersectionType = Loom.Core.Parsing.AST.IntersectionType;
+using LiteralType = Loom.Core.Parsing.AST.LiteralType;
+using OptionalType = Loom.Core.Parsing.AST.OptionalType;
+using PrimitiveType = Loom.Core.Parsing.AST.PrimitiveType;
+using TypeName = Loom.Core.Parsing.AST.TypeName;
+using TypeParameter = Loom.Core.Parsing.AST.TypeParameter;
+using UnionType = Loom.Core.Parsing.AST.UnionType;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
+
+using Type = Types.Type;
 
 public sealed partial class TypeChecker
     : Visitor<Type>

@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class Block(Token leftBrace, Token rightBrace, List<Statement> statements)
     : Statement([leftBrace, ..statements.SelectMany(s => s.Tokens), rightBrace], statements)

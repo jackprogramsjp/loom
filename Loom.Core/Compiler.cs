@@ -1,13 +1,13 @@
-using Loom.Diagnostics;
-using Loom.FlowAnalysis;
-using Loom.Generation;
-using Loom.Lexing;
-using Loom.Parsing;
-using Loom.Resolving;
-using Loom.Text;
-using Loom.TypeChecking;
+using Loom.Core.Diagnostics;
+using Loom.Core.FlowAnalysis;
+using Loom.Core.Generation;
+using Loom.Core.Lexing;
+using Loom.Core.Parsing;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking;
 
-namespace Loom;
+namespace Loom.Core;
 
 public sealed class Compiler(CompilationUnit unit, SourceFile file)
 {

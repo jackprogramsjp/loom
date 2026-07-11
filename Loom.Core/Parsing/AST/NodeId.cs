@@ -1,4 +1,4 @@
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public readonly record struct NodeId(int Value)
 {

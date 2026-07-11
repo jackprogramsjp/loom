@@ -1,4 +1,4 @@
-namespace Loom.TypeChecking.Types;
+namespace Loom.Core.TypeChecking.Types;
 
 public class PrimitiveType(PrimitiveTypeKind kind) : Type
 {

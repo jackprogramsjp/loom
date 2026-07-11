@@ -1,4 +1,4 @@
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class Invocation(Expression expression, TypeArguments? typeArguments, Arguments arguments)
     : Expression([..expression.Tokens, ..arguments.Tokens], [expression, arguments])

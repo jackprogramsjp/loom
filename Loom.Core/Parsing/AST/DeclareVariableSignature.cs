@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class DeclareVariableSignature(Token keyword, Token name, ColonTypeClause colonTypeClause, params Node?[] extraChildren)
     : DeclareSignature([keyword], name, [colonTypeClause, ..extraChildren])

@@ -1,6 +1,6 @@
-using Loom.Diagnostics;
+using Loom.Core.Diagnostics;
 
-namespace Loom;
+namespace Loom.Core;
 
 public sealed record CompilationResult(List<CompiledFile> Files, DiagnosticBag Diagnostics)
     : DiagnosedResult(Diagnostics);

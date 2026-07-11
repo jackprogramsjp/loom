@@ -1,8 +1,8 @@
 using System.Runtime.CompilerServices;
-using Loom.TypeChecking.Types;
-using Type = Loom.TypeChecking.Types.Type;
+using Loom.Core.TypeChecking.Types;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.TypeChecking;
+namespace Loom.Core.TypeChecking;
 
 public static class TypeSimplifier
 {

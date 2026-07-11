@@ -1,16 +1,17 @@
 using Loom.Config;
-using Loom.Diagnostics;
-using Loom.FlowAnalysis;
-using Loom.Generation;
-using Loom.Lexing;
+using Loom.Core;
+using Loom.Core.Diagnostics;
+using Loom.Core.FlowAnalysis;
+using Loom.Core.Generation;
+using Loom.Core.Lexing;
+using Loom.Core.Parsing;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking;
 using Loom.Luau;
 using Loom.Luau.AST;
-using Loom.Parsing;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.Text;
-using Loom.TypeChecking;
-using Type = Loom.TypeChecking.Types.Type;
+using Resolver = Loom.Core.Resolving.Resolver;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Testing;
 
@@ -43,7 +44,7 @@ internal static class Utility
     public static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
 
-    public static SemanticModel GetSemanticModel(string source, bool isDeclaration = false, bool disableRuntimeLib = true)
+    public static Core.Resolving.SemanticModel GetSemanticModel(string source, bool isDeclaration = false, bool disableRuntimeLib = true)
     {
         var parserResult = Parse(source);
         if (isDeclaration)
@@ -56,7 +57,7 @@ internal static class Utility
         return semanticModel;
     }
 
-    public static (FlowAnalyzerResult AnalyzerResult, SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(string source, bool disableRuntimeLib = true)
+    public static (FlowAnalyzerResult AnalyzerResult, Core.Resolving.SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(string source, bool disableRuntimeLib = true)
     {
         var semanticModel = GetSemanticModel(source, disableRuntimeLib: disableRuntimeLib);
         var flowAnalyzer = new FlowAnalyzer(semanticModel);

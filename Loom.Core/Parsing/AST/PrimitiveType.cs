@@ -1,7 +1,7 @@
-using Loom.Text;
-using Loom.TypeChecking.Types;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking.Types;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class PrimitiveType(Token name) : TypeExpression([name], [])
 {

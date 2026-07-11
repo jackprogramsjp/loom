@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.Core.TypeChecking.Types;
 using Loom.Luau.AST;
-using Loom.TypeChecking.Types;
-using Type = Loom.TypeChecking.Types.Type;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.Generation.Macros.Providers;
+namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class ResultStaticMacroProvider : IMacroProvider
 {

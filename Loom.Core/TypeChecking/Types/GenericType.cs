@@ -1,6 +1,6 @@
-using Loom.Parsing.AST;
+using Loom.Core.Parsing.AST;
 
-namespace Loom.TypeChecking.Types;
+namespace Loom.Core.TypeChecking.Types;
 
 public sealed class GenericType(GenericNamedDeclaration declaration, List<TypeParameter> parameters, Type underlyingType) : Type
 {

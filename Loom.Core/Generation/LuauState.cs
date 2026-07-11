@@ -1,6 +1,6 @@
 using Loom.Luau.AST;
 
-namespace Loom.Generation;
+namespace Loom.Core.Generation;
 
 internal sealed class LuauState
 {

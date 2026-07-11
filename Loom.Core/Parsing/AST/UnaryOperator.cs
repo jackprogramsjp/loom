@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class UnaryOperator(Token @operator, Expression operand)
     : Expression([@operator, ..operand.Tokens], [operand])

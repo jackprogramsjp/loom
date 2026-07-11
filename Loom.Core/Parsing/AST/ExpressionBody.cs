@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class ExpressionBody(Token arrow, Expression expression)
     : Statement([arrow, ..expression.Tokens], [expression])

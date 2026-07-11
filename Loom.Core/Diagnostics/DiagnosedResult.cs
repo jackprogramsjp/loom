@@ -1,3 +1,3 @@
-namespace Loom.Diagnostics;
+namespace Loom.Core.Diagnostics;
 
 public record DiagnosedResult(DiagnosticBag Diagnostics);

@@ -1,26 +1,26 @@
+using Loom.Core.Parsing.AST;
 using Loom.Luau;
 using Loom.Luau.AST;
-using Loom.Parsing.AST;
-using ArrayType = Loom.Parsing.AST.ArrayType;
-using Break = Loom.Parsing.AST.Break;
-using Continue = Loom.Parsing.AST.Continue;
-using ExpressionStatement = Loom.Parsing.AST.ExpressionStatement;
-using FunctionType = Loom.Parsing.AST.FunctionType;
-using Identifier = Loom.Parsing.AST.Identifier;
-using IntersectionType = Loom.Parsing.AST.IntersectionType;
-using LiteralType = Loom.Parsing.AST.LiteralType;
-using OptionalType = Loom.Parsing.AST.OptionalType;
-using Parameter = Loom.Parsing.AST.Parameter;
-using Parenthesized = Loom.Parsing.AST.Parenthesized;
-using ParenthesizedType = Loom.Parsing.AST.ParenthesizedType;
-using PrimitiveType = Loom.Parsing.AST.PrimitiveType;
-using PrimitiveTypeKind = Loom.TypeChecking.Types.PrimitiveTypeKind;
-using Return = Loom.Parsing.AST.Return;
-using TypeParameter = Loom.Parsing.AST.TypeParameter;
-using TypeParameters = Loom.Parsing.AST.TypeParameters;
-using UnionType = Loom.Parsing.AST.UnionType;
+using ArrayType = Loom.Core.Parsing.AST.ArrayType;
+using Break = Loom.Core.Parsing.AST.Break;
+using Continue = Loom.Core.Parsing.AST.Continue;
+using ExpressionStatement = Loom.Core.Parsing.AST.ExpressionStatement;
+using FunctionType = Loom.Core.Parsing.AST.FunctionType;
+using Identifier = Loom.Core.Parsing.AST.Identifier;
+using IntersectionType = Loom.Core.Parsing.AST.IntersectionType;
+using LiteralType = Loom.Core.Parsing.AST.LiteralType;
+using OptionalType = Loom.Core.Parsing.AST.OptionalType;
+using Parameter = Loom.Core.Parsing.AST.Parameter;
+using Parenthesized = Loom.Core.Parsing.AST.Parenthesized;
+using ParenthesizedType = Loom.Core.Parsing.AST.ParenthesizedType;
+using PrimitiveType = Loom.Core.Parsing.AST.PrimitiveType;
+using PrimitiveTypeKind = Loom.Core.TypeChecking.Types.PrimitiveTypeKind;
+using Return = Loom.Core.Parsing.AST.Return;
+using TypeParameter = Loom.Core.Parsing.AST.TypeParameter;
+using TypeParameters = Loom.Core.Parsing.AST.TypeParameters;
+using UnionType = Loom.Core.Parsing.AST.UnionType;
 
-namespace Loom.Generation;
+namespace Loom.Core.Generation;
 
 public sealed partial class LuauGenerator
 {

@@ -18,7 +18,7 @@ CI (`.github/workflows/ci.yml`): `dotnet test -c Release` with coverage → Cove
 
 ## Solution layout
 
-- `Loom.Core/` — the compiler. Root namespace is `Loom` (not `Loom.Core`).
+- `Loom.Core/` — the compiler.
   - `Lexing/` — `Lexer`, rule-based (`LexerRules.cs`)
   - `Parsing/` — `Parser` (partial class split: `.Declarations`, `.Expressions`, `.Statements`, `.Types`), `AST/` one file per node type (~90 files)
   - `Resolving/` — `Resolver`, `SemanticModel`, `Symbol`/`SymbolKind`, scopes
@@ -56,7 +56,7 @@ CI (`.github/workflows/ci.yml`): `dotnet test -c Release` with coverage → Cove
 
 ## Gotchas
 
-- `Loom.Core` root namespace is `Loom`; `Loom.Luau` namespace is `Loom.Luau`. Testing imports both plus `Type = Loom.TypeChecking.Types.Type` alias to dodge `System.Type` clash.
+- Testing imports both plus `Type = Loom.TypeChecking.Types.Type` alias to dodge `System.Type` clash.
 - `DiagnosticBag.FailFast` is a global static toggle used by CLI/compiler error paths.
 - Output path derived by string-replacing source dir name with output dir name in the absolute path ([Compiler.cs:33](Loom.Core/Compiler.cs)) — fragile with nested same-named dirs.
 - PRs target `master`; open an issue before writing code (CONTRIBUTING.md).

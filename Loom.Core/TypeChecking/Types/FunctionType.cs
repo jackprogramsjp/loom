@@ -1,4 +1,4 @@
-namespace Loom.TypeChecking.Types;
+namespace Loom.Core.TypeChecking.Types;
 
 public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> parameterTypes, Type returnType) : Type
 {

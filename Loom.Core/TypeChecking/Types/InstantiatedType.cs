@@ -1,4 +1,4 @@
-namespace Loom.TypeChecking.Types;
+namespace Loom.Core.TypeChecking.Types;
 
 public sealed class InstantiatedType(GenericType genericType, List<Type> arguments) : Type
 {
@@ -21,7 +21,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
         if (_instantiatedBase != null)
             return _instantiatedBase;
 
-        var substitution = new TypeParameterSubstitution();
+        var substitution = new Dictionary<TypeParameter, Type>();
         for (var i = 0; i < GenericType.Parameters.Count; i++)
         {
             var parameter = GenericType.Parameters[i];
@@ -34,7 +34,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
         return _instantiatedBase;
     }
 
-    private Type SubstituteTypeParameters(Type type, TypeParameterSubstitution substitution) =>
+    private Type SubstituteTypeParameters(Type type, Dictionary<TypeParameter, Type> substitution) =>
         type is TypeParameter tp && substitution.TryGetValue(tp, out var substituted)
             ? substituted
             : type switch
@@ -51,7 +51,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
                 _ => TypeSolver.Transform(type, t => SubstituteTypeParameters(t, substitution))
             };
 
-    private InterfaceType SubstituteInterfaceType(InterfaceType interfaceType, TypeParameterSubstitution substitution)
+    private InterfaceType SubstituteInterfaceType(InterfaceType interfaceType, Dictionary<TypeParameter, Type> substitution)
     {
         var substitutedObject = SubstituteObjectType(interfaceType.ObjectType, substitution);
         var substitutedConstraints = interfaceType.Constraints
@@ -62,7 +62,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
         return new InterfaceType(interfaceType.Name, substitutedConstraints, substitutedObject);
     }
 
-    private ObjectType SubstituteObjectType(ObjectType objectType, TypeParameterSubstitution substitution)
+    private ObjectType SubstituteObjectType(ObjectType objectType, Dictionary<TypeParameter, Type> substitution)
     {
         ObjectIndexer? substitutedIndexer = null;
         if (objectType.Indexer != null)

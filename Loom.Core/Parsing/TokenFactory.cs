@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing;
+namespace Loom.Core.Parsing;
 
 public static class TokenFactory
 {

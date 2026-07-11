@@ -1,4 +1,4 @@
-using Loom.Diagnostics;
+using Loom.Core.Diagnostics;
 
 namespace Loom.Testing;
 

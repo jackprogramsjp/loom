@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class KeyOf(Token keyword, Token leftParen, Token rightParen, TypeExpression type)
     : TypeExpression([keyword, leftParen, ..type.Tokens, rightParen], [type])

@@ -1,9 +1,9 @@
-using Loom.Diagnostics;
-using Loom.Parsing.AST;
-using Loom.Resolving;
-using Loom.Text;
+using Loom.Core.Diagnostics;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
 
-namespace Loom.FlowAnalysis;
+namespace Loom.Core.FlowAnalysis;
 
 public sealed class FlowAnalyzer(SemanticModel semanticModel)
 {

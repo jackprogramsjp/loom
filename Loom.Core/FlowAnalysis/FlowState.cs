@@ -1,8 +1,8 @@
-using Loom.Resolving;
-using Loom.TypeChecking;
-using Type = Loom.TypeChecking.Types.Type;
+using Loom.Core.Resolving;
+using Loom.Core.TypeChecking;
+using Type = Loom.Core.TypeChecking.Types.Type;
 
-namespace Loom.FlowAnalysis;
+namespace Loom.Core.FlowAnalysis;
 
 public sealed class FlowState(
     HashSet<Symbol>? definitelyInitialized = null,

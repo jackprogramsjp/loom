@@ -1,7 +1,7 @@
 using System.Reflection;
-using Loom.Debug;
-using Loom.Parsing.AST;
-using Loom.Text;
+using Loom.Core.Debug;
+using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 using Xunit;
 
 namespace Loom.Testing;

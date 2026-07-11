@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class RangeLiteral(Token dotDot, Expression minimum, Expression maximum)
     : Expression([..minimum.Tokens, dotDot, ..maximum.Tokens], [minimum, maximum])

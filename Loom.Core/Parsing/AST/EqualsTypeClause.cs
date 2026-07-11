@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class EqualsTypeClause(Token equalsToken, TypeExpression type)
     : Node([equalsToken, ..type.Tokens], [type])

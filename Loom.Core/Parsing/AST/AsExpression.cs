@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class AsExpression(Token keyword, Expression expression, TypeExpression type)
     : Expression([..expression.Tokens, keyword, ..type.Tokens], [expression, type])

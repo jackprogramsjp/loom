@@ -5,10 +5,16 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <RootNamespace>Loom</RootNamespace>
+        <RootNamespace>Loom.Core</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="..\CLAUDE.md">
+            <Link>CLAUDE.md</Link>
+        </Content>
+        <Content Include="..\AGENTS.md">
+            <Link>AGENTS.md</Link>
+        </Content>
         <Content Include="..\CONTRIBUTING.md">
           <Link>CONTRIBUTING.md</Link>
         </Content>

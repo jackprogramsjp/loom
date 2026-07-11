@@ -1,6 +1,6 @@
-using Loom.Text;
+using Loom.Core.Text;
 
-namespace Loom.Parsing.AST;
+namespace Loom.Core.Parsing.AST;
 
 public class InterfaceInvocationPropertyInitializer(Token name, Token colon, Expression expression)
     : InterfaceInvocationInitializer(expression, [name, colon])

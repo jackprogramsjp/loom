@@ -1,4 +1,5 @@
 using Loom.Config;
+using Loom.Core;
 
 namespace Loom.Testing;
 
