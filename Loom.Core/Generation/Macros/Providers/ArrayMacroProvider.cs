@@ -37,6 +37,26 @@ internal sealed class ArrayMacroProvider : IMacroProvider
                 expression = LuauFactory.TableCall("concat", [array, ..call.Arguments]);
                 return true;
             }
+            case "push" or "insert":
+            {
+                expression = LuauFactory.TableCall("insert", [array, ..call.Arguments]);
+                return true;
+            }
+            case "pop" or "remove":
+            {
+                expression = LuauFactory.TableCall("remove", [array, ..call.Arguments]);
+                return true;
+            }
+            case "index_of":
+            {
+                expression = LuauFactory.TableCall("find", [array, ..call.Arguments]);
+                return true;
+            }
+            case "has":
+            {
+                expression = new BinaryOperator(LuauFactory.TableCall("find", [array, ..call.Arguments]), "~=", new NilLiteral());
+                return true;
+            }
         }
 
         expression = null;

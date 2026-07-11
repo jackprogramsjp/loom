@@ -1,12 +1,29 @@
 namespace Loom.Core.TypeChecking.Types;
 
 public sealed class ArrayType(Type elementType, bool isMutable)
-    : ObjectType(new ObjectIndexer(isMutable, PrimitiveType.Number, elementType), ObjectProperties)
+    : ObjectType(new ObjectIndexer(isMutable, PrimitiveType.Number, elementType), BuildProperties(elementType, isMutable))
 {
-    public static List<ObjectProperty> ObjectProperties =>
-    [
-        new(false, "length", PrimitiveType.Number), new(false, "join", new FunctionType([], [new OptionalType(PrimitiveType.String)], PrimitiveType.String))
-    ];
+    private static List<ObjectProperty> BuildProperties(Type elementType, bool isMutable)
+    {
+        var optionalElement = new OptionalType(elementType);
+        var properties = new List<ObjectProperty>
+        {
+            new(false, "length", PrimitiveType.Number),
+            new(false, "join", new FunctionType([], [new OptionalType(PrimitiveType.String)], PrimitiveType.String)),
+            new(false, "index_of", new FunctionType([], [elementType], new OptionalType(PrimitiveType.Number))),
+            new(false, "has", new FunctionType([], [elementType], PrimitiveType.Bool))
+        };
+
+        if (!isMutable)
+            return properties;
+
+        properties.Add(new(false, "push", new FunctionType([], [elementType], PrimitiveType.Void)));
+        properties.Add(new(false, "pop", new FunctionType([], [], optionalElement)));
+        properties.Add(new(false, "insert", new FunctionType([], [PrimitiveType.Number, elementType], PrimitiveType.Void)));
+        properties.Add(new(false, "remove", new FunctionType([], [PrimitiveType.Number], optionalElement)));
+
+        return properties;
+    }
 
     public Type ElementType { get; } = elementType;
     public bool IsMutable { get; } = isMutable;

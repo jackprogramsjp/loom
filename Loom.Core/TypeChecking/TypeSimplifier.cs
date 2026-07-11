@@ -136,10 +136,7 @@ public static class TypeSimplifier
         }
 
         var properties = propertyDictionary.Values.ToList();
-        if (mergedIndexer == null || properties.Count != 0 || !mergedIndexer.KeyType.Equals(PrimitiveType.Number))
-            return new ObjectType(mergedIndexer, properties);
-
-        if (objectTypes.All(t => t is ArrayType))
+        if (mergedIndexer != null && mergedIndexer.KeyType.Equals(PrimitiveType.Number) && objectTypes.All(t => t is ArrayType))
             return new ArrayType(mergedIndexer.ValueType, mergedIndexer.IsMutable);
 
         return new ObjectType(mergedIndexer, properties);
