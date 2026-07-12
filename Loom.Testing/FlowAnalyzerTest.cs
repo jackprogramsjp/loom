@@ -5,6 +5,13 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class FlowAnalyzerTest
 {
+    [Fact]
+    public void Allows_IntrinsicResultReference()
+    {
+        var diagnostics = Utility.FlowAnalyze("some_fn(Result.ok);").AnalyzerResult.Diagnostics;
+        Utility.AssertNoErrors(diagnostics);
+    }
+
     [Theory]
     [InlineData("fn foo { return 42; let x = 1 }")]
     [InlineData("while true { break; let unreachable = 1; }")]

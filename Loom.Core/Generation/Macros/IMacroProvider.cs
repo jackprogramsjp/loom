@@ -9,6 +9,8 @@ internal interface IMacroProvider
     public bool Supports(Type type);
     public bool Supports(Parsing.AST.Expression expression);
 
+    public bool IsInvocationOnlyMember(string memberName);
+
     public bool TryProperty(MacroContext context, string name, LuauExpression target, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         expression = null;

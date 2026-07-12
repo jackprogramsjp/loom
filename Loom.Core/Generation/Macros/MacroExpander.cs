@@ -11,6 +11,9 @@ using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
 using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
 using Type = Loom.Core.TypeChecking.Types.Type;
 using UnionType = Loom.Core.TypeChecking.Types.UnionType;
+using FunctionType = Loom.Core.TypeChecking.Types.FunctionType;
+using Return = Loom.Luau.AST.Return;
+using Parameter = Loom.Luau.AST.Parameter;
 
 namespace Loom.Core.Generation.Macros;
 
@@ -27,6 +30,41 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         expression = null;
         return TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member)
             && provider.TryInvocation(_context, member.Trim(), luauCall, out expression);
+    }
+
+    public bool TryGetInvocationMacroReference(
+        Expression expression,
+        LuauExpression callee,
+        [MaybeNullWhen(false)] out LuauExpression referenceExpression)
+    {
+        referenceExpression = null;
+        if (!InvocationMacroReference.TryClassify(semanticModel, expression, out var provider, out var memberName))
+            return false;
+
+        if (!InvocationMacroReference.IsValidReferenceContext(expression))
+            return false;
+
+        if (semanticModel.GetType(expression) is not FunctionType functionType)
+            return false;
+
+        var parameters = functionType.ParameterTypes
+            .Select((_, index) => new Parameter($"argument{index}"))
+            .ToList();
+        var arguments = parameters
+            .Select(parameter => (LuauExpression)new Luau.AST.Identifier(parameter.Name))
+            .ToList();
+        var call = new Call(callee, arguments);
+        if (!provider.TryInvocation(_context, memberName.Trim(), call, out var body))
+            return false;
+
+        referenceExpression = new AnonymousFunction(
+            null,
+            parameters,
+            null,
+            new Chunk([new Return(body)])
+        );
+
+        return true;
     }
 
     public bool TryGetElementAccessMacro(ElementAccess access, Luau.AST.ElementAccess luauAccess, [MaybeNullWhen(false)] out LuauExpression expression)

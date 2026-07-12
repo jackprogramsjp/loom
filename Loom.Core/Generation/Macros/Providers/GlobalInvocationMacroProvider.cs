@@ -9,6 +9,8 @@ internal sealed class GlobalInvocationMacroProvider : IMacroProvider
     public bool Supports(Type _) => false;
     public bool Supports(Parsing.AST.Expression expression) => expression is Parsing.AST.Identifier;
 
+    public bool IsInvocationOnlyMember(string memberName) => memberName is "string" or "number";
+
     public bool TryInvocation(MacroContext context, string name, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         switch (name)

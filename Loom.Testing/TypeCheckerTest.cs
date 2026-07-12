@@ -8,6 +8,40 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class TypeCheckerTest
 {
+    [Fact]
+    public void ThrowsFor_MacroReference_InVariableDeclaration()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = Result.ok;");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidMacroReference,
+            "Invocation macro 'ok' cannot be used as a value. Call it directly (e.g. ok(...)) or pass it as a function argument."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_MacroReference_InArrayLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("let x = [Result.ok];");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidMacroReference,
+            "Invocation macro 'ok' cannot be used as a value. Call it directly (e.g. ok(...)) or pass it as a function argument."
+        );
+    }
+
+    [Fact]
+    public void Allows_MacroReference_AsFunctionArgument()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn consume<T, E>(callback: fn(value: T): Result<T, E>): void;
+            consume(Result.ok);
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+    
     #region ThrowsFor
     [Fact]
     public void ThrowsFor_Variable_DeclaredType_Mismatch()

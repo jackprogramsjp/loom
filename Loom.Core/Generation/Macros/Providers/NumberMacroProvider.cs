@@ -11,6 +11,8 @@ internal sealed class NumberMacroProvider : IMacroProvider
     public bool Supports(Type type) => type.IsAssignableTo(PrimitiveType.Number);
     public bool Supports(Parsing.AST.Expression _) => false;
 
+    public bool IsInvocationOnlyMember(string _) => false;
+
     public bool TryElementAccess(MacroContext context, ElementAccess access, Type targetType, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         if (targetType.IsAssignableTo(PrimitiveType.String))

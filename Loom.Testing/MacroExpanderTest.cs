@@ -6,6 +6,48 @@ namespace Loom.Testing;
 public class MacroExpanderTest
 {
     [Fact]
+    public void Generates_InvocationMacroReference_AsFunctionArgument_Ok()
+    {
+        const string source = """
+            declare fn consume<T, E>(callback: fn(value: T): Result<T, E>): void;
+            consume(Result.ok);
+            """;
+        
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+
+        var statement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var consumeCall = Assert.IsType<Call>(statement.Expression);
+        var anonymousFunction = Assert.IsType<AnonymousFunction>(Assert.Single(consumeCall.Arguments));
+        var returnStatement = Assert.IsType<Return>(Assert.Single(anonymousFunction.Body.Statements));
+        var table = Assert.IsType<Table>(returnStatement.Expression);
+
+        var okInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
+        var valueInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[1]);
+        Assert.Equal("ok", okInit.PropertyName);
+        Assert.Equal("value", valueInit.PropertyName);
+        Assert.IsType<Identifier>(valueInit.Value);
+    }
+
+    [Fact]
+    public void Generates_InvocationMacroReference_NestedInArgument()
+    {
+        const string source = """
+            fn id<T>(value: T): T -> value;
+            declare fn consume<T, E>(callback: fn(value: T): Result<T, E>): void;
+            consume(id(Result.ok));
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+
+        var statement = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
+        var consumeCall = Assert.IsType<Call>(statement.Expression);
+        var idCall = Assert.IsType<Call>(Assert.Single(consumeCall.Arguments));
+        Assert.IsType<AnonymousFunction>(Assert.Single(idCall.Arguments));
+    }
+
+    [Fact]
     public void Generates_GlobalInvocation_Number_WithRadix()
     {
         const string source = "number('420', 16)";

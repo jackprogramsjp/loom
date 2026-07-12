@@ -65,10 +65,15 @@ public sealed partial class LuauGenerator
             _ => new NilLiteral()
         };
 
-    public override LuauNode VisitIdentifier(Identifier identifier) =>
-        _semanticModel.GetSymbol(identifier) is { Kind: SymbolKind.PropertyVariable }
-            ? new Luau.AST.PropertyAccess(LuauFactory.Self, [identifier.Name.Text])
-            : new Luau.AST.Identifier(identifier.Name.Text);
+    public override LuauNode VisitIdentifier(Identifier identifier)
+    {
+        var luauIdentifier = new Luau.AST.Identifier(identifier.Name.Text);
+        return _macroExpander.TryGetInvocationMacroReference(identifier, luauIdentifier, out var referenceReplacement)
+            ? referenceReplacement
+            : _semanticModel.GetSymbol(identifier) is { Kind: SymbolKind.PropertyVariable } 
+                ? new Luau.AST.PropertyAccess(LuauFactory.Self, [luauIdentifier.Name])
+                : luauIdentifier;
+    }
 
     public override LuauNode VisitFunctionType(FunctionType functionType) =>
         new Luau.AST.FunctionType(
