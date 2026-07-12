@@ -1,4 +1,5 @@
 using Loom.Core.Resolving;
+using Loom.Luau;
 using Loom.Luau.AST;
 
 namespace Loom.Core.Generation.Macros;
@@ -8,25 +9,14 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State)
     public static LuauExpression GetCallObject(Call call) =>
         call.Callee switch
         {
-            ElementAccess elementAccess => UnwrapParentheses(elementAccess.Target),
+            ElementAccess elementAccess => LuauFactory.UnwrapParentheses(elementAccess.Target),
             PropertyAccess propertyAccess =>
                 propertyAccess.Names.Count > 1
-                    ? new PropertyAccess(UnwrapParentheses(propertyAccess.Target), propertyAccess.Names.SkipLast(1).ToList())
-                    : UnwrapParentheses(propertyAccess.Target),
+                    ? new PropertyAccess(LuauFactory.UnwrapParentheses(propertyAccess.Target), propertyAccess.Names.SkipLast(1).ToList())
+                    : LuauFactory.UnwrapParentheses(propertyAccess.Target),
             
-            var callee => UnwrapParentheses(callee)
+            var callee => LuauFactory.UnwrapParentheses(callee)
         };
-
-    private static LuauExpression UnwrapParentheses(LuauExpression expression)
-    {
-        while (true)
-        {
-            if (expression is not Parenthesized parenthesized)
-                return expression;
-
-            expression = parenthesized.Expression;
-        }
-    }
 
     public static bool TryComputeConstantArithmetic(LuauExpression expression, out double computed)
     {

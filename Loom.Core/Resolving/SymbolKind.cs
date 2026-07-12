@@ -8,5 +8,6 @@ public enum SymbolKind : byte
     Type,
     EnumType,
     Interface,
-    Trait
+    Trait,
+    PropertyVariable
 }

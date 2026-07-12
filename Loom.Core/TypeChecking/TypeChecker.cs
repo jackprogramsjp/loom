@@ -565,7 +565,13 @@ public sealed partial class TypeChecker
 
         var symbol = _semanticModel.GetSymbol(identifier);
         if (symbol != null)
-            return BindType(identifier, GetType(symbol));
+        {
+            if (symbol is not PropertyVariableSymbol propertyVariableSymbol)
+                return BindType(identifier, GetType(symbol));
+
+            var interfaceType = (InterfaceType)_semanticModel.GetType(propertyVariableSymbol.From.Declaration);
+            return GetTypeAtIndexInInterface(identifier, interfaceType, new Types.LiteralType(propertyVariableSymbol.Name));
+        }
 
         _diagnostics.Error(identifier, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
         return BindType(identifier, Types.PrimitiveType.Never);

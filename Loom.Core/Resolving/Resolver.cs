@@ -41,12 +41,84 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return result;
     }
 
-    public override bool VisitTraitDeclaration(TraitDeclaration traitDeclaration)
+    public override bool VisitImplement(Implement implement)
     {
-        if (!DeclareTrait(traitDeclaration) || !ResolveTraitBody(traitDeclaration.Body, traitDeclaration.Name.Text))
+        var traitNameSymbol = LookupTypeSymbol(implement.TraitName.Name.Text);
+        if (traitNameSymbol is not TraitSymbol traitSymbol)
+        {
+            _diagnostics.Error(implement.TraitName, InternalCodes.NonInterfaceImplementation, "Interfaces may only implement traits.");
+            return false;
+        }
+
+        AddReference(implement.TraitName, traitSymbol);
+
+        var interfaceNameSymbol = LookupTypeSymbol(implement.InterfaceName.Name.Text);
+        if (interfaceNameSymbol is not InterfaceSymbol interfaceSymbol)
+        {
+            _diagnostics.Error(implement.InterfaceName, InternalCodes.NonInterfaceImplementation, "Traits may only be implemented by interfaces.");
+            return false;
+        }
+
+        if (interfaceSymbol.IsIntrinsic)
+        {
+            _diagnostics.Error(implement.InterfaceName, InternalCodes.IntrinsicImplementation, $"Trait '{implement.TraitName}' may not be implemented on intrinsic interface '{implement.InterfaceName}'.");
+            return false;
+        }
+
+        AddReference(implement.InterfaceName, interfaceSymbol);
+
+        if (interfaceSymbol.Implements.Contains(traitSymbol))
+        {
+            _diagnostics.Error(
+                implement.TraitName,
+                InternalCodes.DuplicateImplementation,
+                $"Interface '{interfaceSymbol.Name}' already has an implementation for trait '{traitSymbol.Name}'"
+            );
+
+            return false;
+        }
+
+        foreach (var implementation in implement.Body.Implementations.Where(implementation => !traitSymbol.MethodNames.Contains(implementation.Name.Text)))
+        {
+            _diagnostics.Error(
+                implementation,
+                InternalCodes.InvalidImplementation,
+                $"Trait '{traitSymbol.Name}' does not contain a signature for method '{implementation.Name.Text}'"
+            );
+
+            return false;
+        }
+
+        foreach (var methodName in traitSymbol.MethodNames.Where(methodName => implement.Body.Implementations.All(i => methodName != i.Name.Text)))
+        {
+            _diagnostics.Error(
+                implement,
+                InternalCodes.MissingImplementation,
+                $"Implementation of trait '{traitSymbol.Name}' on interface '{interfaceSymbol.Name}' is missing method '{methodName}'"
+            );
+
+            return false;
+        }
+
+        PushScope();
+        interfaceSymbol.Implementations.Add(implement);
+        interfaceSymbol.Implements.Add(traitSymbol);
+        traitSymbol.ImplementedBy.Add(interfaceSymbol);
+        if (interfaceSymbol.Properties
+            .Any(property => !DeclareVariable(implement, new PropertyVariableSymbol(implement, property.Name, interfaceSymbol, property.IsMutable))))
         {
             return false;
         }
+
+        Visit(implement.Body);
+        PopScope();
+        return true;
+    }
+
+    public override bool VisitTraitDeclaration(TraitDeclaration traitDeclaration)
+    {
+        if (!DeclareTrait(traitDeclaration) || !ResolveTraitBody(traitDeclaration.Body, traitDeclaration.Name.Text))
+            return false;
 
         PushScope();
         base.VisitTraitDeclaration(traitDeclaration);
@@ -278,7 +350,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var symbol = new Symbol(parameter, SymbolKind.Parameter, name);
         DeclareSymbol(symbol);
 
-        if (parameter.EqualsValueClause != null || parameter.ColonTypeClause != null)
+        if (parameter.EqualsValueClause != null || parameter.ColonTypeClause != null || parameter.Parent.Parent?.Parent is ImplementBody)
             return base.VisitParameter(parameter);
 
         _diagnostics.Error(parameter, InternalCodes.MustHaveDefaultOrType, "Parameter must have a declared type or default value to infer from.");
@@ -291,7 +363,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
         var name = interfaceInvocation.Name.Token.Text;
-        var symbol = LookupValueSymbol(name) ?? LookupTypeSymbol(name);
+        var typeSymbol = LookupTypeSymbol(name);
+        var symbol = LookupValueSymbol(name) ?? typeSymbol;
         switch (symbol)
         {
             case null:
@@ -306,6 +379,10 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
                 return false;
         }
+
+        AddReference(interfaceInvocation.Name, symbol);
+        if (typeSymbol != null)
+            AddReference(interfaceInvocation.Name, typeSymbol);
 
         return base.VisitInterfaceInvocation(interfaceInvocation);
     }
@@ -349,7 +426,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool ResolveTraitBody(TraitBody body, string name)
     {
-        var methodNames = body.Members.Select(p => p.Name.Text);
+        var methodNames = body.Members.Select(p => p.Name.Text).ToList();
         var duplicates = methodNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (duplicates.Count <= 0)
             return true;
@@ -471,16 +548,20 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool DeclareVariable(Node node, string name, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
     {
-        symbol = null;
+        symbol = new Symbol(node, symbolKind, name, isMutable);
+        return DeclareVariable(node, symbol);
+    }
+
+    private bool DeclareVariable(Node node, Symbol symbol)
+    {
         var scope = CurrentScope();
-        if (scope.VariableLookup.TryGetValue(name, out var symbols))
+        if (scope.VariableLookup.ContainsKey(symbol.Name))
         {
-            var kindName = scope.TypeLookup.GetValueOrDefault(name, []) is [.., InterfaceSymbol] ? "Interface" : "Variable";
-            _diagnostics.Error(node, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
+            var kindName = scope.TypeLookup.GetValueOrDefault(symbol.Name, []) is [.., InterfaceSymbol] ? "Interface" : "Variable";
+            _diagnostics.Error(node, InternalCodes.DuplicateName, $"{kindName} '{symbol.Name}' is already declared in this scope.");
             return false;
         }
 
-        symbol = new Symbol(node, symbolKind, name, isMutable);
         DeclareSymbol(symbol);
         return true;
     }
@@ -542,10 +623,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     private Symbol? LookupTypeSymbol(string name) =>
         LookupSymbol(name, SymbolKind.Type)
         ?? LookupSymbol(name, SymbolKind.EnumType)
+        ?? LookupSymbol(name, SymbolKind.Trait)
         ?? LookupSymbol(name, SymbolKind.Interface);
 
     private Symbol? LookupValueSymbol(string name) =>
         LookupSymbol(name, SymbolKind.Variable)
+        ?? LookupSymbol(name, SymbolKind.PropertyVariable)
         ?? LookupSymbol(name, SymbolKind.Function)
         ?? LookupSymbol(name, SymbolKind.Parameter);
 
@@ -567,17 +650,11 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return !lookup.TryGetValue(name, out var symbols) ? null : symbols.First();
     }
 
-    private static Dictionary<string, List<Symbol>> GetLookup(SymbolKind kind, ResolverScope scope) =>
-        Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
+    private static SymbolLookup GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
     private bool ReportNonInterfaceConstraint(TypeExpression constraint)
     {
-        _diagnostics.Error(
-            constraint,
-            InternalCodes.NonInterfaceConstraint,
-            "Interfaces may only be constrained by other interfaces."
-        );
-
+        _diagnostics.Error(constraint, InternalCodes.NonInterfaceConstraint, "Interfaces may only be constrained by other interfaces.");
         return false;
     }
 

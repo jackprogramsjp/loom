@@ -43,7 +43,7 @@ public sealed partial class LuauGenerator
     {
         var luauTree = VisitTree(_semanticModel.Tree);
         if (_semanticModel.MustImportRuntimeLibrary)
-            luauTree.Statements.Insert(0, LuauFactory.RuntimeImport("@game/ReplicatedStorage/include/loom_runtime")); // TODO: rojo resolver; issue #21
+            luauTree.Statements.Insert(0, LuauFactory.RuntimeLibraryImport("@game/ReplicatedStorage/include/loom_runtime")); // TODO: rojo resolver; issue #21
 
         return new LuauGeneratorResult(luauTree, _diagnostics);
     }
@@ -119,10 +119,7 @@ public sealed partial class LuauGenerator
 
         var parameters = functionDeclaration.Parameters?.ParameterList.ConvertAll(Visit<Luau.AST.Parameter>) ?? [];
         var returnType = MaybeVisit<LuauType>(functionDeclaration.ReturnType);
-        var statements = functionDeclaration.Body is ExpressionBody expressionBody
-            ? new Chunk(GenerateStatements(expressionBody.Expression))
-            : GenerateChunk(functionDeclaration.Body);
-
+        var statements = GenerateFunctionBody(functionDeclaration);
         return new Function(functionDeclaration.Name.Text, typeParameters, parameters, returnType, statements);
     }
 
@@ -142,6 +139,9 @@ public sealed partial class LuauGenerator
         var name = variableDeclaration.Name.Text;
         var type = variableDeclaration.ColonTypeClause != null ? Visit(variableDeclaration.ColonTypeClause.Type) : null;
         var initializer = variableDeclaration.EqualsValueClause != null ? Visit(variableDeclaration.EqualsValueClause.Value) : null;
+        if (initializer != null)
+            initializer = LuauFactory.UnwrapParentheses(initializer);
+
         return isConst
             ? new ConstVariable(name, type, initializer!)
             : new LocalVariable(name, type, initializer);
@@ -174,51 +174,16 @@ public sealed partial class LuauGenerator
             }
         );
     }
-
-    public override LuauNode VisitTraitDeclaration(TraitDeclaration traitDeclaration)
+    
+    public override LuauNode VisitInvocation(Invocation invocation)
     {
-        var signatures = traitDeclaration.Body.Members;
-        var properties = signatures.ConvertAll(signature => new TableTypeProperty(
-                LuauVisibility.Read,
-                signature.Name.Text,
-                new FunctionType(
-                    GenerateTypeParameters(signature.TypeParameters),
-                    signature.Parameters?.ParameterList.FindAll(p => p.ColonTypeClause != null).ConvertAll(p => Visit(p.ColonTypeClause!.Type)) ?? [],
-                    Visit(signature.ReturnType)
-                )
-            )
-        );
+        var isMethod = invocation.Expression.Children.FirstOrDefault() is { } child
+            && _semanticModel.GetType(child) is InterfaceType interfaceType
+            && invocation.Expression.Tokens.LastOrDefault() is { Kind: SyntaxKind.Identifier } name
+            && interfaceType.TraitMethodNames.Contains(name.Text);
 
-        var tableType = new TableType(null, properties);
-        var typeParameters = GenerateTypeParameters(traitDeclaration.TypeParameters);
-        return new Luau.AST.TypeAlias(traitDeclaration.Name.Text, typeParameters, tableType);
-    }
-
-    public override LuauNode VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
-    {
-        var indexer = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
-        var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>() ?? [];
-        var tableIndexer = indexer != null
-            ? new TableTypeIndexer(indexer.MutKeyword == null ? LuauVisibility.Read : null, Visit(indexer.IndexType), Visit(indexer.ColonTypeClause))
-            : null;
-
-        var properties = propertyDeclarations.Select(p => new TableTypeProperty(
-                    p.MutKeyword == null ? LuauVisibility.Read : null,
-                    p.Name.Text,
-                    Visit(p.ColonTypeClause)
-                )
-            )
-            .ToList();
-
-        var tableType = new TableType(tableIndexer, properties);
-        var typeParameters = GenerateTypeParameters(interfaceDeclaration.TypeParameters);
-        return new Luau.AST.TypeAlias(
-            interfaceDeclaration.Name.Text,
-            typeParameters,
-            interfaceDeclaration.ColonTypeListClause != null
-                ? new Luau.AST.IntersectionType([..interfaceDeclaration.ColonTypeListClause.Types.ConvertAll(Visit), tableType])
-                : tableType
-        );
+        var call = new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit), isMethod);
+        return _macroExpander.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
     }
 
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName)
@@ -288,6 +253,32 @@ public sealed partial class LuauGenerator
         return new Luau.AST.BinaryOperator(left, mappedOperator, right);
     }
 
+    public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
+    {
+        var operand = Visit(unaryOperator.Operand);
+        return SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind)
+            ? LuauFactory.Bit32Call("bnot", [operand])
+            : new Luau.AST.UnaryOperator(MapLuau.UnaryOperator(unaryOperator.Operator.Text), operand);
+    }
+
+    public override LuauNode VisitTypeName(TypeName typeName)
+    {
+        var symbol = _semanticModel.GetSymbol(typeName);
+        if (symbol == null)
+        {
+            _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
+            return new NilLiteral();
+        }
+
+        var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
+        var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
+        if (symbol.IsIntrinsic)
+            return new QualifiedTypeName([LuauFactory.RuntimeImportName], luauTypeName);
+
+        var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
+        return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
+    }
+    
     private LuauNode GenerateBitwiseOperator(BinaryOperator binaryOperator)
     {
         var left = Visit(binaryOperator.Left);
@@ -320,32 +311,6 @@ public sealed partial class LuauGenerator
         return new Luau.AST.BinaryOperator(left, "=", LuauFactory.Bit32Call(name, arguments));
     }
 
-    public override LuauNode VisitUnaryOperator(UnaryOperator unaryOperator)
-    {
-        var operand = Visit(unaryOperator.Operand);
-        return SyntaxFacts.IsBitwiseOperator(unaryOperator.Operator.Kind)
-            ? LuauFactory.Bit32Call("bnot", [operand])
-            : new Luau.AST.UnaryOperator(MapLuau.UnaryOperator(unaryOperator.Operator.Text), operand);
-    }
-
-    public override LuauNode VisitTypeName(TypeName typeName)
-    {
-        var symbol = _semanticModel.GetSymbol(typeName);
-        if (symbol == null)
-        {
-            _diagnostics.Error(typeName, InternalCodes.CannotFindSymbol, $"Cannot find symbol for type '{typeName}'");
-            return new NilLiteral();
-        }
-
-        var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
-        var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
-        if (symbol.IsIntrinsic)
-            return new QualifiedTypeName([LuauFactory.RuntimeImportName], luauTypeName);
-
-        var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
-        return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
-    }
-
     private static bool AddBit32Arguments(LuauExpression expression, string name, List<LuauExpression> arguments)
     {
         if (expression is not Call
@@ -369,6 +334,11 @@ public sealed partial class LuauGenerator
 
         return true;
     }
+    
+    private Chunk GenerateFunctionBody(FunctionDeclaration functionDeclaration) =>
+        functionDeclaration.Body is ExpressionBody expressionBody
+            ? new Chunk(GenerateStatements(expressionBody.Expression))
+            : GenerateChunk(functionDeclaration.Body);
 
     private Luau.AST.TypeParameters GenerateTypeParameters(TypeParameters? typeParameters) =>
         MaybeVisit<Luau.AST.TypeParameters>(typeParameters) ?? new Luau.AST.TypeParameters();

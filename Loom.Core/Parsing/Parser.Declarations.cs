@@ -107,7 +107,7 @@ public sealed partial class Parser
         return null;
     }
 
-    private Statement ParseDeclareStatement(Token declareKeyword)
+    private Statement ParseDeclare(Token declareKeyword)
     {
         var statement = ParseDeclareSignature(declareKeyword);
         if (statement is not DeclareSignature signature)
@@ -128,7 +128,7 @@ public sealed partial class Parser
             return ParseInterfaceDeclaration(interfaceKeyword);
 
         _diagnostics.Error(
-            Current() ?? declareKeyword,
+            Current(),
             InternalCodes.ExpectedDeclarationSignature,
             $"Expected declaration signature, got {SafeTokenText(Current())}."
         );
@@ -145,7 +145,7 @@ public sealed partial class Parser
 
     private Statement ParseDeclareFunctionSignature(Token fnKeyword)
     {
-        var name = ExpectIdentifier();
+        var name = ExpectIdentifier("function name");
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
@@ -157,7 +157,7 @@ public sealed partial class Parser
 
     private Statement ParseFunctionDeclaration(Token keyword)
     {
-        var name = ExpectIdentifier();
+        var name = ExpectIdentifier("function name");
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
