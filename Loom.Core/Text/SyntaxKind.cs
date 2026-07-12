@@ -5,7 +5,7 @@ public enum SyntaxKind : ushort
     Whitespace,
     Semicolon,
     Comment,
-    MultilineComment,
+    BlockComment,
 
     Plus,
     PlusEquals,

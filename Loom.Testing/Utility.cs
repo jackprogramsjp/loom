@@ -19,7 +19,7 @@ internal static class Utility
 {
     public static readonly LocationSpan Span = LocationSpan.Empty(TestFile(""));
 
-    public static IReadOnlyList<Token> GetTokens(string source, bool withTrivia = false) => Tokenize(source, withTrivia).Tokens;
+    public static IReadOnlyList<Token> GetTokens(string source, bool withTrivia = false) => withTrivia ? Tokenize(source).TokensWithTrivia : Tokenize(source).Tokens;
     public static Tree GetAST(string source) => Parse(source).Tree;
     public static Type GetLastStatementType(string source) => TypeCheck(source).ReturnType;
 
@@ -102,5 +102,5 @@ internal static class Utility
 
     public static SourceFile TestFile(string source) => new("test", source);
 
-    private static LexerResult Tokenize(string source, bool withTrivia = false) => new Lexer(TestFile(source)).Tokenize(withTrivia);
+    private static LexerResult Tokenize(string source) => new Lexer(TestFile(source)).Tokenize();
 }

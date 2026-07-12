@@ -165,7 +165,7 @@ public class LexerTest
         Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
-        Assert.Equal(SyntaxKind.MultilineComment, token.Kind);
+        Assert.Equal(SyntaxKind.BlockComment, token.Kind);
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public class LexerTest
     {
         var tokens = Utility.GetTokens("#: line one\nline two\nline three :#", true);
         Assert.Equal(2, tokens.Count);
-        Assert.Equal(SyntaxKind.MultilineComment, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.BlockComment, tokens[0].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[1].Kind);
 
         var comment = tokens[0];
@@ -214,7 +214,7 @@ public class LexerTest
         Assert.Equal(6, tokens.Count);
         Assert.Equal(SyntaxKind.TrueLiteral, tokens[0].Kind);
         Assert.Equal(SyntaxKind.Whitespace, tokens[1].Kind);
-        Assert.Equal(SyntaxKind.MultilineComment, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.BlockComment, tokens[2].Kind);
         Assert.Equal(SyntaxKind.Whitespace, tokens[3].Kind);
         Assert.Equal(SyntaxKind.FalseLiteral, tokens[4].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[5].Kind);
@@ -225,7 +225,7 @@ public class LexerTest
     {
         var tokens = Utility.GetTokens("#: comment\nstill comment :# true", true);
         Assert.Equal(4, tokens.Count);
-        Assert.Equal(SyntaxKind.MultilineComment, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.BlockComment, tokens[0].Kind);
         Assert.Equal(SyntaxKind.Whitespace, tokens[1].Kind);
         Assert.Equal(SyntaxKind.TrueLiteral, tokens[2].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);

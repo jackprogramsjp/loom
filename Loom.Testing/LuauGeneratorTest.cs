@@ -27,6 +27,18 @@ public class LuauGeneratorTest
     [InlineData("declare mut x: number;")]
     [InlineData("declare fn x(): number;")]
     public void Generates_Nothing(string source) => Assert.Empty(Utility.GetLuauAST(source).Statements);
+    
+    [Theory]
+    [InlineData("##hello!")]
+    [InlineData("#:hello!:#")]
+    public void Generates_Comments(string source)
+    {
+        var luauTree = Utility.GetLuauAST(source);
+        Assert.Single(luauTree.Statements);
+
+        var comment = Assert.IsType<Comment>(luauTree.Statements.First());
+        Assert.Equal("hello!", comment.Content);
+    }
 
     [Fact]
     public void Generates_NestedKeyOfType()

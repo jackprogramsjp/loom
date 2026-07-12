@@ -27,7 +27,16 @@ namespace Loom.Core.Generation;
 
 public sealed partial class LuauGenerator
 {
-    public override LuauTree VisitTree(Tree tree) => new(GenerateStatements(tree.Statements));
+    public override LuauTree VisitTree(Tree tree)
+    {
+        var statements = tree.Tokens
+            .FindAll(t => t.Kind is SyntaxKind.Comment or SyntaxKind.BlockComment)
+            .ConvertAll(LuauStatement (token) => new Comment(token.Text.Replace("##", "").Replace("#:", "").Replace(":#", "")));
+
+        statements.AddRange(GenerateStatements(tree.Statements));
+        return new LuauTree(statements);
+    }
+
     public override Chunk VisitBlock(Block block) => new(GenerateStatements(block.Statements));
     public override LuauNode VisitBreak(Break @break) => new Luau.AST.Break();
     public override LuauNode VisitContinue(Continue @continue) => new Luau.AST.Continue();
@@ -70,7 +79,7 @@ public sealed partial class LuauGenerator
         var luauIdentifier = new Luau.AST.Identifier(identifier.Name.Text);
         return _macroExpander.TryGetInvocationMacroReference(identifier, luauIdentifier, out var referenceReplacement)
             ? referenceReplacement
-            : _semanticModel.GetSymbol(identifier) is { Kind: SymbolKind.PropertyVariable } 
+            : _semanticModel.GetSymbol(identifier) is { Kind: SymbolKind.PropertyVariable }
                 ? new Luau.AST.PropertyAccess(LuauFactory.Self, [luauIdentifier.Name])
                 : luauIdentifier;
     }

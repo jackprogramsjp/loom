@@ -17,7 +17,7 @@ public sealed partial class Parser(LexerResult lexerResult)
         while (!IsEof())
             statements.Add(ParseStatement());
 
-        var tree = new Tree(lexerResult.File, statements);
+        var tree = new Tree(lexerResult, statements);
         return new ParserResult(tree, _diagnostics);
     }
 

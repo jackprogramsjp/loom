@@ -20,13 +20,13 @@ public sealed class Lexer(SourceFile file)
     private int _character, _position;
     private int _line = 1;
 
-    public LexerResult Tokenize(bool withTrivia = false)
+    public LexerResult Tokenize()
     {
-        var tokens = GetTokens(withTrivia);
-        return new LexerResult(file, tokens.ToList(), _diagnostics);
+        var tokens = GetTokens().ToList();
+        return new LexerResult(file, tokens.FindAll(t => SyntaxFacts.IsNotTrivia(t.Kind)), tokens, _diagnostics);
     }
 
-    private IEnumerable<Token> GetTokens(bool withTrivia)
+    private IEnumerable<Token> GetTokens()
     {
         var sourceLength = file.SourceText.Length;
         while (_position < sourceLength)
@@ -52,7 +52,6 @@ public sealed class Lexer(SourceFile file)
             }
 
             var span = GetSpan(start);
-            if (!withTrivia && SyntaxFacts.IsTrivia(rule.Syntax)) continue;
             yield return new Token(rule.Syntax, span);
         }
 

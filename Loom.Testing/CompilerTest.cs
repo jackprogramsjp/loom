@@ -18,7 +18,7 @@ public class CompilerTest
     }
 
     private static void AssertCompiled(string source, string expected) =>
-        Assert.Equal(expected.Replace(Environment.NewLine, "\n") + '\n', Compile(source).RenderedLuau);
+        Assert.Equal(Compile(source).RenderedLuau.Replace(Environment.NewLine, "\n"), expected.Replace(Environment.NewLine, "\n") + '\n');
 
     private static CompiledFile Compile(string source)
     {

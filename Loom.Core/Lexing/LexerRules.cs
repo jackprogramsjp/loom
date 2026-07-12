@@ -35,7 +35,7 @@ public static class LexerRules
         RegEx(StringLiteral, "\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'"),
         RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
         RegEx(Whitespace, @"\s+"),
-        RegEx(MultilineComment, @"#:[\s\S]*?:#"),
+        RegEx(BlockComment, @"#:[\s\S]*?:#"),
         RegEx(Comment, @"##[^\n]*"),
     ];
 

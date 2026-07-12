@@ -1,3 +1,5 @@
+using Loom.Core.Diagnostics;
+using Loom.Core.Lexing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
 
@@ -122,6 +124,7 @@ public class SyntaxNodeTest
         var exprStmt = new ExpressionStatement(lit);
         var block = new Block(T("{", 0, 1, SyntaxKind.LBrace), T("}", 3, 1, SyntaxKind.RBrace), [exprStmt]);
         Assert.True(lit.IsDescendantOf<Block>());
+        Assert.Equal(lit.FirstAncestorOfType<Block>(), block);
     }
 
     [Fact]
@@ -164,7 +167,7 @@ public class SyntaxNodeTest
     {
         var lit = new Literal(T("42", 0, 2, SyntaxKind.NumberLiteral), 42L);
         var exprStmt = new ExpressionStatement(lit);
-        var tree = new Tree(SourceFile.Empty, [exprStmt]);
+        var tree = new Tree(new LexerResult(SourceFile.Empty, [], [], new DiagnosticBag()), [exprStmt]);
         Assert.Null(tree.FirstAncestorOfType<Tree>());
         Assert.Same(tree, lit.FirstAncestorOfType<Tree>());
     }

@@ -1,5 +1,4 @@
 --!strict
 --!native
 --!optimize 2
--- balls 
-print("hello, world")
+print(420 * 69)

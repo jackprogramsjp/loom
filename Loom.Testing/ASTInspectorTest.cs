@@ -1,5 +1,7 @@
 using System.Reflection;
 using Loom.Core.Debug;
+using Loom.Core.Diagnostics;
+using Loom.Core.Lexing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
 using Xunit;
@@ -157,7 +159,8 @@ public class ASTInspectorTest
     [Fact]
     public void InspectTree_RendersStatements()
     {
-        var tree = new Tree(SourceFile.Empty, [new InspectorTestStatement { Name = "first" }, new InspectorTestStatement { Name = "second" }]);
+        var lexerResult = new LexerResult(SourceFile.Empty, [], [], new DiagnosticBag());
+        var tree = new Tree(lexerResult, [new InspectorTestStatement { Name = "first" }, new InspectorTestStatement { Name = "second" }]);
 
         var inspectionResult = InspectTree(tree);
 

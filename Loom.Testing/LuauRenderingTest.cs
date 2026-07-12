@@ -11,6 +11,12 @@ namespace Loom.Testing;
 public class LuauRenderingTest
 {
     [Fact]
+    public void Renders_BlockComment() => Assert.Equal("[[\nhello!\n]]", new Comment("\nhello!\n").Render());
+    
+    [Fact]
+    public void Renders_Comment() => Assert.Equal("-- hello!", new Comment(" hello!").Render());
+
+    [Fact]
     public void Renders_TypeCast()
     {
         var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
