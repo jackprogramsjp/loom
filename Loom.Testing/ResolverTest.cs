@@ -42,42 +42,42 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("type Abc = number[]; enum Abc {}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateInterface()
     {
         var diagnostics = Utility.GetSemanticModel("interface Abc; interface Abc;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Interface 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateInterfaceTypeName()
     {
         var diagnostics = Utility.GetSemanticModel("type Abc = number; interface Abc;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateInterfaceVariableName()
     {
         var diagnostics = Utility.GetSemanticModel("let Abc = 69; interface Abc;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateTrait()
     {
         var diagnostics = Utility.GetSemanticModel("trait Abc {} trait Abc {}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Trait 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateTraitTypeName()
     {
         var diagnostics = Utility.GetSemanticModel("type Abc = number; trait Abc {}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Type 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateTraitInterface()
     {
@@ -91,7 +91,7 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("fn foo(x: number, x: string) {}").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Parameter 'x' is already declared for this function.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateDeclareVariable()
     {
@@ -112,14 +112,14 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("declare fn f(x: number, x: string): void;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Parameter 'x' is already declared for this function.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateDeclareInterface()
     {
         var diagnostics = Utility.GetSemanticModel("declare interface Abc; declare interface Abc;").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Interface 'Abc' is already declared in this scope.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DuplicateDeclareInterfaceTypeName()
     {
@@ -295,35 +295,35 @@ public class ResolverTest
         var diagnostics = Utility.GetSemanticModel("after 1s { continue }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ContinueOutsideLoop, "Continue statements can only be used inside of loops.");
     }
-    
+
     [Fact]
     public void ThrowsFor_BreakInsideAfter()
     {
         var diagnostics = Utility.GetSemanticModel("after 1s { break }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
     }
-    
+
     [Fact]
     public void ThrowsFor_BreakInsideAfter_NestedInLoop()
     {
         var diagnostics = Utility.GetSemanticModel("while true { after 1s { break } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.BreakOutsideLoop, "Break statements can only be used inside of loops.");
     }
-    
+
     [Fact]
     public void ThrowsFor_ReturnInsideAfter()
     {
         var diagnostics = Utility.GetSemanticModel("fn abc { after 1s { return 69 } }").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ReturnInAfter, "Cannot return a value from an 'after' statement body.");
     }
-    
+
     [Fact]
     public void ThrowsFor_DeclareVariable_MissingType()
     {
         var diagnostics = Utility.GetSemanticModel("declare let x").Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.MissingDeclareVariableType, "Declared variable signatures must have a type.");
     }
-    
+
     [Fact]
     public void ThrowsFor_ForLoop_NonObjectCollection_Number()
     {
@@ -351,23 +351,26 @@ public class ResolverTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics("interface Foo {}; let a: Foo? = new Foo {}; for x : a { }");
         Utility.AssertDiagnostic(diagnostics, InternalCodes.TypeMismatch, "Type 'Foo?' is not assignable to type 'object'.");
     }
-    
+
     [Fact]
     public void ThrowsFor_RuntimeStatement_InDeclarationFile()
     {
         var diagnostics = Utility.GetSemanticModel("let x = 1;", isDeclaration: true).Diagnostics;
         Utility.AssertDiagnostic(diagnostics, InternalCodes.RuntimeInDeclarationFile, "Only type-level declarations are allowed in declaration files.");
     }
-    
+
     [Fact]
     public void ThrowsFor_Trait_DuplicateMethod()
     {
-        var diagnostics = Utility.GetSemanticModel("""
-            trait Iterator {
-                fn next(): number
-                fn next(): string
-            }
-            """).Diagnostics;
+        var diagnostics = Utility.GetSemanticModel(
+                """
+                trait Iterator {
+                    fn next(): number
+                    fn next(): string
+                }
+                """
+            )
+            .Diagnostics;
 
         Utility.AssertDiagnostic(
             diagnostics,
@@ -375,8 +378,121 @@ public class ResolverTest
             "Method 'next' already exists on trait 'Iterator'"
         );
     }
-    #endregion ThrowsFor
+
+    [Fact]
+    public void ThrowsFor_Implement_NonTrait()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+                """
+                interface Foo { }
+                interface Bar { }
+
+                implement Foo for Bar { }
+                """
+            )
+            .Diagnostics;
+
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.NonInterfaceImplementation, "Interfaces may only implement traits.");
+    }
+
+    [Fact]
+    public void ThrowsFor_Implement_NonInterface()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+                """
+                trait Foo { }
+
+                type Bar = number
+
+                implement Foo for Bar { }
+                """
+            )
+            .Diagnostics;
+
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.NonInterfaceImplementation, "Traits may only be implemented by interfaces.");
+    }
+
+    [Fact]
+    public void ThrowsFor_DuplicateTraitImplementation()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+                """
+                trait Foo { }
+
+                interface Bar { }
+
+                implement Foo for Bar { }
+                implement Foo for Bar { }
+                """
+            )
+            .Diagnostics;
+
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateImplementation, "Interface 'Bar' already has an implementation for trait 'Foo'");
+    }
+
+    [Fact]
+    public void ThrowsFor_InvalidImplementationMethod()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+                """
+                trait Foo {
+                    fn a(): void
+                }
+
+                interface Bar { }
+
+                implement Foo for Bar {
+                    fn b() { }
+                }
+                """
+            )
+            .Diagnostics;
+
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvalidImplementation, "Trait 'Foo' does not contain a signature for method 'b'");
+    }
+
+    [Fact]
+    public void ThrowsFor_MissingImplementation()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+                """
+                trait Foo {
+                    fn a(): void
+                    fn b(): void
+                }
+
+                interface Bar { }
+
+                implement Foo for Bar {
+                    fn a() { }
+                }
+                """
+            )
+            .Diagnostics;
+
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.MissingImplementation, "Implementation of trait 'Foo' on interface 'Bar' is missing method 'b'");
+    }
     
+    [Fact]
+    public void ThrowsFor_IntrinsicImplementation()
+    {
+        var diagnostics = Utility.GetSemanticModel(
+                """
+                trait Foo {
+                    fn a(): void
+                }
+
+                implement Foo for Range {
+                    fn b() { }
+                }
+                """
+            )
+            .Diagnostics;
+
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.IntrinsicImplementation, "Trait 'Foo' may not be implemented on intrinsic interface 'Range'.");
+    }
+    #endregion ThrowsFor
+
     [Fact]
     public void WarnsFor_UseExpressionBody()
     {
@@ -386,36 +502,94 @@ public class ResolverTest
 
     #region Resolves
     [Fact]
+    public void Resolves_ImplementTraitReference()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface List { }
+
+                implement Iterator for List {
+                    fn next() { return 0; }
+                }
+                """
+            )
+        );
+
+        var implement = Assert.IsType<Implement>(model.Tree.Statements.Last());
+        var symbol = model.GetSymbol(implement.TraitName);
+        Assert.NotNull(symbol);
+        Assert.Equal(SymbolKind.Trait, symbol.Kind);
+        Assert.Equal("Iterator", symbol.Name);
+    }
+
+    [Fact]
+    public void Resolves_ImplementInterfaceReference()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface List { }
+
+                implement Iterator for List {
+                    fn next() { return 0; }
+                }
+                """
+            )
+        );
+
+        var implement = Assert.IsType<Implement>(model.Tree.Statements.Last());
+        var symbol = model.GetSymbol(implement.InterfaceName);
+        Assert.NotNull(symbol);
+        Assert.Equal(SymbolKind.Interface, symbol.Kind);
+        Assert.Equal("List", symbol.Name);
+    }
+
+    [Fact]
     public void Resolves_TraitTypeParameter()
     {
         var model = Utility.AssertNoErrors(
-            Utility.GetSemanticModel("""
+            Utility.GetSemanticModel(
+                """
                 trait Iterator<T> {
                     fn next(): T
                 }
-                """));
+                """
+            )
+        );
 
         var trait = Assert.IsType<TraitDeclaration>(model.Tree.Statements.Single());
         var member = Assert.Single(trait.Body.Members);
-        var returnType = Assert.IsType<TypeName>(member.ReturnType!.Type);
+        var returnType = Assert.IsType<TypeName>(member.ReturnType.Type);
         var symbol = model.GetSymbol(returnType);
 
         Assert.NotNull(symbol);
         Assert.Equal(SymbolKind.Type, symbol.Kind);
         Assert.Equal("T", symbol.Name);
     }
-    
+
     [Fact]
     public void Resolves_TraitTypeReference()
     {
         var model = Utility.AssertNoErrors(
-            Utility.GetSemanticModel("""
+            Utility.GetSemanticModel(
+                """
                 trait Iterator {
                     fn next(): number
                 }
 
                 mut x: Iterator
-                """));
+                """
+            )
+        );
 
         var declaration = Assert.IsType<VariableDeclaration>(model.Tree.Statements.Last());
         var typeName = Assert.IsType<TypeName>(declaration.ColonTypeClause!.Type);
@@ -424,7 +598,7 @@ public class ResolverTest
         Assert.Equal("Iterator", symbol.Name);
         Assert.Equal(SymbolKind.Trait, symbol.Kind);
     }
-    
+
     [Fact]
     public void Resolves_TypeParameter_InFunctionSignature()
     {
@@ -433,7 +607,7 @@ public class ResolverTest
         var returnType = fn.ReturnType!.Type as TypeName;
         Assert.NotNull(returnType);
         Assert.Equal("T", returnType.Name.Text);
-        
+
         var symbol = model.GetSymbol(returnType);
         Assert.NotNull(symbol);
         Assert.Equal(SymbolKind.Type, symbol.Kind);
@@ -460,73 +634,73 @@ public class ResolverTest
         var fnType = Assert.IsType<FunctionType>(alias.EqualsTypeClause.Type);
         var paramType = fnType.Parameters!.ParameterList[0].ColonTypeClause!.Type as TypeName;
         Assert.NotNull(paramType);
-        
+
         var symbol = model.GetSymbol(paramType);
         Assert.NotNull(symbol);
         Assert.Equal("T", symbol.Name);
         Assert.Equal(fnType.TypeParameters!.ParameterList[0], symbol.Declaration);
     }
-    
+
     [Fact]
     public void Resolves_Interface_WithGenericConstraint()
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel("type Foo = number; interface I<T: Foo> { }"));
         Assert.Equal(2, model.Tree.Statements.Count);
-        
+
         var iface = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.Last());
         Assert.NotNull(iface.TypeParameters);
-        
+
         var tp = iface.TypeParameters.ParameterList[0];
         Assert.NotNull(tp.ColonTypeClause);
-        
+
         var constraint = tp.ColonTypeClause.Type;
         var symbol = model.GetSymbol(constraint);
         Assert.NotNull(symbol);
         Assert.Equal("Foo", symbol.Name);
     }
-    
+
     [Fact]
     public void Resolves_TypeParameter_InTypeArgument()
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel("type Foo<T> = T; fn foo<T>(x: Foo<T>) { }"));
         Assert.Equal(2, model.Tree.Statements.Count);
-        
+
         var fn = Assert.IsType<FunctionDeclaration>(model.Tree.Statements.Last());
         Assert.NotNull(fn.Parameters);
-        
+
         var param = fn.Parameters.ParameterList[0];
         var typeName = Assert.IsType<TypeName>(param.ColonTypeClause!.Type);
         Assert.NotNull(typeName.TypeArguments);
-        
+
         var arg = typeName.TypeArguments.ArgumentsList[0] as TypeName;
         Assert.NotNull(arg);
-        
+
         var symbol = model.GetSymbol(arg);
         Assert.NotNull(symbol);
         Assert.Equal("T", symbol.Name);
     }
-    
+
     [Fact]
     public void Resolves_IntrinsicTypeSymbols()
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel("mut x: Range;"));
         Assert.Single(model.Tree.Statements);
-        
+
         var declaration = Assert.IsType<VariableDeclaration>(model.Tree.Statements.First());
         Assert.NotNull(declaration.ColonTypeClause);
-        
+
         var symbol = model.GetSymbol(declaration.ColonTypeClause.Type);
         Assert.NotNull(symbol);
         Assert.True(symbol.IsGlobal);
         Assert.True(symbol.IsIntrinsic);
     }
-    
+
     [Fact]
     public void Resolves_GlobalSymbols_FromCompilationUnit()
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel("print(42);"));
         Assert.Single(model.Tree.Statements);
-        
+
         var stmt = Assert.IsType<ExpressionStatement>(model.Tree.Statements.First());
         var invoc = Assert.IsType<Invocation>(stmt.Expression);
         var ident = Assert.IsType<Identifier>(invoc.Expression);
@@ -536,7 +710,7 @@ public class ResolverTest
         Assert.True(symbol.IsGlobal);
         Assert.True(symbol.IsIntrinsic);
     }
-    
+
     [Fact]
     public void Resolves_Declare_InsideBlock()
     {
@@ -549,15 +723,20 @@ public class ResolverTest
         Assert.NotNull(symbol);
         Assert.Equal("x", symbol.Name);
     }
-    
+
     [Fact]
     public void Resolves_FunctionName_InsideOwnBody()
     {
-        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("fn factorial(n: number): number { if n <= 1 { return 1 } else { return n * factorial(n - 1) } }"));
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel("fn factorial(n: number): number { if n <= 1 { return 1 } else { return n * factorial(n - 1) } }")
+        );
+
         var fn = Assert.IsType<FunctionDeclaration>(model.Tree.Statements.Single());
         var block = Assert.IsType<Block>(fn.Body);
         var ifStmt = Assert.IsType<If>(block.Statements.First());
-        var elseBlock = Assert.IsType<Block>(((If)ifStmt).ElseBranch!.Branch);
+        Assert.NotNull(ifStmt.ElseBranch);
+        
+        var elseBlock = Assert.IsType<Block>(ifStmt.ElseBranch!.Branch);
         var ret = Assert.IsType<Return>(elseBlock.Statements.First());
         var binary = Assert.IsType<BinaryOperator>(ret.Expression!);
         var invocation = Assert.IsType<Invocation>(binary.Right);
@@ -570,6 +749,24 @@ public class ResolverTest
 
     #region Allows
     [Fact]
+    public void Allows_ValidTraitImplementation() =>
+        Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface List { }
+
+                implement Iterator for List {
+                    fn next() { return 0; }
+                }
+                """
+            )
+        );
+
+    [Fact]
     public void Allows_ForLoopVariable_ShadowingOuterVariable()
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; for x : 1..10 { x; }"));
@@ -577,23 +774,23 @@ public class ResolverTest
         var forStmt = Assert.IsType<For>(statements[1]);
         var declSymbol = model.GetDeclarationSymbol(forStmt.Names.First());
         Assert.NotNull(declSymbol);
-        
+
         var outerDecl = Assert.IsType<VariableDeclaration>(statements[0]);
         var outerSymbol = model.GetDeclarationSymbol(outerDecl);
         Assert.NotEqual(declSymbol, outerSymbol);
     }
-    
+
     [Fact]
     public void Allows_InvokingIntrinsicInterfaces() => Utility.AssertNoErrors(Utility.GetSemanticModel("new Record::<string, bool> {}"));
-    
+
     [Fact]
     public void Allows_TernaryOp() => Utility.AssertNoErrors(Utility.GetSemanticModel("true ? 1 : 'abc'"));
-    
+
     [Theory]
     [InlineData("fn abc { return 69 }")]
     [InlineData("fn abc { if true { return 69 } }")]
     public void Allows_Fn_Return(string source) => Utility.AssertNoErrors(Utility.GetSemanticModel(source));
-    
+
     [Fact]
     public void Allows_VariableInitializedBeforeAfter_UsedAfter() => Utility.AssertNoErrors(Utility.GetSemanticModel("let x = 1; after 1s { } x;"));
 
@@ -611,10 +808,10 @@ public class ResolverTest
 
     [Fact]
     public void Allows_NonSealedInterfaceConstraints() => Utility.AssertNoErrors(Utility.GetSemanticModel("interface A; interface B: A;"));
-    
+
     [Fact]
     public void Allows_BreakInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for x : 1..10 { break }"));
-    
+
     [Fact]
     public void Allows_ContinueInsideFor() => Utility.AssertNoErrors(Utility.GetSemanticModel("for x : 1..10 { continue }"));
 
@@ -726,16 +923,19 @@ public class ResolverTest
     [InlineData("Range")]
     [InlineData("Record<string, bool>")]
     public void Declares_IntrinsicType_Symbols(string name) => Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
-    
+
     [Fact]
     public void Declares_TraitSymbol()
     {
         var model = Utility.AssertNoErrors(
-            Utility.GetSemanticModel("""
+            Utility.GetSemanticModel(
+                """
                 trait Iterator {
                     fn next(): number
                 }
-                """));
+                """
+            )
+        );
 
         var trait = Assert.IsType<TraitDeclaration>(model.Tree.Statements.Single());
 

@@ -68,6 +68,16 @@ public class ParserTest
             InternalCodes.UseOfDeclareFnParameterDefaults,
             "Parameters may not have default values in declared function signatures."
         ],
+        ["implement", InternalCodes.UnexpectedEof, "Expected trait name, got EOF."],
+        ["implement Foo", InternalCodes.UnexpectedEof, "Expected 'for', got EOF."],
+        ["implement Foo for", InternalCodes.UnexpectedEof, "Expected interface name, got EOF."],
+        ["implement Foo for Bar", InternalCodes.UnexpectedEof, "Expected '{', got EOF."],
+        ["implement Foo for Bar {", InternalCodes.UnexpectedEof, "Expected '}', got EOF."],
+        ["implement Foo for Bar { fn }", InternalCodes.UnexpectedToken, "Expected function name, got '}'."],
+        ["implement 123 for Bar { }", InternalCodes.UnexpectedToken, "Expected trait name, got '123'."],
+        ["implement Foo for Bar<T> { }", InternalCodes.UnexpectedToken, "Expected '{', got '<'."],
+        ["implement Foo 123 Bar { }", InternalCodes.UnexpectedToken, "Expected 'for', got '123'."],
+        ["implement Foo for 123 { }", InternalCodes.UnexpectedToken, "Expected interface name, got '123'."],
     ];
 
     public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("AST", ".ast");

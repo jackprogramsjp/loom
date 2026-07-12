@@ -1,0 +1,15 @@
+trait ToString {
+    fn to_string: string;
+}
+
+interface User {
+    name: string;
+    age: number;
+}
+
+implement ToString for User {
+    fn to_string -> nameof(User) + " { name: ''" + name + "', age: " + string(age) + " }"
+}
+
+let user = new User { name: "Runic", age: 21 };
+print(user.to_string());

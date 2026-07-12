@@ -14,7 +14,7 @@ public class LuauRenderingTest
     public void Renders_TypeCast()
     {
         var typeCast = new TypeCast(new Identifier("x"), PrimitiveType.Number);
-        Assert.Equal("(x :: number)", typeCast.Render());
+        Assert.Equal("x :: number", typeCast.Render());
     }
 
     [Fact]

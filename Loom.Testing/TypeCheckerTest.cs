@@ -745,6 +745,82 @@ public class TypeCheckerTest
         var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.ConstraintPropertyOverride, "Property 'abc' is already declared within constraint 'Def'.");
     }
+
+    [Theory]
+    [InlineData(": string", "string")]
+    [InlineData("", "\"\"")]
+    public void ThrowsFor_Implement_ReturnTypeMismatch(string explicitReturn, string expected)
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            $$"""
+            trait Iterator {
+                fn next(): number
+            }
+
+            interface Foo;
+
+            implement Iterator for Foo {
+                fn next(){{explicitReturn}} {
+                    return ""
+                }
+            }
+            """
+        );
+
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            $"Type '{expected}' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Implement_ParameterTypeMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            trait Add {
+                fn add(x: number): void
+            }
+
+            interface Foo;
+
+            implement Add for Foo {
+                fn add(x: string) { }
+            }
+            """
+        );
+
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type 'string' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Implement_DefaultValueWrongType()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            trait Add {
+                fn add(x: number): void
+            }
+
+            interface Foo;
+
+            implement Add for Foo {
+                fn add(x = "") { }
+            }
+            """
+        );
+
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"\"' is not assignable to type 'number'."
+        );
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -763,13 +839,175 @@ public class TypeCheckerTest
 
     #region Checks
     [Fact]
+    public void Checks_TraitMethod_FromInterfaceInvocation()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            trait Iterator {
+                fn next(): number
+            }
+
+            interface Foo;
+
+            implement Iterator for Foo {
+                fn next() {
+                    return 42
+                }
+            }
+
+            let foo = new Foo {};
+            foo.next;
+            """
+        );
+
+        var functionType = Assert.IsType<FunctionType>(type);
+        Assert.Empty(functionType.TypeParameters);
+        Assert.Empty(functionType.ParameterTypes);
+        Assert.Equal(PrimitiveType.Number, functionType.ReturnType);
+    }
+    
+    [Fact]
+    public void Allows_InterfaceProperty_AlongsideTraitMethods() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics("""
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface Foo {
+                    value: number
+                }
+
+                implement Iterator on Foo {
+                    fn next() {
+                        return 420 * value
+                    }
+                }
+
+                let foo = new Foo { value: 42 };
+                foo.value;
+                foo.next();
+                """));
+
+    [Fact]
+    public void Allows_Interface_WithMultipleTraits() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics("""
+                trait A {
+                    fn a: number
+                }
+
+                trait B {
+                    fn b: string
+                }
+
+                interface Foo;
+
+                implement A on Foo {
+                    fn a {
+                        return 1
+                    }
+                }
+
+                implement B on Foo {
+                    fn b {
+                        return ""
+                    }
+                }
+
+                let foo = new Foo {};
+                foo.a();
+                foo.b();
+                """));
+
+    [Fact]
+    public void Allows_GenericTraitImplementation() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics("""
+                trait Iterator<T> {
+                    fn next(): T
+                }
+
+                interface Numbers;
+
+                implement Iterator<number> for Numbers {
+                    fn next() {
+                        return 1
+                    }
+                }
+                """));
+
+    [Fact]
+    public void Allows_InterfaceInvocation_WithImplementedTraitMethod() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics(
+                """
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface Foo;
+
+                implement Iterator for Foo {
+                    fn next() {
+                        return 42
+                    }
+                }
+
+                let foo = new Foo {};
+                foo.next();
+                """
+            )
+        );
+
+    [Fact]
+    public void Allows_Implement_ReturnInference() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics(
+                """
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface Foo;
+
+                implement Iterator for Foo {
+                    fn next() {
+                        return 1
+                    }
+                }
+                """
+            )
+        );
+
+    [Fact]
+    public void Allows_Implement_ParameterInference() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics(
+                """
+                trait Iterator {
+                    fn next(x: number): number
+                }
+
+                interface Foo;
+
+                implement Iterator for Foo {
+                    fn next(x) {
+                        return x
+                    }
+                }
+                """
+            )
+        );
+
+    [Fact]
     public void Checks_Trait_EmptyObject()
     {
         var type = Utility.GetLastStatementType("trait Empty { }");
         var interfaceType = Assert.IsType<InterfaceType>(type);
         Assert.Equal(ObjectType.Empty, interfaceType.ObjectType);
     }
-    
+
     [Fact]
     public void Checks_Trait_MethodsBecomeObjectProperties()
     {

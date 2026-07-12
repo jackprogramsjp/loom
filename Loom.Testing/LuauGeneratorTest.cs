@@ -487,8 +487,195 @@ public class LuauGeneratorTest
         Assert.Single(innerBody.Statements);
         Assert.IsType<Break>(innerBody.Statements.First());
 
-        var outerContinue = Assert.IsType<Luau.AST.Continue>(outerBody.Statements[1]);
+        var outerContinue = Assert.IsType<Continue>(outerBody.Statements[1]);
         Assert.Equal("continue", outerContinue.Render());
+    }
+    
+    [Fact]
+    public void Generates_Interface_With_Constraint_And_Implementation()
+    {
+        var luauTree = Utility.GetLuauAST("""
+            trait Display { fn display(): void; }
+
+            interface Base {
+                value: number
+            }
+
+            interface Container: Base { }
+
+            implement Display for Container {
+                fn display() -> print(value);
+            }
+            """, typeCheck: true);
+
+        Assert.Equal(7, luauTree.Statements.Count);
+        
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements[2]);
+        var intersection = Assert.IsType<IntersectionType>(alias.Type);
+        Assert.Equal(3, intersection.Types.Count);
+
+        Assert.Equal("Base", Assert.IsType<TypeName>(intersection.Types[0]).Name);
+        Assert.IsType<TableType>(intersection.Types[1]);
+        Assert.Equal("Display", Assert.IsType<TypeName>(intersection.Types[2]).Name);
+    }
+
+    [Fact]
+    public void Generates_Implement_Multiple()
+    {
+        var luauTree = Utility.GetLuauAST(
+            """
+            trait Display { fn display(): void }
+            trait Serialize { fn serialize(): string }
+
+            interface Container { value: number }
+
+            implement Display for Container {
+                fn display() -> print(value);
+            }
+
+            implement Serialize for Container {
+                fn serialize() -> string(value);
+            }
+
+            let container = new Container { value: 69 };
+            """,
+            typeCheck: true
+        );
+
+        Assert.Equal(12, luauTree.Statements.Count);
+
+        var interfaceAlias = Assert.IsType<TypeAlias>(luauTree.Statements[2]);
+        var intersection = Assert.IsType<IntersectionType>(interfaceAlias.Type);
+        Assert.Equal(3, intersection.Types.Count);
+        Assert.IsType<TableType>(intersection.Types[0]);
+        Assert.Equal("Display", Assert.IsType<TypeName>(intersection.Types[1]).Name);
+        Assert.Equal("Serialize", Assert.IsType<TypeName>(intersection.Types[2]).Name);
+        Assert.Equal("Display_for_Container", Assert.IsType<LocalVariable>(luauTree.Statements[3]).Name);
+        Assert.Equal("Serialize_for_Container", Assert.IsType<LocalVariable>(luauTree.Statements[7]).Name);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[11]);
+        var cast = Assert.IsType<TypeCast>(variable.Initializer);
+        var setmetatableCall = Assert.IsType<Call>(cast.Expression);
+        var mergeCall = Assert.IsType<Call>(setmetatableCall.Arguments[1]);
+        Assert.Equal(2, mergeCall.Arguments.Count);
+        Assert.Equal("Display_for_Container", Assert.IsType<Identifier>(mergeCall.Arguments[0]).Name);
+        Assert.Equal("Serialize_for_Container", Assert.IsType<Identifier>(mergeCall.Arguments[1]).Name);
+    }
+
+    [Fact]
+    public void Generates_Implement_Basic()
+    {
+        var luauTree = Utility.GetLuauAST(
+            """
+            trait Display { fn display(depth: number): void }
+            interface Container { value: number }
+            implement Display for Container {
+                fn display(depth) -> print(depth * value);
+            }
+            let container = new Container { value: 69 };
+            container.display(420);
+            """,
+            typeCheck: true
+        );
+
+        Assert.Equal(8, luauTree.Statements.Count);
+
+        var interfaceTypeAlias = Assert.IsType<TypeAlias>(luauTree.Statements[1]);
+        Assert.Equal("Container", interfaceTypeAlias.Name);
+        Assert.Empty(interfaceTypeAlias.TypeParameters.Parameters);
+
+        var intersection = Assert.IsType<IntersectionType>(interfaceTypeAlias.Type);
+        Assert.Equal(2, intersection.Types.Count);
+        Assert.IsType<TableType>(intersection.Types.First());
+
+        var traitTypeName = Assert.IsType<TypeName>(intersection.Types.Last());
+        Assert.Equal("Display", traitTypeName.Name);
+        Assert.NotNull(traitTypeName.TypeArguments);
+        Assert.Empty(traitTypeName.TypeArguments);
+
+        const string metaName = "Display_for_Container";
+        var implementationVariable = Assert.IsType<LocalVariable>(luauTree.Statements[2]);
+        Assert.Equal(metaName, implementationVariable.Name);
+        Assert.IsType<Table>(implementationVariable.Initializer);
+
+        var indexAssignmentStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[3]);
+        var indexAssignment = Assert.IsType<BinaryOperator>(indexAssignmentStatement.Expression);
+        Assert.Equal("=", indexAssignment.Operator);
+
+        var indexAccess = Assert.IsType<PropertyAccess>(indexAssignment.Left);
+        var identifier = Assert.IsType<Identifier>(indexAccess.Target);
+        var rightIdentifier = Assert.IsType<Identifier>(indexAssignment.Right);
+        Assert.Equal("__index", Assert.Single(indexAccess.Names));
+        Assert.Equal(metaName, identifier.Name);
+        Assert.Equal(metaName, rightIdentifier.Name);
+
+        var castAssignmentStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[4]);
+        var castAssignment = Assert.IsType<BinaryOperator>(castAssignmentStatement.Expression);
+        Assert.Equal("=", castAssignment.Operator);
+
+        var castIdentifier = Assert.IsType<Identifier>(castAssignment.Left);
+        var cast = Assert.IsType<TypeCast>(castAssignment.Right);
+        var castedIdentifier = Assert.IsType<Identifier>(cast.Expression);
+        var castType = Assert.IsType<TypeName>(cast.Type);
+        Assert.Equal(metaName, castIdentifier.Name);
+        Assert.Equal(metaName, castedIdentifier.Name);
+        Assert.Equal("Container", castType.Name);
+
+        var displayFunction = Assert.IsType<Function>(luauTree.Statements[5]);
+        Assert.False(displayFunction.IsConst);
+        Assert.Equal($"{metaName}.display", displayFunction.Name);
+        Assert.Equal(2, displayFunction.Parameters.Count);
+
+        var selfParameter = displayFunction.Parameters.First();
+        Assert.Equal("self", selfParameter.Name);
+
+        var selfType = Assert.IsType<TypeName>(selfParameter.DeclaredType);
+        Assert.Equal("Container", selfType.Name);
+        Assert.NotNull(selfType.TypeArguments);
+        Assert.Empty(selfType.TypeArguments);
+        Assert.Equal("depth", displayFunction.Parameters.Last().Name);
+
+        var @return = Assert.IsType<Return>(Assert.Single(displayFunction.Body.Statements));
+        var printCall = Assert.IsType<Call>(@return.Expression);
+        Assert.Equal("print", Assert.IsType<Identifier>(printCall.Callee).Name);
+
+        var binaryOperator = Assert.IsType<BinaryOperator>(Assert.Single(printCall.Arguments));
+        Assert.Equal("*", binaryOperator.Operator);
+        Assert.Equal("depth", Assert.IsType<Identifier>(binaryOperator.Left).Name);
+
+        var selfAccess = Assert.IsType<PropertyAccess>(binaryOperator.Right);
+        Assert.Equal("self", Assert.IsType<Identifier>(selfAccess.Target).Name);
+        Assert.Equal("value", Assert.Single(selfAccess.Names));
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[6]);
+        Assert.Equal("container", variable.Name);
+        Assert.Null(variable.DeclaredType);
+
+        var constructorCast = Assert.IsType<TypeCast>(variable.Initializer);
+        var constructorCastType = Assert.IsType<TypeName>(constructorCast.Type);
+        Assert.Equal("Container", constructorCastType.Name);
+        Assert.NotNull(constructorCastType.TypeArguments);
+        Assert.Empty(constructorCastType.TypeArguments);
+
+        var setmetatableCall = Assert.IsType<Call>(constructorCast.Expression);
+        Assert.False(setmetatableCall.IsMethod);
+        Assert.Equal("setmetatable", Assert.IsType<Identifier>(setmetatableCall.Callee).Name);
+        Assert.Equal(2, setmetatableCall.Arguments.Count);
+        Assert.IsType<Table>(setmetatableCall.Arguments.First());
+
+        var mergeCall = Assert.IsType<Call>(setmetatableCall.Arguments.Last());
+        var loomMerge = Assert.IsType<PropertyAccess>(mergeCall.Callee);
+        Assert.Equal(LuauFactory.RuntimeImportName, Assert.IsType<Identifier>(loomMerge.Target).Name);
+        Assert.Equal("merge_meta", Assert.Single(loomMerge.Names));
+        Assert.Equal(metaName, Assert.IsType<Identifier>(Assert.Single(mergeCall.Arguments)).Name);
+
+        var methodCallStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[7]);
+        var methodCall = Assert.IsType<Call>(methodCallStatement.Expression);
+        var methodAccess = Assert.IsType<PropertyAccess>(methodCall.Callee);
+        Assert.True(methodCall.IsMethod);
+        Assert.Equal("container", Assert.IsType<Identifier>(methodAccess.Target).Name);
+        Assert.Equal("display", Assert.Single(methodAccess.Names));
+        Assert.Equal(420, Assert.IsType<NumberLiteral>(Assert.Single(methodCall.Arguments)).Value);
     }
 
     [Fact]
@@ -506,12 +693,13 @@ public class LuauGeneratorTest
 
         var prop = tableType.Properties.First();
         Assert.Equal("method", prop.Name);
-        Assert.Equal(LuauVisibility.Read, prop.Visibility);
+        Assert.Null(prop.Visibility);
 
         var fnType = Assert.IsType<FunctionType>(prop.Type);
-        Assert.Empty(fnType.ParameterTypes);
-        Assert.IsType<PrimitiveType>(fnType.ReturnType);
-        Assert.Equal(PrimitiveTypeKind.Number, ((PrimitiveType)fnType.ReturnType).Kind);
+        Assert.Single(fnType.ParameterTypes);
+
+        var returnType = Assert.IsType<PrimitiveType>(fnType.ReturnType);
+        Assert.Equal(PrimitiveTypeKind.Number, returnType.Kind);
     }
 
     [Fact]
@@ -522,26 +710,39 @@ public class LuauGeneratorTest
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         var prop = tableType.Properties.Single();
         var fnType = Assert.IsType<FunctionType>(prop.Type);
-        Assert.Equal(2, fnType.ParameterTypes.Count);
-        Assert.IsType<PrimitiveType>(fnType.ParameterTypes[0]);
+        Assert.Equal(3, fnType.ParameterTypes.Count);
+        Assert.IsType<TypeName>(fnType.ParameterTypes[0]);
         Assert.IsType<PrimitiveType>(fnType.ParameterTypes[1]);
+        Assert.IsType<PrimitiveType>(fnType.ParameterTypes[2]);
         Assert.IsType<PrimitiveType>(fnType.ReturnType);
     }
 
     [Fact]
     public void Generates_TraitDeclaration_Generic()
     {
-        var luauTree = Utility.GetLuauAST("trait T<T> { fn method(value: T): T }", typeCheck: true);
+        var luauTree = Utility.GetLuauAST("trait Trait<T> { fn method(value: T): T }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         Assert.Single(typeAlias.TypeParameters.Parameters);
+
         var param = typeAlias.TypeParameters.Parameters[0];
         Assert.Equal("T", param.Name);
+
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         var prop = tableType.Properties.Single();
         var fnType = Assert.IsType<FunctionType>(prop.Type);
-        Assert.Single(fnType.ParameterTypes);
-        var paramType = Assert.IsType<TypeName>(fnType.ParameterTypes[0]);
+        Assert.Equal(2, fnType.ParameterTypes.Count);
+        Assert.Null(prop.Visibility);
+
+        var selfType = Assert.IsType<TypeName>(fnType.ParameterTypes[0]);
+        Assert.Equal("Trait", selfType.Name);
+
+        var typeArgument = Assert.IsType<TypeName>(Assert.Single(selfType.TypeArguments));
+        Assert.Equal("T", typeArgument.Name);
+        Assert.Empty(typeArgument.TypeArguments);
+
+        var paramType = Assert.IsType<TypeName>(fnType.ParameterTypes[1]);
         Assert.Equal("T", paramType.Name);
+
         var returnType = Assert.IsType<TypeName>(fnType.ReturnType);
         Assert.Equal("T", returnType.Name);
     }
@@ -862,6 +1063,8 @@ public class LuauGeneratorTest
     [Theory]
     [InlineData("Range")]
     [InlineData("Result")]
+    [InlineData("ResultOk")]
+    [InlineData("ResultError")]
     public void Generates_Qualified_IntrinsicType(string typeName)
     {
         var luauTree = Utility.GetLuauAST($"let x: {typeName};");

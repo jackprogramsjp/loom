@@ -39,5 +39,13 @@ function Event.fire<A...>(self: EventPrivate<(A...) -> ()>, ...: A...)
 	end
 end
 
+function Loom.merge_meta(...: {})
+	local meta = select(1, ...)
+	for i = 2, select("#", ...) do
+		meta = setmetatable(meta, select(i, ...))
+	end
+	return meta
+end
+
 table.freeze(Loom)
 return Loom

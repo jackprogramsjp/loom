@@ -14,8 +14,10 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
     public bool MustImportRuntimeLibrary =>
         !DisableRuntimeLibraryImport
         && !Tree.File.IsIntrinsic
-        && (References.Any(pair => !NodeId.Map[pair.Key].File.IsIntrinsic && pair.Value.Any(s => s.File.Name == "runtime.loom" && s.IsIntrinsic))
-            || RuntimeReferences > 0);
+        && (
+            RuntimeReferences > 0
+            || References.Any(pair => !NodeId.Map[pair.Key].File.IsIntrinsic && pair.Value.Any(s => s.File.Name == "runtime.loom" && s.IsIntrinsic))
+        );
 
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
 
