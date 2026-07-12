@@ -192,7 +192,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     private FlowState AnalyzeIdentifier(Identifier identifier, FlowState state)
     {
         var symbol = semanticModel.GetSymbol(identifier);
-        if (symbol is not { IsValueSymbol: true } || state.DefinitelyInitialized.Contains(symbol))
+        if (symbol is null)
             return BindState(identifier, state);
 
         if (symbol.IsIntrinsic || symbol.Declaration.FirstAncestorOfType<Declare>() is not null)

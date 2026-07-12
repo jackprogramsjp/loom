@@ -48,7 +48,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
             return false;
 
         var parameters = functionType.ParameterTypes
-            .Select((_, index) => new Parameter($"_arg{index}"))
+            .Select((_, index) => new Parameter($"argument{index}"))
             .ToList();
         var arguments = parameters
             .Select(parameter => (LuauExpression)new Luau.AST.Identifier(parameter.Name))
