@@ -1,3 +1,4 @@
+using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
 
@@ -48,7 +49,7 @@ public sealed partial class Parser
 
         return type;
     }
-    
+
     private TypeExpression ParseUnaryType()
     {
         if (!Match(out var keyOfKeyword, SyntaxKind.KeyOfKeyword))
@@ -59,7 +60,7 @@ public sealed partial class Parser
         var rightParen = Expect(SyntaxKind.RParen);
         return new KeyOf(keyOfKeyword, leftParen, rightParen, innerType);
     }
-    
+
     private TypeExpression ParsePrimaryType()
     {
         if (Match(out var fnKeyword, SyntaxKind.FnKeyword))
@@ -78,7 +79,7 @@ public sealed partial class Parser
         var typeArguments = ParseTypeArguments();
         return new TypeName(name, typeArguments);
     }
-    
+
     private TypeExpression ParseFunctionType(Token fnKeyword)
     {
         var typeParameters = ParseTypeParameters();
@@ -143,6 +144,26 @@ public sealed partial class Parser
         var arguments = ParseDelimited(ParseType);
         if (MatchClosingArrow(out var rightArrow))
             return new TypeArguments(leftArrow, rightArrow, arguments);
+
+        Expect(SyntaxKind.RArrow);
+        return null;
+    }
+
+    private TypeArguments<T>? ParseTypeArguments<T>(bool forInvocation = false, string? error = null)
+        where T : TypeExpression
+    {
+        if (!Match(out var leftArrow, forInvocation ? SyntaxKind.ColonColonLArrow : SyntaxKind.LArrow))
+            return null;
+
+        var arguments = ParseDelimited(ParseType);
+        if (error != null && arguments.Find(a => a is not T) is { } invalidArgument)
+        {
+            _diagnostics.Error(invalidArgument, InternalCodes.InvalidTypeArguments, error);
+            return null;
+        }
+
+        if (MatchClosingArrow(out var rightArrow))
+            return new TypeArguments<T>(leftArrow, rightArrow, arguments.OfType<T>().ToList());
 
         Expect(SyntaxKind.RArrow);
         return null;

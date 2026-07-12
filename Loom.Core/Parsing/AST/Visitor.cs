@@ -99,7 +99,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitLiteral(Literal literal) => DefaultValue(literal);
     public virtual T VisitIdentifier(Identifier identifier) => DefaultValue(identifier);
     public virtual T VisitParenthesized(Parenthesized parenthesized) => Visit(parenthesized.Expression);
-    public virtual T VisitNameOf(NameOf nameOf) => Visit(nameOf.Name);
+    public virtual T VisitNameOf(NameOf nameOf) => CombineResults([VisitWithDefault(nameOf.TypeArguments), VisitWithDefault(nameOf.Name)]);
     public virtual T VisitArguments(Arguments arguments) => VisitList(arguments.ArgumentList);
 
     public virtual T VisitInvocation(Invocation invocation) =>
@@ -138,7 +138,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
         CombineResults([VisitWithDefault(typeParameter.ColonTypeClause), VisitWithDefault(typeParameter.EqualsTypeClause)]);
 
     public virtual T VisitTypeParameters(TypeParameters typeParameters) => VisitList(typeParameters.ParameterList);
-    public virtual T VisitTypeArguments(TypeArguments typeArguments) => VisitList(typeArguments.ArgumentsList);
+    public virtual T VisitTypeArguments<TType>(TypeArguments<TType> typeArguments) where TType : TypeExpression => VisitList(typeArguments.ArgumentsList);
     public virtual T VisitColonTypeListClause(ColonTypeListClause colonTypeListClause) => VisitList(colonTypeListClause.Types);
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
     public virtual T VisitEqualsTypeClause(EqualsTypeClause equalsTypeClause) => Visit(equalsTypeClause.Type);

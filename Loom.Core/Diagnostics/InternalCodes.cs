@@ -67,6 +67,7 @@ public static class InternalCodes
     public const string MissingImplementation = "L343";
     public const string DuplicateImplementation = "L344";
     public const string IntrinsicImplementation = "L345";
+    public const string InvalidTypeArguments = "L346";
     
     public const string SimplifiableCode = "L400";
 }

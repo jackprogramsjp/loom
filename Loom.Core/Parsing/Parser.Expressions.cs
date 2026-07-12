@@ -198,13 +198,28 @@ public sealed partial class Parser
 
     private Expression ParseNameOf(Token keyword)
     {
+        var typeArguments = ParseTypeArguments<TypeName>(true, "May only get name of type when the type is a type name.");
         var leftParen = Expect(SyntaxKind.LParen);
-        var expression = ParseExpression();
+        var expression = typeArguments == null ? ParseExpression() : null;
         var rightParen = Expect(SyntaxKind.RParen);
         if (expression is Name name)
-            return new NameOf(keyword, leftParen, rightParen, name);
+            return new NameOf(keyword, null, leftParen, rightParen, name);
 
-        _diagnostics.Error(expression, InternalCodes.InvalidNameOf, $"'{expression}' is not a valid name.");
+        if (typeArguments != null)
+        {
+            if (typeArguments.ArgumentsList.Count == 1)
+                return new NameOf(keyword, typeArguments, leftParen, rightParen, null);
+
+            _diagnostics.Error(typeArguments, InternalCodes.GenericArity, "Exactly one type parameter is allowed for 'nameof::<T>()'.");
+            return new NullExpression(keyword);
+        }
+
+        _diagnostics.Error(
+            typeArguments?.Span ?? expression!.Span,
+            InternalCodes.InvalidNameOf,
+            $"'{typeArguments?.ArgumentsList.FirstOrDefault()?.ToString() ?? expression!.ToString()}' is not a valid name."
+        );
+
         return new NullExpression(keyword);
     }
 

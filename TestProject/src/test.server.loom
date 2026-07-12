@@ -1,4 +1,52 @@
-##!strict
-##!native
-##!optimize 2
-print(420 * 69);
+interface Component {
+  name: string;
+};
+type Entity = number;
+
+interface ComponentStorage {
+  mut [Entity]: Component[mut];
+}
+
+interface WorldData {
+  component_storage: ComponentStorage;
+}
+
+mut eid: Entity = -1;
+trait World {
+  fn spawn(components: Component[mut]): Entity;
+  fn query<T: Component>(entity: Entity, name: string): T[];
+}
+
+implement World for WorldData {
+  fn spawn(components) {
+    let entity = eid += 1;
+    if component_storage[entity] == none {
+      component_storage[entity] = components;
+    }
+    else {
+      for c : components
+        component_storage[entity].push(c);
+    }
+
+    return entity;
+  }
+
+  fn query<T: Component>(entity, name) {
+    let components = component_storage[entity];
+    let result: T[mut] = mut [];
+    for c : components
+      if c.name == name
+        result.push(c as never as T);
+
+    return result;
+  }
+}
+
+interface Position: Component {
+  x: number;
+  y: number;
+}
+
+let world = new WorldData { component_storage: new ComponentStorage {} };
+let player = world.spawn(mut [new Position { name: nameof::<Position>(), x: 69, y: 420 }]);
+print(world.query::<Position>(player, nameof::<Position>()))

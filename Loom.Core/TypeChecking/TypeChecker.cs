@@ -283,7 +283,8 @@ public sealed partial class TypeChecker
         return BindType(asExpression, castedType);
     }
 
-    public override Type VisitNameOf(NameOf nameOf) => BindType(nameOf, new Types.LiteralType(nameOf.Name.ToString()));
+    public override Type VisitNameOf(NameOf nameOf) =>
+        BindType(nameOf, new Types.LiteralType(nameOf.TypeArguments?.ArgumentsList.FirstOrDefault()?.ToString() ?? nameOf.Name?.ToString()));
 
     public override Type VisitInvocation(Invocation invocation)
     {
@@ -834,7 +835,7 @@ public sealed partial class TypeChecker
         _diagnostics.Error(
             expression,
             InternalCodes.InvalidMacroReference,
-            $"Invocation macro '{memberName}' cannot be used as a value. Call it directly (e.g. {memberName}(...)) or pass it as a function argument."  
+            $"Invocation macro '{memberName}' cannot be used as a value. Call it directly (e.g. {memberName}(...)) or pass it as a function argument."
         );
     }
 
