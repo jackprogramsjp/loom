@@ -195,6 +195,12 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         if (symbol is not { IsValueSymbol: true } || state.DefinitelyInitialized.Contains(symbol))
             return BindState(identifier, state);
 
+        if (symbol.IsIntrinsic || symbol.Declaration.FirstAncestorOfType<Declare>() is not null)
+            return BindState(identifier, state);
+
+        if (symbol is not { IsValueSymbol: true } || state.DefinitelyInitialized.Contains(symbol))
+            return BindState(identifier, state);
+
         if (state.MaybeInitialized.Contains(symbol))
             _diagnostics.Error(identifier, InternalCodes.UseOfMaybeUninitialized, $"Variable '{symbol.Name}' might not be initialized on this path.");
         else
