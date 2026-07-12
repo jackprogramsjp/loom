@@ -50,7 +50,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             bodyState.DefinitelyInitialized.Add(symbol);
             bodyState.MaybeInitialized.Add(symbol);
         }
-        
+
         foreach (var declaration in implement.Body.Implementations)
         {
             if (semanticModel.GetDeclarationSymbol(declaration, SymbolKind.Function) is not { } symbol) continue;
@@ -73,7 +73,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     }
 
     private FlowState AnalyzeBlock(Block block, FlowState state) => BindState(block, AnalyzeStatements(block.Statements, state));
-    
+
     private FlowState AnalyzeFunctionDeclaration(FunctionDeclaration functionDeclaration, FlowState state)
     {
         var newState = new FlowState(state);
@@ -82,7 +82,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             newState.DefinitelyInitialized.Add(symbol);
             newState.MaybeInitialized.Add(symbol);
         }
-        
+
         var functionState = new FlowState(newState);
         if (functionDeclaration.Parameters != null)
         {
@@ -194,7 +194,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             state = AnalyzeExpression(assignment.Left, state);
             state = AnalyzeExpression(assignment.Right, state);
         }
-        
+
         return BindState(assignment, state);
     }
 
@@ -212,14 +212,14 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     private FlowState AnalyzeIdentifier(Identifier identifier, FlowState state)
     {
         var symbol = semanticModel.GetSymbol(identifier);
-        if (symbol is null)
+        if (symbol is null
+            || symbol.IsIntrinsic
+            || symbol.Declaration.FirstAncestorOfType<Declare>() is not null
+            || symbol is { IsValueSymbol: false }
+            || state.DefinitelyInitialized.Contains(symbol))
+        {
             return BindState(identifier, state);
-
-        if (symbol.IsIntrinsic || symbol.Declaration.FirstAncestorOfType<Declare>() is not null)
-            return BindState(identifier, state);
-
-        if (symbol is not { IsValueSymbol: true } || state.DefinitelyInitialized.Contains(symbol))
-            return BindState(identifier, state);
+        }
 
         if (state.MaybeInitialized.Contains(symbol))
             _diagnostics.Error(identifier, InternalCodes.UseOfMaybeUninitialized, $"Variable '{symbol.Name}' might not be initialized on this path.");

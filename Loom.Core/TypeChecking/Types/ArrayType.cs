@@ -44,8 +44,6 @@ public sealed class ArrayType(Type elementType, bool isMutable)
         var validMutability = IsMutable || !targetArray.IsMutable;
         return validMutability && (IsNever(ElementType) || ElementType.Equals(targetArray.ElementType));
     }
-
-    public override Type Widen() => IsNever(ElementType) ? new ArrayType(PrimitiveType.Unknown, IsMutable) : this;
-
+    
     public override string ToString() => $"{ParenthesizeIfNeeded(ElementType)}[{(IsMutable ? "mut" : "")}]";
 }

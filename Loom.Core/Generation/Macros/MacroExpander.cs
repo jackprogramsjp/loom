@@ -47,12 +47,8 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         if (semanticModel.GetType(expression) is not FunctionType functionType)
             return false;
 
-        var parameters = functionType.ParameterTypes
-            .Select((_, index) => new Parameter($"argument{index}"))
-            .ToList();
-        var arguments = parameters
-            .Select(parameter => (LuauExpression)new Luau.AST.Identifier(parameter.Name))
-            .ToList();
+        var parameters = functionType.ParameterTypes.Select((_, index) => new Parameter($"argument{index}")).ToList();
+        var arguments = parameters.ConvertAll(LuauExpression (parameter) => new Luau.AST.Identifier(parameter.Name));
         var call = new Call(callee, arguments);
         if (!provider.TryInvocation(_context, memberName.Trim(), call, out var body))
             return false;

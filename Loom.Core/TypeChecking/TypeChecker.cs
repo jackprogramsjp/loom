@@ -549,7 +549,7 @@ public sealed partial class TypeChecker
         var elementType = TypeSimplifier.Simplify(new Types.UnionType(expressionTypes));
         var isMutable = arrayLiteral.MutKeyword != null;
         var type = new Types.ArrayType(elementType, isMutable);
-        return BindType(arrayLiteral, isMutable ? type.Widen() : type);
+        return BindType(arrayLiteral, type);
     }
 
     public override Type VisitLiteral(Literal literal) => BindType(literal, new Types.LiteralType(literal.Value));
