@@ -2417,11 +2417,23 @@ public class LuauGeneratorTest
         Assert.IsType<BooleanLiteral>(unary.Operand);
         Assert.Equal("not ", unary.Operator);
     }
+    
+    [Fact]
+    public void Generates_NameOf_ForType()
+    {
+        var luauTree = Utility.GetLuauAST("type T = 69; nameof::<T>()", typeCheck: true);
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        Assert.IsType<TypeAlias>(luauTree.Statements.First());
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var literal = Assert.IsType<StringLiteral>(variable.Initializer);
+        Assert.Equal("T", literal.Value);
+    }
 
     [Fact]
     public void Generates_NameOf()
     {
-        var luauTree = Utility.GetLuauAST("let x = 1; nameof(x)");
+        var luauTree = Utility.GetLuauAST("let x = 1; nameof(x)", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         Assert.IsType<ConstVariable>(luauTree.Statements.First());

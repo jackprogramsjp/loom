@@ -78,6 +78,9 @@ public class ParserTest
         ["implement Foo for Bar<T> { }", InternalCodes.UnexpectedToken, "Expected '{', got '<'."],
         ["implement Foo 123 Bar { }", InternalCodes.UnexpectedToken, "Expected 'for', got '123'."],
         ["implement Foo for 123 { }", InternalCodes.UnexpectedToken, "Expected interface name, got '123'."],
+        ["nameof::<number>()", InternalCodes.InvalidTypeArguments, "May only get name of type when the type is a type name."],
+        ["nameof::<T>(1)", InternalCodes.UnexpectedToken, "Expected ')', got '1'."],
+        ["nameof::<T, U>()", InternalCodes.GenericArity, "Exactly one type parameter is allowed for 'nameof::<T>()'."],
     ];
 
     public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("AST", ".ast");

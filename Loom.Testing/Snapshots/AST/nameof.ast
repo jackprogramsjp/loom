@@ -1,5 +1,6 @@
 ﻿ExpressionStatement(
   Expression: NameOf(
+    TypeArguments: null
     LeftParen: Token(LParen, "(")
     RightParen: Token(RParen, ")")
     Name: Identifier(
@@ -10,6 +11,7 @@
 )
 ExpressionStatement(
   Expression: NameOf(
+    TypeArguments: null
     LeftParen: Token(LParen, "(")
     RightParen: Token(RParen, ")")
     Name: Identifier(
@@ -20,6 +22,7 @@ ExpressionStatement(
 )
 ExpressionStatement(
   Expression: NameOf(
+    TypeArguments: null
     LeftParen: Token(LParen, "(")
     RightParen: Token(RParen, ")")
     Name: QualifiedName(
@@ -39,6 +42,7 @@ ExpressionStatement(
 )
 ExpressionStatement(
   Expression: NameOf(
+    TypeArguments: null
     LeftParen: Token(LParen, "(")
     RightParen: Token(RParen, ")")
     Name: QualifiedName(
