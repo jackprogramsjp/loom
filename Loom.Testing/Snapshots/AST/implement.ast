@@ -1,0 +1,126 @@
+﻿Implement(
+  TraitName: TypeName(
+    Name: Token(Identifier, "Empty")
+    TypeArguments: null
+  )
+  ForKeyword: Token(ForKeyword, "for")
+  InterfaceName: TypeName(
+    Name: Token(Identifier, "String")
+    TypeArguments: null
+  )
+  Body: ImplementBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Implementations: []
+  )
+)
+Implement(
+  TraitName: TypeName(
+    Name: Token(Identifier, "Iterator")
+    TypeArguments(
+      LeftArrow: Token(LArrow, "<")
+      RightArrow: Token(RArrow, ">")
+      ArgumentsList: [
+        TypeName(
+          Name: Token(Identifier, "T")
+          TypeArguments: null
+        )
+      ]
+    )
+  )
+  ForKeyword: Token(ForKeyword, "for")
+  InterfaceName: TypeName(
+    Name: Token(Identifier, "List")
+    TypeArguments: null
+  )
+  Body: ImplementBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Implementations: [
+      FunctionDeclaration(
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: TypeName(
+            Name: Token(Identifier, "T")
+            TypeArguments: null
+          )
+        )
+        Body: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: []
+        )
+        Parameters(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ParameterList: []
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "next")
+      )
+    ]
+  )
+)
+Implement(
+  TraitName: TypeName(
+    Name: Token(Identifier, "Foo")
+    TypeArguments: null
+  )
+  ForKeyword: Token(ForKeyword, "for")
+  InterfaceName: TypeName(
+    Name: Token(Identifier, "Bar")
+    TypeArguments: null
+  )
+  Body: ImplementBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Implementations: [
+      FunctionDeclaration(
+        ReturnType: null
+        Body: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: []
+        )
+        Parameters(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ParameterList: []
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "a")
+      )
+      FunctionDeclaration(
+        ReturnType: ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Void
+          )
+        )
+        Body: Block(
+          LeftBrace: Token(LBrace, "{")
+          RightBrace: Token(RBrace, "}")
+          Statements: []
+        )
+        Parameters(
+          LeftParen: Token(LParen, "(")
+          RightParen: Token(RParen, ")")
+          ParameterList: [
+            Parameter(
+              ColonTypeClause(
+                ColonToken: Token(Colon, ":")
+                Type: PrimitiveType(
+                  Kind: Number
+                )
+              )
+              EqualsValueClause: null
+              Name: Token(Identifier, "x")
+            )
+          ]
+        )
+        TypeParameters: null
+        Name: Token(Identifier, "b")
+      )
+    ]
+  )
+)

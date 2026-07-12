@@ -15,7 +15,9 @@ public sealed partial class Parser
             [SyntaxKind.MutKeyword] = ParseVariableDeclaration,
             [SyntaxKind.TypeKeyword] = ParseTypeAlias,
             [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
-            [SyntaxKind.DeclareKeyword] = ParseDeclareStatement,
+            [SyntaxKind.DeclareKeyword] = ParseDeclare,
+            [SyntaxKind.ImplementKeyword] = ParseImplement,
+            [SyntaxKind.TraitKeyword] = ParseTraitDeclaration,
             [SyntaxKind.InterfaceKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.SealedKeyword] = ParseInterfaceDeclaration,
             [SyntaxKind.IfKeyword] = ParseIf,
@@ -25,7 +27,40 @@ public sealed partial class Parser
             [SyntaxKind.BreakKeyword] = ParseBreak,
             [SyntaxKind.ContinueKeyword] = ParseContinue,
         };
+
+    private Implement ParseImplement(Token keyword)
+    {
+        var traitNameIdentifier = ExpectIdentifier("trait name");
+        var typeArguments = ParseTypeArguments();
+        var traitName = new TypeName(traitNameIdentifier, typeArguments);
+        var forKeyword = Expect(SyntaxKind.ForKeyword);
+        var interfaceName = new TypeName(ExpectIdentifier("interface name"));
+        var body = ParseImplementBody();
+
+        return new Implement(keyword, traitName, forKeyword, interfaceName, body);
+    }
+
+    private ImplementBody ParseImplementBody()
+    {
+        var leftBrace = Expect(SyntaxKind.LBrace);
+        var implementations = ParseImplementMethods();
+        var rightBrace = Expect(SyntaxKind.RBrace);
+        
+        return new ImplementBody(leftBrace, rightBrace, implementations);
+    }
     
+    private List<FunctionDeclaration> ParseImplementMethods()
+    {
+        var members = new List<Statement>();
+        while (Match(out var fnKeyword, SyntaxKind.FnKeyword))
+        {
+            members.Add(ParseFunctionDeclaration(fnKeyword));
+            Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
+        }
+
+        return members.OfType<FunctionDeclaration>().ToList();
+    }
+
     private Statement ParseStatement()
     {
         var statement = ParseStatementCore();

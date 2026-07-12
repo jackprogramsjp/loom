@@ -24,6 +24,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             Block block => AnalyzeBlock(block, state),
             VariableDeclaration variableDeclaration => AnalyzeVariableDeclaration(variableDeclaration, state),
             FunctionDeclaration functionDeclaration => AnalyzeFunctionDeclaration(functionDeclaration, state),
+            Implement implement => AnalyzeImplement(implement, state),
             Return @return => AnalyzeReturn(@return, state),
             Break @break => AnalyzeBreak(@break, state),
             Continue @continue => AnalyzeContinue(@continue, state),
@@ -39,6 +40,25 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             _diagnostics.Warn(statement, InternalCodes.UnreachableCode, "Unreachable code detected.");
 
         return newState;
+    }
+
+    private FlowState AnalyzeImplement(Implement implement, FlowState state)
+    {
+        var bodyState = new FlowState(state);
+        foreach (var symbol in semanticModel.GetDeclarationSymbols(implement))
+        {
+            bodyState.DefinitelyInitialized.Add(symbol);
+            bodyState.MaybeInitialized.Add(symbol);
+        }
+        
+        foreach (var declaration in implement.Body.Implementations)
+        {
+            if (semanticModel.GetDeclarationSymbol(declaration, SymbolKind.Function) is not { } symbol) continue;
+            bodyState.DefinitelyInitialized.Add(symbol);
+            bodyState.MaybeInitialized.Add(symbol);
+        }
+
+        return AnalyzeStatement(implement.Body, bodyState);
     }
 
     private FlowState AnalyzeExpression(Expression expression, FlowState state)

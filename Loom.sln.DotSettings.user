@@ -18,6 +18,37 @@
 	
 	
 	
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=8e4cb2e4_002Db682_002D4f62_002Db3d1_002D3385549fef21/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Generates_Qualified_IntrinsicType" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;xUnit::9995EF26-8479-43A8-9973-4DAA5C980D17::net9.0::Loom.Testing.LuauGeneratorTest.Generates_Qualified_IntrinsicType&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=e21ac72e_002D1f7e_002D4abe_002D8cd4_002Dbff25040b494/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from &amp;lt;Loom.Testing&amp;gt;" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;Project Location="C:\Users\Riley Peel\dev\c#\Loom\Loom.Testing" Presentation="&amp;lt;Loom.Testing&amp;gt;" /&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

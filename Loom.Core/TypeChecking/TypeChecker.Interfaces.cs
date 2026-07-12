@@ -1,13 +1,68 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
 using Loom.Core.TypeChecking.Types;
+using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
+using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core.TypeChecking;
 
 public sealed partial class TypeChecker
 {
+    public override Type VisitImplement(Implement implement)
+    {
+        var traitType = Visit(implement.TraitName);
+        var interfaceType = Visit(implement.InterfaceName);
+        foreach (var declaration in implement.Body.Implementations)
+        {
+            var declarationType = (Types.FunctionType)GetTypeAtIndex(declaration, traitType, new LiteralType(declaration.Name.Text));
+            BindType(declaration, declarationType);
+            MaybeVisit(declaration.TypeParameters);
+            for (var i = 0; i < declarationType.ParameterTypes.Count; i++)
+            {
+                var parameter = declaration.Parameters!.ParameterList[i];
+                var explicitType = MaybeVisit(parameter.ColonTypeClause);
+                var initializerType = MaybeVisit(parameter.EqualsValueClause);
+                var type = declarationType.ParameterTypes[i];
+                if (parameter.EqualsValueClause != null)
+                    _semanticModel.TypeSolver.AddConstraint(initializerType!, type, parameter.EqualsValueClause.Value);
+
+                if (parameter.EqualsValueClause != null && Type.IsOptional(type))
+                    type = type.NonNullable();
+
+                if (explicitType != null)
+                    _semanticModel.TypeSolver.AddConstraint(explicitType, type, parameter.ColonTypeClause!.Type);
+
+                BindType(parameter, type);
+            }
+
+            var actualType = GetReturnType(declaration);
+            _semanticModel.TypeSolver.AddConstraint(actualType, declarationType.ReturnType, declaration.ReturnType?.Type.Span ?? declaration.Span);
+            if (declaration.ReturnType != null)
+                BindType(declaration.ReturnType, declarationType.ReturnType);
+
+            Visit(declaration.Body);
+        }
+
+        return TypeSimplifier.Simplify(new Types.IntersectionType([traitType, interfaceType]));
+    }
+
+    public override Type VisitTraitDeclaration(TraitDeclaration traitDeclaration)
+    {
+        var name = traitDeclaration.Name.Text;
+        var typeParameters = traitDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
+        var properties = ResolveTraitProperties(traitDeclaration.Body.Members);
+        var objectType = new ObjectType(null, properties);
+        var interfaceType = new InterfaceType(name, [], objectType);
+        if (typeParameters == null)
+            return BindType(traitDeclaration, interfaceType);
+
+        var genericType = new GenericType(traitDeclaration, typeParameters, interfaceType);
+        return BindType(traitDeclaration, genericType);
+    }
+
     public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
         var name = interfaceDeclaration.Name.Text;
@@ -32,22 +87,36 @@ public sealed partial class TypeChecker
         if (type.Equals(Intrinsics.Range))
             _diagnostics.Warn(node, InternalCodes.SimplifiableCode, "Use range literal.");
 
+        var traitProperties = new List<ObjectProperty>();
+        if (_semanticModel.GetSymbol(node.Name, SymbolKind.Interface) is InterfaceSymbol interfaceSymbol)
+            traitProperties.AddRange(
+                from declaration in interfaceSymbol.Implementations.SelectMany(i => i.Body.Implementations)
+                let methodType = _semanticModel.GetType(declaration)
+                select new ObjectProperty(false, declaration.Name.Text, methodType)
+            );
+        
         if (type is InterfaceType nonGeneric)
-        {
-            CheckInterfaceInvocationInitializers(node, nonGeneric);
-            return BindType(node, nonGeneric);
-        }
+            return BindInterfaceInvocation(node, nonGeneric, traitProperties);
 
         if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
         {
             _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
-            return BindType(node, Types.PrimitiveType.Never);
+            return BindType(node, PrimitiveType.Never);
         }
 
         if (!TrySubstituteGenericInterface(node, generic, underlying, out var interfaceType))
-            return BindType(node, Types.PrimitiveType.Never);
+            return BindType(node, PrimitiveType.Never);
 
+        return BindInterfaceInvocation(node, interfaceType, traitProperties);
+    }
+
+    private Type BindInterfaceInvocation(InterfaceInvocation node, InterfaceType interfaceType, List<ObjectProperty> traitProperties)
+    {
+        var traitMethodNames = traitProperties.Select(p => p.Name).ToHashSet();
         CheckInterfaceInvocationInitializers(node, interfaceType);
+        interfaceType.ObjectType.Properties.AddRange(traitProperties);
+        interfaceType.TraitMethodNames = traitMethodNames;
+        
         return BindType(node, interfaceType);
     }
 
@@ -76,6 +145,14 @@ public sealed partial class TypeChecker
         substituted = new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
         return true;
     }
+
+    private List<ObjectProperty> ResolveTraitProperties(List<DeclareFunctionSignature> signatures) =>
+    (
+        from signature in signatures
+        let name = signature.Name.Text
+        let fnType = Visit(signature)
+        select new ObjectProperty(false, name, fnType)
+    ).ToList();
 
     private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
     {

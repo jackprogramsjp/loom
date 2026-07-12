@@ -1,4 +1,7 @@
 using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.Text;
+using Loom.Core.TypeChecking.Types;
 using Loom.Luau;
 using Loom.Luau.AST;
 using ArrayType = Loom.Core.Parsing.AST.ArrayType;
@@ -39,29 +42,12 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) => WrapExpressionAsStatement(Visit(expressionStatement.Expression));
     public override LuauNode VisitNameOf(NameOf nameOf) => new StringLiteral(nameOf.Name.ToString());
 
-    public override LuauNode VisitInvocation(Invocation invocation)
-    {
-        var call = new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit));
-        return _macroExpander.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
-    }
-
     public override LuauNode VisitAsExpression(AsExpression asExpression) => new TypeCast(Visit(asExpression.Expression), Visit(asExpression.Type));
 
     public override LuauNode VisitTernaryOperator(TernaryOperator ternaryOperator) =>
         new IfExpression(Visit(ternaryOperator.Condition), Visit(ternaryOperator.ThenBranch), [], Visit(ternaryOperator.ElseBranch));
 
     public override LuauNode VisitParenthesized(Parenthesized parenthesized) => new Luau.AST.Parenthesized(Visit(parenthesized.Expression));
-
-    public override LuauNode VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation) => Visit(interfaceInvocation.Body);
-
-    public override LuauNode VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) =>
-        new Table(interfaceInvocationBody.Initializers.ConvertAll(Visit<TableInitializer>));
-
-    public override LuauNode VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
-        new PropertyTableInitializer(propertyInitializer.Name.Text, Visit(propertyInitializer.Expression));
-
-    public override LuauNode VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
-        new ComputedPropertyTableInitializer(Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression));
 
     public override LuauNode VisitRangeLiteral(RangeLiteral rangeLiteral) =>
         new Table([new PropertyTableInitializer("minimum", Visit(rangeLiteral.Minimum)), new PropertyTableInitializer("maximum", Visit(rangeLiteral.Maximum))]);
@@ -84,7 +70,9 @@ public sealed partial class LuauGenerator
         var luauIdentifier = new Luau.AST.Identifier(identifier.Name.Text);
         return _macroExpander.TryGetInvocationMacroReference(identifier, luauIdentifier, out var referenceReplacement)
             ? referenceReplacement
-            : luauIdentifier;
+            : _semanticModel.GetSymbol(identifier) is { Kind: SymbolKind.PropertyVariable } 
+                ? new Luau.AST.PropertyAccess(LuauFactory.Self, [luauIdentifier.Name])
+                : luauIdentifier;
     }
 
     public override LuauNode VisitFunctionType(FunctionType functionType) =>

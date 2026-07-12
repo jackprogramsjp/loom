@@ -62,6 +62,11 @@ public static class InternalCodes
     public const string InvalidKeyOf = "L338";
     public const string ConstraintPropertyOverride = "L339";
     public const string ConstraintIndexerOverride = "L340";
+    public const string NonInterfaceImplementation = "L341";
+    public const string InvalidImplementation = "L342";
+    public const string MissingImplementation = "L343";
+    public const string DuplicateImplementation = "L344";
+    public const string IntrinsicImplementation = "L345";
     
     public const string SimplifiableCode = "L400";
 }

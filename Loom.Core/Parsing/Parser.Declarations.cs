@@ -6,6 +6,35 @@ namespace Loom.Core.Parsing;
 
 public sealed partial class Parser
 {
+    private TraitDeclaration ParseTraitDeclaration(Token keyword)
+    {
+        var name = ExpectIdentifier("trait name");
+        var typeParameters = ParseTypeParameters();
+        var body = ParseTraitBody();
+
+        return new TraitDeclaration(keyword, name, typeParameters, body);
+    }
+    
+    private TraitBody ParseTraitBody()
+    {
+        var leftBrace = Expect(SyntaxKind.LBrace);
+        var members = ParseTraitMembers();
+        var rightBrace = Expect(SyntaxKind.RBrace);
+        return new TraitBody(leftBrace, rightBrace, members);
+    }
+    
+    private List<DeclareFunctionSignature> ParseTraitMembers()
+    {
+        var members = new List<Statement>();
+        while (Match(out var fnKeyword, SyntaxKind.FnKeyword))
+        {
+            members.Add(ParseDeclareFunctionSignature(fnKeyword));
+            Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
+        }
+
+        return members.OfType<DeclareFunctionSignature>().ToList();
+    }
+
     private InterfaceDeclaration ParseInterfaceDeclaration(Token keyword)
     {
         var isSealed = keyword.Kind == SyntaxKind.SealedKeyword;
@@ -15,7 +44,7 @@ public sealed partial class Parser
         var typeParameters = ParseTypeParameters();
         var colonTypeListClause = ParseColonTypeListClause();
         var body = ParseInterfaceBody();
-        
+
         return new InterfaceDeclaration(
             sealedKeyword,
             interfaceKeyword,
@@ -78,7 +107,7 @@ public sealed partial class Parser
         return null;
     }
 
-    private Statement ParseDeclareStatement(Token declareKeyword)
+    private Statement ParseDeclare(Token declareKeyword)
     {
         var statement = ParseDeclareSignature(declareKeyword);
         if (statement is not DeclareSignature signature)
@@ -99,7 +128,7 @@ public sealed partial class Parser
             return ParseInterfaceDeclaration(interfaceKeyword);
 
         _diagnostics.Error(
-            Current() ?? declareKeyword,
+            Current(),
             InternalCodes.ExpectedDeclarationSignature,
             $"Expected declaration signature, got {SafeTokenText(Current())}."
         );
@@ -116,7 +145,7 @@ public sealed partial class Parser
 
     private Statement ParseDeclareFunctionSignature(Token fnKeyword)
     {
-        var name = ExpectIdentifier();
+        var name = ExpectIdentifier("function name");
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
@@ -128,7 +157,7 @@ public sealed partial class Parser
 
     private Statement ParseFunctionDeclaration(Token keyword)
     {
-        var name = ExpectIdentifier();
+        var name = ExpectIdentifier("function name");
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
@@ -140,7 +169,7 @@ public sealed partial class Parser
             body = new ExpressionBody(arrow, ParseExpression());
         else
             body = new NullStatement(Current());
-        
+
         if (body is not NullStatement nullStatement)
             return new FunctionDeclaration(
                 keyword,
@@ -219,7 +248,7 @@ public sealed partial class Parser
         var equalsValueClause = ParseEqualsValueClause();
         return new Parameter(name, colonTypeClause, equalsValueClause);
     }
-    
+
     private EqualsValueClause? ParseEqualsValueClause() => Match(out var equals, SyntaxKind.Equals) ? new EqualsValueClause(equals, ParseExpression()) : null;
     private ColonTypeClause? ParseColonTypeClause() => Match(out var colon, SyntaxKind.Colon) ? new ColonTypeClause(colon, ParseType()) : null;
 

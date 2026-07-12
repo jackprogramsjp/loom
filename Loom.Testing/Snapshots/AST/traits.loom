@@ -1,0 +1,17 @@
+trait Shoot {
+    fn shoot: void;
+}
+
+trait Shoot<T> {
+    fn shoot: T;
+}
+
+trait Shoot<T: number, U> {
+    fn shoot(p: U): T;
+}
+
+trait Stuff {
+    fn step1: void;
+    fn step2: void;
+    fn step3: void;
+}

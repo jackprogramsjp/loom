@@ -1,2 +1,14 @@
-mut x = 69;
-x &= 420 | 67;
+trait Display { fn display(): void }
+trait Serialize { fn serialize(): string }
+
+interface Container { value: number }
+
+implement Display for Container {
+    fn display() -> print(value);
+}
+
+implement Serialize for Container {
+    fn serialize() -> string(value);
+}
+
+let container = new Container { value: 69 };

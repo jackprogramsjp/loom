@@ -25,6 +25,7 @@ public class CompilerTest
         var compilationUnit = new CompilationUnit(new LoomConfig());
         var compiler = new Compiler(compilationUnit, Utility.TestFile(source));
         var file = compiler.Compile();
+        Assert.False(file.SemanticModel.DisableRuntimeLibraryImport);
         Utility.AssertNoErrors(file.Diagnostics);
 
         return file;

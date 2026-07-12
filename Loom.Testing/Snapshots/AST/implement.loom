@@ -1,0 +1,8 @@
+implement Empty for String {}
+implement Iterator<T> for List {
+    fn next(): T { }
+}
+implement Foo for Bar {
+    fn a() { }
+    fn b(x: number): void { }
+}
