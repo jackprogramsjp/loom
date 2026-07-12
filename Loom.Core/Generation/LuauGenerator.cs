@@ -203,13 +203,25 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName)
     {
         var luauAccess = new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
-        return _macroExpander.TryGetQualifiedNameMacro(qualifiedName, luauAccess, out var replacement) ? replacement : luauAccess;
+        if (_macroExpander.TryGetQualifiedNameMacro(qualifiedName, luauAccess, out var propertyReplacement))
+            return propertyReplacement;
+
+        if (_macroExpander.TryGetInvocationMacroReference(qualifiedName, luauAccess, out var referenceReplacement))
+            return referenceReplacement;
+
+        return luauAccess;
     }
 
     public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess)
     {
         var luauAccess = new Luau.AST.PropertyAccess(Visit(propertyAccess.Expression), propertyAccess.Names.ConvertAll(dotName => dotName.Name.Text));
-        return _macroExpander.TryGetPropertyAccessMacro(propertyAccess, luauAccess, out var replacement) ? replacement : luauAccess;
+        if (_macroExpander.TryGetPropertyAccessMacro(propertyAccess, luauAccess, out var propertyReplacement))
+            return propertyReplacement;
+
+        if (_macroExpander.TryGetInvocationMacroReference(propertyAccess, luauAccess, out var referenceReplacement))
+            return referenceReplacement;
+
+        return luauAccess;
     }
 
     public override LuauNode VisitElementAccess(ElementAccess elementAccess)

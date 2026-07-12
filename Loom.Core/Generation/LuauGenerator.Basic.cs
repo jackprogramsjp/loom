@@ -79,7 +79,13 @@ public sealed partial class LuauGenerator
             _ => new NilLiteral()
         };
 
-    public override LuauNode VisitIdentifier(Identifier identifier) => new Luau.AST.Identifier(identifier.Name.Text);
+    public override LuauNode VisitIdentifier(Identifier identifier)
+    {
+        var luauIdentifier = new Luau.AST.Identifier(identifier.Name.Text);
+        return _macroExpander.TryGetInvocationMacroReference(identifier, luauIdentifier, out var referenceReplacement)
+            ? referenceReplacement
+            : luauIdentifier;
+    }
 
     public override LuauNode VisitFunctionType(FunctionType functionType) =>
         new Luau.AST.FunctionType(

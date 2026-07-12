@@ -12,6 +12,8 @@ internal sealed class RangeMacroProvider : IMacroProvider
     public bool Supports(Type type) => type.Equals(Intrinsics.Range);
     public bool Supports(Parsing.AST.Expression _) => false;
 
+    public bool IsInvocationOnlyMember(string memberName) => memberName is "clamp";
+
     public bool TryProperty(MacroContext context, string name, LuauExpression target, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         switch (name)

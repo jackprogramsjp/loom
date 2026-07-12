@@ -38,6 +38,7 @@ public static class InternalCodes
     public const string InvalidInvocation = "L314";
     public const string InvocationArity = "L315";
     public const string RedundantCode = "L316";
+    public const string InvalidMacroReference = "L317";
     public const string ConstraintViolation = "L318";
     public const string UseOfMaybeUninitialized = "L319";
     public const string InvalidAccess = "L320";

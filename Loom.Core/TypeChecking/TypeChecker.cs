@@ -5,6 +5,7 @@ using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.Text;
 using Loom.Core.TypeChecking.Types;
+using Loom.Core.Generation.Macros;
 using ArrayType = Loom.Core.Parsing.AST.ArrayType;
 using FunctionType = Loom.Core.Parsing.AST.FunctionType;
 using IntersectionType = Loom.Core.Parsing.AST.IntersectionType;
@@ -562,7 +563,18 @@ public sealed partial class TypeChecker
 
         var symbol = _semanticModel.GetSymbol(identifier);
         if (symbol != null)
+        {
+            CheckInvocationMacroReference(identifier);
+
+            if (InvocationMacroReference.TryClassify(_semanticModel, identifier, out _, out _)
+                && InvocationMacroReference.IsValidReferenceContext(identifier)
+                && GetContextualType(identifier) is Types.FunctionType contextualType)
+            {
+                return BindType(identifier, contextualType);
+            }
+
             return BindType(identifier, GetType(symbol));
+        }
 
         _diagnostics.Error(identifier, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
         return BindType(identifier, Types.PrimitiveType.Never);
@@ -678,8 +690,27 @@ public sealed partial class TypeChecker
                 when assignment.Right == expression =>
                 _semanticModel.GetType(assignment.Left),
 
+            Arguments arguments when arguments.ArgumentList.Contains(expression)
+                && arguments.Parent is Invocation invocation =>
+                GetInvocationArgumentType(invocation, expression),
+
             _ => null
         };
+
+    private Type? GetInvocationArgumentType(Invocation invocation, Expression argument)
+    {
+        var index = invocation.Arguments.ArgumentList.IndexOf(argument);
+        if (index < 0)
+            return null;
+
+        if (_semanticModel.GetType(invocation.Expression) is not Types.FunctionType functionType)
+            return null;
+
+        if (index >= functionType.ParameterTypes.Count)
+            return null;
+
+        return functionType.ParameterTypes[index];
+    }
 
     private Type? GetEnclosingDeclaredReturnType(Return @return)
     {
@@ -700,6 +731,15 @@ public sealed partial class TypeChecker
             type = IndexType(accessExpression, type, indexType, $"Cannot access property '{indexType.Value}' on type '{type}'.");
             if (Type.IsNever(type))
                 return type;
+        }
+
+        CheckInvocationMacroReference(accessExpression);
+
+        if (InvocationMacroReference.TryClassify(_semanticModel, accessExpression, out _, out _)
+            && InvocationMacroReference.IsValidReferenceContext(accessExpression)
+            && GetContextualType(accessExpression) is Types.FunctionType contextualType)
+        {
+            return BindType(accessExpression, contextualType);
         }
 
         return BindType(accessExpression, type);
@@ -772,6 +812,24 @@ public sealed partial class TypeChecker
             ObjectType objectType => objectType.ValueUnion(),
             _ => Types.PrimitiveType.Never
         };
+
+    private void CheckInvocationMacroReference(Expression expression)
+    {
+        if (!InvocationMacroReference.TryClassify(_semanticModel, expression, out _, out var memberName))
+            return;
+
+        if (InvocationMacroReference.IsValidReferenceContext(expression))
+            return;
+
+        if (InvocationMacroReference.IsDirectInvocationCallee(expression))
+            return;
+
+        _diagnostics.Error(
+            expression,
+            InternalCodes.InvalidMacroReference,
+            $"Invocation macro '{memberName}' cannot be used as a value. Call it directly (e.g. {memberName}(...)) or pass it as a function argument."  
+        );
+    }
 
     private void CheckInvalidAccessAssignment(ElementAccess elementAccess, Type type, Type indexType)
     {
