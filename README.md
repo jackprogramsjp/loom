@@ -890,7 +890,7 @@ type User = {
 local Serialize_string_for_User = {}
 Serialize_string_for_User.__index = Serialize_string_for_User
 Serialize_string_for_User = Serialize_string_for_User :: User
-function Serialize_string_for_User.to_string(self: User)
+function Serialize_string_for_User.serialize(self: User)
 	return self.name .. ", " .. tostring(self.age)
 end
 const user = setmetatable({ name = "Runic", age = 21 }, Loom.merge_meta(Serialize_string_for_User)) :: User
