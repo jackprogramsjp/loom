@@ -749,6 +749,20 @@ public class ResolverTest
 
     #region Allows
     [Fact]
+    public void Allows_ValidShorthandInitializers() =>
+        Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                interface Foo { bar: string, baz: number }
+
+                let bar = "abc";
+                let baz = 420;
+                let foo = new Foo { bar, baz }
+                """
+            )
+        );
+    
+    [Fact]
     public void Allows_ValidTraitImplementation() =>
         Utility.AssertNoErrors(
             Utility.GetSemanticModel(

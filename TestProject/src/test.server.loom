@@ -1,55 +1,9 @@
-interface Component {
-  name: string;
-};
-type Entity = number;
-
-interface ComponentStorage {
-  mut [Entity]: Component[mut];
+interface Comparator<T> {
+    less: fn(a: T, b: T): bool;
 }
 
-interface WorldData {
-  component_storage: ComponentStorage;
-}
+fn max<T>(a: T, b: T, cmp: Comparator<T>): T -> cmp.less(a, b) ? b : a;
+fn less(a: number, b: number): bool -> a < b;
 
-interface Position: Component {
-  x: number;
-  y: number;
-}
-
-interface NameMap {
-  Position: Position;
-}
-
-mut eid: Entity = -1;
-trait World {
-  fn spawn(components: Component[mut]): Entity;
-  fn query<T: keyof(NameMap)>(entity: Entity, name: T): NameMap[T][];
-}
-
-implement World for WorldData {
-  fn spawn(components) {
-    let entity = eid += 1;
-    if component_storage[entity] == none {
-      component_storage[entity] = components;
-    } else {
-      for c : components
-        component_storage[entity].push(c);
-    }
-
-    return entity;
-  }
-
-  fn query<T: Component>(entity, name) {
-    let components = component_storage[entity];
-    let result: T[mut] = mut [];
-    for c : components
-      if c.name == name
-        result.push(c as never as T);
-
-    return result;
-  }
-}
-
-let world = new WorldData { component_storage: new ComponentStorage {} };
-let player = world.spawn(mut [new Position { name: nameof::<Position>(), x: 69, y: 420 }]);
-print(world.query(player, nameof::<Position>()))
+let numbers_comparator = new Comparator { less }
+print(max(5, 8, numbers_comparator));

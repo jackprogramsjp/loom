@@ -3,7 +3,7 @@ interface Comparator<T> {
 }
 
 fn max<T>(a: T, b: T, cmp: Comparator<T>): T -> cmp.less(a, b) ? b : a;
-fn numbers_less(a: number, b: number): bool -> a < b;
+fn less(a: number, b: number): bool -> a < b;
 
-let numbers_comparator = new Comparator { less: numbers_less }
+let numbers_comparator = new Comparator { less }
 print(max(5, 8, numbers_comparator));

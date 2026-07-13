@@ -94,7 +94,7 @@ public sealed partial class TypeChecker
                 let methodType = _semanticModel.GetType(declaration)
                 select new ObjectProperty(false, declaration.Name.Text, methodType)
             );
-        
+
         if (type is InterfaceType nonGeneric)
             return BindInterfaceInvocation(node, nonGeneric, traitProperties);
 
@@ -110,13 +110,13 @@ public sealed partial class TypeChecker
         return BindInterfaceInvocation(node, interfaceType, traitProperties);
     }
 
-    private Type BindInterfaceInvocation(InterfaceInvocation node, InterfaceType interfaceType, List<ObjectProperty> traitProperties)
+    private InterfaceType BindInterfaceInvocation(InterfaceInvocation node, InterfaceType interfaceType, List<ObjectProperty> traitProperties)
     {
         var traitMethodNames = traitProperties.Select(p => p.Name).ToHashSet();
         CheckInterfaceInvocationInitializers(node, interfaceType);
         interfaceType.ObjectType.Properties.AddRange(traitProperties);
         interfaceType.TraitMethodNames = traitMethodNames;
-        
+
         return BindType(node, interfaceType);
     }
 
@@ -211,12 +211,24 @@ public sealed partial class TypeChecker
         {
             case InterfaceInvocationPropertyInitializer propertyInitializer:
             {
-                var propertyName = CheckPropertyInitializer(propertyInitializer, interfaceType);
+                var propertyName = CheckPropertyInitializer(propertyInitializer, propertyInitializer.Name.Text, propertyInitializer.Expression, interfaceType);
                 if (propertyName != null)
                     providedProperties.Add(propertyName);
 
                 break;
             }
+            case InterfaceInvocationShorthandPropertyInitializer shorthandPropertyInitializer:
+                var shorthandPropertyName = CheckPropertyInitializer(
+                    shorthandPropertyInitializer,
+                    shorthandPropertyInitializer.Identifier.Name.Text,
+                    shorthandPropertyInitializer.Identifier,
+                    interfaceType
+                );
+
+                if (shorthandPropertyName != null)
+                    providedProperties.Add(shorthandPropertyName);
+
+                break;
             case InterfaceInvocationIndexInitializer indexInitializer:
             {
                 CheckIndexInitializer(indexInitializer, interfaceType);
@@ -227,14 +239,13 @@ public sealed partial class TypeChecker
         return providedProperties;
     }
 
-    private string? CheckPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer, InterfaceType interfaceType)
+    private string? CheckPropertyInitializer(Node node, string name, Expression expression, InterfaceType interfaceType)
     {
-        var name = propertyInitializer.Name.Text;
         var property = interfaceType.GetProperty(name);
         if (property == null)
         {
             _diagnostics.Error(
-                propertyInitializer,
+                node,
                 InternalCodes.InvalidAccess,
                 $"Property '{name}' does not exist on interface '{interfaceType.Name}'."
             );
@@ -242,8 +253,8 @@ public sealed partial class TypeChecker
             return null;
         }
 
-        var valueType = Visit(propertyInitializer.Expression);
-        _semanticModel.TypeSolver.AddConstraint(valueType, property.ValueType, propertyInitializer.Expression);
+        var valueType = Visit(expression);
+        _semanticModel.TypeSolver.AddConstraint(valueType, property.ValueType, expression);
         return name;
     }
 

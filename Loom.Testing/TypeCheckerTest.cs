@@ -3301,6 +3301,14 @@ public class TypeCheckerTest
         var iface = Assert.IsType<InterfaceType>(type);
         Assert.Equal("I", iface.Name);
     }
+    
+    [Fact]
+    public void Checks_InterfaceInvocation_NonGeneric_ShorthandPropertyInitializers()
+    {
+        var type = Utility.GetLastStatementType("interface I { x: number, y: string } let x = 42; let y = 'hello'; new I { x, y }");
+        var iface = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("I", iface.Name);
+    }
 
     [Fact]
     public void Checks_InterfaceInvocation_NonGeneric_IndexInitializer()

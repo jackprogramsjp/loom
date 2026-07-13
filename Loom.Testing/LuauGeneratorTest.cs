@@ -785,14 +785,37 @@ public class LuauGeneratorTest
     public void Generates_InterfaceInvocation_PropertyInitializer()
     {
         var luauTree = Utility.GetLuauAST("interface I { x: number } new I { x: 1 }", typeCheck: true);
-        Assert.True(luauTree.Statements.Count >= 2);
+        Assert.Equal(2, luauTree.Statements.Count);
+        
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         var table = Assert.IsType<Table>(variable.Initializer);
         Assert.Single(table.Initializers);
+        
         var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
         Assert.Equal("x", propInit.PropertyName);
+        
         var value = Assert.IsType<NumberLiteral>(propInit.Value);
         Assert.Equal(1, value.Value);
+    }
+    
+    [Fact]
+    public void Generates_InterfaceInvocation_ShorthandPropertyInitializer()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { x: number } let x = 69; new I { x }", typeCheck: true);
+        Assert.Equal(3, luauTree.Statements.Count);
+        
+        var propVariable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
+        Assert.Equal("x", propVariable.Name);
+        Assert.Null(propVariable.DeclaredType);
+        Assert.IsType<NumberLiteral>(propVariable.Initializer);
+        
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
+        var table = Assert.IsType<Table>(variable.Initializer);
+        Assert.Single(table.Initializers);
+        
+        var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
+        Assert.Equal("x", propInit.PropertyName);
+        Assert.Equal("x", Assert.IsType<Identifier>(propInit.Value).Name);
     }
 
     [Fact]

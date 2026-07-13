@@ -13,3 +13,4 @@ new Foo { [key]: value };
 new Foo { [69]: 420 };
 new Foo { [getKey()]: getValue() };
 new Foo { a: 1, [2]: "two", c: 3 };
+new Foo { a, b }

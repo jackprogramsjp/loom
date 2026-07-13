@@ -325,18 +325,13 @@ public sealed partial class TypeChecker
 
         var type = Visit(elementAccess.Expression);
         var indexType = Visit(elementAccess.IndexExpression);
-        if (type is Types.TypeParameter { Constraint: ObjectType or InterfaceType or InstantiatedType } parameter)
+        switch (type)
         {
-            return BindType(
-                elementAccess,
-                new Types.IndexedType(parameter, indexType)
-            );
-        }
-        
-        if (type is Types.ArrayType && indexType.IsAssignableTo(Intrinsics.Range))
-        {
-            CheckInvalidAccessAssignment(elementAccess, type, indexType);
-            return BindType(elementAccess, type);
+            case Types.TypeParameter { Constraint: ObjectType or InterfaceType or InstantiatedType } parameter:
+                return BindType(elementAccess, new Types.IndexedType(parameter, indexType));
+            case Types.ArrayType when indexType.IsAssignableTo(Intrinsics.Range):
+                CheckInvalidAccessAssignment(elementAccess, type, indexType);
+                return BindType(elementAccess, type);
         }
 
         var indexIsRangeOrNumber = indexType.IsAssignableTo(Intrinsics.Range) || indexType.IsAssignableTo(Types.PrimitiveType.Number);
@@ -617,7 +612,7 @@ public sealed partial class TypeChecker
         var targetType = Visit(keyOf.Type);
         if (targetType is InstantiatedType instantiated)
             targetType = instantiated.Expand();
-        
+
         if (targetType is Types.TypeParameter { Constraint: ObjectType or InterfaceType or InstantiatedType } parameter)
         {
             targetType = parameter.Constraint!;

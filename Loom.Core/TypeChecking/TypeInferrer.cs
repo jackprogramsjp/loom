@@ -13,7 +13,7 @@ namespace Loom.Core.TypeChecking;
 
 public sealed class TypeInferrer(Func<Node, Type> getType)
 {
-    public Dictionary<TypeParameter, Type> InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
+    public TypeParameterSubstitution InferInterfaceTypeArguments(InterfaceInvocation node, GenericType generic, InterfaceType underlying)
     {
         var objectType = underlying.ObjectType;
         var pairs = new List<(Type parameterType, Type argumentType)>();
@@ -26,6 +26,14 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
                     var prop = objectType.GetProperty(propInit.Name.Text);
                     if (prop == null) continue;
                     var argType = getType(propInit.Expression);
+                    pairs.Add((prop.ValueType, argType));
+                    break;
+                }
+                case InterfaceInvocationShorthandPropertyInitializer shorthandPropInit:
+                {
+                    var prop = objectType.GetProperty(shorthandPropInit.Identifier.Name.Text);
+                    if (prop == null) continue;
+                    var argType = getType(shorthandPropInit.Identifier);
                     pairs.Add((prop.ValueType, argType));
                     break;
                 }

@@ -124,11 +124,14 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitInterfaceInvocationBody(InterfaceInvocationBody interfaceInvocationBody) =>
         new Table(interfaceInvocationBody.Initializers.ConvertAll(Visit<TableInitializer>));
 
+    public override LuauNode VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
+        new ComputedPropertyTableInitializer(Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression));
+    
     public override LuauNode VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
         new PropertyTableInitializer(propertyInitializer.Name.Text, Visit(propertyInitializer.Expression));
 
-    public override LuauNode VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
-        new ComputedPropertyTableInitializer(Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression));
+    public override LuauNode VisitInterfaceInvocationShorthandPropertyInitializer(InterfaceInvocationShorthandPropertyInitializer shorthandPropertyInitializer) => 
+        new PropertyTableInitializer(shorthandPropertyInitializer.Identifier.Name.Text, Visit(shorthandPropertyInitializer.Identifier));
 
     private static string GetImplementationMetaName(Implement implement)
     {

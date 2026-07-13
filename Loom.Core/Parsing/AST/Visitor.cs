@@ -93,6 +93,9 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
 
     public virtual T VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
         Visit(propertyInitializer.Expression);
+    
+    public virtual T VisitInterfaceInvocationShorthandPropertyInitializer(InterfaceInvocationShorthandPropertyInitializer shorthandPropertyInitializer) =>
+        Visit(shorthandPropertyInitializer.Expression);
 
     public virtual T VisitRangeLiteral(RangeLiteral rangeLiteral) => CombineResults([Visit(rangeLiteral.Minimum), Visit(rangeLiteral.Maximum)]);
     public virtual T VisitArrayLiteral(ArrayLiteral arrayLiteral) => VisitList(arrayLiteral.Expressions);
@@ -138,7 +141,11 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
         CombineResults([VisitWithDefault(typeParameter.ColonTypeClause), VisitWithDefault(typeParameter.EqualsTypeClause)]);
 
     public virtual T VisitTypeParameters(TypeParameters typeParameters) => VisitList(typeParameters.ParameterList);
-    public virtual T VisitTypeArguments<TType>(TypeArguments<TType> typeArguments) where TType : TypeExpression => VisitList(typeArguments.ArgumentsList);
+
+    public virtual T VisitTypeArguments<TType>(TypeArguments<TType> typeArguments)
+        where TType : TypeExpression =>
+        VisitList(typeArguments.ArgumentsList);
+
     public virtual T VisitColonTypeListClause(ColonTypeListClause colonTypeListClause) => VisitList(colonTypeListClause.Types);
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
     public virtual T VisitEqualsTypeClause(EqualsTypeClause equalsTypeClause) => Visit(equalsTypeClause.Type);

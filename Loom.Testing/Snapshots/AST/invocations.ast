@@ -482,3 +482,38 @@ ExpressionStatement(
     )
   )
 )
+ExpressionStatement(
+  Expression: InterfaceInvocation(
+    Name: Identifier(
+      Name: Token(Identifier, "Foo")
+      Token(Identifier, "Foo")
+    )
+    TypeArguments: null
+    Body: InterfaceInvocationBody(
+      Initializers: [
+        InterfaceInvocationShorthandPropertyInitializer(
+          Identifier(
+            Name: Token(Identifier, "a")
+            Token(Identifier, "a")
+          )
+          Expression: Identifier(
+            Name: Token(Identifier, "a")
+            Token(Identifier, "a")
+          )
+        )
+        InterfaceInvocationShorthandPropertyInitializer(
+          Identifier(
+            Name: Token(Identifier, "b")
+            Token(Identifier, "b")
+          )
+          Expression: Identifier(
+            Name: Token(Identifier, "b")
+            Token(Identifier, "b")
+          )
+        )
+      ]
+      RightBrace: Token(RBrace, "}")
+      LeftBrace: Token(LBrace, "{")
+    )
+  )
+)

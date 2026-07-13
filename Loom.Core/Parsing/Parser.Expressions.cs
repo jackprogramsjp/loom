@@ -162,7 +162,9 @@ public sealed partial class Parser
     {
         if (Match(out var name, SyntaxKind.Identifier))
         {
-            var colon = Expect(SyntaxKind.Colon);
+            if (!Match(out var colon, SyntaxKind.Colon))
+                return new InterfaceInvocationShorthandPropertyInitializer(new Identifier(name));
+
             var expression = ParseExpression();
             return new InterfaceInvocationPropertyInitializer(name, colon, expression);
         }
