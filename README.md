@@ -37,6 +37,8 @@
 
 ## Working Examples
 
+Each example is separated by a line. Top code is written in Loom, bottom code is the Luau output.
+
 ```rs
 let x: bool = false;
 ```
