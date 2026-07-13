@@ -40,11 +40,19 @@ function Event.fire<A...>(self: EventPrivate<(A...) -> ()>, ...: A...)
 end
 
 function Loom.merge_meta(...: {})
-	local meta = select(1, ...)
-	for i = 2, select("#", ...) do
-		meta = setmetatable(meta, select(i, ...))
+	const parents = { ... }
+	const mt = {}
+	mt.__index = function(_self, key)
+		for _, parent in parents do
+			local value = parent[key]
+			if value ~= nil then
+				return value
+			end
+		end
+		return nil
 	end
-	return meta
+
+	return mt
 end
 
 table.freeze(Loom)
