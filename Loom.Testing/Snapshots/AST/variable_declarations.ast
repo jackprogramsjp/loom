@@ -560,7 +560,7 @@ VariableDeclaration(
         IndexedType(
           LeftBracket: Token(LBracket, "[")
           RightBracket: Token(RBracket, "]")
-          Type: TypeName(
+          TargetType: TypeName(
             Name: Token(Identifier, "A")
             TypeArguments: null
           )
@@ -572,7 +572,7 @@ VariableDeclaration(
         IndexedType(
           LeftBracket: Token(LBracket, "[")
           RightBracket: Token(RBracket, "]")
-          Type: TypeName(
+          TargetType: TypeName(
             Name: Token(Identifier, "C")
             TypeArguments: null
           )
@@ -1052,7 +1052,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: TypeName(
+      TargetType: TypeName(
         Name: Token(Identifier, "T")
         TypeArguments: null
       )
@@ -1071,7 +1071,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: PrimitiveType(
+      TargetType: PrimitiveType(
         Kind: Number
       )
       IndexType: PrimitiveType(
@@ -1088,7 +1088,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: TypeName(
+      TargetType: TypeName(
         Name: Token(Identifier, "T")
         TypeArguments: null
       )
@@ -1107,7 +1107,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: TypeName(
+      TargetType: TypeName(
         Name: Token(Identifier, "T")
         TypeArguments: null
       )
@@ -1140,10 +1140,10 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: IndexedType(
+      TargetType: IndexedType(
         LeftBracket: Token(LBracket, "[")
         RightBracket: Token(RBracket, "]")
-        Type: TypeName(
+        TargetType: TypeName(
           Name: Token(Identifier, "T")
           TypeArguments: null
         )
@@ -1169,7 +1169,7 @@ VariableDeclaration(
       NonNullableType: IndexedType(
         LeftBracket: Token(LBracket, "[")
         RightBracket: Token(RBracket, "]")
-        Type: TypeName(
+        TargetType: TypeName(
           Name: Token(Identifier, "T")
           TypeArguments: null
         )
@@ -1190,7 +1190,7 @@ VariableDeclaration(
       ElementType: IndexedType(
         LeftBracket: Token(LBracket, "[")
         RightBracket: Token(RBracket, "]")
-        Type: TypeName(
+        TargetType: TypeName(
           Name: Token(Identifier, "T")
           TypeArguments: null
         )
@@ -1213,7 +1213,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: ParenthesizedType(
+      TargetType: ParenthesizedType(
         LeftParen: Token(LParen, "(")
         RightParen: Token(RParen, ")")
         Type: IntersectionType(
@@ -1264,7 +1264,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: ParenthesizedType(
+      TargetType: ParenthesizedType(
         LeftParen: Token(LParen, "(")
         RightParen: Token(RParen, ")")
         Type: FunctionType(
@@ -1307,7 +1307,7 @@ VariableDeclaration(
         IndexedType(
           LeftBracket: Token(LBracket, "[")
           RightBracket: Token(RBracket, "]")
-          Type: TypeName(
+          TargetType: TypeName(
             Name: Token(Identifier, "T")
             TypeArguments: null
           )
@@ -1331,7 +1331,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: TypeName(
+      TargetType: TypeName(
         Name: Token(Identifier, "Array")
         TypeArguments(
           LeftArrow: Token(LArrow, "<")
@@ -1358,7 +1358,7 @@ VariableDeclaration(
     Type: IndexedType(
       LeftBracket: Token(LBracket, "[")
       RightBracket: Token(RBracket, "]")
-      Type: ParenthesizedType(
+      TargetType: ParenthesizedType(
         LeftParen: Token(LParen, "(")
         RightParen: Token(RParen, ")")
         Type: IntersectionType(

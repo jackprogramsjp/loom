@@ -108,7 +108,7 @@ public class ASTInspectorTest
         var node = new IndexedType(
             leftBracket: new Token(SyntaxKind.LBracket, LocationSpan.Empty(), "["),
             rightBracket: new Token(SyntaxKind.RBracket, LocationSpan.Empty(), "]"),
-            type: new InspectorTestType("MyArray"),
+            targetType: new InspectorTestType("MyArray"),
             indexType: new InspectorTestType("number")
         );
 
@@ -142,7 +142,7 @@ public class ASTInspectorTest
         var indexType = new IndexedType(
             leftBracket: new Token(SyntaxKind.LBracket, LocationSpan.Empty(), "["),
             rightBracket: new Token(SyntaxKind.RBracket, LocationSpan.Empty(), "]"),
-            type: new InspectorTestType("MyArray"),
+            targetType: new InspectorTestType("MyArray"),
             indexType: new InspectorTestType("number")
         );
 

@@ -855,6 +855,18 @@ public class TypeCheckerTest
             "Type '\"\"' is not assignable to type 'number'."
         );
     }
+    
+    [Fact]
+    public void ThrowsFor_UnconstrainedTypeParameter_Index()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("fn abc<T>(i: T) -> ([1, 2, 3])[i]");
+
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidAccess,
+            "Expression of type 'T' cannot be used to index type 'number[]'. Type parameter 'T' is unconstrained."
+        );
+    }
     #endregion ThrowsFor
 
     [Fact]
@@ -872,6 +884,53 @@ public class TypeCheckerTest
     }
 
     #region Checks
+    [Theory]
+    [InlineData("number", PrimitiveTypeKind.Number)]
+    [InlineData("string", PrimitiveTypeKind.String)]
+    [InlineData("bool", PrimitiveTypeKind.Bool)]
+    public void Checks_Generic_IndexedType(string typeName, PrimitiveTypeKind expectedKind)
+    {
+        var type = Utility.GetLastStatementType(
+            $$"""
+            interface Names { number: number; string: string; bool: bool; }
+            fn get_type<K: keyof(Names)>(k: K) -> none as never as Names[K];
+            get_type("{{typeName}}");
+            """
+        );
+        
+        var primitive = Assert.IsType<PrimitiveType>(type);
+        Assert.Equal(expectedKind, primitive.Kind);
+    }
+    
+    [Fact]
+    public void Checks_Generic_InterfaceIndex()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            interface Foo { bar: number, baz: string }
+            fn idx<T: Foo, K: keyof(T)>(foo: T, k: K) -> foo[k];
+            
+            let foo = new Foo { bar: 69, baz: "abc" };
+            idx(foo, "bar")
+            """
+        );
+        
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+    
+    [Fact]
+    public void Checks_Generic_ArrayIndex()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            fn idx<T, I: number>(arr: T[], i: I) -> arr[i];
+            idx([1, 2, 3], 2);
+            """
+        );
+        
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+    
     [Fact]
     public void Checks_TraitMethod_FromInterfaceInvocation()
     {
