@@ -1,7 +1,9 @@
 global using TypeParameterSubstitution = System.Collections.Generic.Dictionary<Loom.Core.TypeChecking.Types.TypeParameter, Loom.Core.TypeChecking.Types.Type>;
+using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.TypeChecking.Types;
+using IndexedType = Loom.Core.TypeChecking.Types.IndexedType;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using Type = Loom.Core.TypeChecking.Types.Type;
 
@@ -107,12 +109,12 @@ public sealed partial class TypeChecker
         return false;
     }
 
-    private static ObjectType SubstituteObjectType(ObjectType objectType, TypeParameterSubstitution substitution)
+    private ObjectType SubstituteObjectType(Node failNode, ObjectType objectType, TypeParameterSubstitution substitution)
     {
         var newProperties = objectType.Properties.ConvertAll(property => new ObjectProperty(
                 property.IsMutable,
                 property.Name,
-                SubstituteTypeParameters(property.ValueType, substitution)
+                SubstituteTypeParameters(failNode, property.ValueType, substitution)
             )
         );
 
@@ -121,19 +123,41 @@ public sealed partial class TypeChecker
         {
             newIndexer = new ObjectIndexer(
                 objectType.Indexer.IsMutable,
-                SubstituteTypeParameters(objectType.Indexer.KeyType, substitution),
-                SubstituteTypeParameters(objectType.Indexer.ValueType, substitution)
+                SubstituteTypeParameters(failNode, objectType.Indexer.KeyType, substitution),
+                SubstituteTypeParameters(failNode, objectType.Indexer.ValueType, substitution)
             );
         }
 
         return new ObjectType(newIndexer, newProperties);
     }
 
-    private static List<Type> SubstituteTypeParameters(List<Type> types, TypeParameterSubstitution substitution) =>
-        types.ConvertAll(t => SubstituteTypeParameters(t, substitution));
+    private List<Type> SubstituteTypeParameters(Node failNode, List<Type> types, TypeParameterSubstitution substitution) =>
+        types.ConvertAll(t => SubstituteTypeParameters(failNode, t, substitution));
 
-    private static Type SubstituteTypeParameters(Type type, TypeParameterSubstitution substitution) =>
-        type is Types.TypeParameter tp && substitution.TryGetValue(tp, out var substituted)
+    private Type SubstituteTypeParameters(Node failNode, Type type, TypeParameterSubstitution substitution) =>
+        TrySubstituteTypeParameter(type, substitution, out var substituted)
             ? substituted
-            : TypeSolver.Transform(type, t => t is Types.TypeParameter tp2 && substitution.TryGetValue(tp2, out var s) ? s : SubstituteTypeParameters(t, substitution));
+            : type is IndexedType indexedType
+            ? SubstituteIndexedType(failNode, substitution, indexedType)
+            : TypeSolver.Transform(
+                type,
+                t => t switch
+                {
+                    _ when TrySubstituteTypeParameter(type, substitution, out var substituted2) => substituted2,
+                    _ => SubstituteTypeParameters(failNode, t, substitution)
+                }
+            );
+
+    private Type SubstituteIndexedType(Node failNode, TypeParameterSubstitution substitution, IndexedType indexedType)
+    {
+        var target = SubstituteTypeParameters(failNode, indexedType.Target, substitution);
+        var index = SubstituteTypeParameters(failNode, indexedType.Index, substitution);
+        return GetTypeAtIndex(failNode, target, index);
+    }
+
+    private static bool TrySubstituteTypeParameter(Type type, TypeParameterSubstitution substitution, [MaybeNullWhen(false)] out Type substituted)
+    {
+        substituted = null;
+        return type is Types.TypeParameter tp && substitution.TryGetValue(tp, out substituted);
+    }
 }

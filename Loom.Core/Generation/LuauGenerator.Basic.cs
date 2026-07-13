@@ -10,6 +10,7 @@ using Continue = Loom.Core.Parsing.AST.Continue;
 using ExpressionStatement = Loom.Core.Parsing.AST.ExpressionStatement;
 using FunctionType = Loom.Core.Parsing.AST.FunctionType;
 using Identifier = Loom.Core.Parsing.AST.Identifier;
+using IndexedType = Loom.Core.Parsing.AST.IndexedType;
 using IntersectionType = Loom.Core.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Core.Parsing.AST.LiteralType;
 using OptionalType = Loom.Core.Parsing.AST.OptionalType;
@@ -96,8 +97,10 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitArrayType(ArrayType arrayType) => new TableType(new TableTypeIndexer(null, null, Visit(arrayType.ElementType)), []);
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
     public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
-    public override LuauNode VisitIndexedType(IndexedType indexedType) => new Luau.AST.TypeName("index", [Visit(indexedType.Type), Visit(indexedType.IndexType)]);
     public override LuauNode VisitKeyOf(KeyOf keyOf) => new Luau.AST.TypeName("keyof", [Visit(keyOf.Type)]);
+
+    public override LuauNode VisitIndexedType(IndexedType indexedType) =>
+        new Luau.AST.TypeName("index", [Visit(indexedType.TargetType), Visit(indexedType.IndexType)]);
 
     public override LuauNode VisitTypeParameters(TypeParameters typeParameters) =>
         new Luau.AST.TypeParameters(typeParameters.ParameterList.ConvertAll(VisitTypeParameter));

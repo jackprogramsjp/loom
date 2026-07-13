@@ -141,7 +141,7 @@ public sealed partial class TypeChecker
                 return false;
         }
 
-        var substitutedObject = SubstituteObjectType(underlying.ObjectType, substitution);
+        var substitutedObject = SubstituteObjectType(node, underlying.ObjectType, substitution);
         substituted = new InterfaceType(underlying.Name, underlying.Constraints, substitutedObject);
         return true;
     }

@@ -123,7 +123,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitPrimitiveType(PrimitiveType primitiveType) => DefaultValue(primitiveType);
     public virtual T VisitTypeName(TypeName typeName) => VisitWithDefault(typeName.TypeArguments);
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
-    public virtual T VisitIndexedType(IndexedType indexedType) => CombineResults([Visit(indexedType.Type), Visit(indexedType.IndexType)]);
+    public virtual T VisitIndexedType(IndexedType indexedType) => CombineResults([Visit(indexedType.TargetType), Visit(indexedType.IndexType)]);
     public virtual T VisitKeyOf(KeyOf keyOf) => Visit(keyOf.Type);
 
     public virtual T VisitFunctionType(FunctionType functionType) =>

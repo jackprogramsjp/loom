@@ -4,6 +4,7 @@ using Loom.Core.Text;
 using Loom.Core.TypeChecking.Types;
 using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
 using FunctionType = Loom.Core.TypeChecking.Types.FunctionType;
+using IndexedType = Loom.Core.TypeChecking.Types.IndexedType;
 using IntersectionType = Loom.Core.TypeChecking.Types.IntersectionType;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using Type = Loom.Core.TypeChecking.Types.Type;
@@ -60,6 +61,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         TypeSimplifier.Simplify(
             type switch
             {
+                IndexedType indexedType => new IndexedType(fn(indexedType.Target), fn(indexedType.Index)),
                 ArrayType arrayType => new ArrayType(fn(arrayType.ElementType), arrayType.IsMutable),
                 InterfaceType interfaceType => new InterfaceType(
                     interfaceType.Name,
@@ -338,6 +340,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         type switch
         {
             TypeVariable tv => tv.Id == variable.Id,
+            IndexedType indexedType => OccursIn(variable, indexedType.Target) || OccursIn(variable, indexedType.Index),
             InterfaceType i => i.Constraints.Any(t => OccursIn(variable, t)) || OccursIn(variable, i.ObjectType),
             ObjectType obj => obj.Indexer != null && (OccursIn(variable, obj.Indexer.KeyType) || OccursIn(variable, obj.Indexer.ValueType))
                 || obj.Properties.Any(p => OccursIn(variable, p.ValueType)),

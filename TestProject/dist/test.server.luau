@@ -7,10 +7,17 @@ type ComponentStorage = { [Entity]: { Component } }
 type WorldData = {
   read component_storage: ComponentStorage,
 } & World
+type Position = Component & {
+  read x: number,
+  read y: number,
+}
+type NameMap = {
+  read Position: Position,
+}
 local eid: Entity = -1
 type World = {
   spawn: (World, { Component }) -> Entity,
-  query: <T>(World, Entity, string) -> { T & Component },
+  query: <T>(World, Entity, T & keyof<NameMap>) -> { index<NameMap, T & keyof<NameMap>> },
 }
 local World_for_WorldData = {}
 World_for_WorldData.__index = World_for_WorldData
@@ -37,10 +44,6 @@ function World_for_WorldData.query<T>(self: WorldData, entity, name)
   end
   return result
 end
-type Position = Component & {
-  read x: number,
-  read y: number,
-}
 const world = setmetatable({ component_storage = {} }, Loom.merge_meta(World_for_WorldData)) :: WorldData
 const player = world:spawn({{ name = "Position", x = 69, y = 420 }})
 print(world:query(player, "Position"))

@@ -11,10 +11,19 @@ interface WorldData {
   component_storage: ComponentStorage;
 }
 
+interface Position: Component {
+  x: number;
+  y: number;
+}
+
+interface NameMap {
+  Position: Position;
+}
+
 mut eid: Entity = -1;
 trait World {
   fn spawn(components: Component[mut]): Entity;
-  fn query<T: Component>(entity: Entity, name: string): T[];
+  fn query<T: keyof(NameMap)>(entity: Entity, name: T): NameMap[T][];
 }
 
 implement World for WorldData {
@@ -22,8 +31,7 @@ implement World for WorldData {
     let entity = eid += 1;
     if component_storage[entity] == none {
       component_storage[entity] = components;
-    }
-    else {
+    } else {
       for c : components
         component_storage[entity].push(c);
     }
@@ -42,11 +50,6 @@ implement World for WorldData {
   }
 }
 
-interface Position: Component {
-  x: number;
-  y: number;
-}
-
 let world = new WorldData { component_storage: new ComponentStorage {} };
 let player = world.spawn(mut [new Position { name: nameof::<Position>(), x: 69, y: 420 }]);
-print(world.query::<Position>(player, nameof::<Position>()))
+print(world.query(player, nameof::<Position>()))

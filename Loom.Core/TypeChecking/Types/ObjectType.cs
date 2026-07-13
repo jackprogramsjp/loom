@@ -11,10 +11,10 @@ public record ObjectProperty(bool IsMutable, string Name, Type ValueType)
 public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties) : Type
 {
     public static readonly ObjectType Empty = new(null, []);
-    
+
     public ObjectIndexer? Indexer { get; } = indexer;
     public List<ObjectProperty> Properties { get; } = properties;
-    
+
     public Type KeyUnion()
     {
         var propertyKeyType = PropertyKeyUnion();
@@ -44,7 +44,23 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 
         return TypeSimplifier.Simplify(new UnionType(types));
     }
-    
+
+    private Type ValueUnionForKeyType(Type keyType)
+    {
+        var matches = (
+                from property in Properties
+                let literal = new LiteralType(property.Name)
+                where literal.IsAssignableTo(keyType)
+                select property.ValueType
+            )
+            .ToList();
+
+        if (Indexer != null)
+            matches.Add(Indexer.ValueType);
+
+        return TypeSimplifier.Simplify(new UnionType(matches));
+    }
+
     public Type PropertyKeyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(Type (p) => new LiteralType(p.Name))));
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
@@ -52,21 +68,40 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 
     public (ObjectBodyType? BodyType, string CannotFindReason) GetTypeAtIndex(Type indexType, Type? self = null)
     {
-        var cannotFindReason = "";
-        if (indexType is LiteralType { Value: string name } && Properties.Count > 0)
+        if (indexType is TypeParameter parameter)
+        {
+            if (parameter.Constraint == null)
+                return Indexer != null && indexType.IsAssignableTo(Indexer.KeyType)
+                    ? (Indexer, "")
+                    : (null, $" Type parameter '{parameter.Name}' is unconstrained.");
+
+            indexType = parameter.Constraint;
+        }
+        
+        if (indexType is LiteralType { Value: string name })
         {
             var property = GetProperty(name);
             if (property != null)
                 return (property, "");
 
-            cannotFindReason = $" Property '{name}' does not exist on type '{self ?? this}'.";
+            if (Indexer == null)
+                return (null, $" Property '{name}' does not exist on type '{self ?? this}'.");
+        }
+        
+        if (Properties.Count > 0 && indexType.Equals(PropertyKeyUnion()))
+        {
+            return (new ObjectIndexer(
+                IsMutable: Properties.Any(p => p.IsMutable),
+                KeyType: indexType,
+                ValueType: ValueUnionForKeyType(indexType)
+            ), "");
         }
 
-        if (Indexer == null)
-            return (null, cannotFindReason);
+        if (Indexer != null && indexType.IsAssignableTo(Indexer.KeyType))
+            return (Indexer, "");
 
-        return indexType.IsAssignableTo(Indexer.KeyType)
-            ? (Indexer, "")
+        return Indexer == null
+            ? (null, "")
             : (null, $" Index is not of type '{Indexer.KeyType}'.");
     }
 

@@ -8,6 +8,7 @@ using Loom.Core.TypeChecking.Types;
 using Loom.Core.Generation.Macros;
 using ArrayType = Loom.Core.Parsing.AST.ArrayType;
 using FunctionType = Loom.Core.Parsing.AST.FunctionType;
+using IndexedType = Loom.Core.Parsing.AST.IndexedType;
 using IntersectionType = Loom.Core.Parsing.AST.IntersectionType;
 using LiteralType = Loom.Core.Parsing.AST.LiteralType;
 using OptionalType = Loom.Core.Parsing.AST.OptionalType;
@@ -305,8 +306,8 @@ public sealed partial class TypeChecker
         if (substitution == null)
             return BindType(invocation, Types.PrimitiveType.Never);
 
-        var substitutedParameterTypes = SubstituteTypeParameters(functionType.ParameterTypes, substitution);
-        var substitutedReturnType = SubstituteTypeParameters(functionType.ReturnType, substitution);
+        var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
+        var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
         var instantiated = new Types.FunctionType([], substitutedParameterTypes, substitutedReturnType);
 
         CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
@@ -324,6 +325,14 @@ public sealed partial class TypeChecker
 
         var type = Visit(elementAccess.Expression);
         var indexType = Visit(elementAccess.IndexExpression);
+        if (type is Types.TypeParameter { Constraint: ObjectType or InterfaceType or InstantiatedType } parameter)
+        {
+            return BindType(
+                elementAccess,
+                new Types.IndexedType(parameter, indexType)
+            );
+        }
+        
         if (type is Types.ArrayType && indexType.IsAssignableTo(Intrinsics.Range))
         {
             CheckInvalidAccessAssignment(elementAccess, type, indexType);
@@ -608,6 +617,13 @@ public sealed partial class TypeChecker
         var targetType = Visit(keyOf.Type);
         if (targetType is InstantiatedType instantiated)
             targetType = instantiated.Expand();
+        
+        if (targetType is Types.TypeParameter { Constraint: ObjectType or InterfaceType or InstantiatedType } parameter)
+        {
+            targetType = parameter.Constraint!;
+            if (targetType is InstantiatedType constrainedInstantiation)
+                targetType = constrainedInstantiation.Expand();
+        }
 
         if (targetType is not (ObjectType or InterfaceType))
         {
@@ -622,7 +638,7 @@ public sealed partial class TypeChecker
 
     public override Type VisitIndexedType(IndexedType indexedType)
     {
-        var targetType = Visit(indexedType.Type);
+        var targetType = Visit(indexedType.TargetType);
         var indexType = Visit(indexedType.IndexType);
         if (targetType is InstantiatedType instantiated)
             targetType = instantiated.Expand();
@@ -633,7 +649,10 @@ public sealed partial class TypeChecker
             return BindType(indexedType, Types.PrimitiveType.Never);
         }
 
-        var type = GetTypeAtIndex(indexedType, targetType, indexType);
+        var type = indexedType.GetDescendants<TypeName>().Any(n => _semanticModel.GetType(n) is Types.TypeParameter)
+            ? new Types.IndexedType(targetType, indexType)
+            : GetTypeAtIndex(indexedType, targetType, indexType);
+
         return BindType(indexedType, type);
     }
 
