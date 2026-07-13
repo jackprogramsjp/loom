@@ -64,7 +64,8 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
                 InterfaceType interfaceType => new InterfaceType(
                     interfaceType.Name,
                     interfaceType.Constraints.ConvertAll(fn).OfType<InterfaceType>().ToList(),
-                    (ObjectType)fn(interfaceType.ObjectType)
+                    (ObjectType)fn(interfaceType.ObjectType),
+                    interfaceType.TraitMethodNames
                 ),
                 ObjectType objectType => new ObjectType(
                     objectType.Indexer != null

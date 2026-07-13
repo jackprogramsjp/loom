@@ -1,6 +1,6 @@
 namespace Loom.Core.TypeChecking.Types;
 
-public sealed class InterfaceType(string name, List<InterfaceType> constraints, ObjectType objectType)
+public sealed class InterfaceType(string name, List<InterfaceType> constraints, ObjectType objectType, HashSet<string>? traitMethodNames = null)
     : Type
 {
     public string Name { get; } = name;
@@ -11,7 +11,7 @@ public sealed class InterfaceType(string name, List<InterfaceType> constraints, 
             ? new IntersectionType([ObjectType, ..Constraints.Select(c => c.AssignabilityType)])
             : ObjectType;
 
-    public HashSet<string> TraitMethodNames { get; set; } = [];
+    public HashSet<string> TraitMethodNames { get; set; } = traitMethodNames ?? [];
     public ObjectIndexer? Indexer { get; } = objectType.Indexer ?? constraints.Select(c => c.Indexer).FirstOrDefault(i => i != null);
     public ObjectProperty? GetProperty(string name) => ObjectType.GetProperty(name) ?? Constraints.Select(c => c.GetProperty(name)).FirstOrDefault(p => p != null);
 

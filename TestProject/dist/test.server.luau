@@ -42,5 +42,5 @@ type Position = Component & {
   read y: number,
 }
 const world = setmetatable({ component_storage = {} }, Loom.merge_meta(World_for_WorldData)) :: WorldData
-const player = world.spawn({{ name = "Position", x = 69, y = 420 }})
-print(world.query(player, "Position"))
+const player = world:spawn({{ name = "Position", x = 69, y = 420 }})
+print(world:query(player, "Position"))

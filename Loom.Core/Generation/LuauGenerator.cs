@@ -13,7 +13,6 @@ using BinaryOperator = Loom.Core.Parsing.AST.BinaryOperator;
 using ElementAccess = Loom.Core.Parsing.AST.ElementAccess;
 using Expression = Loom.Core.Parsing.AST.Expression;
 using ExpressionStatement = Loom.Core.Parsing.AST.ExpressionStatement;
-using FunctionType = Loom.Luau.AST.FunctionType;
 using Identifier = Loom.Core.Parsing.AST.Identifier;
 using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
 using TypeAlias = Loom.Core.Parsing.AST.TypeAlias;

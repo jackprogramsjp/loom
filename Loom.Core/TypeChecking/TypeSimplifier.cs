@@ -19,7 +19,8 @@ public static class TypeSimplifier
                 ? new InterfaceType(
                     interfaceType.Name,
                     [],
-                    (ObjectType)Simplify(new IntersectionType([interfaceType.ObjectType, ..interfaceType.Constraints.Select(Simplify)]))
+                    (ObjectType)Simplify(new IntersectionType([interfaceType.ObjectType, ..interfaceType.Constraints.Select(Simplify)])),
+                    interfaceType.TraitMethodNames.Intersect(interfaceType.Constraints.SelectMany(c => c.TraitMethodNames)).ToHashSet()
                 )
                 : interfaceType,
             ObjectType objectType => SimplifyObject(objectType),
