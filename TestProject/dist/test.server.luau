@@ -32,7 +32,7 @@ function World_for_WorldData.query<T>(self: WorldData, entity, name)
   const result: { T & Component } = {}
   for _, c in components do
     if c.name == name then
-      table.insert(result, c :: never :: T & Component)
+      table.insert(result, (c :: never) :: T & Component)
     end
   end
   return result

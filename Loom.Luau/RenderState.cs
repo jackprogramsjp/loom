@@ -20,7 +20,7 @@ public sealed class RenderState
     public string ParenthesizeIfNeeded(LuauNode node) => RequiresParentheses(node) ? $"({node.Render(this)})" : node.Render(this);
 
     private static bool RequiresParentheses(LuauNode node) =>
-        node is (UnionType or IntersectionType or FunctionType or Table or BinaryOperator or UnaryOperator or IfExpression) and not OptionalType;
+        node is (UnionType or IntersectionType or FunctionType or Table or BinaryOperator or UnaryOperator or IfExpression or TypeCast) and not OptionalType;
 
     public static string RenderVisibility(LuauVisibility? visibility) =>
         visibility == null
