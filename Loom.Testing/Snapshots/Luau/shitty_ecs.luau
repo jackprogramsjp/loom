@@ -1,18 +1,18 @@
 const Loom = require("@game/ReplicatedStorage/include/loom_runtime")
 type Component = {
-	read name: string,
+  read name: string,
 }
 type Entity = number
 type ComponentStorage = { [Entity]: { Component } }
 type WorldData = {
-	read component_storage: ComponentStorage,
+  read component_storage: ComponentStorage,
 } & World
 type Position = Component & {
-	read x: number,
-	read y: number,
+  read x: number,
+  read y: number,
 }
 type NameMap = {
-	read Position: Position,
+  read Position: Position,
 }
 local eid: Entity = -1
 type World = {
@@ -37,8 +37,8 @@ end
 function World_for_WorldData.query<T>(self: WorldData, entity, name)
   const components = self.component_storage[entity]
   const result: { T & Component } = {}
-  for _, c in components do 
-    if c.name == name then 
+  for _, c in components do
+    if c.name == name then
       table.insert(result, (c :: never) :: T & Component)
     end
   end
