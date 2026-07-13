@@ -17,6 +17,227 @@ using static PrimitiveType;
 public class TypesTest
 {
     [Fact]
+    public void ObjectType_GetTypeAtIndex_Property()
+    {
+        var obj = new ObjectType(
+            null,
+            [new ObjectProperty(true, "x", Number)]
+        );
+
+        var (body, error) = obj.GetTypeAtIndex(new LiteralType("x"));
+        Assert.Equal("", error);
+        
+        var property = Assert.IsType<ObjectProperty>(body);
+        Assert.True(property.IsMutable);
+        Assert.Equal(Number, property.ValueType);
+    }
+
+    [Fact]
+    public void ObjectType_GetTypeAtIndex_MissingProperty_NoIndexer()
+    {
+        var obj = ObjectType.Empty;
+        var (body, error) = obj.GetTypeAtIndex(new LiteralType("x"));
+
+        Assert.Null(body);
+        Assert.Contains("Property 'x' does not exist", error);
+    }
+
+    [Fact]
+    public void ObjectType_GetTypeAtIndex_MissingProperty_UsesIndexer()
+    {
+        var indexer = new ObjectIndexer(false, String, Number);
+        var obj = new ObjectType(indexer, []);
+        var (body, error) = obj.GetTypeAtIndex(new LiteralType("x"));
+
+        Assert.Equal("", error);
+        Assert.Same(indexer, body);
+    }
+
+    [Fact]
+    public void ObjectType_GetTypeAtIndex_PropertyKeyUnion()
+    {
+        var obj = new ObjectType(
+            null,
+            [new ObjectProperty(false, "a", Number), new ObjectProperty(true, "b", String)]
+        );
+
+        var keyUnion = obj.PropertyKeyUnion();
+        var (body, error) = obj.GetTypeAtIndex(keyUnion);
+        Assert.Equal("", error);
+
+        var indexer = Assert.IsType<ObjectIndexer>(body);
+        Assert.True(indexer.IsMutable);
+        Assert.Equal(keyUnion, indexer.KeyType);
+
+        var expected = TypeSimplifier.Simplify(new UnionType([Number, String]));
+        Assert.True(indexer.ValueType.Equals(expected));
+    }
+    
+    [Fact]
+    public void ObjectType_GetTypeAtIndex_WrongIndexerType()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, Number, String),
+            []
+        );
+
+        var (body, error) = obj.GetTypeAtIndex(String);
+
+        Assert.Null(body);
+        Assert.Contains("Index is not of type", error);
+    }
+    
+    [Fact]
+    public void ObjectType_GetTypeAtIndex_UnconstrainedTypeParameter()
+    {
+        var obj = new ObjectType(
+            new ObjectIndexer(false, Number, String),
+            []
+        );
+
+        var parameter = new TypeParameter("T");
+        var (body, error) = obj.GetTypeAtIndex(parameter);
+
+        Assert.Null(body);
+        Assert.Contains("unconstrained", error);
+    }
+    
+    [Fact]
+    public void ObjectType_GetTypeAtIndex_ConstrainedTypeParameter()
+    {
+        var indexer = new ObjectIndexer(false, Number, String);
+        var obj = new ObjectType(indexer, []);
+        var parameter = new TypeParameter("T", Number);
+        var (body, error) = obj.GetTypeAtIndex(parameter);
+
+        Assert.Equal("", error);
+        Assert.Same(indexer, body);
+    }
+    
+    [Fact]
+    public void ObjectType_GetTypeAtIndex_UsesSelfInErrorMessage()
+    {
+        var obj = ObjectType.Empty;
+        var (body, error) = obj.GetTypeAtIndex(
+            new LiteralType("missing"),
+            new InterfaceType("Foo", [], ObjectType.Empty)
+        );
+
+        Assert.Null(body);
+        Assert.Contains("Foo", error);
+    }
+    
+    [Fact]
+    public void ObjectType_GetProperty()
+    {
+        var property = new ObjectProperty(false, "name", String);
+
+        var obj = new ObjectType(null, [property]);
+
+        Assert.Same(property, obj.GetProperty("name"));
+        Assert.Null(obj.GetProperty("missing"));
+    }
+    
+    [Fact]
+    public void InterfaceType_GetProperty_FromOwnObject()
+    {
+        var property = new ObjectProperty(false, "id", Number);
+        var iface = new InterfaceType(
+            "I",
+            [],
+            new ObjectType(null, [property])
+        );
+
+        Assert.Same(property, iface.GetProperty("id"));
+    }
+    
+    [Fact]
+    public void InterfaceType_GetProperty_FromConstraint()
+    {
+        var property = new ObjectProperty(false, "id", Number);
+
+        var baseInterface = new InterfaceType(
+            "Base",
+            [],
+            new ObjectType(null, [property])
+        );
+
+        var derived = new InterfaceType(
+            "Derived",
+            [baseInterface],
+            ObjectType.Empty
+        );
+
+        Assert.Same(property, derived.GetProperty("id"));
+    }
+    
+    [Fact]
+    public void InterfaceType_Indexer_FromConstraint()
+    {
+        var indexer = new ObjectIndexer(false, String, Number);
+
+        var baseInterface = new InterfaceType(
+            "Base",
+            [],
+            new ObjectType(indexer, [])
+        );
+
+        var derived = new InterfaceType(
+            "Derived",
+            [baseInterface],
+            ObjectType.Empty
+        );
+
+        Assert.Same(indexer, derived.Indexer);
+    }
+    
+    [Fact]
+    public void InterfaceType_Indexer_PrefersOwnIndexer()
+    {
+        var baseIndexer = new ObjectIndexer(false, String, Number);
+        var ownIndexer = new ObjectIndexer(false, Number, String);
+        var baseInterface = new InterfaceType(
+            "Base",
+            [],
+            new ObjectType(baseIndexer, [])
+        );
+
+        var derived = new InterfaceType(
+            "Derived",
+            [baseInterface],
+            new ObjectType(ownIndexer, [])
+        );
+
+        Assert.Same(ownIndexer, derived.Indexer);
+    }
+    
+    [Fact]
+    public void InterfaceType_AssignabilityType_NoConstraints()
+    {
+        var obj = new ObjectType(null, []);
+        var iface = new InterfaceType("I", [], obj);
+        Assert.Same(obj, iface.AssignabilityType);
+    }
+    
+    [Fact]
+    public void InterfaceType_AssignabilityType_WithConstraints()
+    {
+        var baseInterface = new InterfaceType(
+            "Base",
+            [],
+            new ObjectType(null, [new ObjectProperty(false, "id", Number)])
+        );
+
+        var derived = new InterfaceType(
+            "Derived",
+            [baseInterface],
+            ObjectType.Empty
+        );
+
+        Assert.IsType<IntersectionType>(derived.AssignabilityType);
+    }
+
+    [Fact]
     public void ObjectType_PropertyUnion_EmptyObject()
     {
         var empty = ObjectType.Empty;
