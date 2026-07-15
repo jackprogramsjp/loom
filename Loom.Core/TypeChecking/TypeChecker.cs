@@ -612,7 +612,7 @@ public sealed partial class TypeChecker
         var targetType = Visit(keyOf.Type);
         if (targetType is InstantiatedType instantiated)
             targetType = instantiated.Expand();
-
+        
         if (targetType is Types.TypeParameter { Constraint: ObjectType or InterfaceType or InstantiatedType } parameter)
         {
             targetType = parameter.Constraint!;

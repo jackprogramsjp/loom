@@ -1,9 +1,0 @@
-interface Comparator<T> {
-    less: fn(a: T, b: T): bool;
-}
-
-fn max<T>(a: T, b: T, cmp: Comparator<T>): T -> cmp.less(a, b) ? b : a;
-fn less(a: number, b: number): bool -> a < b;
-
-let numbers_comparator = new Comparator { less }
-print(max(5, 8, numbers_comparator));

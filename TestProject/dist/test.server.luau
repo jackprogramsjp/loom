@@ -1,11 +1,5 @@
-type Comparator<T> = {
-  read less: (T, T) -> boolean,
-}
-const function max<T>(a: T, b: T, cmp: Comparator<T>): T
-  return if cmp.less(a, b) then b else a
+const function abc(p: unknown)
 end
-const function less(a: number, b: number): boolean
-  return a < b
-end
-const numbers_comparator = { less = less }
-print(max(5, 8, numbers_comparator))
+abc(function(argument0)
+  return table.concat({1, 2, 3}, argument0)
+end)
