@@ -12,7 +12,7 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
     private int StartCharacter => Span.Start.Character;
     private int EndCharacter => Span.End.Character;
     private int LineDigits => EndLine.ToString().Length;
-    private string[] SourceLines => Span.File.SourceText.Split(Environment.NewLine);
+    private string[] SourceLines => Span.File.SourceText.Replace(Environment.NewLine, "\n").Split('\n');
     private string GutterIndent => new(' ', LineDigits);
     private string Gutter => $"{Colors.Dim}{GutterIndent} │{Colors.Reset}";
 
@@ -89,6 +89,7 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
     private void AppendHighlightedLines(List<string> lines)
     {
         var pad = new string(' ', StartCharacter);
+        Console.Write(StartCharacter);
         for (var line = StartLine; line <= EndLine; line++)
         {
             var source = SourceLines[line - 1];

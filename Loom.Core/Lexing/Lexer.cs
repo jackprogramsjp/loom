@@ -52,6 +52,13 @@ public sealed class Lexer(SourceFile file)
             }
 
             var span = GetSpan(start);
+            if (rule.Syntax == SyntaxKind.Whitespace)
+            {
+                var text = span.GetText();
+                var tabCount = text.Count(c => c == '\t');
+                _character += tabCount * 3;
+            }
+            
             yield return new Token(rule.Syntax, span);
         }
 
@@ -104,6 +111,7 @@ public sealed class Lexer(SourceFile file)
     {
         var lines = content.Count(c => c == '\n');
         var length = content.Length;
+        
         _position += length;
         if (lines > 0)
         {
