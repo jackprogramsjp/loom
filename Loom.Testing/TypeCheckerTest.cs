@@ -4441,4 +4441,71 @@ public class TypeCheckerTest
         Assert.Equal(false, falseLiteral.Value);
     }
     #endregion Checks
+
+    #region Bidirectional
+    [Fact(Skip = "Requires bidirectional check mode... check array elements against declared element type")]
+    public void ThrowsFor_AnnotatedArrayLiteral_ElementMismatch_ReportsOnBadElement()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""let xs: number[] = [1, "no"]""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact(Skip = "Requires bidirectional check mode... check object fields against declared property types")]
+    public void ThrowsFor_AnnotatedObjectLiteral_PropertyMismatch_ReportsOnBadField()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            interface Point { x: number, y: number }
+            let p: Point = new Point { x: 1, y: "no" }
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact(Skip = "Requires bidirectional check mode... empty array in argument position inherits param element type")]
+    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionArgument()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn take(xs: number[]): void;
+            take([]);
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact(Skip = "Requires bidirectional check mode... empty array return checked against declared return type")]
+    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionReturn()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            fn empty(): number[] {
+              return [];
+            }
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact(Skip = "Requires bidirectional check mode... generic return context + checked nested literal")]
+    public void Allows_GenericCall_ReturnContext_DrivesNestedLiteral()
+    {
+        // What is expected is that contextual return type List<number> checks [1, 2] as number[].
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn identity<T>(value: T): T;
+            let xs: number[] = identity([1, 2]);
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+    #endregion Bidirectional
 }
