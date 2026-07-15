@@ -4443,18 +4443,45 @@ public class TypeCheckerTest
     #endregion Checks
 
     #region Bidirectional
-    [Fact(Skip = "Requires bidirectional check mode... check array elements against declared element type")]
-    public void ThrowsFor_AnnotatedArrayLiteral_ElementMismatch_ReportsOnBadElement()
+
+    [Fact]
+    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionArgument()
     {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("""let xs: number[] = [1, "no"]""");
-        Utility.AssertDiagnostic(
-            diagnostics,
-            InternalCodes.TypeMismatch,
-            "Type '\"no\"' is not assignable to type 'number'."
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn take(xs: number[]): void;
+            take([]);
+            """
         );
+        Utility.AssertNoErrors(diagnostics);
     }
 
-    [Fact(Skip = "Requires bidirectional check mode... check object fields against declared property types")]
+    [Fact]
+    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionReturn()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            fn empty(): number[] {
+              return [];
+            }
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Allows_GenericCall_ReturnContext_DrivesNestedLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn identity<T>(value: T): T;
+            let xs: number[] = identity([1, 2]);
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
     public void ThrowsFor_AnnotatedObjectLiteral_PropertyMismatch_ReportsOnBadField()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
@@ -4470,42 +4497,75 @@ public class TypeCheckerTest
         );
     }
 
-    [Fact(Skip = "Requires bidirectional check mode... empty array in argument position inherits param element type")]
-    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionArgument()
+    [Fact]
+    public void ThrowsFor_AnnotatedArrayLiteral_ElementMismatch_ReportsOnBadElement()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""let xs: number[] = [1, "no"]""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_AsFunctionArgument()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
             """
             declare fn take(xs: number[]): void;
-            take([]);
+            take([1, "no"]);
             """
         );
-        Utility.AssertNoErrors(diagnostics);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
     }
 
-    [Fact(Skip = "Requires bidirectional check mode... empty array return checked against declared return type")]
-    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionReturn()
+    [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_AsFunctionReturn()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
             """
-            fn empty(): number[] {
-              return [];
+            fn bad(): number[] {
+              return [1, "no"];
             }
             """
         );
-        Utility.AssertNoErrors(diagnostics);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
     }
 
-    [Fact(Skip = "Requires bidirectional check mode... generic return context + checked nested literal")]
-    public void Allows_GenericCall_ReturnContext_DrivesNestedLiteral()
+    [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_OnAssignment()
     {
-        // What is expected is that contextual return type List<number> checks [1, 2] as number[].
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
             """
-            declare fn identity<T>(value: T): T;
-            let xs: number[] = identity([1, 2]);
+            mut xs: number[] = [1];
+            xs = [1, "no"];
             """
         );
-        Utility.AssertNoErrors(diagnostics);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_NestedArrayLiteral_ElementMismatch_ReportsOnBadElement()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""let xs: number[][] = [[1, "no"]]""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
     }
     #endregion Bidirectional
 }
