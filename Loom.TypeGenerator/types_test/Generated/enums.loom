@@ -5890,8 +5890,3 @@ declare interface Enum {
 }
 
 declare let Enum: Enum;
-
-let water = Enum.Material.Water;
-print(water)
-print(water.Name)
-print(water.Value)
