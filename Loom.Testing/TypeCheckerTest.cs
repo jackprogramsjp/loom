@@ -4542,6 +4542,17 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_AsExpressionBodyReturn()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""fn bad(): number[] -> [1, "no"]""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
     public void ThrowsFor_ArrayLiteral_ElementMismatch_OnAssignment()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(

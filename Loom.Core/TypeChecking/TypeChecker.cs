@@ -204,8 +204,18 @@ public sealed partial class TypeChecker
 
         var returnType = GetReturnType(functionDeclaration);
         var functionType = BindType(functionDeclaration, new Types.FunctionType(typeParameters, parameterTypes, returnType));
-        Visit(functionDeclaration.Body);
 
+        if (functionDeclaration.Body is ExpressionBody body)
+        {
+            if (functionDeclaration.ReturnType != null)
+                Check(body.Expression, returnType);
+            // Else... GetReturnType had already visited expression body
+        }
+        else
+        {
+            Visit(functionDeclaration.Body);
+        }
+        
         return functionType;
     }
 
