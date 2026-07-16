@@ -733,5 +733,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     private void PopScope() => _scopes.Pop();
     private void PushScope() => _scopes.Push(new ResolverScope());
 
-    protected override bool CombineResults(IEnumerable<bool> results) => results.All(t => t);
+    protected override bool CombineResults(ReadOnlySpan<bool> results)
+    {
+        var finalResult = true;
+        foreach (var result in results)
+            finalResult &= result;
+
+        return finalResult;
+    }
 }

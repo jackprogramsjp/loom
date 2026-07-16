@@ -93,7 +93,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
 
     public virtual T VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
         Visit(propertyInitializer.Expression);
-    
+
     public virtual T VisitInterfaceInvocationShorthandPropertyInitializer(InterfaceInvocationShorthandPropertyInitializer shorthandPropertyInitializer) =>
         Visit(shorthandPropertyInitializer.Expression);
 
@@ -155,7 +155,18 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitNullStatement(NullStatement _) => DefaultValue(_);
     public virtual T VisitNullTypeExpression(NullTypeExpression _) => DefaultValue(_);
 
-    protected virtual T CombineResults(IEnumerable<T?> results) => results.LastOrDefault(r => r != null)!;
+    protected virtual T CombineResults(ReadOnlySpan<T?> results)
+    {
+        T result = default!;
+
+        foreach (var item in results)
+        {
+            if (item != null)
+                result = item;
+        }
+
+        return result;
+    }
 
     protected TResult? MaybeVisit<TResult>(Node? node)
         where TResult : T =>
@@ -165,6 +176,13 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     private T VisitWithDefault(Node? node) => MaybeVisit(node) ?? DefaultValue(node);
 
     private T VisitList<TNode>(List<TNode> nodes)
-        where TNode : Node =>
-        CombineResults(nodes.ConvertAll(Visit));
+        where TNode : Node
+    {
+        T result = default!;
+
+        foreach (var node in nodes)
+            result = Visit(node);
+
+        return result;
+    }
 }
