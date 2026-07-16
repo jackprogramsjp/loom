@@ -8,13 +8,13 @@ internal partial class ReflectionMetadataReader(string body)
 {
     private readonly XElement _metadata = XElement.Parse(body);
 
-    public string ReadFunctionDescriptor(string className, string name) =>
-        ReadMemberDescriptor(className, name, ["ReflectionMetadataFunctions", "ReflectionMetadataYieldFunctions"]);
+    public string ReadFunctionDescription(string className, string name) =>
+        ReadMemberDescription(className, name, ["ReflectionMetadataFunctions", "ReflectionMetadataYieldFunctions"]);
 
-    public string ReadPropertyDescriptor(string className, string name) => ReadMemberDescriptor(className, name, ["ReflectionMetadataProperties"]);
-    public string ReadCallbackDescriptor(string className, string name) => ReadMemberDescriptor(className, name, ["ReflectionMetadataCallbacks"]);
-    public string ReadEventDescriptor(string className, string name) => ReadMemberDescriptor(className, name, ["ReflectionMetadataEvents"]);
-    public string ReadClassDescriptor(string name) => Get($"{ClassPrefix(name)}Properties/string[@name='summary']");
+    public string ReadPropertyDescription(string className, string name) => ReadMemberDescription(className, name, ["ReflectionMetadataProperties"]);
+    public string ReadCallbackDescription(string className, string name) => ReadMemberDescription(className, name, ["ReflectionMetadataCallbacks"]);
+    public string ReadEventDescription(string className, string name) => ReadMemberDescription(className, name, ["ReflectionMetadataEvents"]);
+    public string ReadClassDescription(string name) => Get($"{ClassPrefix(name)}Properties/string[@name='summary']");
 
     private string Get(string query)
     {
@@ -22,7 +22,7 @@ internal partial class ReflectionMetadataReader(string body)
         return result != null ? HyperlinkToMarkdown(result.ToString()) : string.Empty;
     }
 
-    public string ReadMemberDescriptor(string className, string name, string[] specifier)
+    public string ReadMemberDescription(string className, string name, string[] specifier)
     {
         var specifierString = string.Join(" or ", specifier.Select(v => $"@class='{v}'"));
         var query = $"{ClassPrefix(className)}Item[{specifierString}]/"

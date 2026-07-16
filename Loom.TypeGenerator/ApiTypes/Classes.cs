@@ -23,15 +23,13 @@ internal sealed class Parameter
 internal class Callback : MemberBase
 {
     public Parameter[] Parameters { get; set; }
+    [JsonConverter(typeof(SingleOrArrayConverter<ValueType>))]
+    public ValueType[]? ReturnType { get; set; }
 }
 
 internal sealed class Event : Callback;
 
-internal sealed class Function : Callback
-{
-    [JsonConverter(typeof(SingleOrArrayConverter<ValueType>))]
-    public ValueType[] ReturnType { get; set; }
-}
+internal sealed class Function : Callback;
 
 internal sealed class Property : MemberBase
 {

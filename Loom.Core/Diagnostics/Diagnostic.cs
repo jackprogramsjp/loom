@@ -89,7 +89,6 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
     private void AppendHighlightedLines(List<string> lines)
     {
         var pad = new string(' ', StartCharacter);
-        Console.Write(StartCharacter);
         for (var line = StartLine; line <= EndLine; line++)
         {
             var source = SourceLines[line - 1];

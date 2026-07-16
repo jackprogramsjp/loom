@@ -56,7 +56,7 @@ public sealed class Lexer(SourceFile file)
             {
                 var text = span.GetText();
                 var tabCount = text.Count(c => c == '\t');
-                _character += tabCount * 3;
+                _character += tabCount * 2;
             }
             
             yield return new Token(rule.Syntax, span);

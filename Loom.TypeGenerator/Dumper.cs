@@ -1,5 +1,4 @@
-﻿
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Loom.TypeGenerator;
 
@@ -11,12 +10,16 @@ internal static class Dumper
     public static async Task<ApiTypes.Dump> GetDump()
     {
         var body = await Request("Mini-API-Dump.json");
+        Log.Info("acquired API dump");
+
         return JsonSerializer.Deserialize<ApiTypes.Dump>(body)!;
     }
 
     public static async Task<ReflectionMetadataReader> GetReflectionMetadata()
     {
         var body = await Request("ReflectionMetadata.xml");
+        Log.Info("acquired reflection metadata");
+        
         return new ReflectionMetadataReader(body);
     }
 
@@ -26,7 +29,7 @@ internal static class Dumper
         {
             var response = await _client.GetAsync(BaseUrl + endpoint);
             response.EnsureSuccessStatusCode();
-
+            
             return await response.Content.ReadAsStringAsync();
         }
         catch (HttpRequestException e)

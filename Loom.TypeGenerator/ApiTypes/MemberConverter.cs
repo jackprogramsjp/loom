@@ -7,17 +7,20 @@ internal sealed class MemberConverter : JsonConverter<MemberBase>
 {
     public override MemberBase Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        using var doc = JsonDocument.ParseValue(ref reader);
-        var root = doc.RootElement;
+        using var document = JsonDocument.ParseValue(ref reader);
+        var root = document.RootElement;
         var memberType = root.GetProperty("MemberType").GetString();
-        MemberBase member = memberType switch
+        MemberBase? member = memberType switch
         {
             "Callback" => new Callback(),
             "Event" => new Event(),
             "Function" => new Function(),
             "Property" => new Property(),
-            _ => throw new NotSupportedException($"MemberType '{memberType}' is not supported.")
+            _ => null
         };
+
+        if (member == null)
+            Log.Fatal($"MemberType '{memberType}' is not supported.");
 
         foreach (var property in root.EnumerateObject())
         {
@@ -44,40 +47,40 @@ internal sealed class MemberConverter : JsonConverter<MemberBase>
 
                     break;
                 case "ReturnType":
-                    if (member is Function function)
+                    if (member is Callback callback2)
                     {
                         var rawJson = property.Value.GetRawText();
                         var type = rawJson.StartsWith('[')
-                            ? JsonSerializer.Deserialize<ValueType[]>(rawJson, options)
+                            ? JsonSerializer.Deserialize<ValueType[]>(rawJson, options)!
                             : [JsonSerializer.Deserialize<ValueType>(rawJson, options)!];
 
-                        function.ReturnType = type;
+                        callback2.ReturnType = type;
                     }
 
                     break;
                 case "Category":
                     if (member is Property prop)
-                        prop.Category = property.Value.GetString();
+                        prop.Category = property.Value.GetString()!;
 
                     break;
                 case "Default":
                     if (member is Property propDefault)
-                        propDefault.Default = property.Value.GetString();
+                        propDefault.Default = property.Value.GetString()!;
 
                     break;
                 case "Serialization":
                     if (member is Property propSerialization)
-                        propSerialization.Serialization = JsonSerializer.Deserialize<Serialization>(property.Value.GetRawText(), options);
+                        propSerialization.Serialization = JsonSerializer.Deserialize<Serialization>(property.Value.GetRawText(), options)!;
 
                     break;
                 case "ThreadSafety":
                     if (member is Property propThreadSafety)
-                        propThreadSafety.ThreadSafety = property.Value.GetString();
+                        propThreadSafety.ThreadSafety = property.Value.GetString()!;
 
                     break;
                 case "ValueType":
                     if (member is Property propValueType)
-                        propValueType.ValueType = JsonSerializer.Deserialize<ValueType>(property.Value.GetRawText(), options);
+                        propValueType.ValueType = JsonSerializer.Deserialize<ValueType>(property.Value.GetRawText(), options)!;
 
                     break;
             }
