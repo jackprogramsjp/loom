@@ -25,7 +25,6 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         {
             ArgumentNullException.ThrowIfNull(actual);
             ArgumentNullException.ThrowIfNull(expected);
-            ArgumentNullException.ThrowIfNull(span);
             Actual = actual;
             Expected = expected;
             Span = span;

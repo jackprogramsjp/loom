@@ -1,0 +1,429 @@
+## Handwritten Roblox types
+
+declare fn print(msg: unknown): void;
+
+interface SecurityCapabilities;
+
+declare interface DateTime {
+    UnixTimestamp: number;
+    UnixTimestampMillis: number;
+}
+
+declare interface DateTimeStatic {
+    now: fn: DateTime;
+    fromIsoDate: fn(isoDate: string): DateTime?;
+    fromLocalTime: fn(year: number?, month: number?, day: number?, hour: number?, minute: number?, second: number?, millisecond: number?): DateTime;
+    fromUniversalTime: fn(year: number?, month: number?, day: number?, hour: number?, minute: number?, second: number?, millisecond: number?): DateTime;
+    fromUnixTimestamp: fn(unixTimestamp: number): DateTime;
+    fromUnixTimestampMillis: fn(unixTimestampMillis: number): DateTime;
+}
+
+declare let DateTime: DateTimeStatic;
+
+declare interface Content {
+    SourceType: Enum["ContentSourceType"];
+    Uri: string?;
+    ## Object: Object?;
+}
+
+declare interface ContentStatic {
+    ## none: Content;
+    fromUri: fn(uri: string): Content;
+    ## fromObject: fn(object: Object): Content;
+}
+
+declare let Content: ContentStatic;
+
+declare interface Vector2 {
+    X: number;
+    Y: number;
+    Magnitude: number;
+    Unit: Vector2;
+}
+
+declare interface Vector2Static {
+    X: number;
+    Y: number;
+    zero: Vector2;
+    one: Vector2;
+    yAxis: Vector2;
+    xAxis: Vector2;
+    zAxis: Vector2;
+}
+
+declare let Vector2: Vector2Static;
+
+declare interface Vector2int16 {
+    X: number;
+    Y: number;
+}
+
+declare interface Vector3 {
+    X: number;
+    Y: number;
+    Z: number;
+    Magnitude: number;
+    Unit: Vector3;
+}
+
+declare interface Vector3Static {
+    zero: Vector3;
+    one: Vector3;
+    yAxis: Vector3;
+    xAxis: Vector3;
+    zAxis: Vector3;
+    FromNormalId: fn(normal: Enum["NormalId"]): Vector3;
+    FromAxis: fn(axis: Enum["Axis"]): Vector3;
+}
+
+declare let Vector3: Vector3Static;
+
+declare interface Vector3int16 {
+    X: number;
+    Y: number;
+    Z: number;
+}
+
+declare interface CFrame {
+    X: number;
+    Y: number;
+    Z: number;
+    Position: Vector3;
+    Rotation: CFrame;
+    LookVector: Vector3;
+    RightVector: Vector3;
+    UpVector: Vector3;
+    XVector: Vector3;
+    YVector: Vector3;
+    ZVector: Vector3;
+}
+
+declare interface CFrameStatic {
+    identity: CFrame;
+    Angles: fn(x: number, y: number, z: number): CFrame;
+    lookAt: fn(at: Vector3, lookAt: Vector3, up: Vector3?): CFrame;
+    lookAlong: fn(at: Vector3, direction: Vector3, up: Vector3?): CFrame;
+    fromEulerAngles: fn(x: number, y: number, z: number, order: Enum["RotationOrder"]?): CFrame;
+    fromEulerAnglesXYZ: fn(x: number, y: number, z: number): CFrame;
+    fromEulerAnglesYXZ: fn(x: number, y: number, z: number): CFrame;
+    fromOrientation: fn(x: number, y: number, z: number): CFrame;
+    fromAxisAngle: fn(vector: Vector3, rotation: number): CFrame;
+    fromMatrix: fn(pos: Vector3, vX: Vector3, vY: Vector3, vZ: Vector3): CFrame;
+}
+
+declare let CFrame: CFrameStatic;
+
+declare interface Region3int16 {
+    Min: Vector3int16;
+    Max: Vector3int16;
+}
+
+declare interface Region3 {
+    CFrame: CFrame;
+    Size: Vector3;
+}
+
+declare interface Color3 {
+    R: number;
+    G: number;
+    B: number;
+}
+
+declare interface Color3Static {
+    fromRGB: fn(r: number?, g: number?, b: number?): Color3;
+    fromHSV: fn(h: number?, s: number?, v: number?): Color3;
+    fromHex: fn(hex: string): Color3;
+}
+
+declare let Color3: Color3Static;
+
+declare interface BrickColor {
+    Number: number;
+    Name: string;
+    Color: Color3;
+    r: number;
+    g: number;
+    b: number;
+}
+
+declare interface BrickColorStatic {
+    random: fn: BrickColor;
+    palette: fn(paletteValue: number): BrickColor;
+    White: fn: BrickColor;
+    Gray: fn: BrickColor;
+    DarkGray: fn: BrickColor;
+    Black: fn: BrickColor;
+    Red: fn: BrickColor;
+    Yellow: fn: BrickColor;
+    Green: fn: BrickColor;
+    Blue: fn: BrickColor;
+}
+
+declare let BrickColor: BrickColorStatic;
+
+declare interface Ray {
+    Unit: Ray;
+    Origin: Vector3;
+    Direction: Vector3;
+}
+
+declare interface RaycastResult {
+    Distance: number;
+    ## Instance: Instance?;
+    Material: Enum["Material"];
+    Position: Vector3;
+    Normal: Vector3;
+}
+
+declare interface RaycastParams {
+    ## mut FilterDescendantsInstances: Instance[]?;
+    mut FilterType: Enum["RaycastFilterType"];
+    mut IgnoreWater: bool?;
+    mut CollisionGroup: string;
+    mut RespectCanCollide: bool?;
+    mut BruteForceAllSlow: bool?;
+}
+
+declare interface OverlapParams {
+    ## mut FilterDescendantsInstances: Instance[]?;
+    mut FilterType: Enum["RaycastFilterType"];
+    mut MaxParts: number;
+    mut CollisionGroup: string;
+    mut RespectCanCollide: bool?;
+    mut BruteForceAllSlow: bool?;
+}
+
+declare interface UDim {
+    Scale: number;
+    Offset: number;
+}
+
+declare interface UDim2 {
+    X: UDim;
+    Y: UDim;
+    Width: UDim;
+    Height: UDim;
+}
+
+declare interface UDim2Static {
+    fromScale: fn(xScale: number?, yScale: number?): UDim2;
+    fromOffset: fn(xOffset: number?, yOffset: number?): UDim2;
+}
+
+declare let UDim2: UDim2Static;
+
+declare interface Random;
+
+declare interface time_t {
+    year: number
+    month: number;
+    day: number;
+    wday: number;
+    yday: number;
+    hour: number;
+    min: number;
+    sec: number;
+    isdst: number;
+}
+
+declare interface TimeTable {
+    Year: number
+    Month: number;
+    Day: number;
+    Hour: number;
+    Minute: number;
+    Second: number;
+    Millisecond: number;
+}
+
+declare interface NumberRange {
+    Min: number;
+    Max: number;
+}
+
+declare interface NumberSequenceKeypoint {
+    Envelope: number;
+    Time: number;
+    Value: number;
+}
+
+declare interface NumberSequence {
+    Keypoints: NumberSequenceKeypoint[];
+}
+
+declare interface ColorSequenceKeypoint {
+    Time: number;
+    Value: Color3;
+}
+
+declare interface ColorSequence {
+    Keypoints: ColorSequenceKeypoint[];
+}
+
+declare interface Rect {
+    Width: number;
+    Height: number;
+    Min: Vector2;
+    Max: Vector2;
+}
+
+declare interface Axes {
+    X: bool;
+    Y: bool;
+    Z: bool;
+    Top: bool;
+    Bottom: bool;
+    Left: bool;
+    Right: bool;
+    Back: bool;
+    Front: bool;
+}
+
+declare interface Faces {
+    Top: bool;
+    Bottom: bool;
+    Left: bool;
+    Right: bool;
+    Back: bool;
+    Front: bool;
+}
+
+declare interface PhysicalProperties {
+    Density: number;
+    Friction: number;
+    Elasticity: number;
+    FrictionWeight: number;
+    ElasticityWeight: number;
+}
+
+declare interface Path2DControlPoint {
+    Position: UDim2;
+    LeftTangent: UDim2;
+    RightTangent: UDim2;
+}
+
+declare interface RotationCurveKey {
+    Interpolation: Enum["KeyInterpolationMode"];
+    Time: number;
+    Value: CFrame;
+    LeftTangent: number;
+    RightTangent: number;
+}
+
+declare interface FloatCurveKey {
+    Interpolation: Enum["KeyInterpolationMode"];
+    Time: number;
+    Value: number;
+    LeftTangent: number;
+    RightTangent: number;
+}
+
+declare interface Font {
+    Family: string;
+    Weight: Enum["FontWeight"];
+    Style: Enum["FontStyle"];
+    Bold: bool;
+}
+
+declare interface FontStatic {
+    fromEnum: fn(font: Enum["Font"]): Font;
+    fromName: fn(name: string, weight: Enum["FontWeight"]?, style: Enum["FontStyle"]?): Font;
+    fromId: fn(id: number, weight: Enum["FontWeight"]?, style: Enum["FontStyle"]?): Font;
+}
+
+declare let Font: FontStatic;
+
+declare interface Secret;
+
+declare interface DockWidgetPluginGuiInfo {
+    InitialEnabled: bool;
+    InitialEnabledShouldOverrideRestore: bool;
+    FloatingXSize: number;
+    FloatingYSize: number;
+    MinWidth: number;
+    MinHeight: number;
+}
+
+declare interface CatalogSearchParams {
+    mut SearchKeyword: string?;
+    mut MinPrice: number?;
+    mut MaxPrice: number?;
+    mut SortType: Enum["CatalogSortType"]?;
+    mut SortAggregation: Enum["CatalogSortAggregation"]?;
+    mut CategoryFilter: Enum["CatalogCategoryFilter"]?;
+    mut SalesTypeFilter: Enum["SalesTypeFilter"]?;
+    mut BundleTypes: Enum["BundleType"][]?;
+    mut AssetTypes: Enum["AvatarAssetType"][]?;
+    mut IncludeOffSale: bool?;
+    mut CreatorName: string?;
+    mut Limit: number?;
+}
+
+declare interface TweenInfo {
+    EasingStyle: Enum["EasingStyle"];
+    EasingDirection: Enum["EasingDirection"];
+    Time: number;
+    DelayTime: number;
+    RepeatCount: number;
+    Reverses: bool;
+}
+
+declare interface SharedTable {
+    mut [string]: unknown;
+}
+
+declare interface EmoteDictionary {
+    mut [string]: number[];
+}
+
+enum EmoteSlot {
+    Slot1 = 1,
+    Slot2,
+    Slot3,
+    Slot4,
+    Slot5,
+    Slot6,
+    Slot7,
+    Slot8
+}
+
+declare interface EquippedEmote {
+    Name: string;
+    Slot: EmoteSlot;
+}
+
+declare interface UserInfo {
+    Id: number;
+    Username: string;
+    DisplayName: string;
+}
+
+declare interface GroupOwner {
+    Id: number;
+    Name: string;
+}
+
+declare interface GroupRole {
+    Name: string;
+    Rank: number;
+}
+
+declare interface GroupInfo {
+    Id: number;
+    Name: string;
+    Owner: GroupOwner;
+    EmblemUrl: string;
+    Description: string;
+    Roles: GroupRole[];
+}
+
+declare interface GetGroupsAsyncResult {
+    Id: number;
+    Name: string;
+    EmblemUrl: string;
+    Description: string;
+    Rank: number;
+    Role: string;
+    IsPrimary: bool;
+    IsInClan: bool;
+}

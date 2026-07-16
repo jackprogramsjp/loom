@@ -5,14 +5,14 @@ using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core.Diagnostics;
 
-public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
+public readonly record struct Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {
     private int StartLine => Span.Start.Line;
     private int EndLine => Span.End.Line;
     private int StartCharacter => Span.Start.Character;
     private int EndCharacter => Span.End.Character;
     private int LineDigits => EndLine.ToString().Length;
-    private string[] SourceLines => Span.File.SourceText.Split(Environment.NewLine);
+    private string[] SourceLines => Span.File.SourceText.Replace(Environment.NewLine, "\n").Split('\n');
     private string GutterIndent => new(' ', LineDigits);
     private string Gutter => $"{Colors.Dim}{GutterIndent} │{Colors.Reset}";
 

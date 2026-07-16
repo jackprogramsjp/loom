@@ -47,7 +47,7 @@ public class ResolverTest
     public void ThrowsFor_DuplicateInterface()
     {
         var diagnostics = Utility.GetSemanticModel("interface Abc; interface Abc;").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Interface 'Abc' is already declared in this scope.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.DuplicateName, "Variable 'Abc' is already declared in this scope.");
     }
 
     [Fact]

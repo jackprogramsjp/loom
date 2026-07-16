@@ -61,7 +61,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
         if (interfaceSymbol.IsIntrinsic)
         {
-            _diagnostics.Error(implement.InterfaceName, InternalCodes.IntrinsicImplementation, $"Trait '{implement.TraitName}' may not be implemented on intrinsic interface '{implement.InterfaceName}'.");
+            _diagnostics.Error(
+                implement.InterfaceName,
+                InternalCodes.IntrinsicImplementation,
+                $"Trait '{implement.TraitName}' may not be implemented on intrinsic interface '{implement.InterfaceName}'."
+            );
+
             return false;
         }
 
@@ -294,7 +299,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature)
     {
-        if (!DeclareVariable(declareFunctionSignature, SymbolKind.Function, out var symbol))
+        if (!DeclareVariable(declareFunctionSignature, SymbolKind.Function, out _))
             return false;
 
         PushScope();
@@ -496,7 +501,40 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    private bool ResolveStatements(List<Statement> statements) => statements.All(ResolveStatement);
+    private bool ResolveStatements(List<Statement> statements)
+    {
+        HoistDeclarations(statements);
+        return statements.All(ResolveStatement);
+    }
+
+    private void HoistDeclarations(List<Statement> statements)
+    {
+        foreach (var statement in statements)
+        {
+            switch (statement)
+            {
+                case TypeAlias typeAlias:
+                    DeclareType(typeAlias);
+                    break;
+                case TraitDeclaration traitDeclaration:
+                    DeclareTrait(traitDeclaration);
+                    break;
+                case InterfaceDeclaration interfaceDeclaration:
+                    if (DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out _))
+                        DeclareInterface(interfaceDeclaration, interfaceDeclaration.SealedKeyword != null, out _);
+
+                    break;
+                case EnumDeclaration enumDeclaration:
+                    if (DeclareVariable(enumDeclaration, SymbolKind.Variable, out _))
+                        DeclareType(enumDeclaration, SymbolKind.EnumType);
+
+                    break;
+                case Declare { Signature: InterfaceDeclaration nested }:
+                    DeclareInterface(nested, nested.SealedKeyword != null, out _);
+                    break;
+            }
+        }
+    }
 
     private bool ResolveStatement(Statement statement)
     {
@@ -516,6 +554,9 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var name = traitDeclaration.Name.Text;
         if (scope.TypeLookup.TryGetValue(name, out var symbols))
         {
+            if (IsAlreadyHoisted(traitDeclaration, symbols))
+                return true;
+
             var kindName = symbols is [.., TraitSymbol] ? "Trait" : "Type";
             _diagnostics.Error(traitDeclaration.Name, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
             return false;
@@ -532,6 +573,9 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var name = interfaceDeclaration.Name.Text;
         if (scope.TypeLookup.TryGetValue(name, out var symbols))
         {
+            if (IsAlreadyHoisted(interfaceDeclaration, symbols, out interfaceSymbol))
+                return true;
+
             var kindName = symbols is [.., InterfaceSymbol] ? "Interface" : "Type";
             _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
             return false;
@@ -554,13 +598,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool DeclareVariable(Node node, Symbol symbol)
     {
-        var scope = CurrentScope();
-        if (scope.VariableLookup.ContainsKey(symbol.Name))
-        {
-            var kindName = scope.TypeLookup.GetValueOrDefault(symbol.Name, []) is [.., InterfaceSymbol] ? "Interface" : "Variable";
-            _diagnostics.Error(node, InternalCodes.DuplicateName, $"{kindName} '{symbol.Name}' is already declared in this scope.");
-            return false;
-        }
+        if (HasDuplicateSymbol(node, symbol.Name, true, $"Variable '{symbol.Name}' is already declared in this scope."))
+            return true;
 
         DeclareSymbol(symbol);
         return true;
@@ -568,17 +607,25 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool DeclareType(NamedDeclaration node, SymbolKind symbolKind = SymbolKind.Type)
     {
-        var scope = CurrentScope();
         var name = node.Name.Text;
-        if (scope.TypeLookup.ContainsKey(name))
-        {
-            _diagnostics.Error(node, InternalCodes.DuplicateName, $"Type '{name}' is already declared in this scope.");
-            return false;
-        }
+        if (HasDuplicateSymbol(node, false, $"Type '{name}' is already declared in this scope."))
+            return true;
 
         var symbol = new Symbol(node, symbolKind, name);
         DeclareSymbol(symbol);
+        return true;
+    }
 
+    private bool HasDuplicateSymbol(NamedDeclaration node, bool isVariable, string error) => HasDuplicateSymbol(node, node.Name.Text, isVariable, error);
+
+    private bool HasDuplicateSymbol(Node node, string name, bool isVariable, string error)
+    {
+        var scope = CurrentScope();
+        var lookup = isVariable ? scope.VariableLookup : scope.TypeLookup;
+        if (!lookup.TryGetValue(name, out var existing) || IsAlreadyHoisted(node, existing))
+            return false;
+
+        _diagnostics.Error(node, InternalCodes.DuplicateName, error);
         return true;
     }
 
@@ -650,6 +697,15 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return !lookup.TryGetValue(name, out var symbols) ? null : symbols.First();
     }
 
+    private static bool IsAlreadyHoisted(Node node, List<Symbol> symbolsForName) => IsAlreadyHoisted<Symbol>(node, symbolsForName, out _);
+
+    private static bool IsAlreadyHoisted<T>(Node node, List<Symbol> symbolsForName, [MaybeNullWhen(false)] out T hoistedSymbol)
+        where T : Symbol
+    {
+        hoistedSymbol = symbolsForName.OfType<T>().FirstOrDefault(s => s.Declaration == node);
+        return hoistedSymbol != null;
+    }
+
     private static SymbolLookup GetLookup(SymbolKind kind, ResolverScope scope) => Symbol.IsTypeKind(kind) ? scope.TypeLookup : scope.VariableLookup;
 
     private bool ReportNonInterfaceConstraint(TypeExpression constraint)
@@ -669,7 +725,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private void DeclareIntrinsicSymbols(SemanticModel semanticModel)
     {
-        foreach (var symbol in Intrinsics.Register(semanticModel))
+        foreach (var (symbol, _) in Intrinsics.Register(semanticModel))
             DeclareSymbol(symbol);
     }
 
@@ -677,5 +733,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     private void PopScope() => _scopes.Pop();
     private void PushScope() => _scopes.Push(new ResolverScope());
 
-    protected override bool CombineResults(IEnumerable<bool> results) => results.All(t => t);
+    protected override bool CombineResults(ReadOnlySpan<bool> results)
+    {
+        var finalResult = true;
+        foreach (var result in results)
+            finalResult &= result;
+
+        return finalResult;
+    }
 }
