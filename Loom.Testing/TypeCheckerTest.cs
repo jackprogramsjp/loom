@@ -4498,6 +4498,38 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void ThrowsFor_InterfaceInvocation_NestedArrayProperty_ElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            interface Box { items: number[] }
+            new Box { items: [1, "no"] }
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_NestedArrayIndexer_ElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            interface Box { [string]: number[] }
+            new Box { ["k"]: [1, "no"] }
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
     public void ThrowsFor_AnnotatedArrayLiteral_ElementMismatch_ReportsOnBadElement()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("""let xs: number[] = [1, "no"]""");
