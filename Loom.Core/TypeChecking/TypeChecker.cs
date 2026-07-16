@@ -322,9 +322,9 @@ public sealed partial class TypeChecker
         }
 
         var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
+        var args = invocation.Arguments.ArgumentList;
         if (functionType.TypeParameters.Count == 0)
         {
-            var args = invocation.Arguments.ArgumentList;
             var parameterTypes = functionType.ParameterTypes;
             var argTypes = new List<Type>(args.Count);
 
@@ -340,19 +340,50 @@ public sealed partial class TypeChecker
             return BindNonGenericInvocation(invocation, argTypes, functionType, declaration);
         }
 
-        var argumentTypes = invocation.Arguments.ArgumentList.ConvertAll(Visit);
         var expectedReturnType = GetContextualType(invocation);
-        var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
-        if (substitution == null)
-            return BindType(invocation, Types.PrimitiveType.Never);
 
-        var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
-        var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
-        var instantiated = new Types.FunctionType([], substitutedParameterTypes, substitutedReturnType);
+        if (invocation.TypeArguments != null)
+        {
+            var substitution = ResolveTypeArguments(invocation, functionType, [], expectedReturnType);
+            if (substitution == null)
+                return BindType(invocation, Types.PrimitiveType.Never);
 
-        CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
-        AddArgumentConstraints(invocation.Arguments, argumentTypes, substitutedParameterTypes);
-        return BindType(invocation, instantiated.ReturnType);
+            var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
+            var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
+            var argumentTypes = new List<Type>(args.Count);
+
+            for (var i = 0; i < args.Count; i++)
+            {
+                argumentTypes.Add(
+                    i < substitutedParameterTypes.Count
+                        ? Check(args[i], substitutedParameterTypes[i])
+                        : Visit(args[i])
+                );
+            }
+
+            CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
+            return BindType(invocation, substitutedReturnType);
+        }
+
+        {
+            var argumentTypes = args.ConvertAll(Visit);
+            var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
+            if (substitution == null)
+                return BindType(invocation, Types.PrimitiveType.Never);
+
+            var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
+            var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
+
+            CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
+
+            for (var i = 0; i < args.Count; i++)
+            {
+                if (i < substitutedParameterTypes.Count)
+                    Check(args[i], substitutedParameterTypes[i]);
+            }
+
+            return BindType(invocation, substitutedReturnType);
+        }
     }
 
     public override Type VisitQualifiedName(QualifiedName qualifiedName) => GetTypeOfNamedAccess(qualifiedName, qualifiedName.Identifier, qualifiedName.Names);
@@ -740,11 +771,11 @@ public sealed partial class TypeChecker
         {
             EqualsValueClause equalsValueClause when equalsValueClause.Value == expression
                 && equalsValueClause.Parent is VariableDeclaration { ColonTypeClause: not null } variableDeclaration =>
-                _semanticModel.GetType(variableDeclaration.ColonTypeClause),
+                _semanticModel.GetType(variableDeclaration.ColonTypeClause.Type),
 
             EqualsValueClause equalsValueClause when equalsValueClause.Value == expression
-                && equalsValueClause.Parent is Parameter { ColonTypeClause: not null } variableDeclaration =>
-                _semanticModel.GetType(variableDeclaration.ColonTypeClause),
+                && equalsValueClause.Parent is Parameter { ColonTypeClause: not null } parameter =>
+                _semanticModel.GetType(parameter.ColonTypeClause.Type),
 
             Return @return when @return.Expression == expression =>
                 GetEnclosingDeclaredReturnType(@return),

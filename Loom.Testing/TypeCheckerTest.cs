@@ -726,7 +726,7 @@ public class TypeCheckerTest
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.ConstraintViolation,
-            "Type 'T1' does not satisfy constraint 'number' for type parameter 'T'."
+            "Type 'string' does not satisfy constraint 'number' for type parameter 'T'."
         );
     }
 
@@ -4479,6 +4479,38 @@ public class TypeCheckerTest
             """
         );
         Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericCall_ReturnContext_ArrayElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn id<T>(value: T): T;
+            let xs: number[] = id([1, "no"]);
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericCall_ExplicitTypeArgs_ArrayElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn id<T>(value: T): T;
+            id::<number[]>([1, "no"]);
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
     }
 
     [Fact]
