@@ -6,5 +6,6 @@ interface MutRecord<K, V> {
     mut [K]: V;
 }
 
+declare fn print(msg: unknown): void;
 declare fn string(value: unknown): string;
 declare fn number(value: unknown, radix: number?): number?;
