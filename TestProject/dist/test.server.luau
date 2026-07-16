@@ -1,1 +1,2 @@
-print("hi")
+local x = "hey"
+x = "hi"

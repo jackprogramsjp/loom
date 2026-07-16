@@ -94,8 +94,8 @@ internal sealed class ClassGenerator(
         Write($"declare interface {className}{superclassText}{(useBraces ? " {" : ";")}");
         if (useBraces)
             PushIndent();
-        
-        if (isCreatable)
+
+        if (isCreatable && !HasCreatableSuperclass(rbxClass))
             Write("_is_creatable: true");
 
         foreach (var member in membersToGenerate)
@@ -125,6 +125,15 @@ internal sealed class ClassGenerator(
         PopIndent();
         Write("}");
         Write();
+    }
+
+    private bool HasCreatableSuperclass(Class rbxClass)
+    {
+        if (rbxClass.Superclass == Constants.RootClassName)
+            return false;
+         
+        var superclass = _classRefs[AssertClassName(rbxClass.Superclass)];
+        return ClassUtility.IsCreatable(superclass) || HasCreatableSuperclass(superclass);
     }
 
     private void WriteDescription(string description)

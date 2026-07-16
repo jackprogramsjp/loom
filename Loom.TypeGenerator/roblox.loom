@@ -398,6 +398,12 @@ declare interface UserInfo {
     DisplayName: string;
 }
 
+declare interface User {
+    Id: number;
+    DomainType: Enum["DomainType"];
+    DomainId: number;
+}
+
 declare interface GroupOwner {
     Id: number;
     Name: string;
@@ -427,3 +433,18 @@ declare interface GetGroupsAsyncResult {
     IsPrimary: bool;
     IsInClan: bool;
 }
+
+declare interface ClipEvaluator: Instance;
+declare interface SystemAddress: Instance;
+declare interface OpenCloudModel: Instance;
+declare interface HSRDataContentProvider: Instance;
+declare interface MeshContentProvider: Instance;
+declare interface SolidModelContentProvider: Instance;
+declare interface SlimContentProvider: Instance;
+declare interface CSGDictionaryService: Instance;
+declare interface NonReplicatedCSGDictionaryService: Instance;
+declare interface AppStorageService: Instance;
+declare interface UserStorageService: Instance;
+declare interface NetworkPeer: Instance;
+declare interface NetworkClient: NetworkPeer;
+declare interface NetworkServer: NetworkPeer;

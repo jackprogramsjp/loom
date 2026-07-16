@@ -25,7 +25,8 @@ internal class Generator(
             var classGenerator = new ClassGenerator(FilePath, Metadata, definedClassNames, security, lowerSecurity);
             classGenerator.Generate(dump.Classes);
 
-            var generatorDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
+            var generatorDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../.."));
+            Log.Info($"writing within directory '{generatorDirectory}'");
             var filesToCopy = Directory.GetFiles(generatorDirectory, "*.loom", SearchOption.TopDirectoryOnly);
             foreach (var file in filesToCopy)
             {
