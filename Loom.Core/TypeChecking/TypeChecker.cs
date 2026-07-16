@@ -183,6 +183,19 @@ public sealed partial class TypeChecker
         return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenType, elseType])));
     }
 
+    public override Type VisitReturn(Return @return)
+    {
+        if (@return.Expression == null)
+            return BindType(@return, Types.PrimitiveType.Void);
+
+        var expected = GetEnclosingDeclaredReturnType(@return);
+        var actual = expected != null
+            ? Check(@return.Expression, expected)
+            : Visit(@return.Expression);
+        
+        return BindType(@return, actual);
+    }
+
     public override Type VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
     {
         var typeParameters = functionDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter) ?? [];
@@ -221,20 +234,22 @@ public sealed partial class TypeChecker
             declaredType = Visit(variableDeclaration.ColonTypeClause);
 
         var initializerType = variableDeclaration.EqualsValueClause != null
-            ? Visit(variableDeclaration.EqualsValueClause)
-            : declaredType ?? Types.PrimitiveType.Unknown;
+            ? (declaredType != null
+                ? Check(variableDeclaration.EqualsValueClause.Value, declaredType, _flowState)
+                : Visit(variableDeclaration.EqualsValueClause))
+            : null;
 
         Type finalType = Types.PrimitiveType.None;
         if (declaredType != null)
         {
-            if (variableDeclaration.EqualsValueClause != null)
-                _semanticModel.TypeSolver.AddConstraint(initializerType, declaredType, variableDeclaration.EqualsValueClause.Value);
-
             finalType = declaredType;
         }
-        else if (variableDeclaration.EqualsValueClause != null)
+        else if (initializerType != null)
         {
             finalType = initializerType;
+        }
+        else {
+            finalType = Types.PrimitiveType.Unknown;
         }
 
         if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
@@ -297,10 +312,25 @@ public sealed partial class TypeChecker
         }
 
         var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
-        var argumentTypes = invocation.Arguments.ArgumentList.ConvertAll(Visit);
         if (functionType.TypeParameters.Count == 0)
-            return BindNonGenericInvocation(invocation, argumentTypes, functionType, declaration);
+        {
+            var args = invocation.Arguments.ArgumentList;
+            var parameterTypes = functionType.ParameterTypes;
+            var argTypes = new List<Type>(args.Count);
 
+            for (var i = 0; i < args.Count; i++)
+            {
+                argTypes.Add(
+                    i < parameterTypes.Count
+                        ? Check(args[i], parameterTypes[i])
+                        : Visit(args[i])
+                );
+            }
+        
+            return BindNonGenericInvocation(invocation, argTypes, functionType, declaration);
+        }
+
+        var argumentTypes = invocation.Arguments.ArgumentList.ConvertAll(Visit);
         var expectedReturnType = GetContextualType(invocation);
         var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
         if (substitution == null)
@@ -393,7 +423,7 @@ public sealed partial class TypeChecker
             return base.VisitBinaryOperator(assignmentOperator);
 
         var targetType = Visit(assignmentOperator.Left);
-        var valueType = Visit(assignmentOperator.Right);
+        var valueType = Check(assignmentOperator.Right, targetType);
         if (assignmentOperator.Left is ElementAccess or PropertyAccess or QualifiedName)
         {
             var expression = assignmentOperator.Left switch
@@ -454,7 +484,8 @@ public sealed partial class TypeChecker
             }
         }
 
-        _semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
+        // Dropping AddConstraint here because the Check method already does it
+        // _semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
         return BindType(assignmentOperator, valueType);
     }
 
@@ -548,7 +579,7 @@ public sealed partial class TypeChecker
     }
 
     public override Type VisitArrayLiteral(ArrayLiteral arrayLiteral)
-    {
+    {        
         // TODO: array literal types for immutable arrays assigned to immutable names
         var expressionTypes = arrayLiteral.Expressions.ConvertAll(Visit).ConvertAll(t => t.Widen());
         var elementType = TypeSimplifier.Simplify(new Types.UnionType(expressionTypes));
@@ -913,7 +944,8 @@ public sealed partial class TypeChecker
     private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, Types.FunctionType functionType, DeclareFunctionSignature? declaration)
     {
         CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes, declaration);
-        AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
+        // COMMENT THIS OUT BECAUSE THE CHECK ALREADY DID IT SO NO NEED TO ADD CONSTRAINTS HERE
+        // AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
         return BindType(invocation, functionType.ReturnType);
     }
 
