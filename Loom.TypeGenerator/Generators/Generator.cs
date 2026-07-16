@@ -25,14 +25,7 @@ internal class Generator(
             var classGenerator = new ClassGenerator(FilePath, Metadata, definedClassNames, security, lowerSecurity);
             classGenerator.Generate(dump.Classes);
 
-            var generatorDirectory = Path.GetDirectoryName(
-                Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory)))
-            );
-            
-            if (generatorDirectory == null)
-                Log.Fatal("could not find type generator project directory");
-
-            Stream.Append(enumGenerator.Stream);
+            var generatorDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
             var filesToCopy = Directory.GetFiles(generatorDirectory, "*.loom", SearchOption.TopDirectoryOnly);
             foreach (var file in filesToCopy)
             {
@@ -41,6 +34,7 @@ internal class Generator(
                 Log.Info($"wrote contents of '{Path.GetRelativePath(generatorDirectory, file)}'");
             }
             
+            Stream.Append(enumGenerator.Stream);
             Stream.Append(classGenerator.Stream);
             WriteFile();
         }

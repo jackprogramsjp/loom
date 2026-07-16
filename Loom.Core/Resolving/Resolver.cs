@@ -725,7 +725,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private void DeclareIntrinsicSymbols(SemanticModel semanticModel)
     {
-        foreach (var symbol in Intrinsics.Register(semanticModel))
+        foreach (var (symbol, _) in Intrinsics.Register(semanticModel))
             DeclareSymbol(symbol);
     }
 

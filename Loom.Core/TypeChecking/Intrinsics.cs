@@ -8,6 +8,7 @@ namespace Loom.Core.TypeChecking;
 
 public static class Intrinsics
 {
+    private static HashSet<(Symbol, Types.Type)>? _cachedIntrinsics;
     private static bool _compilingIntrinsic;
 
     public static readonly InterfaceType Range = new(
@@ -24,25 +25,33 @@ public static class Intrinsics
         )
     );
 
-    public static HashSet<Symbol> Register(SemanticModel model)
+    public static HashSet<(Symbol, Types.Type)> Register(SemanticModel model)
+    {
+        _cachedIntrinsics ??= CompileIntrinsics();
+        
+        foreach (var (symbol, type) in _cachedIntrinsics)
+            model.TypeSolver.SetType(symbol.Declaration, type);
+
+        return _cachedIntrinsics;
+    }
+
+    private static HashSet<(Symbol, Types.Type)> CompileIntrinsics()
     {
         if (_compilingIntrinsic) return [];
         _compilingIntrinsic = true;
-
-        var sourceDirectory = Path.GetDirectoryName(
-            Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory))))
-        );
-
+        
+        var sourceDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
         var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" } };
         var compilationUnit = new CompilationUnit(loomConfig);
         var compiledFiles = compilationUnit.SourceFiles.Select(file =>
-            {
-                file.IsIntrinsic = true;
-                return compilationUnit.Compile(file);
-            }
-        );
+                {
+                    file.IsIntrinsic = true;
+                    return compilationUnit.Compile(file);
+                }
+            )
+            .ToArray();
 
-        var intrinsicSymbols = new HashSet<Symbol>();
+        var intrinsicSymbols = new HashSet<(Symbol, Types.Type)>();
         foreach (var compiledFile in compiledFiles)
         {
             var symbols = compiledFile.Tree.Statements.SelectMany(statement => compiledFile.SemanticModel.GetDeclarationSymbols(statement));
@@ -50,8 +59,7 @@ public static class Intrinsics
             {
                 symbol.IsIntrinsic = true;
                 symbol.IsGlobal = true;
-                model.TypeSolver.SetType(symbol.Declaration, compiledFile.SemanticModel.GetType(symbol.Declaration));
-                intrinsicSymbols.Add(symbol);
+                intrinsicSymbols.Add((symbol, compiledFile.SemanticModel.GetType(symbol.Declaration)));
             }
         }
 
