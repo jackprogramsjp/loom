@@ -144,15 +144,16 @@ public static class SyntaxFacts
         SyntaxKind.LArrowLArrowEquals
     ];
     private static readonly HashSet<SyntaxKind> _unaryOperators = [SyntaxKind.Minus, SyntaxKind.Tilde, SyntaxKind.Bang];
+    private static readonly Dictionary<SyntaxKind, string> _operatorTextByKind =
+        OperatorMap.ToDictionary(kv => kv.Value, kv => kv.Key);
+    private static readonly Dictionary<SyntaxKind, string> _keywordTextByKind =
+        KeywordMap.ToDictionary(kv => kv.Value, kv => kv.Key);
 
     public static bool IsNotTrivia(SyntaxKind kind) => !IsTrivia(kind);
     public static bool IsTrivia(SyntaxKind kind) => _triviaSyntaxes.Contains(kind);
     public static bool IsLiteral(SyntaxKind kind) => _literalSyntaxes.Contains(kind);
-    public static SyntaxKind? GetOperatorSyntax(string op) => OperatorMap.TryGetValue(op, out var syntax) ? syntax : null;
-    public static string? GetOperatorText(SyntaxKind syntax) => OperatorMap.Keys.ElementAtOrDefault(OperatorMap.Values.ToList().IndexOf(syntax));
-    public static SyntaxKind? GetKeywordSyntax(string text) => KeywordMap.TryGetValue(text, out var syntax) ? syntax : null;
-    public static string? GetKeywordText(SyntaxKind syntax) => KeywordMap.Keys.ElementAtOrDefault(KeywordMap.Values.ToList().IndexOf(syntax));
-    public static SyntaxKind? GetSyntax(string text) => GetKeywordSyntax(text) ?? GetOperatorSyntax(text);
+    public static string? GetOperatorText(SyntaxKind syntax) => _operatorTextByKind.GetValueOrDefault(syntax);
+    public static string? GetKeywordText(SyntaxKind syntax) => _keywordTextByKind.GetValueOrDefault(syntax);
     public static string? GetText(SyntaxKind syntax) => GetKeywordText(syntax) ?? GetOperatorText(syntax);
 
     public static bool IsAssignmentOperator(SyntaxKind kind) => _assignmentOperators.Contains(kind);

@@ -22,7 +22,7 @@ public class TypeSolverTest
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
         var generic = new GenericType(
-            new TypeAlias(null!, null!, null!, null!),
+            new TypeAlias(default!, default!, null!, null!),
             [new TypeParameter("T")],
             PrimitiveType.Never
         );
@@ -323,7 +323,7 @@ public class TypeSolverTest
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
         var generic = new GenericType(
-            new TypeAlias(null!, null!, null!, null!),
+            new TypeAlias(default!, default!, null!, null!),
             [new TypeParameter("T")],
             PrimitiveType.Never
         );

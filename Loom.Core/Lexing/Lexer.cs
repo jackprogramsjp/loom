@@ -6,24 +6,28 @@ namespace Loom.Core.Lexing;
 
 public sealed class Lexer(SourceFile file)
 {
-    private static readonly IReadOnlyList<(LexerRule Rule, Regex? CompiledRegex)> _compiledRules =
-        LexerRules.Standard
-            .Select(r => (
-                r,
-                r.Kind == LexerRuleKind.RegEx
-                    ? new Regex($@"\G(?:{r.Pattern})", RegexOptions.Compiled)
-                    : null
-            ))
-            .ToList();
-    
+    private static readonly IReadOnlyList<(LexerRule Rule, Regex CompiledRegex)> _compiledRegexRules =
+        LexerRules.RegExRules
+            .Select(r => (r, new Regex($@"\G(?:{r.Pattern})", RegexOptions.Compiled)))
+            .ToArray();
+
     private readonly DiagnosticBag _diagnostics = new();
     private int _character, _position;
     private int _line = 1;
 
     public LexerResult Tokenize()
     {
-        var tokens = GetTokens().ToList();
-        return new LexerResult(file, tokens.FindAll(t => SyntaxFacts.IsNotTrivia(t.Kind)), tokens, _diagnostics);
+        var allTokens = new List<Token>();
+        var significantTokens = new List<Token>();
+        foreach (var token in GetTokens())
+        {
+            allTokens.Add(token);
+            
+            if (SyntaxFacts.IsTrivia(token.Kind)) continue;
+            significantTokens.Add(token);
+        }
+
+        return new LexerResult(file, significantTokens, allTokens, _diagnostics);
     }
 
     private IEnumerable<Token> GetTokens()
@@ -34,8 +38,8 @@ public sealed class Lexer(SourceFile file)
             var start = GetLocation();
             if (TryDiagnosticRule(start, LexerRules.PriorityDiagnostic)) continue;
 
-            var rule = Lex();
-            if (rule == null)
+            var lexResult = LexWithRule();
+            if (lexResult is not { } result)
             {
                 if (!TryDiagnosticRule(start, LexerRules.Diagnostic))
                 {
@@ -52,19 +56,22 @@ public sealed class Lexer(SourceFile file)
             }
 
             var span = GetSpan(start);
-            if (rule.Syntax == SyntaxKind.Whitespace)
+            if (result.Rule.Syntax == SyntaxKind.Whitespace)
             {
-                var text = span.GetText();
-                var tabCount = text.Count(c => c == '\t');
+                var tabCount = 0;
+                for (var i = start.Position; i < span.End.Position; i++)
+                    if (file.SourceText[i] == '\t')
+                        tabCount++;
+
                 _character += tabCount * 2;
             }
-            
-            yield return new Token(rule.Syntax, span);
+
+            yield return new Token(result.Rule.Syntax, span, result.Content);
         }
 
         yield return new Token(SyntaxKind.Eof, GetSpan(GetLocation()));
     }
-    
+
     private bool TryDiagnosticRule(Location start, IReadOnlyList<LexerDiagnosticRule> rules)
     {
         foreach (var rule in rules)
@@ -80,29 +87,66 @@ public sealed class Lexer(SourceFile file)
                 rule.MessageFactory(match.Value),
                 rule.Hint
             );
+
             return true;
         }
-        
+
         return false;
     }
 
-    private LexerRule? Lex()
+    private (LexerRule Rule, string Content)? LexWithRule()
     {
-        var matches = _compiledRules
-            .Select(entry => (entry.Rule, Match: GetMatch(entry.Rule, entry.CompiledRegex)))
-            .Where(pair => pair.Match.HasValue && pair.Match.Value.Index == _position)
-            .Select(pair => (pair.Rule, pair.Match!.Value))
-            .OrderByDescending(pair => pair.Value.Content.Length * (int)pair.Rule.Kind)
-            .ToList();
+        LexerRule? bestRule = null;
+        var bestContent = "";
+        var bestScore = -1;
 
-        if (matches.Count == 0 || matches.All(pair => pair.Value.Content.Length == 0))
+        if (!IsEof() && LexerRules.LiteralRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
+        {
+            foreach (var rule in candidates)
+            {
+                if (GetLiteralMatch(rule) is not { } content) continue;
+
+                var score = content.Length * (int)rule.Kind;
+                if (score <= bestScore) continue;
+
+                bestScore = score;
+                bestRule = rule;
+                bestContent = content;
+            }
+        }
+
+        foreach (var (rule, compiledRegex) in _compiledRegexRules)
+        {
+            var match = compiledRegex.Match(file.SourceText, _position);
+            if (!match.Success || match.Index != _position || match.Value.Length == 0) continue;
+
+            var score = match.Value.Length * (int)rule.Kind;
+            if (score <= bestScore) continue;
+
+            bestScore = score;
+            bestRule = rule;
+            bestContent = match.Value;
+        }
+
+        if (bestRule == null)
             return null;
 
-        var (rule, (content, _)) = matches.First();
-        Advance(content);
-        return rule;
+        Advance(bestContent);
+        return (bestRule.Value, bestContent);
     }
-    
+
+    private string? GetLiteralMatch(LexerRule rule) =>
+        rule.Kind switch
+        {
+            LexerRuleKind.SingleCharacter when rule.Pattern.Length == 1 && Current() == rule.Pattern[0] =>
+                rule.Pattern,
+
+            LexerRuleKind.MultiCharacter when !IsEof(rule.Pattern.Length - 1) && MatchesPatternAt(rule.Pattern) =>
+                rule.Pattern,
+
+            _ => null
+        };
+
     /// <summary>
     /// Advances the position, line, and character counters by the length of
     /// <paramref name="content"/>, accounting for embedded newlines.
@@ -111,7 +155,7 @@ public sealed class Lexer(SourceFile file)
     {
         var lines = content.Count(c => c == '\n');
         var length = content.Length;
-        
+
         _position += length;
         if (lines > 0)
         {
@@ -124,29 +168,7 @@ public sealed class Lexer(SourceFile file)
         }
     }
 
-    private (string Content, int Index)? GetMatch(LexerRule rule, Regex? compiledRegex)
-    {
-        if (rule.Kind == LexerRuleKind.RegEx && compiledRegex != null)
-        {
-            var match = compiledRegex.Match(file.SourceText, _position);
-            return match.Success ? (match.Value, match.Index) : null;
-        }
-
-        var isMatch = rule.Kind switch
-        {
-            LexerRuleKind.SingleCharacter =>
-                !IsEof() && Current().ToString() == rule.Pattern,
-
-            LexerRuleKind.MultiCharacter =>
-                !IsEof(rule.Pattern.Length - 1) && PeekNext(rule.Pattern.Length) == rule.Pattern,
-
-            _ => false
-        };
-
-        return isMatch ? (rule.Pattern, _position) : null;
-    }
-
-    private string PeekNext(int characters) => file.SourceText[_position..(_position + characters)];
+    private bool MatchesPatternAt(string pattern) => file.SourceText.AsSpan(_position, pattern.Length).SequenceEqual(pattern);
     private char Current() => file.SourceText[_position];
     private bool IsEof(int offset = 0) => _position + offset >= file.SourceText.Length;
     private LocationSpan GetSpan(Location start) => new(start, GetLocation());

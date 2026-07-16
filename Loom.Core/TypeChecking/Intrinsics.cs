@@ -1,5 +1,6 @@
 using Loom.Config;
 using Loom.Core.Resolving;
+using Loom.Core.Text;
 using Loom.Core.TypeChecking.Types;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 
@@ -34,10 +35,10 @@ public static class Intrinsics
 
         var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" } };
         var compilationUnit = new CompilationUnit(loomConfig);
-        var compiledFiles = compilationUnit.SourceFiles.Select(f =>
+        var compiledFiles = compilationUnit.SourceFiles.Select(file =>
             {
-                f.IsIntrinsic = true;
-                return compilationUnit.Compile(f);
+                file.IsIntrinsic = true;
+                return compilationUnit.Compile(file);
             }
         );
 

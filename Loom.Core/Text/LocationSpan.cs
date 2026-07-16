@@ -1,6 +1,6 @@
 namespace Loom.Core.Text;
 
-public sealed class LocationSpan
+public readonly struct LocationSpan
 {
     public LocationSpan(Location start, Location end)
     {
@@ -26,6 +26,6 @@ public sealed class LocationSpan
     public static LocationSpan Empty(SourceFile? file = null) => new(Location.Empty(file ?? SourceFile.Empty), Location.Empty(file ?? SourceFile.Empty));
     public static LocationSpan operator+(LocationSpan span, int n) => new(span.Start + n, span.End + n);
 
-    public string GetText() => File.SourceText[Start.Position..End.Position];
+    public string GetText() => File.SourceText.Substring(Start.Position, Length);
     public override string ToString() => $"{File.Name} @ {Start.Line}:{Start.Character} - {End.Line}:{End.Character}";
 }

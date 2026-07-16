@@ -24,7 +24,7 @@ public static class LexerRules
     private const string MinutesNumber = $"({Number}[mM])";
     private const string HoursNumber = $"({Number}[hH])";
 
-    public static readonly List<LexerRule> Standard =
+    private static readonly IReadOnlyList<LexerRule> _standardRules =
     [
         ..SyntaxFacts.OperatorMap.Select(pair => pair.Key.Length == 1
             ? SingleCharacter(pair.Value, pair.Key[0])
@@ -96,6 +96,21 @@ public static class LexerRules
             _ => "Unterminated block comment: expected closing ':#'."
         ),
     ];
+    
+    /// <summary>
+    /// Literal (non-regex) rules from <see cref="_standardRules"/>, bucketed by first
+    /// character and sorted longest-pattern-first within each bucket, so the
+    /// lexer can look up only the handful of candidates that could possibly
+    /// match at a given position instead of scanning every literal rule.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<char, LexerRule[]> LiteralRulesByFirstCharacter =
+        _standardRules
+            .Where(r => r.Kind is LexerRuleKind.SingleCharacter or LexerRuleKind.MultiCharacter)
+            .GroupBy(r => r.Pattern[0])
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Pattern.Length).ToArray());
+
+    public static readonly IReadOnlyList<LexerRule> RegExRules =
+        _standardRules.Where(r => r.Kind == LexerRuleKind.RegEx).ToArray();
 
     private static LexerDiagnosticRule DiagnosticRule(string pattern, string code, Func<string, string> message) =>
         new(new Regex(pattern, RegexOptions.Compiled), code, message);

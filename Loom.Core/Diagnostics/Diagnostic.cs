@@ -5,7 +5,7 @@ using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core.Diagnostics;
 
-public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
+public readonly record struct Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {
     private int StartLine => Span.Start.Line;
     private int EndLine => Span.End.Line;

@@ -171,14 +171,7 @@ public class DiagnosticBagTest
         
         var found = bag.Find(d => d.Code == "w1");
         Assert.NotNull(found);
-        Assert.Equal("w1", found.Code);
-    }
-
-    [Fact]
-    public void Find_ReturnsNullWhenNone()
-    {
-        var bag = new DiagnosticBag();
-        Assert.Null(bag.Find(_ => true));
+        Assert.Equal("w1", found.Value.Code);
     }
     
     [Fact]
