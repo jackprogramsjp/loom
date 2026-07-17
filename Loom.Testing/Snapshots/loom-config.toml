@@ -1,3 +1,5 @@
+project_type = "library"
+
 [files]
 source_directory = "src"
 output_directory = "dist"
