@@ -22,7 +22,7 @@ public class TypeSolverTest
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
         var generic = new GenericType(
-            new TypeAlias(default!, default!, null!, null!),
+            new TypeAlias(null!, null!, null!, null!),
             [new TypeParameter("T")],
             PrimitiveType.Never
         );
@@ -323,7 +323,7 @@ public class TypeSolverTest
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
         var generic = new GenericType(
-            new TypeAlias(default!, default!, null!, null!),
+            new TypeAlias(null!, null!, null!, null!),
             [new TypeParameter("T")],
             PrimitiveType.Never
         );
@@ -468,7 +468,7 @@ public class TypeSolverTest
         var diagnostics = CreateDiagnostics();
         var solver = new TypeSolver(diagnostics);
         var nodes = Enumerable.Range(0, 5).Select(_ => Identifier("x")).ToList();
-        var variables = nodes.Select(n => solver.GetType(n)).ToList();
+        var variables = nodes.Select(solver.GetType).ToList();
         for (var i = 0; i < variables.Count - 1; i++)
             solver.AddConstraint(variables[i], variables[i + 1], Utility.Span);
 

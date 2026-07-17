@@ -1,6 +1,5 @@
 using Loom.Config;
 using Loom.Core.Resolving;
-using Loom.Core.Text;
 using Loom.Core.TypeChecking.Types;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 

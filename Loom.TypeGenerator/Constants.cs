@@ -198,7 +198,7 @@ internal static class Constants
         { "Part", "BasePart" }, { "Script", "LuaSourceContainer" }, { "Character", "Model" }, { "Input", "InputObject" }
     };
     
-    public static readonly Dictionary<string, string> PropertyTypeMap = new();
+    // public static readonly Dictionary<string, string> PropertyTypeMap = new();
     
     public static readonly Dictionary<string, string> ValueTypeMap = new()
     {
@@ -229,7 +229,7 @@ internal static class Constants
         { "Variant", "unknown" },
         { "Color3uint8", "Color3" },
         { "any", "unknown" },
-        { "Array<any>", "unknown[]" },
+        { "Array<any>", "unknown[]" }
     };
     
     public static readonly Dictionary<string, string> ReturnTypeMap = new() { { "null", "void" } };

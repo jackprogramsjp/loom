@@ -48,8 +48,8 @@ public sealed partial class LuauGenerator
                 var parameterTypes = signature.Parameters?.ParameterList.FindAll(p => p.ColonTypeClause != null).ConvertAll(p => Visit(p.ColonTypeClause!.Type))
                     ?? [];
 
-                var typeArguments = traitDeclaration.TypeParameters?.ParameterList.ConvertAll(LuauType (p) => new Luau.AST.TypeName(p.Name.Text));
-                parameterTypes.Insert(0, new Luau.AST.TypeName(traitDeclaration.Name.Text, typeArguments));
+                var typeArguments = traitDeclaration.TypeParameters?.ParameterList.ConvertAll(LuauType (p) => new TypeName(p.Name.Text));
+                parameterTypes.Insert(0, new TypeName(traitDeclaration.Name.Text, typeArguments));
 
                 return new TableTypeProperty(
                     null,

@@ -22,7 +22,7 @@ internal partial class ReflectionMetadataReader(string body)
         return result != null ? HyperlinkToMarkdown(result.ToString()) : string.Empty;
     }
 
-    public string ReadMemberDescription(string className, string name, string[] specifier)
+    private string ReadMemberDescription(string className, string name, string[] specifier)
     {
         var specifierString = string.Join(" or ", specifier.Select(v => $"@class='{v}'"));
         var query = $"{ClassPrefix(className)}Item[{specifierString}]/"

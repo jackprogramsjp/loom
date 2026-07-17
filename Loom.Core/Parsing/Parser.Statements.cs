@@ -25,7 +25,7 @@ public sealed partial class Parser
             [SyntaxKind.AfterKeyword] = ParseAfter,
             [SyntaxKind.WhileKeyword] = ParseWhile,
             [SyntaxKind.BreakKeyword] = ParseBreak,
-            [SyntaxKind.ContinueKeyword] = ParseContinue,
+            [SyntaxKind.ContinueKeyword] = ParseContinue
         };
 
     private Implement ParseImplement(Token keyword)

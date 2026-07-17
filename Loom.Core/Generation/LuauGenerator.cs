@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.Generation.Macros;
 using Loom.Core.Parsing.AST;

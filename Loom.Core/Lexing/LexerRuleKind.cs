@@ -4,5 +4,5 @@ public enum LexerRuleKind : byte
 {
     SingleCharacter = 0xF,
     RegEx,
-    MultiCharacter,
+    MultiCharacter
 }

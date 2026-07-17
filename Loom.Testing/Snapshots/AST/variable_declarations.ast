@@ -1,15 +1,14 @@
 ﻿VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause: null
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause: null
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -17,10 +16,10 @@ VariableDeclaration(
       Value: 1
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -28,31 +27,26 @@ VariableDeclaration(
       Value: 1
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause(
+    EqualsToken: Token(Equals, "=")
+    Value: Literal(
+      Token(NumberLiteral, "1")
+      Value: 1
+    )
+  )
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: PrimitiveType(
       Kind: Number
     )
   )
-  EqualsValueClause(
-    EqualsToken: Token(Equals, "=")
-    Value: Literal(
-      Token(NumberLiteral, "1")
-      Value: 1
-    )
-  )
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause(
-    ColonToken: Token(Colon, ":")
-    Type: PrimitiveType(
-      Kind: Bool
-    )
-  )
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -60,49 +54,56 @@ VariableDeclaration(
       Value: False
     )
   )
+  ColonTypeClause(
+    ColonToken: Token(Colon, ":")
+    Type: PrimitiveType(
+      Kind: Bool
+    )
+  )
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: PrimitiveType(
       Kind: Number
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: PrimitiveType(
       Kind: String
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: PrimitiveType(
       Kind: Unknown
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: PrimitiveType(
       Kind: Never
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -110,11 +111,9 @@ VariableDeclaration(
       Value: null
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -137,10 +136,10 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: InterfaceInvocation(
@@ -173,9 +172,11 @@ VariableDeclaration(
       )
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -205,10 +206,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -250,10 +251,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: TypeName(
@@ -269,10 +270,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: TypeName(
@@ -297,10 +298,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: UnionType(
@@ -327,10 +328,10 @@ VariableDeclaration(
       ]
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IntersectionType(
@@ -357,10 +358,10 @@ VariableDeclaration(
       ]
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ArrayType(
@@ -389,10 +390,10 @@ VariableDeclaration(
       RightBracket: Token(RBracket, "]")
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -482,10 +483,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: UnionType(
@@ -543,10 +544,10 @@ VariableDeclaration(
       ]
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: UnionType(
@@ -584,10 +585,10 @@ VariableDeclaration(
       ]
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ArrayType(
@@ -604,10 +605,10 @@ VariableDeclaration(
       RightBracket: Token(RBracket, "]")
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -683,10 +684,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: TypeName(
@@ -723,10 +724,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -741,10 +742,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "callback")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -777,10 +778,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "callback")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -815,10 +816,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "callback")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -861,10 +862,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "callback")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: OptionalType(
@@ -901,10 +902,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "callback")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ArrayType(
@@ -943,10 +944,10 @@ VariableDeclaration(
       RightBracket: Token(RBracket, "]")
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "callbacks")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -988,10 +989,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "identity")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: FunctionType(
@@ -1043,10 +1044,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "wrap")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1062,10 +1063,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1079,10 +1080,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1098,10 +1099,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1131,10 +1132,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1158,10 +1159,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: OptionalType(
@@ -1180,10 +1181,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ArrayType(
@@ -1204,10 +1205,10 @@ VariableDeclaration(
       RightBracket: Token(RBracket, "]")
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1255,10 +1256,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1290,10 +1291,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: UnionType(
@@ -1322,10 +1323,10 @@ VariableDeclaration(
       ]
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1349,10 +1350,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: IndexedType(
@@ -1400,10 +1401,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: OptionalType(
@@ -1422,10 +1423,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ArrayType(
@@ -1438,10 +1439,10 @@ VariableDeclaration(
       RightBracket: Token(RBracket, "]")
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ArrayType(
@@ -1454,10 +1455,10 @@ VariableDeclaration(
       RightBracket: Token(RBracket, "]")
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: OptionalType(
@@ -1468,10 +1469,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: TypeName(
@@ -1479,10 +1480,10 @@ VariableDeclaration(
       TypeArguments: null
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ParenthesizedType(
@@ -1493,10 +1494,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1504,10 +1505,10 @@ VariableDeclaration(
       Value: 69
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1515,10 +1516,10 @@ VariableDeclaration(
       Value: 0.1
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1526,10 +1527,10 @@ VariableDeclaration(
       Value: 105
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1537,10 +1538,10 @@ VariableDeclaration(
       Value: 11
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1548,10 +1549,10 @@ VariableDeclaration(
       Value: "abc"
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1559,10 +1560,10 @@ VariableDeclaration(
       Value: "abc"
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1570,10 +1571,10 @@ VariableDeclaration(
       Value: True
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: LiteralType(
@@ -1581,6 +1582,5 @@ VariableDeclaration(
       Value: False
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )

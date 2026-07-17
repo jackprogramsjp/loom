@@ -6,15 +6,15 @@ using System.Text.Json;
 
 internal static class ClassUtility
 {
-    public static string? SafePropertyType(string? valueType) =>
-        string.IsNullOrEmpty(valueType)
-            ? null
-            : Constants.PropertyTypeMap.GetValueOrDefault(valueType, valueType);
+    // public static string? SafePropertyType(string? valueType) =>
+    //     string.IsNullOrEmpty(valueType)
+    //         ? null
+    //         : Constants.PropertyTypeMap.GetValueOrDefault(valueType, valueType);
 
-    public static string? SafeRenamedInstance(string? name) =>
-        name != null && Constants.RenamableAutoTypes.TryGetValue(name, out var value)
-            ? value
-            : SafeName(name);
+    // public static string SafeRenamedInstance(string? name) =>
+    //     name != null && Constants.RenamableAutoTypes.TryGetValue(name, out var value)
+    //         ? value
+    //         : SafeName(name);
 
     public static string SafeValueType(ApiTypes.ValueType valueType)
     {

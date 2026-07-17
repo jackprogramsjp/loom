@@ -24,11 +24,11 @@ internal sealed class ClassGenerator(
         foreach (var rbxClass in rbxClasses)
         {
             var className = rbxClass.Name;
-            rbxClass.Subclasses = [];
+            // rbxClass.Subclasses = [];
             _classRefs[className] = rbxClass;
 
-            var superclass = GetSuperclass(rbxClass);
-            superclass?.Subclasses.Add(className);
+            // var superclass = GetSuperclass(rbxClass);
+            // superclass?.Subclasses.Add(className);
         }
 
         var classesToGenerate = rbxClasses.Where(ShouldGenerateClass).ToArray();
@@ -153,7 +153,7 @@ internal sealed class ClassGenerator(
     
     private void GenerateProperty(Property property, Class rbxClass)
     {
-        var valueType = ClassUtility.SafePropertyType(ClassUtility.SafeValueType(property.ValueType))!;
+        var valueType = ClassUtility.SafeValueType(property.ValueType);
         var (name, description) = GetMemberNameAndDescription(property, rbxClass);
         var definitelyDefined = property.ValueType.Category != "Class";
         var extraPropertyData = CanWrite(rbxClass.Name, property) && !ClassUtility.HasTag(property, "ReadOnly") ? "mut " : "";
@@ -161,13 +161,13 @@ internal sealed class ClassGenerator(
         Write($"{extraPropertyData}{name.Replace(" ", "")}: {valueType}{(definitelyDefined || valueType.EndsWith('?') ? "" : "?")};");
     }
 
-    private void GenerateEvent(Event @event, Class rbxClass)
-    {
-        var paramTypeList = GenerateParameterList(@event.Parameters);
-        var (name, description) = GetMemberNameAndDescription(@event, rbxClass);
-        WriteDescription(description);
-        Write($"event {name}{paramTypeList};");
-    }
+    // private void GenerateEvent(Event @event, Class rbxClass)
+    // {
+    //     var paramTypeList = GenerateParameterList(@event.Parameters);
+    //     var (name, description) = GetMemberNameAndDescription(@event, rbxClass);
+    //     WriteDescription(description);
+    //     Write($"event {name}{paramTypeList};");
+    // }
     
     private void GenerateCallback(Callback callback, Class rbxClass)
     {
@@ -196,7 +196,7 @@ internal sealed class ClassGenerator(
             Property => Metadata.ReadPropertyDescription,
             Event => Metadata.ReadEventDescription,
             Function => Metadata.ReadFunctionDescription,
-            Callback => Metadata.ReadPropertyDescription,
+            Callback => Metadata.ReadCallbackDescription,
             _ => null
         };
         

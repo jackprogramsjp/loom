@@ -23,7 +23,7 @@ public sealed class Compiler(CompilationUnit unit, SourceFile file)
             var resolver = new Resolver(parserResult, unit);
             var semanticModel = trackDiagnostics(resolver.Resolve());
             var flowAnalyzer = new FlowAnalyzer(semanticModel);
-            var flowAnalyzerResult = trackDiagnostics(flowAnalyzer.Analyze());
+            trackDiagnostics(flowAnalyzer.Analyze());
             var typeChecker = new TypeChecker(semanticModel, flowAnalyzer);
             var typeCheckerResult = trackDiagnostics(typeChecker.Check());
             var generator = new LuauGenerator(semanticModel);
@@ -46,8 +46,7 @@ public sealed class Compiler(CompilationUnit unit, SourceFile file)
                 ReturnType = typeCheckerResult.ReturnType,
                 SemanticModel = semanticModel,
                 Tree = parserResult.Tree,
-                Tokens = lexerResult.Tokens,
-                TopLevelFlowState = flowAnalyzerResult.FlowState
+                Tokens = lexerResult.Tokens
             };
         }
         catch (Exception e)

@@ -10,8 +10,8 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_ErrorDiagnostic_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 4, 1, 4);
-        var end = new Location(_testFile, 9, 1, 9);
+        var start = new Location(_testFile, 4);
+        var end = new Location(_testFile, 9);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(
             span,
@@ -23,39 +23,54 @@ public class DiagnosticMessageTest
 
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L306){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Type 'string' is not assignable to type 'number'.{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L306){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Type 'string' is not assignable to type 'number'.{Colors.Reset}",
+            result
+        );
+
         Assert.Contains($"{Colors.Dim}  ╭─{Colors.Reset} {Colors.Orange}test.loom @ 1:4 - 1:9{Colors.Reset}", result);
         Assert.Contains("let x: number = 5;", result);
         Assert.Contains($"{Colors.Magenta}┬────{Colors.Reset}", result);
-        Assert.Contains($"{Colors.Magenta}╰─{Colors.Reset}  {Colors.Red}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}did you mean to use a number?{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Magenta}╰─{Colors.Reset}  {Colors.Red}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}did you mean to use a number?{Colors.Reset}",
+            result
+        );
     }
 
     [Fact]
     public void ToString_WarningDiagnostic_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 8, 2, 8);
-        var end = new Location(_testFile, 13, 2, 13);
+        var start = new Location(_testFile, 28);
+        var end = new Location(_testFile, 34);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Warn, InternalCodes.RedundantCode, "Unnecessary null check.", null);
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Yellow}{Colors.Bold}warning{Colors.Reset}{Colors.Yellow} {Colors.Dim}(L316){Colors.Reset}{Colors.Yellow}:{Colors.Reset} {Colors.Gray}Unnecessary null check.{Colors.Reset}", result);
-        Assert.Contains($"{Colors.Dim}  ╭─{Colors.Reset} {Colors.Orange}test.loom @ 2:8 - 2:13{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Yellow}{Colors.Bold}warning{Colors.Reset}{Colors.Yellow} {Colors.Dim}(L316){Colors.Reset}{Colors.Yellow}:{Colors.Reset} {Colors.Gray}Unnecessary null check.{Colors.Reset}",
+            result
+        );
+
+        Assert.Contains($"{Colors.Dim}  ╭─{Colors.Reset} {Colors.Orange}test.loom @ 2:8 - 2:14{Colors.Reset}", result);
         Assert.Contains("let y = x + 10;", result);
-        Assert.Contains($"{Colors.Yellow}─────{Colors.Reset}", result);
+        Assert.Contains($"{Colors.Yellow}──────{Colors.Reset}", result);
         Assert.DoesNotContain("Hint:", result);
     }
 
     [Fact]
     public void ToString_InfoDiagnostic_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 0, 3, 0);
-        var end = new Location(_testFile, 5, 3, 5);
+        var start = new Location(_testFile, 0);
+        var end = new Location(_testFile, _testFile.SourceText.Length - 1);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Info, null, "Variable 'print' is a built-in function.", null);
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Blue}{Colors.Bold}info{Colors.Reset}{Colors.Blue}:{Colors.Reset} {Colors.Gray}Variable 'print' is a built-in function.{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Blue}{Colors.Bold}info{Colors.Reset}{Colors.Blue}:{Colors.Reset} {Colors.Gray}Variable 'print' is a built-in function.{Colors.Reset}",
+            result
+        );
+
         Assert.DoesNotContain("(L", result);
         Assert.Contains("print(y);", result);
         Assert.DoesNotContain("Hint:", result);
@@ -64,9 +79,13 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_MultiLineError_FormatsCorrectly()
     {
-        var multiLineFile = new SourceFile("multi.loom", $"fn test() {{{Environment.NewLine}    let x: string = 42;{Environment.NewLine}    return x;{Environment.NewLine}}}");
-        var start = new Location(multiLineFile, 13, 2, 13);
-        var end = new Location(multiLineFile, 15, 2, 15);
+        var multiLineFile = new SourceFile(
+            "multi.loom",
+            $"fn test() {{{Environment.NewLine}    let x: string = 42;{Environment.NewLine}    return x;{Environment.NewLine}}}"
+        );
+
+        var start = new Location(multiLineFile, 13);
+        var end = new Location(multiLineFile, 15);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(
             span,
@@ -78,18 +97,29 @@ public class DiagnosticMessageTest
 
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L306){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Cannot assign number to string.{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L306){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Cannot assign number to string.{Colors.Reset}",
+            result
+        );
+
         Assert.Contains("let x: string = 42;", result);
         Assert.Contains($"{Colors.Magenta}┬─{Colors.Reset}", result);
-        Assert.Contains($"{Colors.Magenta}╰─{Colors.Reset}  {Colors.Red}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}use a string literal instead{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Magenta}╰─{Colors.Reset}  {Colors.Red}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}use a string literal instead{Colors.Reset}",
+            result
+        );
     }
 
     [Fact]
     public void ToString_SpanAcrossMultipleLines_FormatsCorrectly()
     {
-        var multiLineFile = new SourceFile("multi.loom", $"fn test() {{{Environment.NewLine}    let x = {Environment.NewLine}        \"hello\"{Environment.NewLine}        + \"world\";{Environment.NewLine}}}");
-        var start = new Location(multiLineFile, 8, 3, 8);
-        var end = new Location(multiLineFile, 14, 4, 14);
+        var multiLineFile = new SourceFile(
+            "multi.loom",
+            $"fn test() {{{Environment.NewLine}    let x = {Environment.NewLine}        \"hello\"{Environment.NewLine}        + \"world\";{Environment.NewLine}}}"
+        );
+
+        var start = new Location(multiLineFile, 25);
+        var end = new Location(multiLineFile, 59);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(
             span,
@@ -101,7 +131,11 @@ public class DiagnosticMessageTest
 
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L311){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Cannot concatenate strings with +.{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L311){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Cannot concatenate strings with +.{Colors.Reset}",
+            result
+        );
+
         Assert.Contains("\"hello\"", result);
         Assert.Contains("+ \"world\"", result);
         Assert.Contains($"{Colors.Magenta}┬─────", result);
@@ -110,8 +144,8 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_NoCode_OmitsCodeFromHeader()
     {
-        var start = new Location(_testFile, 0, 1, 0);
-        var end = new Location(_testFile, 3, 1, 3);
+        var start = new Location(_testFile, 0);
+        var end = new Location(_testFile, 3);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, null, "Generic error message.", null);
         var result = diagnostic.ToString();
@@ -123,20 +157,23 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_WithHint_IncludesHintSection()
     {
-        var start = new Location(_testFile, 10, 1, 10);
-        var end = new Location(_testFile, 15, 1, 15);
+        var start = new Location(_testFile, 10);
+        var end = new Location(_testFile, 15);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, InternalCodes.CannotFindName, "Cannot find name 'undefined'.", "did you mean 'undefined'?");
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Magenta}╰─{Colors.Reset}  {Colors.Red}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}did you mean 'undefined'?{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Magenta}╰─{Colors.Reset}  {Colors.Red}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}did you mean 'undefined'?{Colors.Reset}",
+            result
+        );
     }
 
     [Fact]
     public void ToString_WithoutHint_OmitsHintSection()
     {
-        var start = new Location(_testFile, 0, 2, 0);
-        var end = new Location(_testFile, 3, 2, 3);
+        var start = new Location(_testFile, 0);
+        var end = new Location(_testFile, 3);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Warn, InternalCodes.RedundantCode, "Redundant code.", null);
         var result = diagnostic.ToString();
@@ -148,13 +185,17 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_SingleCharacterSpan_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 6, 1, 6);
-        var end = new Location(_testFile, 7, 1, 7);
+        var start = new Location(_testFile, 6);
+        var end = new Location(_testFile, 7);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, InternalCodes.UnexpectedToken, "Unexpected token ';'.", "remove the semicolon");
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L201){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Unexpected token ';'.{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L201){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Unexpected token ';'.{Colors.Reset}",
+            result
+        );
+
         Assert.Contains($"{Colors.Magenta}┬{Colors.Reset}", result);
         Assert.Contains($"{Colors.Magenta}╰─{Colors.Reset}  {Colors.Red}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}remove the semicolon{Colors.Reset}", result);
     }
@@ -162,8 +203,8 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_FirstLineOfFile_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 0, 1, 0);
-        var end = new Location(_testFile, 2, 1, 2);
+        var start = new Location(_testFile, 0);
+        var end = new Location(_testFile, _testFile.SourceText.Length - 1);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, InternalCodes.CannotFindName, "Cannot find name 'letx'.", "did you mean 'let x'?");
         var result = diagnostic.ToString();
@@ -174,15 +215,16 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_LastLineOfFile_FormatsCorrectly()
     {
-        var lastLineFile = new SourceFile("last.loom", $"line1{Environment.NewLine}line2{Environment.NewLine}line3");
-        var start = new Location(lastLineFile, 2, 3, 2);
-        var end = new Location(lastLineFile, 4, 3, 4);
+        var source = $"line1{Environment.NewLine}line2{Environment.NewLine}line3";
+        var lastLineFile = new SourceFile("last.loom", source);
+        var start = new Location(lastLineFile, source.Length - 1 - 5);
+        var end = new Location(lastLineFile, source.Length - 1);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Warn, InternalCodes.RedundantCode, "Warning at end of file.", null);
         var result = diagnostic.ToString();
 
         Assert.Contains("line3", result);
-        Assert.Contains($"{Colors.Yellow}──{Colors.Reset}", result);
+        Assert.Contains($"{Colors.Yellow}────{Colors.Reset}", result);
     }
 
     [Fact]
@@ -190,8 +232,8 @@ public class DiagnosticMessageTest
     {
         var lines = string.Join(Environment.NewLine, Enumerable.Range(1, 100).Select(i => $"line {i}"));
         var longFile = new SourceFile("long.loom", lines);
-        var start = new Location(longFile, 0, 100, 0);
-        var end = new Location(longFile, 4, 100, 4);
+        var start = new Location(longFile, 0);
+        var end = new Location(longFile, lines.Length - 1);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Info, null, "Info message.", null);
         var result = diagnostic.ToString();
@@ -203,14 +245,14 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_WithDifferentSeverityColors_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 0, 1, 0);
-        var end = new Location(_testFile, 1, 1, 1);
+        var start = new Location(_testFile, 0);
+        var end = new Location(_testFile, 1);
         var span = new LocationSpan(start, end);
-        
+
         var errorDiag = new Diagnostic(span, DiagnosticSeverity.Error, null, "Error", null);
         var warnDiag = new Diagnostic(span, DiagnosticSeverity.Warn, null, "Warning", null);
         var infoDiag = new Diagnostic(span, DiagnosticSeverity.Info, null, "Info", null);
-        
+
         var errorResult = errorDiag.ToString();
         var warnResult = warnDiag.ToString();
         var infoResult = infoDiag.ToString();
@@ -224,13 +266,17 @@ public class DiagnosticMessageTest
     public void ToString_EmptyFile_HandlesGracefully()
     {
         var emptyFile = new SourceFile("empty.loom", "");
-        var start = new Location(emptyFile, 0, 1, 0);
-        var end = new Location(emptyFile, 0, 1, 0);
+        var start = new Location(emptyFile, 0);
+        var end = new Location(emptyFile, 0);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, InternalCodes.UnexpectedEof, "Unexpected end of file.", null);
         var result = diagnostic.ToString();
 
-        Assert.Contains($"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L202){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Unexpected end of file.{Colors.Reset}", result);
+        Assert.Contains(
+            $"{Colors.Red}{Colors.Bold}error{Colors.Reset}{Colors.Red} {Colors.Dim}(L202){Colors.Reset}{Colors.Red}:{Colors.Reset} {Colors.Gray}Unexpected end of file.{Colors.Reset}",
+            result
+        );
+
         Assert.Contains("empty.loom", result);
     }
 
@@ -238,8 +284,8 @@ public class DiagnosticMessageTest
     public void ToString_WhitespaceLine_FormatsCorrectly()
     {
         var whitespaceFile = new SourceFile("whitespace.loom", $"    {Environment.NewLine}let x = 5;");
-        var start = new Location(whitespaceFile, 0, 2, 0);
-        var end = new Location(whitespaceFile, 3, 2, 3);
+        var start = new Location(whitespaceFile, 0);
+        var end = new Location(whitespaceFile, 3);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, InternalCodes.CannotFindName, "Cannot find name 'let'.", null);
         var result = diagnostic.ToString();
@@ -251,8 +297,8 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_LocationSpan_ToString_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 4, 1, 4);
-        var end = new Location(_testFile, 9, 1, 9);
+        var start = new Location(_testFile, 4);
+        var end = new Location(_testFile, 9);
         var span = new LocationSpan(start, end);
         var result = span.ToString();
 
@@ -262,7 +308,7 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_Location_ToString_FormatsCorrectly()
     {
-        var location = new Location(_testFile, 4, 1, 4);
+        var location = new Location(_testFile, 4);
         var result = location.ToString();
 
         Assert.Equal("test.loom:1:4", result);
@@ -271,7 +317,7 @@ public class DiagnosticMessageTest
     [Fact]
     public void Location_AdditionOperator()
     {
-        var start = new Location(_testFile, 4, 1, 4);
+        var start = new Location(_testFile, 4);
         var end = start + 5;
 
         Assert.Equal(9, end.Position);
@@ -283,23 +329,23 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_ColorCodes_AreProperlyClosed()
     {
-        var start = new Location(_testFile, 0, 1, 0);
-        var end = new Location(_testFile, 1, 1, 1);
+        var start = new Location(_testFile, 0);
+        var end = new Location(_testFile, 1);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, InternalCodes.TypeMismatch, "Test message", "Test hint");
         var result = diagnostic.ToString();
 
         var resetCount = result.Count(c => c == $"{Colors.Reset}"[0]);
         var colorStartCount = result.Count(c => c == '\u001b');
-        
+
         Assert.Equal(colorStartCount, resetCount);
     }
 
     [Fact]
     public void ToString_NewLines_UseEnvironmentNewLine()
     {
-        var start = new Location(_testFile, 0, 1, 0);
-        var end = new Location(_testFile, 1, 1, 1);
+        var start = new Location(_testFile, 0);
+        var end = new Location(_testFile, 1);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Error, null, "Test message", null);
         var result = diagnostic.ToString();

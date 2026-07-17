@@ -1,6 +1,5 @@
 using System.Text;
 using Loom.Core.Diagnostics;
-using Loom.Core.FlowAnalysis;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.Text;
@@ -20,7 +19,6 @@ public sealed class CompiledFile(SourceFile sourceFile)
     public required SemanticModel SemanticModel { get; init; }
     public required Tree Tree { get; init; }
     public required IReadOnlyList<Token> Tokens { get; init; }
-    public required FlowState TopLevelFlowState { get; init; }
 
     public string GetDebugInfo(
         bool rebuilt = true,

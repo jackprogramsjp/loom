@@ -2,13 +2,16 @@
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>Loom.Core</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="..\.editorconfig">
+          <Link>.editorconfig</Link>
+        </Content>
         <Content Include="..\CLAUDE.md">
             <Link>CLAUDE.md</Link>
         </Content>
@@ -17,6 +20,9 @@
         </Content>
         <Content Include="..\CONTRIBUTING.md">
           <Link>CONTRIBUTING.md</Link>
+        </Content>
+        <Content Include="..\qodana.yaml">
+          <Link>qodana.yaml</Link>
         </Content>
         <Content Include="..\README.md">
           <Link>README.md</Link>

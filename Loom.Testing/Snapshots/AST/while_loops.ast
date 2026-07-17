@@ -124,7 +124,6 @@ While(
     RightBrace: Token(RBrace, "}")
     Statements: [
       VariableDeclaration(
-        ColonTypeClause: null
         EqualsValueClause(
           EqualsToken: Token(Equals, "=")
           Value: Literal(
@@ -132,6 +131,7 @@ While(
             Value: 1
           )
         )
+        ColonTypeClause: null
         Name: Token(Identifier, "x")
       )
     ]

@@ -96,5 +96,5 @@ public enum SyntaxKind : ushort
     WhenKeyword,
 
     Identifier,
-    Eof,
+    Eof
 }

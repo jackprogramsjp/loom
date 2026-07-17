@@ -6,7 +6,7 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class CompilerTest
 {
-    public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("Luau", ".luau");
+    public static readonly IEnumerable<TheoryDataRow<string, string>> SnapshotFiles = Utility.GetSnapshotFiles("Luau", ".luau");
 
     [Theory]
     [MemberData(nameof(SnapshotFiles))]

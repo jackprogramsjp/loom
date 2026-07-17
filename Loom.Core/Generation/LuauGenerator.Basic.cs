@@ -1,7 +1,6 @@
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.Text;
-using Loom.Core.TypeChecking.Types;
 using Loom.Luau;
 using Loom.Luau.AST;
 using ArrayType = Loom.Core.Parsing.AST.ArrayType;

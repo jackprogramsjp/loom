@@ -461,7 +461,7 @@ public class LuauRenderingTest
 
     [Fact]
     public void Renders_IntersectionType() =>
-        Assert.Equal("number & string & boolean", new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean,]).Render());
+        Assert.Equal("number & string & boolean", new IntersectionType([PrimitiveType.Number, PrimitiveType.String, PrimitiveType.Boolean]).Render());
 
     [Theory]
     [InlineData(PrimitiveTypeKind.Number)]

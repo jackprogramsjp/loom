@@ -8,7 +8,6 @@ using Loom.Core.Parsing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
 using Loom.Core.TypeChecking;
-using Loom.Luau;
 using Loom.Luau.AST;
 using Resolver = Loom.Core.Resolving.Resolver;
 using Type = Loom.Core.TypeChecking.Types.Type;
@@ -57,7 +56,9 @@ internal static class Utility
         return semanticModel;
     }
 
-    public static (FlowAnalyzerResult AnalyzerResult, Core.Resolving.SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(string source, bool disableRuntimeLib = true)
+    public static (FlowAnalyzerResult AnalyzerResult, Core.Resolving.SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(
+        string source,
+        bool disableRuntimeLib = true)
     {
         var semanticModel = GetSemanticModel(source, disableRuntimeLib: disableRuntimeLib);
         var flowAnalyzer = new FlowAnalyzer(semanticModel);
@@ -75,7 +76,7 @@ internal static class Utility
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;
 
     public static Token IdentifierToken(string name, LocationSpan? span = null) => Token(SyntaxKind.Identifier, name, span);
-    public static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
+    private static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
 
     public static T AssertNoErrors<T>(T result)
         where T : DiagnosedResult
@@ -84,7 +85,7 @@ internal static class Utility
         return result;
     }
 
-    public static void AssertNoErrors(DiagnosticBag diagnostics) => Assert.Empty(diagnostics.Set.Where(d => d.Severity == DiagnosticSeverity.Error));
+    public static void AssertNoErrors(DiagnosticBag diagnostics) => Assert.DoesNotContain(diagnostics.Set, d => d.Severity == DiagnosticSeverity.Error);
 
     public static void AssertDiagnostic(DiagnosticBag diagnostics, string code, string message, string? hint = null)
     {
@@ -96,9 +97,9 @@ internal static class Utility
         Assert.Equal(hint, diagnostic.Value.Hint);
     }
 
-    public static IEnumerable<object[]> GetSnapshotFiles(string folderName, string targetExtension) =>
+    public static IEnumerable<TheoryDataRow<string, string>> GetSnapshotFiles(string folderName, string targetExtension) =>
         Directory.EnumerateFiles(AssemblyFixture.Snapshots + '/' + folderName, $"*{FileManager.LoomExtension}")
-            .Select(path => new object[] { path, path.Replace(FileManager.LoomExtension, targetExtension) });
+            .Select(path => new TheoryDataRow<string, string>(path, path.Replace(FileManager.LoomExtension, targetExtension)));
 
     public static SourceFile TestFile(string source) => new("test", source);
 

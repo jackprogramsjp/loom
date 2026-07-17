@@ -1959,7 +1959,7 @@ public class TypeCheckerTest
         Utility.AssertNoErrors(result);
 
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
-        Assert.IsAssignableFrom<PrimitiveType>(optional.NonNullableType);
+        Assert.IsType<PrimitiveType>(optional.NonNullableType, exactMatch: false);
         Assert.Equal(typeString, optional.NonNullableType.ToString());
     }
 

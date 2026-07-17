@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Text;
 
 namespace Loom.Core.Parsing.AST;
@@ -11,7 +12,7 @@ public abstract class Node
     public List<Token> Tokens { get; }
     public LocationSpan Span { get; }
     public SourceFile File { get; }
-    public Node Parent { get; private set; } = null!;
+    [MaybeNull] public Node Parent { get; private set; } = null!;
 
     protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children, LocationSpan? span = null)
     {

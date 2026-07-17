@@ -13,7 +13,6 @@ public sealed class RenderState
         where T : LuauNode =>
         nodes.ConvertAll(a => a.Render(this));
 
-    public string IndentedLine(LuauNode node) => IndentedLine(node.Render(this));
     public string IndentedLine(string text) => Indented(text) + '\n';
     public string Indented(string text) => _indent + text;
 

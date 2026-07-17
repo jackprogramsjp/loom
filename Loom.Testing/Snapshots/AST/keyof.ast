@@ -1,4 +1,5 @@
 ﻿VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: KeyOf(
@@ -10,10 +11,10 @@
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: KeyOf(
@@ -29,10 +30,10 @@ VariableDeclaration(
       )
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
+  EqualsValueClause: null
   ColonTypeClause(
     ColonToken: Token(Colon, ":")
     Type: ArrayType(
@@ -49,6 +50,5 @@ VariableDeclaration(
       RightBracket: Token(RBracket, "]")
     )
   )
-  EqualsValueClause: null
   Name: Token(Identifier, "x")
 )

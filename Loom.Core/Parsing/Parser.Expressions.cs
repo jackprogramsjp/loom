@@ -415,7 +415,7 @@ public sealed partial class Parser
                 }
 
                 elements.Add(ParsePattern());
-                if (!Match(SyntaxKind.Comma, SyntaxKind.Semicolon))
+                if (!Match(out _, SyntaxKind.Comma, SyntaxKind.Semicolon))
                     break;
             }
 
