@@ -86,7 +86,7 @@ internal static class Utility
         return result;
     }
 
-    public static void AssertNoErrors(DiagnosticBag diagnostics) => Assert.Empty(diagnostics.Set.Where(d => d.Severity == DiagnosticSeverity.Error));
+    public static void AssertNoErrors(DiagnosticBag diagnostics) => Assert.DoesNotContain(diagnostics.Set, d => d.Severity == DiagnosticSeverity.Error);
 
     public static void AssertDiagnostic(DiagnosticBag diagnostics, string code, string message, string? hint = null)
     {

@@ -11,7 +11,7 @@ internal static class ClassUtility
             ? null
             : Constants.PropertyTypeMap.GetValueOrDefault(valueType, valueType);
 
-    public static string? SafeRenamedInstance(string? name) =>
+    public static string SafeRenamedInstance(string? name) =>
         name != null && Constants.RenamableAutoTypes.TryGetValue(name, out var value)
             ? value
             : SafeName(name);

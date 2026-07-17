@@ -14,7 +14,7 @@ ide: QDNET
 
 #Specify inspection profile for code analysis
 profile:
-  name: qodana.starter
+  name: qodana.recommended
 
 #Enable inspections
 #include:
@@ -36,11 +36,10 @@ profile:
 # Quality gate. Will fail the CI/CD pipeline if any condition is not met
 # severityThresholds - configures maximum thresholds for different problem severities
 # testCoverageThresholds - configures minimum code coverage on a whole project and newly added code
-# Code Coverage is available in Ultimate and Ultimate Plus plans
 failureConditions:
-#  severityThresholds:
-#    any: 15
-#    critical: 5
+  severityThresholds:
+    any: 25
+    critical: 5
   testCoverageThresholds:
     fresh: 70
     total: 50

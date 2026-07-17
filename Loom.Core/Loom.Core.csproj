@@ -9,6 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="..\.editorconfig">
+          <Link>.editorconfig</Link>
+        </Content>
         <Content Include="..\CLAUDE.md">
             <Link>CLAUDE.md</Link>
         </Content>
@@ -17,6 +20,9 @@
         </Content>
         <Content Include="..\CONTRIBUTING.md">
           <Link>CONTRIBUTING.md</Link>
+        </Content>
+        <Content Include="..\qodana.yaml">
+          <Link>qodana.yaml</Link>
         </Content>
         <Content Include="..\README.md">
           <Link>README.md</Link>
