@@ -39,14 +39,14 @@ implement World for WorldData {
     return entity;
   }
 
-  fn query<T: Component>(entity, name) {
+  fn query(entity, name) {
     let components = component_storage[entity];
-    let result: T[mut] = mut [];
+    let result: Component[mut] = mut [];
     for c : components
       if c.name == name
-        result.push(c as never as T);
+        result.push(c);
 
-    return result;
+    return result as never;
   }
 }
 

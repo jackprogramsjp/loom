@@ -1,3 +1,0 @@
-interface List<T> { value: T, next: List<T>? }
-            fn first<T>(list: List<T>): T -> list.value
-            first(new List { value: 42, next: none })

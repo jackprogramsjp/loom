@@ -54,14 +54,18 @@ public sealed partial class TypeChecker
     {
         var name = traitDeclaration.Name.Text;
         var typeParameters = traitDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
-        var properties = ResolveTraitProperties(traitDeclaration.Body.Members);
-        var objectType = new ObjectType(null, properties);
+        var objectType = new ObjectType(null, []);
         var interfaceType = new InterfaceType(name, [], objectType);
-        if (typeParameters == null)
-            return BindType(traitDeclaration, interfaceType);
+        Type publishedType = typeParameters == null
+            ? interfaceType
+            : new GenericType(traitDeclaration, typeParameters, interfaceType);
 
-        var genericType = new GenericType(traitDeclaration, typeParameters, interfaceType);
-        return BindType(traitDeclaration, genericType);
+        BindType(traitDeclaration, publishedType);
+        
+        var properties = ResolveTraitProperties(traitDeclaration.Body.Members);
+        objectType.Properties.AddRange(properties);
+        
+        return publishedType;
     }
 
     public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)

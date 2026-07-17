@@ -34,15 +34,15 @@ function World_for_WorldData.spawn(self: WorldData, components)
   end
   return entity
 end
-function World_for_WorldData.query<T>(self: WorldData, entity, name)
+function World_for_WorldData.query(self: WorldData, entity, name)
   const components = self.component_storage[entity]
-  const result: { T & Component } = {}
+  const result: { Component } = {}
   for _, c in components do
     if c.name == name then
-      table.insert(result, (c :: never) :: T & Component)
+      table.insert(result, c)
     end
   end
-  return result
+  return result :: never
 end
 const world = setmetatable({ component_storage = {} }, Loom.merge_meta(World_for_WorldData)) :: WorldData
 const player = world:spawn({{ name = "Position", x = 69, y = 420 }})

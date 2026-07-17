@@ -32,6 +32,7 @@ public sealed partial class TypeChecker
     private readonly TypeInferrer _inferrer;
     private readonly TypeNarrower _narrower;
     private FlowState _flowState;
+    private bool _resolvingHoisted;
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)
@@ -194,7 +195,7 @@ public sealed partial class TypeChecker
         var actual = expected != null
             ? Check(@return.Expression, expected)
             : Visit(@return.Expression);
-        
+
         return BindType(@return, actual);
     }
 
@@ -211,13 +212,14 @@ public sealed partial class TypeChecker
         {
             if (functionDeclaration.ReturnType != null)
                 Check(body.Expression, returnType);
+
             // Else... GetReturnType had already visited expression body
         }
         else
         {
             Visit(functionDeclaration.Body);
         }
-        
+
         return functionType;
     }
 
@@ -251,7 +253,7 @@ public sealed partial class TypeChecker
                 : Visit(variableDeclaration.EqualsValueClause))
             : null;
 
-        Type finalType = Types.PrimitiveType.None;
+        Type finalType;
         if (declaredType != null)
         {
             finalType = declaredType;
@@ -260,7 +262,8 @@ public sealed partial class TypeChecker
         {
             finalType = initializerType;
         }
-        else {
+        else
+        {
             finalType = Types.PrimitiveType.Unknown;
         }
 
@@ -338,7 +341,7 @@ public sealed partial class TypeChecker
                         : Visit(args[i])
                 );
             }
-        
+
             return BindNonGenericInvocation(invocation, argTypes, functionType, declaration);
         }
 
@@ -467,65 +470,65 @@ public sealed partial class TypeChecker
 
         var targetType = Visit(assignmentOperator.Left);
         var valueType = Check(assignmentOperator.Right, targetType);
-        if (assignmentOperator.Left is ElementAccess or PropertyAccess or QualifiedName)
+        if (assignmentOperator.Left is not (ElementAccess or PropertyAccess or QualifiedName))
+            return BindType(assignmentOperator, valueType);
+
+        var expression = assignmentOperator.Left switch
         {
-            var expression = assignmentOperator.Left switch
+            ElementAccess access => access.Expression,
+            PropertyAccess propertyAccess => propertyAccess.Expression,
+            QualifiedName name => name.Identifier,
+            _ => null!
+        };
+
+        var expressionType = _semanticModel.GetType(expression);
+        var indexType = assignmentOperator.Left switch
+        {
+            ElementAccess access => _semanticModel.GetType(access.IndexExpression),
+            PropertyAccess propertyAccess => new Types.LiteralType(propertyAccess.Names.First().Name.Text),
+            QualifiedName name => new Types.LiteralType(name.Names.First().Name.Text),
+            _ => null!
+        };
+
+        var objectType = expressionType switch
+        {
+            ObjectType o => o,
+            InterfaceType i => i.ObjectType,
+            _ => null
+        };
+
+        var names = (assignmentOperator.Left switch
+        {
+            PropertyAccess propertyAccess => propertyAccess.Names,
+            QualifiedName name => name.Names,
+            _ => []
+        }).ToList();
+
+        if (objectType == null)
+            return BindType(assignmentOperator, valueType);
+
+        if (names.Count > 1)
+        {
+            foreach (var property in names.SkipLast(1).Select(name => objectType.GetProperty(name.Name.Text)!))
             {
-                ElementAccess access => access.Expression,
-                PropertyAccess propertyAccess => propertyAccess.Expression,
-                QualifiedName name => name.Identifier,
-                _ => null!
-            };
-
-            var expressionType = _semanticModel.GetType(expression);
-            var indexType = assignmentOperator.Left switch
-            {
-                ElementAccess access => _semanticModel.GetType(access.IndexExpression),
-                PropertyAccess propertyAccess => new Types.LiteralType(propertyAccess.Names.First().Name.Text),
-                QualifiedName name => new Types.LiteralType(name.Names.First().Name.Text),
-                _ => null!
-            };
-
-            var objectType = expressionType switch
-            {
-                ObjectType o => o,
-                InterfaceType i => i.ObjectType,
-                _ => null
-            };
-
-            var names = (assignmentOperator.Left switch
-            {
-                PropertyAccess propertyAccess => propertyAccess.Names,
-                QualifiedName name => name.Names,
-                _ => []
-            }).ToList();
-
-            if (objectType != null)
-            {
-                if (names.Count > 1)
-                {
-                    foreach (var property in names.SkipLast(1).Select(name => objectType.GetProperty(name.Name.Text)!))
-                    {
-                        objectType = property.ValueType is InterfaceType i ? i.ObjectType : (ObjectType)property.ValueType;
-                    }
-
-                    indexType = new Types.LiteralType(names.Last().Name.Text);
-                }
-
-                var (bodyType, _) = objectType.GetTypeAtIndex(indexType, expressionType);
-                if (bodyType is { IsMutable: false })
-                {
-                    var display = bodyType switch
-                    {
-                        ObjectProperty property => $"property '{property.Name}'.",
-                        ObjectIndexer indexer => $"index '{indexer.KeyType}'.",
-                        _ => ""
-                    };
-
-                    _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
-                }
+                objectType = property.ValueType is InterfaceType i ? i.ObjectType : (ObjectType)property.ValueType;
             }
+
+            indexType = new Types.LiteralType(names.Last().Name.Text);
         }
+
+        var (bodyType, _) = objectType.GetTypeAtIndex(indexType, expressionType);
+        if (bodyType is not { IsMutable: false })
+            return BindType(assignmentOperator, valueType);
+
+        var display = bodyType switch
+        {
+            ObjectProperty property => $"property '{property.Name}'.",
+            ObjectIndexer indexer => $"index '{indexer.KeyType}'.",
+            _ => ""
+        };
+
+        _diagnostics.Error(assignmentOperator, InternalCodes.AssignToImmutable, $"Cannot assign to immutable {display}");
 
         // Dropping AddConstraint here because the Check method already does it
         // _semanticModel.TypeSolver.AddConstraint(valueType, targetType, assignmentOperator.Right);
@@ -622,7 +625,7 @@ public sealed partial class TypeChecker
     }
 
     public override Type VisitArrayLiteral(ArrayLiteral arrayLiteral)
-    {        
+    {
         // TODO: array literal types for immutable arrays assigned to immutable names
         var expressionTypes = arrayLiteral.Expressions.ConvertAll(Visit).ConvertAll(t => t.Widen());
         var elementType = TypeSimplifier.Simplify(new Types.UnionType(expressionTypes));
@@ -661,7 +664,7 @@ public sealed partial class TypeChecker
                 return GetTypeAtIndexInInterface(identifier, interfaceType, new Types.LiteralType(propertyVariableSymbol.Name));
             }
 
-            var declaredType = GetTypeFromSymbol(symbol);
+            var declaredType = ResolveHoistedType(symbol);
             return BindType(identifier, declaredType);
         }
 
@@ -734,11 +737,11 @@ public sealed partial class TypeChecker
     public override Type VisitLiteralType(LiteralType literalType) => BindType(literalType, new Types.LiteralType(literalType.Value));
 
     public override Type VisitTypeName(TypeName typeName)
-    {   
+    {
         var symbol = _semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
-            var declaredType = GetTypeFromSymbol(symbol);
+            var declaredType = ResolveHoistedType(symbol);
             if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
                 return BindType(typeName, typeName.Parent is IndexedType or KeyOf ? objectType : objectType.PropertyUnion());
 
@@ -747,7 +750,7 @@ public sealed partial class TypeChecker
 
             if (typeName.TypeArguments == null)
                 return BindType(typeName, declaredType);
-            
+
             _diagnostics.Error(typeName, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
             return BindType(typeName, Types.PrimitiveType.Never);
         }
@@ -975,21 +978,10 @@ public sealed partial class TypeChecker
         _diagnostics.Error(arguments, InternalCodes.InvocationArity, $"Function expects {arityDisplay} argument{s}, but {argumentTypes.Count} were provided.");
     }
 
-    private void AddArgumentConstraints(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes)
-    {
-        for (var i = 0; i < Math.Min(argumentTypes.Count, parameterTypes.Count); i++)
-        {
-            _semanticModel.TypeSolver.AddConstraint(
-                argumentTypes[i],
-                parameterTypes[i],
-                arguments.ArgumentList[i]
-            );
-        }
-    }
-
     private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, Types.FunctionType functionType, DeclareFunctionSignature? declaration)
     {
         CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes, declaration);
+
         // COMMENT THIS OUT BECAUSE THE CHECK ALREADY DID IT SO NO NEED TO ADD CONSTRAINTS HERE
         // AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
         return BindType(invocation, functionType.ReturnType);
@@ -1056,6 +1048,19 @@ public sealed partial class TypeChecker
                 .ConvertAll(Visit);
 
         return possibleReturnTypes.Count == 0 ? Types.PrimitiveType.Void : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
+    }
+
+    private Type ResolveHoistedType(Symbol symbol)
+    {
+        var type = GetTypeFromSymbol(symbol);
+        if (_resolvingHoisted || type is not TypeVariable)
+            return type;
+
+        _resolvingHoisted = true;
+        type = Visit(symbol.Declaration);
+        _resolvingHoisted = false;
+
+        return type;
     }
 
     private Type GetTypeFromSymbol(Symbol symbol) =>

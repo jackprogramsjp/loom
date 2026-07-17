@@ -1,8 +1,6 @@
-type List<T> = {
-  read value: T,
-  read next: List<T>?,
+type FooProp = index<Foo, "foo">
+const x: FooProp = 69
+const _ = x + 69
+type Foo = {
+  read foo: number,
 }
-const function first<T>(list: List<T>): T
-  return list.value
-end
-first({ value = 42, next = nil })
