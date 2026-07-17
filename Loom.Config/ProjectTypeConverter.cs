@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Loom.Config;
 
 using Tomlyn.Serialization;
@@ -16,6 +18,7 @@ public sealed class ProjectTypeConverter : TomlConverter<ProjectType>
         };
     }
 
+    [ExcludeFromCodeCoverage]
     public override void Write(TomlWriter writer, ProjectType value)
     {
         switch (value)
