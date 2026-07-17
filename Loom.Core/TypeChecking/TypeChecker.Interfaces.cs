@@ -259,8 +259,7 @@ public sealed partial class TypeChecker
             return null;
         }
 
-        var valueType = Visit(expression);
-        _semanticModel.TypeSolver.AddConstraint(valueType, property.ValueType, expression);
+        Check(expression, property.ValueType);
         return name;
     }
 
@@ -278,9 +277,7 @@ public sealed partial class TypeChecker
             return;
         }
 
-        var indexType = Visit(initializer.IndexExpression);
-        var valueType = Visit(initializer.Expression);
-        _semanticModel.TypeSolver.AddConstraint(indexType, indexer.KeyType, initializer.IndexExpression);
-        _semanticModel.TypeSolver.AddConstraint(valueType, indexer.ValueType, initializer.Expression);
+        Check(initializer.IndexExpression, indexer.KeyType);
+        Check(initializer.Expression, indexer.ValueType);
     }
 }

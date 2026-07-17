@@ -726,7 +726,7 @@ public class TypeCheckerTest
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.ConstraintViolation,
-            "Type 'T1' does not satisfy constraint 'number' for type parameter 'T'."
+            "Type 'string' does not satisfy constraint 'number' for type parameter 'T'."
         );
     }
 
@@ -4442,4 +4442,206 @@ public class TypeCheckerTest
         Assert.Equal(false, falseLiteral.Value);
     }
     #endregion Checks
+
+    #region Bidirectional
+
+    [Fact]
+    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionArgument()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn take(xs: number[]): void;
+            take([]);
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionReturn()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            fn empty(): number[] {
+              return [];
+            }
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void Allows_GenericCall_ReturnContext_DrivesNestedLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn identity<T>(value: T): T;
+            let xs: number[] = identity([1, 2]);
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericCall_ReturnContext_ArrayElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn id<T>(value: T): T;
+            let xs: number[] = id([1, "no"]);
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericCall_ExplicitTypeArgs_ArrayElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn id<T>(value: T): T;
+            id::<number[]>([1, "no"]);
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_AnnotatedObjectLiteral_PropertyMismatch_ReportsOnBadField()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            interface Point { x: number, y: number }
+            let p: Point = new Point { x: 1, y: "no" }
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_NestedArrayProperty_ElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            interface Box { items: number[] }
+            new Box { items: [1, "no"] }
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_InterfaceInvocation_NestedArrayIndexer_ElementMismatch()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            interface Box { [string]: number[] }
+            new Box { ["k"]: [1, "no"] }
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_AnnotatedArrayLiteral_ElementMismatch_ReportsOnBadElement()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""let xs: number[] = [1, "no"]""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_AsFunctionArgument()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            declare fn take(xs: number[]): void;
+            take([1, "no"]);
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_AsFunctionReturn()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            fn bad(): number[] {
+              return [1, "no"];
+            }
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_AsExpressionBodyReturn()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""fn bad(): number[] -> [1, "no"]""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_ArrayLiteral_ElementMismatch_OnAssignment()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            mut xs: number[] = [1];
+            xs = [1, "no"];
+            """
+        );
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_NestedArrayLiteral_ElementMismatch_ReportsOnBadElement()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""let xs: number[][] = [[1, "no"]]""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type '\"no\"' is not assignable to type 'number'."
+        );
+    }
+    #endregion Bidirectional
 }
