@@ -25,8 +25,8 @@ public static class ConfigReader
         config.ProjectDirectory = directoryPath;
         return config;
     }
-    
-    public static LoomConfig? ReadFile(string path)
+
+    private static LoomConfig? ReadFile(string path)
     {
         if (!File.Exists(path))
             throw new Exception($"Could not find Loom configuration file at {path}.");

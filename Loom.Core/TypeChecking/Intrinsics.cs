@@ -25,30 +25,39 @@ public static class Intrinsics
         )
     );
 
-    public static HashSet<(Symbol, Types.Type)> Register(SemanticModel model)
+    public static HashSet<(Symbol, Types.Type)> Register(SemanticModel model, CompilationUnit injectInto)
     {
-        _cachedIntrinsics ??= CompileIntrinsics();
-        
+        _cachedIntrinsics ??= CompileIntrinsics(injectInto);
+
         foreach (var (symbol, type) in _cachedIntrinsics)
             model.TypeSolver.SetType(symbol.Declaration, type);
 
         return _cachedIntrinsics;
     }
 
-    private static HashSet<(Symbol, Types.Type)> CompileIntrinsics()
+    private static HashSet<(Symbol, Types.Type)> CompileIntrinsics(CompilationUnit injectInto)
     {
         if (_compilingIntrinsic) return [];
         _compilingIntrinsic = true;
-        
+
         var sourceDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
-        var loomConfig = new LoomConfig { NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" } };
+        var loomConfig = new LoomConfig
+        {
+            ProjectType = ProjectType.Library, NoEmit = true, Files = new FilesConfig { SourceDirectory = $"{sourceDirectory}/Loom.Core/TypeChecking/Intrinsic" }
+        };
+
         var compilationUnit = new CompilationUnit(loomConfig);
-        var compiledFiles = compilationUnit.SourceFiles.Select(file =>
-                {
-                    file.IsIntrinsic = true;
-                    return compilationUnit.Compile(file);
-                }
-            )
+        var compiledFiles = compilationUnit.SourceFiles
+            .Where(file =>
+            {
+                file.IsIntrinsic = true;
+                
+                if (injectInto.Config.ProjectType != ProjectType.Plugin && file.Name == "PluginSecurity.loom")
+                    return false;
+                
+                return injectInto.Config.ProjectType != ProjectType.Plugin || file.Name != "None.loom";
+            })
+            .Select(compilationUnit.Compile)
             .ToArray();
 
         var intrinsicSymbols = new HashSet<(Symbol, Types.Type)>();

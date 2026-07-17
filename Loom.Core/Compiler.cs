@@ -32,8 +32,8 @@ public sealed class Compiler(CompilationUnit unit, SourceFile file)
             var diagnostics = DiagnosticBag.Concat(pipelineDiagnostics);
             var compiledFilePath = file.AbsolutePath
                 .Replace(
-                    Path.GetFileName(unit.LoomConfig.Files.SourceDirectory) + Path.DirectorySeparatorChar,
-                    Path.GetFileName(unit.LoomConfig.Files.OutputDirectory) + Path.DirectorySeparatorChar
+                    Path.GetFileName(unit.Config.Files.SourceDirectory) + Path.DirectorySeparatorChar,
+                    Path.GetFileName(unit.Config.Files.OutputDirectory) + Path.DirectorySeparatorChar
                 )
                 .Replace(FileManager.LoomExtension, ".luau");
 

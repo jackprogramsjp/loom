@@ -3,16 +3,17 @@
 namespace Loom.Config;
 
 // ReSharper disable file ClassNeverInstantiated.Global
-public sealed class FilesConfig
-{
-    public string SourceDirectory { get; set; } = "src";
-    public string OutputDirectory { get; set; } = "dist";
-}
-
 public sealed class LoomConfig
 {
     [TomlIgnore] public string ProjectDirectory { get; set; } = "?";
 
+    [TomlPropertyName("no_emit")]
     public bool NoEmit { get; set; }
+    
+    [TomlPropertyName("project_type")]
+    [TomlConverter(typeof(ProjectTypeConverter))]
+    public ProjectType ProjectType { get; init; }
+    
+    [TomlPropertyName("files")]
     public FilesConfig Files { get; init; } = new();
 }

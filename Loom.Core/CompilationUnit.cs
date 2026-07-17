@@ -6,10 +6,10 @@ using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core;
 
-public sealed class CompilationUnit(LoomConfig loomConfig)
+public sealed class CompilationUnit(LoomConfig config)
 {
-    public LoomConfig LoomConfig { get; } = loomConfig;
-    public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(loomConfig.Files.SourceDirectory);
+    public LoomConfig Config { get; } = config;
+    public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(config.Files.SourceDirectory);
     public Dictionary<Symbol, Type> Globals { get; } = [];
     
     public CompilationResult Compile()
@@ -28,7 +28,7 @@ public sealed class CompilationUnit(LoomConfig loomConfig)
         var compiledConcreteFiles = SourceFiles.FindAll(file => !file.IsDeclaration).ConvertAll(Compile);
         var compiledFiles = compiledDeclarationFiles.Concat(compiledConcreteFiles).ToList();
         var diagnostics = DiagnosticBag.Concat(compiledFiles.ConvertAll(file => file.Diagnostics));
-        if (!diagnostics.ContainsErrors() && !LoomConfig.NoEmit)
+        if (!diagnostics.ContainsErrors() && !Config.NoEmit)
             compiledFiles.ForEach(FileManager.WriteCompiledFile);
 
         return new CompilationResult(compiledFiles, diagnostics);
