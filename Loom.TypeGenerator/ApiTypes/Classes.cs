@@ -1,4 +1,5 @@
 #pragma warning disable CS8618
+// ReSharper disable UnusedAutoPropertyAccessor.Global
 using System.Text.Json.Serialization;
 
 namespace Loom.TypeGenerator.ApiTypes;
