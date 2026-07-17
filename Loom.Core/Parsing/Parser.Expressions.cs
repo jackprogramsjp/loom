@@ -123,6 +123,9 @@ public sealed partial class Parser
 
     private Expression ParsePrimary()
     {
+        if (Match(out var matchKeyword, SyntaxKind.MatchKeyword))
+            return ParseMatchExpression(matchKeyword);
+
         if (Match(out var newKeyword, SyntaxKind.NewKeyword))
             return ParseInterfaceInvocation(newKeyword);
 
@@ -236,5 +239,79 @@ public sealed partial class Parser
         var expressions = ParseDelimited(ParseExpression);
         var rightBracket = Expect(SyntaxKind.RBracket);
         return new ArrayLiteral(mutKeyword, leftBracket, rightBracket, expressions);
+    }
+
+    private MatchExpression ParseMatchExpression(Token keyword)
+    {
+        var expression = ParseExpression();
+        var leftBrace = Expect(SyntaxKind.LBrace);
+        var arms = new List<MatchArm>();
+        while (!IsEof() && Current() is not { Kind: SyntaxKind.RBrace })
+        {
+            arms.Add(ParseMatchArm());
+            Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
+        }
+
+        var rightBrace = Expect(SyntaxKind.RBrace);
+        return new MatchExpression(keyword, expression, leftBrace, rightBrace, arms);
+    }
+
+    private MatchArm ParseMatchArm()
+    {
+        var pattern = ParsePattern();
+        var arrow = Expect(SyntaxKind.Arrow);
+        var body = ParseExpression();
+        return new MatchArm(pattern, arrow, body);
+    }
+
+    private Pattern ParsePattern()
+    {
+        if (Match(out var leftBrace, SyntaxKind.LBrace))
+            return ParseObjectPattern(leftBrace);
+
+        if (Match(out var identifier, SyntaxKind.Identifier))
+            return identifier.Text == "_"
+                ? new WildcardPattern(identifier)
+                : new IdentifierPattern(identifier);
+
+        if (Match(out var literal, SyntaxFacts.IsLiteral))
+            return new LiteralPattern(literal, LiteralUtility.ResolveValue(literal));
+
+        var current = Current();
+        if (IsEof())
+            _diagnostics.Error(current, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+        else
+        {
+            _diagnostics.Error(current, InternalCodes.UnexpectedToken, $"Expected pattern, got {SafeTokenText(current)}.");
+            _position++;
+        }
+
+        return new NullPattern(current);
+    }
+
+    private ObjectPattern ParseObjectPattern(Token leftBrace)
+    {
+        var fields = new List<ObjectPatternField>();
+        if (!Match(out var rightBrace, SyntaxKind.RBrace))
+        {
+            while (!IsEof() && Current() is not { Kind: SyntaxKind.RBrace })
+            {
+                fields.Add(ParseObjectPatternField());
+                Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
+            }
+
+            rightBrace = Expect(SyntaxKind.RBrace);
+        }
+
+        return new ObjectPattern(leftBrace, rightBrace, fields);
+    }
+
+    private ObjectPatternField ParseObjectPatternField()
+    {
+        var name = ExpectIdentifier("property name");
+        if (!Match(out var colon, SyntaxKind.Colon))
+            return new ObjectPatternField(name, null, new IdentifierPattern(name));
+
+        return new ObjectPatternField(name, colon, ParsePattern());
     }
 }

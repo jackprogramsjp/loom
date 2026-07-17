@@ -81,6 +81,13 @@ public class ParserTest
         ["nameof::<number>()", InternalCodes.InvalidTypeArguments, "May only get name of type when the type is a type name."],
         ["nameof::<T>(1)", InternalCodes.UnexpectedToken, "Expected ')', got '1'."],
         ["nameof::<T, U>()", InternalCodes.GenericArity, "Exactly one type parameter is allowed for 'nameof::<T>()'."],
+        ["match", InternalCodes.UnexpectedEof, "Unexpected end of file."],
+        ["match x", InternalCodes.UnexpectedEof, "Expected '{', got EOF."],
+        ["match x {", InternalCodes.UnexpectedEof, "Expected '}', got EOF."],
+        ["match x { _ ", InternalCodes.UnexpectedEof, "Expected '->', got EOF."],
+        ["match x { _ -> }", InternalCodes.UnexpectedToken, "Expected expression, got '}'."],
+        ["match x { -> 1 }", InternalCodes.UnexpectedToken, "Expected pattern, got '->'."],
+        ["match x { { 123: y } -> 1 }", InternalCodes.UnexpectedToken, "Expected property name, got '123'."],
     ];
 
     public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("AST", ".ast");
@@ -104,6 +111,82 @@ public class ParserTest
         var actual = AstInspector.Inspect(result.Tree).Replace(Environment.NewLine, "\n");
         var expected = File.ReadAllText(snapshotPath).Replace(Environment.NewLine, "\n");
         Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Parses_MatchExpression_WildcardArm()
+    {
+        var tree = Utility.GetAST("match x { _ -> 0 }");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var match = Assert.IsType<MatchExpression>(expressionStatement.Expression);
+
+        Assert.Equal("x", Assert.IsType<Identifier>(match.Expression).Name.Text);
+        var arm = Assert.Single(match.Arms);
+        Assert.IsType<WildcardPattern>(arm.Pattern);
+        Assert.Equal(0L, Assert.IsType<Literal>(arm.Body).Value);
+    }
+
+    [Fact]
+    public void Parses_MatchExpression_ObjectPatternWithBindings()
+    {
+        var tree = Utility.GetAST("match result { { ok: true, value: v } -> v }");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var match = Assert.IsType<MatchExpression>(expressionStatement.Expression);
+        var arm = Assert.Single(match.Arms);
+        var pattern = Assert.IsType<ObjectPattern>(arm.Pattern);
+
+        Assert.Equal(2, pattern.Fields.Count);
+        Assert.Equal("ok", pattern.Fields[0].Name.Text);
+        Assert.Equal(true, Assert.IsType<LiteralPattern>(pattern.Fields[0].Pattern).Value);
+        Assert.Equal("value", pattern.Fields[1].Name.Text);
+        Assert.Equal("v", Assert.IsType<IdentifierPattern>(pattern.Fields[1].Pattern).Name.Text);
+        Assert.Equal("v", Assert.IsType<Identifier>(arm.Body).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_MatchExpression_ObjectPatternShorthand()
+    {
+        var tree = Utility.GetAST("match value { { value } -> value }");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var match = Assert.IsType<MatchExpression>(expressionStatement.Expression);
+        var field = Assert.Single(Assert.IsType<ObjectPattern>(Assert.Single(match.Arms).Pattern).Fields);
+
+        Assert.Equal("value", field.Name.Text);
+        Assert.Null(field.Colon);
+        Assert.Equal("value", Assert.IsType<IdentifierPattern>(field.Pattern).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_MatchExpression_AsVariableInitializer()
+    {
+        var tree = Utility.GetAST("let x = match n { 0 -> \"zero\", _ -> \"other\" }");
+        var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(tree.Statements));
+        var match = Assert.IsType<MatchExpression>(declaration.EqualsValueClause!.Value);
+
+        Assert.Equal(2, match.Arms.Count);
+        Assert.Equal(0L, Assert.IsType<LiteralPattern>(match.Arms[0].Pattern).Value);
+        Assert.IsType<WildcardPattern>(match.Arms[1].Pattern);
+    }
+
+    [Fact]
+    public void Parses_MatchExpression_LiteralAndIdentifierArms()
+    {
+        var tree = Utility.GetAST("""match tag { "lava" -> 1, other -> 2 }""");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var match = Assert.IsType<MatchExpression>(expressionStatement.Expression);
+
+        Assert.Equal(2, match.Arms.Count);
+        Assert.Equal("lava", Assert.IsType<LiteralPattern>(match.Arms[0].Pattern).Value);
+        Assert.Equal("other", Assert.IsType<IdentifierPattern>(match.Arms[1].Pattern).Name.Text);
+    }
+
+    [Fact]
+    public void Match_InvalidPattern_ProducesNullPattern()
+    {
+        var tree = Utility.GetAST("match x { -> 1 }");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var match = Assert.IsType<MatchExpression>(expressionStatement.Expression);
+        Assert.IsType<NullPattern>(Assert.Single(match.Arms).Pattern);
     }
 
     [Fact]

@@ -1,0 +1,19 @@
+match x {
+    _ -> 0
+}
+match result {
+    { ok: true, value: v } -> v,
+    { ok: false, error: e } -> e,
+}
+match tag {
+    "lava" -> 1,
+    "something" -> 2,
+    other -> 3,
+}
+let x = match n {
+    0 -> "zero",
+    _ -> "other",
+}
+match value {
+    { value } -> value,
+}

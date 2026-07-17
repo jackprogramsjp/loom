@@ -32,6 +32,7 @@ public static class SyntaxFacts
             new("sealed", SyntaxKind.SealedKeyword),
             new("trait", SyntaxKind.TraitKeyword),
             new("implement", SyntaxKind.ImplementKeyword),
+            new("match", SyntaxKind.MatchKeyword),
         ]
     );
     public static readonly Dictionary<string, SyntaxKind> OperatorMap = new(
