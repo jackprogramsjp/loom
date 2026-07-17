@@ -9,7 +9,7 @@ namespace Loom.Testing;
 public class SyntaxNodeTest
 {
     private static Token T(string text, int start, int length, SyntaxKind kind = SyntaxKind.Identifier)
-        => new(kind, new LocationSpan(new Location(SourceFile.Empty, start, 1, start), length), text);
+        => new(kind, new LocationSpan(new Location(SourceFile.Empty, start), length), text);
 
     [Fact]
     public void Node_Id_IsAssigned_AndIncrements()

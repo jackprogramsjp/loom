@@ -12,8 +12,7 @@ public sealed class Lexer(SourceFile file)
             .ToArray();
 
     private readonly DiagnosticBag _diagnostics = new();
-    private int _character, _position;
-    private int _line = 1;
+    private int _position;
 
     public LexerResult Tokenize()
     {
@@ -55,18 +54,7 @@ public sealed class Lexer(SourceFile file)
                 break;
             }
 
-            var span = GetSpan(start);
-            if (result.Rule.Syntax == SyntaxKind.Whitespace)
-            {
-                var tabCount = 0;
-                for (var i = start.Position; i < span.End.Position; i++)
-                    if (file.SourceText[i] == '\t')
-                        tabCount++;
-
-                _character += tabCount * 2;
-            }
-
-            yield return new Token(result.Rule.Syntax, span, result.Content);
+            yield return new Token(result.Rule.Syntax, GetSpan(start), result.Content);
         }
 
         yield return new Token(SyntaxKind.Eof, GetSpan(GetLocation()));
@@ -146,31 +134,11 @@ public sealed class Lexer(SourceFile file)
 
             _ => null
         };
-
-    /// <summary>
-    /// Advances the position, line, and character counters by the length of
-    /// <paramref name="content"/>, accounting for embedded newlines.
-    /// </summary>
-    private void Advance(string content)
-    {
-        var lines = content.Count(c => c == '\n');
-        var length = content.Length;
-
-        _position += length;
-        if (lines > 0)
-        {
-            _line += lines;
-            _character = length - content.LastIndexOf('\n') - 1;
-        }
-        else
-        {
-            _character += length;
-        }
-    }
-
+    
+    private void Advance(string content) => _position += content.Length;
     private bool MatchesPatternAt(string pattern) => file.SourceText.AsSpan(_position, pattern.Length).SequenceEqual(pattern);
     private char Current() => file.SourceText[_position];
     private bool IsEof(int offset = 0) => _position + offset >= file.SourceText.Length;
     private LocationSpan GetSpan(Location start) => new(start, GetLocation());
-    private Location GetLocation() => new(file, _character, _line, _position);
+    private Location GetLocation() => new(file, _position);
 }

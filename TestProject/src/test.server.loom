@@ -1,1 +1,2 @@
-let replicated = get_service("ReplicatedStorage");
+let a = 'a'
+let y = a + 10

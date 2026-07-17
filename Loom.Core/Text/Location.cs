@@ -1,14 +1,16 @@
 namespace Loom.Core.Text;
 
-public readonly struct Location(SourceFile file, int character, int line, int position) : IEquatable<Location>
+public readonly struct Location(SourceFile file, int position) : IEquatable<Location>
 {
-    public static Location Empty(SourceFile file) => new(file, 0, 1, 0);
-    public static Location operator +(Location location, int n) => location with { Character = location.Character + n, Position = location.Position + n };
+    public static Location Empty(SourceFile file) => new(file, 0);
+
+    public static Location operator +(Location location, int n) =>
+        new(location.File, location.Position + n);
 
     public SourceFile File { get; } = file;
-    public int Character { get; private init; } = character;
-    public int Line { get; } = line;
-    public int Position { get; private init; } = position;
+    public int Position { get; } = position;
+    public int Character => File.GetCharacterFromPosition(Position);
+    public int Line => File.GetLineFromPosition(Position);
 
     public static bool operator ==(Location left, Location right) => left.Equals(right);
     public static bool operator !=(Location left, Location right) => !(left == right);
