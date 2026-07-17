@@ -2,7 +2,7 @@
 
 declare fn print(msg: unknown): void;
 
-interface SecurityCapabilities;
+declare interface SecurityCapabilities;
 
 declare interface DateTime {
     UnixTimestamp: number;

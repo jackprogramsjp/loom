@@ -332,21 +332,17 @@ public sealed partial class TypeChecker
         {
             var parameterTypes = functionType.ParameterTypes;
             var argTypes = new List<Type>(args.Count);
-
-            for (var i = 0; i < args.Count; i++)
-            {
-                argTypes.Add(
-                    i < parameterTypes.Count
-                        ? Check(args[i], parameterTypes[i])
-                        : Visit(args[i])
-                );
-            }
+            argTypes.AddRange(
+                args.Select((t, i) => i < parameterTypes.Count
+                    ? Check(t, parameterTypes[i])
+                    : Visit(t)
+                )
+            );
 
             return BindNonGenericInvocation(invocation, argTypes, functionType, declaration);
         }
 
         var expectedReturnType = GetContextualType(invocation);
-
         if (invocation.TypeArguments != null)
         {
             var substitution = ResolveTypeArguments(invocation, functionType, [], expectedReturnType);
@@ -356,15 +352,12 @@ public sealed partial class TypeChecker
             var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
             var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
             var argumentTypes = new List<Type>(args.Count);
-
-            for (var i = 0; i < args.Count; i++)
-            {
-                argumentTypes.Add(
-                    i < substitutedParameterTypes.Count
-                        ? Check(args[i], substitutedParameterTypes[i])
-                        : Visit(args[i])
-                );
-            }
+            argumentTypes.AddRange(
+                args.Select((t, i) => i < substitutedParameterTypes.Count
+                    ? Check(t, substitutedParameterTypes[i])
+                    : Visit(t)
+                )
+            );
 
             CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
             return BindType(invocation, substitutedReturnType);
@@ -378,7 +371,6 @@ public sealed partial class TypeChecker
 
             var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
             var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
-
             CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
 
             for (var i = 0; i < args.Count; i++)

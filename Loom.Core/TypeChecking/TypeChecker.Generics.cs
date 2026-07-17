@@ -130,29 +130,45 @@ public sealed partial class TypeChecker
 
         return new ObjectType(newIndexer, newProperties);
     }
+    
+    private Type SubstituteIndexedType(Node failNode, TypeParameterSubstitution substitution, IndexedType indexedType, Dictionary<Type, Type> cache)
+    {
+        var target = SubstituteTypeParameters(failNode, indexedType.Target, substitution, cache);
+        var index = SubstituteTypeParameters(failNode, indexedType.Index, substitution, cache);
+        return GetTypeAtIndex(failNode, target, index);
+    }
 
     private List<Type> SubstituteTypeParameters(Node failNode, List<Type> types, TypeParameterSubstitution substitution) =>
         types.ConvertAll(t => SubstituteTypeParameters(failNode, t, substitution));
-
+    
     private Type SubstituteTypeParameters(Node failNode, Type type, TypeParameterSubstitution substitution) =>
-        TrySubstituteTypeParameter(type, substitution, out var substituted)
+        SubstituteTypeParameters(
+            failNode,
+            type,
+            substitution,
+            new Dictionary<Type, Type>());
+
+    private Type SubstituteTypeParameters(Node failNode, Type type, TypeParameterSubstitution substitution, Dictionary<Type, Type> cache)
+    {
+        if (cache.TryGetValue(type, out var cached))
+            return cached;
+        
+        cache[type] = PrimitiveType.Never;
+        var substitutedType = TrySubstituteTypeParameter(type, substitution, out var substituted)
             ? substituted
             : type is IndexedType indexedType
-            ? SubstituteIndexedType(failNode, substitution, indexedType)
-            : TypeSolver.Transform(
-                type,
-                t => t switch
-                {
-                    _ when TrySubstituteTypeParameter(type, substitution, out var substituted2) => substituted2,
-                    _ => SubstituteTypeParameters(failNode, t, substitution)
-                }
-            );
+                ? SubstituteIndexedType(failNode, substitution, indexedType, cache)
+                : TypeSolver.Transform(
+                    type,
+                    t => t switch
+                    {
+                        _ when TrySubstituteTypeParameter(type, substitution, out var substituted2) => substituted2,
+                        _ => SubstituteTypeParameters(failNode, t, substitution, cache)
+                    }
+                );
 
-    private Type SubstituteIndexedType(Node failNode, TypeParameterSubstitution substitution, IndexedType indexedType)
-    {
-        var target = SubstituteTypeParameters(failNode, indexedType.Target, substitution);
-        var index = SubstituteTypeParameters(failNode, indexedType.Index, substitution);
-        return GetTypeAtIndex(failNode, target, index);
+        cache[type] = substitutedType;
+        return substitutedType;
     }
 
     private static bool TrySubstituteTypeParameter(Type type, TypeParameterSubstitution substitution, [MaybeNullWhen(false)] out Type substituted)

@@ -14,7 +14,7 @@ internal sealed class ClassGenerator(
     private readonly Dictionary<string, Class> _classRefs = [];
     private readonly Dictionary<string, HashSet<string>> _definedMemberNames = [];
     private const string ClassMacros = """
-    interface CreatableInstance: Instance { _is_creatable: true; }
+    declare interface CreatableInstance: Instance { _is_creatable: true; }
     declare fn new_instance<T: CreatableInstance>: T;
     declare fn get_service<Name: keyof(Services)>(name: Name): Services[Name];
     """;
