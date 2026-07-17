@@ -35,3 +35,7 @@ match value {
     f when Foo { some_field: let n, other: name when string } -> n,
     f when Foo { some_field: let n } when n > 0 -> n,
 }
+match xs {
+    [a, b, c] -> a,
+    [head, ..rest] -> head,
+}

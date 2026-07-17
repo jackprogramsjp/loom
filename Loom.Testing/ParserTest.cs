@@ -94,6 +94,7 @@ public class ParserTest
         ["match x { let -> 1 }", InternalCodes.UnexpectedToken, "Expected binding name, got '->'."],
         ["match x { name when -> 1 }", InternalCodes.UnexpectedToken, "Expected type, got '->'."],
         ["match x { _ when -> 1 }", InternalCodes.UnexpectedToken, "Expected expression, got '->'."],
+        ["match x { [a, ..rest, b] -> 1 }", InternalCodes.UnexpectedToken, "Rest pattern must be the last element in an array pattern."],
     ];
 
     public static readonly IEnumerable<object[]> SnapshotFiles = Utility.GetSnapshotFiles("AST", ".ast");
@@ -316,6 +317,35 @@ public class ParserTest
         var guard = Assert.IsType<BinaryOperator>(arm.Guard);
         Assert.Equal("x", Assert.IsType<Identifier>(guard.Left).Name.Text);
         Assert.Equal(0L, Assert.IsType<Literal>(guard.Right).Value);
+    }
+
+    [Fact]
+    public void Parses_MatchExpression_ArrayPattern()
+    {
+        var tree = Utility.GetAST("match xs { [a, b, c] -> a }");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var arm = Assert.Single(Assert.IsType<MatchExpression>(expressionStatement.Expression).Arms);
+        var array = Assert.IsType<ArrayPattern>(arm.Pattern);
+
+        Assert.Null(array.Rest);
+        Assert.Equal(3, array.Elements.Count);
+        Assert.Equal("a", Assert.IsType<IdentifierPattern>(array.Elements[0]).Name.Text);
+        Assert.Equal("b", Assert.IsType<IdentifierPattern>(array.Elements[1]).Name.Text);
+        Assert.Equal("c", Assert.IsType<IdentifierPattern>(array.Elements[2]).Name.Text);
+    }
+
+    [Fact]
+    public void Parses_MatchExpression_ArrayPatternWithRest()
+    {
+        var tree = Utility.GetAST("match xs { [head, ..rest] -> head }");
+        var expressionStatement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var arm = Assert.Single(Assert.IsType<MatchExpression>(expressionStatement.Expression).Arms);
+        var array = Assert.IsType<ArrayPattern>(arm.Pattern);
+
+        Assert.Single(array.Elements);
+        Assert.Equal("head", Assert.IsType<IdentifierPattern>(array.Elements[0]).Name.Text);
+        Assert.NotNull(array.Rest);
+        Assert.Equal("rest", Assert.IsType<IdentifierPattern>(array.Rest.Pattern).Name.Text);
     }
 
     [Fact]

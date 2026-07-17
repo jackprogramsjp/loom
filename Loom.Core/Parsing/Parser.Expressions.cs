@@ -291,6 +291,9 @@ public sealed partial class Parser
 
     private Pattern ParsePrimaryPattern()
     {
+        if (Match(out var leftBracket, SyntaxKind.LBracket))
+            return ParseArrayPattern(leftBracket);
+
         if (Match(out var leftBrace, SyntaxKind.LBrace))
             return ParseObjectPattern(leftBrace);
 
@@ -378,10 +381,49 @@ public sealed partial class Parser
             or SyntaxKind.Comma
             or SyntaxKind.Semicolon
             or SyntaxKind.RBrace
+            or SyntaxKind.RBracket
             or SyntaxKind.Pipe
             or SyntaxKind.LBrace
             or SyntaxKind.WhenKeyword
             or SyntaxKind.Eof;
+
+    private ArrayPattern ParseArrayPattern(Token leftBracket)
+    {
+        var elements = new List<Pattern>();
+        RestPattern? rest = null;
+        if (!Match(out var rightBracket, SyntaxKind.RBracket))
+        {
+            while (!IsEof() && Current() is not { Kind: SyntaxKind.RBracket })
+            {
+                if (Match(out var dotDot, SyntaxKind.DotDot))
+                {
+                    if (rest != null)
+                    {
+                        _diagnostics.Error(dotDot, InternalCodes.UnexpectedToken, "Rest pattern must appear at most once in an array pattern.");
+                        break;
+                    }
+
+                    rest = new RestPattern(dotDot, ParsePrimaryPattern());
+                    Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
+                    if (!IsEof() && Current() is not { Kind: SyntaxKind.RBracket })
+                    {
+                        _diagnostics.Error(Current(), InternalCodes.UnexpectedToken, "Rest pattern must be the last element in an array pattern.");
+                        break;
+                    }
+
+                    break;
+                }
+
+                elements.Add(ParsePattern());
+                if (!Match(SyntaxKind.Comma, SyntaxKind.Semicolon))
+                    break;
+            }
+
+            rightBracket = Expect(SyntaxKind.RBracket);
+        }
+
+        return new ArrayPattern(leftBracket, rightBracket, elements, rest);
+    }
 
     private ObjectPattern ParseObjectPattern(Token leftBrace)
     {

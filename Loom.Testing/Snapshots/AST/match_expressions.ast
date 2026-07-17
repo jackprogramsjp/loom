@@ -558,3 +558,64 @@ ExpressionStatement(
     ]
   )
 )
+ExpressionStatement(
+  Expression: MatchExpression(
+    Expression: Identifier(
+      Name: Token(Identifier, "xs")
+      Token(Identifier, "xs")
+    )
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Arms: [
+      MatchArm(
+        Pattern: ArrayPattern(
+          LeftBracket: Token(LBracket, "[")
+          RightBracket: Token(RBracket, "]")
+          Elements: [
+            IdentifierPattern(
+              Name: Token(Identifier, "a")
+            )
+            IdentifierPattern(
+              Name: Token(Identifier, "b")
+            )
+            IdentifierPattern(
+              Name: Token(Identifier, "c")
+            )
+          ]
+          Rest: null
+        )
+        When: Token(Arrow, "->")
+        Guard: null
+        Arrow: Token(Arrow, "->")
+        Body: Identifier(
+          Name: Token(Identifier, "a")
+          Token(Identifier, "a")
+        )
+      )
+      MatchArm(
+        Pattern: ArrayPattern(
+          LeftBracket: Token(LBracket, "[")
+          RightBracket: Token(RBracket, "]")
+          Elements: [
+            IdentifierPattern(
+              Name: Token(Identifier, "head")
+            )
+          ]
+          Rest: RestPattern(
+            DotDot: Token(DotDot, "..")
+            Pattern: IdentifierPattern(
+              Name: Token(Identifier, "rest")
+            )
+          )
+        )
+        When: Token(Arrow, "->")
+        Guard: null
+        Arrow: Token(Arrow, "->")
+        Body: Identifier(
+          Name: Token(Identifier, "head")
+          Token(Identifier, "head")
+        )
+      )
+    ]
+  )
+)
