@@ -24,10 +24,22 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitMatchExpression(MatchExpression matchExpression) =>
         CombineResults([Visit(matchExpression.Expression), VisitList(matchExpression.Arms)]);
 
-    public virtual T VisitMatchArm(MatchArm matchArm) => CombineResults([Visit(matchArm.Pattern), Visit(matchArm.Body)]);
+    public virtual T VisitMatchArm(MatchArm matchArm) =>
+        CombineResults([Visit(matchArm.Pattern), VisitWithDefault(matchArm.Guard), Visit(matchArm.Body)]);
     public virtual T VisitWildcardPattern(WildcardPattern wildcardPattern) => DefaultValue(wildcardPattern);
     public virtual T VisitIdentifierPattern(IdentifierPattern identifierPattern) => DefaultValue(identifierPattern);
     public virtual T VisitLiteralPattern(LiteralPattern literalPattern) => DefaultValue(literalPattern);
+    public virtual T VisitOrPattern(OrPattern orPattern) => VisitList(orPattern.Patterns);
+    public virtual T VisitRangePattern(RangePattern rangePattern) =>
+        CombineResults([Visit(rangePattern.Minimum), Visit(rangePattern.Maximum)]);
+    public virtual T VisitLetPattern(LetPattern letPattern) => DefaultValue(letPattern);
+
+    public virtual T VisitTypedPattern(TypedPattern typedPattern) =>
+        CombineResults([Visit(typedPattern.Type), VisitWithDefault(typedPattern.ObjectPattern)]);
+
+    public virtual T VisitTypePattern(TypePattern typePattern) =>
+        CombineResults([Visit(typePattern.Type), VisitWithDefault(typePattern.ObjectPattern)]);
+
     public virtual T VisitObjectPattern(ObjectPattern objectPattern) => VisitList(objectPattern.Fields);
     public virtual T VisitObjectPatternField(ObjectPatternField objectPatternField) => Visit(objectPatternField.Pattern);
     public virtual T VisitNullPattern(NullPattern nullPattern) => DefaultValue(nullPattern);

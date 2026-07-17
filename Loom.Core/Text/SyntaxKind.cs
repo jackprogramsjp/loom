@@ -93,6 +93,7 @@ public enum SyntaxKind : ushort
     TraitKeyword,
     ImplementKeyword,
     MatchKeyword,
+    WhenKeyword,
 
     Identifier,
     Eof,

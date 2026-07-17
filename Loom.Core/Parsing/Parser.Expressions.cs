@@ -259,23 +259,107 @@ public sealed partial class Parser
     private MatchArm ParseMatchArm()
     {
         var pattern = ParsePattern();
+        Token? when = null;
+        Expression? guard = null;
+        if (Match(out when, SyntaxKind.WhenKeyword))
+            guard = ParseExpression();
+
         var arrow = Expect(SyntaxKind.Arrow);
         var body = ParseExpression();
-        return new MatchArm(pattern, arrow, body);
+        return new MatchArm(pattern, when, guard, arrow, body);
     }
 
     private Pattern ParsePattern()
     {
+        var pattern = ParsePrimaryPattern();
+        if (!Match(out var firstPipe, SyntaxKind.Pipe))
+            return pattern;
+
+        var patterns = new List<Pattern> { pattern };
+        var pipes = new List<Token> { firstPipe };
+        while (true)
+        {
+            patterns.Add(ParsePrimaryPattern());
+            if (!Match(out var pipe, SyntaxKind.Pipe))
+                break;
+
+            pipes.Add(pipe);
+        }
+
+        return new OrPattern(pipes, patterns);
+    }
+
+    private Pattern ParsePrimaryPattern()
+    {
         if (Match(out var leftBrace, SyntaxKind.LBrace))
             return ParseObjectPattern(leftBrace);
 
+        if (Match(out var letKeyword, SyntaxKind.LetKeyword))
+        {
+            var letName = ExpectIdentifier("binding name");
+            return new LetPattern(letKeyword, letName);
+        }
+
         if (Match(out var identifier, SyntaxKind.Identifier))
+        {
+            if (identifier.Text != "_" && Current() is { Kind: SyntaxKind.WhenKeyword })
+            {
+                var whenPosition = _position;
+                Match(out var when, SyntaxKind.WhenKeyword);
+                var type = ParseType();
+                if (IsTypedPatternFollower())
+                {
+                    ObjectPattern? objectPattern = null;
+                    if (Match(out var typedLeftBrace, SyntaxKind.LBrace))
+                        objectPattern = ParseObjectPattern(typedLeftBrace);
+
+                    return new TypedPattern(identifier, when!, type, objectPattern);
+                }
+
+                _position = whenPosition;
+            }
+
+            var typeArguments = ParseTypeArguments();
+            if (typeArguments != null || Current() is { Kind: SyntaxKind.LBrace })
+            {
+                TypeExpression type = SyntaxFacts.IsPrimitiveType(identifier.Text) && typeArguments == null
+                    ? new PrimitiveType(identifier)
+                    : new TypeName(identifier, typeArguments);
+
+                ObjectPattern? objectPattern = null;
+                if (Match(out var typeLeftBrace, SyntaxKind.LBrace))
+                    objectPattern = ParseObjectPattern(typeLeftBrace);
+
+                return new TypePattern(type, objectPattern);
+            }
+
             return identifier.Text == "_"
                 ? new WildcardPattern(identifier)
                 : new IdentifierPattern(identifier);
+        }
 
         if (Match(out var literal, SyntaxFacts.IsLiteral))
-            return new LiteralPattern(literal, LiteralUtility.ResolveValue(literal));
+        {
+            var minimum = new LiteralPattern(literal, LiteralUtility.ResolveValue(literal));
+            if (!Match(out var dotDot, SyntaxKind.DotDot))
+                return minimum;
+
+            if (!Match(out var maximumLiteral, SyntaxFacts.IsLiteral))
+            {
+                var badToken = Current();
+                if (IsEof())
+                    _diagnostics.Error(badToken, InternalCodes.UnexpectedEof, "Unexpected end of file.");
+                else
+                {
+                    _diagnostics.Error(badToken, InternalCodes.UnexpectedToken, $"Expected range end, got {SafeTokenText(badToken)}.");
+                    _position++;
+                }
+
+                return new RangePattern(minimum, dotDot, new NullPattern(badToken));
+            }
+
+            return new RangePattern(minimum, dotDot, new LiteralPattern(maximumLiteral, LiteralUtility.ResolveValue(maximumLiteral)));
+        }
 
         var current = Current();
         if (IsEof())
@@ -288,6 +372,16 @@ public sealed partial class Parser
 
         return new NullPattern(current);
     }
+
+    private bool IsTypedPatternFollower() =>
+        Current().Kind is SyntaxKind.Arrow
+            or SyntaxKind.Comma
+            or SyntaxKind.Semicolon
+            or SyntaxKind.RBrace
+            or SyntaxKind.Pipe
+            or SyntaxKind.LBrace
+            or SyntaxKind.WhenKeyword
+            or SyntaxKind.Eof;
 
     private ObjectPattern ParseObjectPattern(Token leftBrace)
     {
