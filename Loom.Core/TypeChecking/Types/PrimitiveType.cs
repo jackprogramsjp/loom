@@ -12,7 +12,7 @@ public class PrimitiveType(PrimitiveTypeKind kind) : Type
 
     public PrimitiveTypeKind Kind { get; } = kind;
 
-    public override int GetHashCode() => Kind.GetHashCode();
+    public override int GetHashCode() => HashCode.Combine(typeof(PrimitiveType), Kind);
     public override bool Equals(Type? other) => other?.GetType() == typeof(PrimitiveType) && ((PrimitiveType)other).Kind == Kind;
 
     public override bool IsAssignableTo(Type other)

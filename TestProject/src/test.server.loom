@@ -1,0 +1,47 @@
+
+## Handwritten Roblox types
+
+##declare fn print(msg: unknown): void;
+
+interface SecurityCapabilities;
+
+declare interface Instance;
+
+declare interface DateTime {
+    UnixTimestamp: number;
+    UnixTimestampMillis: number;
+}
+
+declare interface DateTimeStatic {
+    now: fn: DateTime;
+    fromIsoDate: fn(isoDate: string): DateTime?;
+    fromLocalTime: fn(year: number?, month: number?, day: number?, hour: number?, minute: number?, second: number?, millisecond: number?): DateTime;
+    fromUniversalTime: fn(year: number?, month: number?, day: number?, hour: number?, minute: number?, second: number?, millisecond: number?): DateTime;
+    fromUnixTimestamp: fn(unixTimestamp: number): DateTime;
+    fromUnixTimestampMillis: fn(unixTimestampMillis: number): DateTime;
+}
+
+declare let DateTime: DateTimeStatic;
+
+declare interface Content {
+    SourceType: Enum["ContentSourceType"];
+    Uri: string?;
+    ## Object: Object?;
+}
+
+declare interface EnumItem<Kind: string> {
+	_kind: Kind;
+	Name: string;
+	Value: number;
+	EnumType: never;
+}
+
+declare interface EnumAccessModifierType {
+	Allow: EnumItem<"AccessModifierType">;
+	Deny: EnumItem<"AccessModifierType">;
+}
+
+declare interface Enum {
+	AccessModifierType: EnumItem<"AccessModifierType">;
+	ContentSourceType: EnumItem<"ContentSourceType">
+}

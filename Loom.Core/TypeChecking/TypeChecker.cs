@@ -32,7 +32,7 @@ public sealed partial class TypeChecker
     private readonly TypeInferrer _inferrer;
     private readonly TypeNarrower _narrower;
     private FlowState _flowState;
-    private bool _resolvingHoisted;
+    private Symbol? _resolvingHoisted;
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)
@@ -1053,12 +1053,13 @@ public sealed partial class TypeChecker
     private Type ResolveHoistedType(Symbol symbol)
     {
         var type = GetTypeFromSymbol(symbol);
-        if (_resolvingHoisted || type is not TypeVariable)
+        if (ReferenceEquals(symbol, _resolvingHoisted) || type is not TypeVariable)
             return type;
 
-        _resolvingHoisted = true;
+        var outer = _resolvingHoisted;
+        _resolvingHoisted = symbol;
         type = Visit(symbol.Declaration);
-        _resolvingHoisted = false;
+        _resolvingHoisted = outer;
 
         return type;
     }
