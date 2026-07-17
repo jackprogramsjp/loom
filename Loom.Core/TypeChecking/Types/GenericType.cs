@@ -9,11 +9,20 @@ public sealed class GenericType(GenericNamedDeclaration declaration, List<TypePa
     public Type UnderlyingType { get; } = underlyingType;
 
     public override bool Equals(Type? other) =>
-        other is GenericType generic
-        && Declaration.Id == generic.Declaration.Id
-        && Parameters.Count == generic.Parameters.Count
-        && Parameters.All(t => generic.Parameters.Any(u => u.Equals(t)))
-        && UnderlyingType.Equals(generic.UnderlyingType);
+        GuardedEquals(
+            this,
+            other,
+            () =>
+            {
+                if (ReferenceEquals(this, other)) return true;
+                return other is GenericType generic
+                    && Declaration.Id == generic.Declaration.Id
+                    && ListEquals(Parameters, generic.Parameters)
+                    && UnderlyingType.Equals(generic.UnderlyingType);
+            }
+        );
+    
+    public override int GetHashCode() => HashCode.Combine(Declaration.Id, Parameters.Count);
 
     public override string ToString() => $"{Declaration.Name.Text}<{string.Join(", ", Parameters.ConvertAll(p => p.ToString()))}>";
 }

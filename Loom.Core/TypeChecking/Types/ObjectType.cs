@@ -12,7 +12,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 {
     public static readonly ObjectType Empty = new(null, []);
 
-    public ObjectIndexer? Indexer { get; } = indexer;
+    public ObjectIndexer? Indexer { get; internal set; } = indexer;
     public List<ObjectProperty> Properties { get; } = properties;
 
     public Type KeyUnion()
@@ -104,38 +104,57 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             ? (null, "")
             : (null, $" Index is not of type '{Indexer.KeyType}'.");
     }
-
-    public override bool Equals(Type? other)
+    
+    public override int GetHashCode()
     {
-        if (other is not ObjectType objectType)
-            return false;
-
-        if (Properties.Count != objectType.Properties.Count)
-            return false;
-
-        var otherProps = objectType.Properties.ToDictionary(p => p.Name, p => p);
-        foreach (var prop in Properties)
+        var hash = new HashCode();
+        hash.Add(Properties.Count);
+        foreach (var property in Properties.OrderBy(p => p.Name, StringComparer.Ordinal))
         {
-            if (!otherProps.TryGetValue(prop.Name, out var otherProp))
-                return false;
-
-            if (prop.IsMutable != otherProp.IsMutable)
-                return false;
-
-            if (!prop.ValueType.Equals(otherProp.ValueType))
-                return false;
+            hash.Add(property.Name);
+            hash.Add(property.IsMutable);
         }
-
-        if (Indexer == null)
-            return objectType.Indexer == null;
-
-        if (objectType.Indexer == null)
-            return false;
-
-        return Indexer.KeyType.Equals(objectType.Indexer.KeyType)
-            && Indexer.ValueType.Equals(objectType.Indexer.ValueType)
-            && Indexer.IsMutable == objectType.Indexer.IsMutable;
+        // hash.Add(Indexer != null);
+        return hash.ToHashCode();
     }
+
+    public override bool Equals(Type? other) =>
+        GuardedEquals(
+            this,
+            other,
+            () =>
+            {
+                if (ReferenceEquals(this, other)) return true;
+                if (other is not ObjectType objectType)
+                    return false;
+
+                if (Properties.Count != objectType.Properties.Count)
+                    return false;
+
+                var otherProps = objectType.Properties.ToDictionary(p => p.Name, p => p);
+                foreach (var prop in Properties)
+                {
+                    if (!otherProps.TryGetValue(prop.Name, out var otherProp))
+                        return false;
+
+                    if (prop.IsMutable != otherProp.IsMutable)
+                        return false;
+
+                    if (!prop.ValueType.Equals(otherProp.ValueType))
+                        return false;
+                }
+
+                if (Indexer == null)
+                    return objectType.Indexer == null;
+
+                if (objectType.Indexer == null)
+                    return false;
+
+                return Indexer.KeyType.Equals(objectType.Indexer.KeyType)
+                    && Indexer.ValueType.Equals(objectType.Indexer.ValueType)
+                    && Indexer.IsMutable == objectType.Indexer.IsMutable;
+            }
+        );
 
     public override bool IsAssignableTo(Type other)
     {

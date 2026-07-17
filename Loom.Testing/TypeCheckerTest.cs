@@ -2110,7 +2110,7 @@ public class TypeCheckerTest
         var type = Utility.GetLastStatementType(source);
         var iface = Assert.IsType<InterfaceType>(type);
         var errorProp = iface.ObjectType.GetProperty("error")!;
-        var optional = Assert.IsType<OptionalType>(errorProp.ValueType);
+        var optional = Assert.IsType<OptionalType>(TypeSimplifier.Simplify(errorProp.ValueType));
         Assert.True(optional.NonNullableType.Equals(PrimitiveType.String), $"Expected default 'string', got '{optional.NonNullableType}'");
     }
 
@@ -2170,6 +2170,7 @@ public class TypeCheckerTest
             first(new List { value: 42, next: none })
             """;
 
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
         var type = Utility.GetLastStatementType(source);
         var literal = Assert.IsType<LiteralType>(type);
         Assert.Equal(42L, literal.Value);

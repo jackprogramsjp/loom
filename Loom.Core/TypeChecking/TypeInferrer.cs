@@ -49,12 +49,12 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
             }
         }
 
-        var inferred = new Dictionary<TypeParameter, Type>();
+        var inferred = new TypeParameterSubstitution();
         var visited = new HashSet<(Type, Type)>();
         foreach (var (parameterType, argumentType) in pairs)
             TryInferTypes(parameterType, argumentType, inferred, visited);
 
-        var substitution = new Dictionary<TypeParameter, Type>();
+        var substitution = new TypeParameterSubstitution();
         foreach (var typeParameter in generic.Parameters)
         {
             substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
@@ -65,12 +65,12 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return substitution;
     }
 
-    public static Dictionary<TypeParameter, Type> InferFunctionTypeArguments(
+    public static TypeParameterSubstitution InferFunctionTypeArguments(
         FunctionType functionType,
         List<Type> argumentTypes,
         Type? contextualType = null)
     {
-        var inferred = new Dictionary<TypeParameter, Type>();
+        var inferred = new TypeParameterSubstitution();
         var visited = new HashSet<(Type, Type)>();
         for (var i = 0; i < Math.Min(functionType.ParameterTypes.Count, argumentTypes.Count); i++)
             TryInferTypes(functionType.ParameterTypes[i], argumentTypes[i], inferred, visited);
@@ -78,7 +78,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         if (contextualType != null)
             TryInferTypes(functionType.ReturnType, contextualType, inferred, visited);
 
-        var substitution = new Dictionary<TypeParameter, Type>();
+        var substitution = new TypeParameterSubstitution();
         foreach (var typeParameter in functionType.TypeParameters)
         {
             substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
@@ -89,7 +89,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return substitution;
     }
 
-    private static bool TryInferTypes(Type parameterType, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes, HashSet<(Type, Type)> visitedPairs)
+    private static bool TryInferTypes(Type parameterType, Type argumentType, TypeParameterSubstitution inferredTypes, HashSet<(Type, Type)> visitedPairs)
     {
         parameterType = ExpandAliases(parameterType);
         argumentType = ExpandAliases(argumentType);
@@ -143,7 +143,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         };
     }
 
-    private static bool TryInferFromUnion(UnionType union, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes)
+    private static bool TryInferFromUnion(UnionType union, Type argumentType, TypeParameterSubstitution inferredTypes)
     {
         if (argumentType is UnionType)
             return false;
@@ -152,7 +152,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return typeParams.Count == 1 && BindTypeParameter(typeParams[0], argumentType, inferredTypes);
     }
 
-    private static bool TryInferFromIntersection(IntersectionType union, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes)
+    private static bool TryInferFromIntersection(IntersectionType union, Type argumentType, TypeParameterSubstitution inferredTypes)
     {
         if (argumentType is IntersectionType)
             return false;
@@ -161,7 +161,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         return typeParams.Count == 1 && BindTypeParameter(typeParams[0], argumentType, inferredTypes);
     }
 
-    private static bool BindTypeParameter(TypeParameter typeParameter, Type argumentType, Dictionary<TypeParameter, Type> inferredTypes)
+    private static bool BindTypeParameter(TypeParameter typeParameter, Type argumentType, TypeParameterSubstitution inferredTypes)
     {
         if (inferredTypes.TryGetValue(typeParameter, out var existingType))
         {
@@ -184,7 +184,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
     private static bool MatchObjectTypes(
         ObjectType parameterObject,
         ObjectType argumentObject,
-        Dictionary<TypeParameter, Type> inferredTypes,
+        TypeParameterSubstitution inferredTypes,
         HashSet<(Type, Type)> visitedPairs)
     {
         foreach (var parameterProperty in parameterObject.Properties)
@@ -209,7 +209,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
     private static bool MatchFunctionTypes(
         FunctionType parameterFunction,
         FunctionType argumentFunction,
-        Dictionary<TypeParameter, Type> inferredTypes,
+        TypeParameterSubstitution inferredTypes,
         HashSet<(Type, Type)> visitedPairs)
     {
         if (parameterFunction.ParameterTypes.Count != argumentFunction.ParameterTypes.Count)
@@ -222,21 +222,21 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
     private static bool MatchUnionTypes(
         UnionType parameterUnion,
         UnionType argumentUnion,
-        Dictionary<TypeParameter, Type> inferredTypes,
+        TypeParameterSubstitution inferredTypes,
         HashSet<(Type, Type)> visitedPairs) =>
         !parameterUnion.Types.Where((t, index) => !TryInferTypes(t, argumentUnion.Types[index], inferredTypes, visitedPairs)).Any();
 
     private static bool MatchIntersectionTypes(
         IntersectionType parameterIntersection,
         IntersectionType argumentIntersection,
-        Dictionary<TypeParameter, Type> inferredTypes,
+        TypeParameterSubstitution inferredTypes,
         HashSet<(Type, Type)> visitedPairs) =>
         !parameterIntersection.Types.Where((t, index) => !TryInferTypes(t, argumentIntersection.Types[index], inferredTypes, visitedPairs)).Any();
 
     private static bool TryMatchGenericTypes(
         Type parameterType,
         Type argumentType,
-        Dictionary<TypeParameter, Type> inferredTypes,
+        TypeParameterSubstitution inferredTypes,
         HashSet<(Type, Type)> visitedPairs,
         out bool result)
     {

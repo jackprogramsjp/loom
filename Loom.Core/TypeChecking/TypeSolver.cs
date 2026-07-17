@@ -56,9 +56,9 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         return false;
     }
 
-    public static Type Transform(Type type, Converter<Type, Type> fn, Type? defaultValue = null) =>
-        TypeSimplifier.Simplify(
-            type switch
+    public static Type Transform(Type type, Converter<Type, Type> fn, Type? defaultValue = null, bool simplify = true)
+    {
+        var transformed = type switch
             {
                 IndexedType indexedType => new IndexedType(fn(indexedType.Target), fn(indexedType.Index)),
                 ArrayType arrayType => new ArrayType(fn(arrayType.ElementType), arrayType.IsMutable),
@@ -87,16 +87,14 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
                     fn(genericType.UnderlyingType)
                 ),
                 InstantiatedType instantiatedType => new InstantiatedType(
-                    new GenericType(
-                        instantiatedType.GenericType.Declaration,
-                        instantiatedType.GenericType.Parameters,
-                        fn(instantiatedType.GenericType.UnderlyingType)
-                    ),
+                    instantiatedType.GenericType,
                     instantiatedType.Arguments.ConvertAll(fn)
                 ),
                 _ => defaultValue ?? type
-            }
-        );
+            };
+
+        return simplify ? TypeSimplifier.Simplify(transformed) : transformed;
+    }
 
     public void SetType(Node node, Type type) => _nodeTypes[node.Id] = type;
 

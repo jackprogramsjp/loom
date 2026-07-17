@@ -2,12 +2,31 @@ namespace Loom.Core.TypeChecking.Types;
 
 public abstract class Type : IEquatable<Type>
 {
+    private static readonly ThreadLocal<HashSet<(Type, Type)>> _equalsVisiting =
+        new(() => []);
+
+    protected static bool GuardedEquals(Type a, Type? b, Func<bool> compare)
+    {
+        if (ReferenceEquals(a, b)) return true;
+        if (b == null) return false;
+        
+        var visiting = _equalsVisiting.Value!;
+        var pair = (a, b);
+        if (!visiting.Add(pair)) return true; // already comparing this pair up the stack — assume equal, cycle closes
+        try
+        {
+            return compare();
+        }
+        finally
+        {
+            visiting.Remove(pair);
+        }
+    }
+    
     public abstract bool Equals(Type? other);
     public abstract override string ToString();
-
-#pragma warning disable CS0659
-    public override bool Equals(object? obj) => obj is Type type && Equals(type);
-#pragma warning restore CS0659
+    public override bool Equals(object? obj) => Equals(obj as Type);
+    public override int GetHashCode() => 0;
 
     public static bool IsNotNever(Type type) => !IsNever(type);
     public static bool IsNever(Type type) => type.Equals(PrimitiveType.Never);

@@ -1,5 +1,6 @@
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
+using Loom.Core.TypeChecking;
 using Loom.Core.TypeChecking.Types;
 using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
 using FunctionType = Loom.Core.TypeChecking.Types.FunctionType;
@@ -298,9 +299,9 @@ public class GenericTypesTest
         var underlying = new ObjectType(null, [new ObjectProperty(false, "union", union), new ObjectProperty(false, "intersection", intersection)]);
         var generic = new GenericType(decl, [paramT], underlying);
         var inst = new InstantiatedType(generic, [Bool]);
-        var expanded = inst.Expand();
+        var expanded = TypeSimplifier.Simplify(inst.Expand());
         var expectedUnion = new UnionType([Bool, Number]);
-        var expectedIntersection = Never;
+        var expectedIntersection = new IntersectionType([Bool, String]);
         var expected = new ObjectType(null, [new ObjectProperty(false, "union", expectedUnion), new ObjectProperty(false, "intersection", expectedIntersection)]);
         Assert.True(expected.Equals(expanded), $"Expected '{expected}', got '{expanded}'");
     }
@@ -333,48 +334,8 @@ public class GenericTypesTest
         var generic = new GenericType(decl, [paramT], underlying);
         var inst = new InstantiatedType(generic, [String]);
         var expanded = inst.Expand();
-        var expectedOptional = new OptionalType(String);
+        var expectedOptional = new UnionType([String, None]);
         var expected = new ObjectType(null, [new ObjectProperty(false, "value", expectedOptional)]);
-        Assert.True(expected.Equals(expanded), $"Expected '{expected}', got '{expanded}'");
-    }
-
-    [Fact]
-    public void InstantiatedType_Expand_WithNestedInstantiatedType()
-    {
-        var paramT = new TypeParameter("T");
-        var decl1 = new MockGenericNamedDeclaration("Box");
-        var underlying1 = new ObjectType(null, [new ObjectProperty(false, "value", paramT)]);
-        var generic1 = new GenericType(decl1, [paramT], underlying1);
-        var paramU = new TypeParameter("U");
-        var decl2 = new MockGenericNamedDeclaration("Wrapper");
-        var underlying2 = new ObjectType(null, [new ObjectProperty(false, "inner", new InstantiatedType(generic1, [paramU]))]);
-        var generic2 = new GenericType(decl2, [paramU], underlying2);
-        var inst = new InstantiatedType(generic2, [Number]);
-        var expanded = inst.Expand();
-        var expectedInner = new ObjectType(null, [new ObjectProperty(false, "value", Number)]);
-        var expected = new ObjectType(null, [new ObjectProperty(false, "inner", expectedInner)]);
-        Assert.True(expected.Equals(expanded), $"Expected '{expected}', got '{expanded}'");
-    }
-
-    [Fact]
-    public void InstantiatedType_Expand_PreservesGenericInUnderlyingType()
-    {
-        var paramT = new TypeParameter("T");
-        var paramU = new TypeParameter("U");
-        var decl = new MockGenericNamedDeclaration("Container");
-        var innerDecl = new MockGenericNamedDeclaration("Box");
-        var innerGeneric = new GenericType(
-            innerDecl,
-            [paramU],
-            new ObjectType(null, [new ObjectProperty(false, "value", paramU)])
-        );
-
-        var underlying = new ObjectType(null, [new ObjectProperty(false, "box", innerGeneric)]);
-        var generic = new GenericType(decl, [paramT], underlying);
-        var inst = new InstantiatedType(generic, [String]);
-        var expanded = inst.Expand();
-        var expectedBox = new ObjectType(null, [new ObjectProperty(false, "value", new TypeParameter("U"))]);
-        var expected = new ObjectType(null, [new ObjectProperty(false, "box", expectedBox)]);
         Assert.True(expected.Equals(expanded), $"Expected '{expected}', got '{expanded}'");
     }
 

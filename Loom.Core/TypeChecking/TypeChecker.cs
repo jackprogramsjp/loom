@@ -58,20 +58,22 @@ public sealed partial class TypeChecker
     private Type Visit(Node node, FlowState? state)
     {
         var lastState = _flowState;
+        FlowState effectiveState;
         if (state != null)
         {
-            _flowState = state;
+            effectiveState = state;
         }
         else
         {
             var baseState = _flowAnalyzer.GetState(node);
-            _flowState = new FlowState(baseState.DefinitelyInitialized, baseState.MaybeInitialized, baseState.IsUnreachable, lastState.NarrowedTypes);
+            effectiveState = new FlowState(baseState.DefinitelyInitialized, baseState.MaybeInitialized, baseState.IsUnreachable, lastState.NarrowedTypes);
         }
 
-        var result = node.Accept(this);
+        _flowState = effectiveState;
+        var type = node.Accept(this);
         _flowState = lastState;
 
-        return result;
+        return type;
     }
 
     public override Type VisitTree(Tree tree)
@@ -581,11 +583,14 @@ public sealed partial class TypeChecker
                 return BindType(identifier, contextualType);
             }
 
-            if (symbol is not PropertyVariableSymbol propertyVariableSymbol)
-                return BindType(identifier, GetType(symbol));
+            if (symbol is PropertyVariableSymbol propertyVariableSymbol)
+            {
+                var interfaceType = (InterfaceType)_semanticModel.GetType(propertyVariableSymbol.From.Declaration);
+                return GetTypeAtIndexInInterface(identifier, interfaceType, new Types.LiteralType(propertyVariableSymbol.Name));
+            }
 
-            var interfaceType = (InterfaceType)_semanticModel.GetType(propertyVariableSymbol.From.Declaration);
-            return GetTypeAtIndexInInterface(identifier, interfaceType, new Types.LiteralType(propertyVariableSymbol.Name));
+            var declaredType = GetTypeFromSymbol(symbol);
+            return BindType(identifier, declaredType);
         }
 
         _diagnostics.Error(identifier, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of variable '{identifier.Name.Text}'.");
@@ -612,7 +617,7 @@ public sealed partial class TypeChecker
         var targetType = Visit(keyOf.Type);
         if (targetType is InstantiatedType instantiated)
             targetType = instantiated.Expand();
-        
+
         if (targetType is Types.TypeParameter { Constraint: ObjectType or InterfaceType or InstantiatedType } parameter)
         {
             targetType = parameter.Constraint!;
@@ -657,11 +662,11 @@ public sealed partial class TypeChecker
     public override Type VisitLiteralType(LiteralType literalType) => BindType(literalType, new Types.LiteralType(literalType.Value));
 
     public override Type VisitTypeName(TypeName typeName)
-    {
+    {   
         var symbol = _semanticModel.GetSymbol(typeName);
         if (symbol != null)
         {
-            var declaredType = GetType(symbol);
+            var declaredType = GetTypeFromSymbol(symbol);
             if (symbol is { Kind: SymbolKind.EnumType } && declaredType is ObjectType objectType)
                 return BindType(typeName, typeName.Parent is IndexedType or KeyOf ? objectType : objectType.PropertyUnion());
 
@@ -670,7 +675,7 @@ public sealed partial class TypeChecker
 
             if (typeName.TypeArguments == null)
                 return BindType(typeName, declaredType);
-
+            
             _diagnostics.Error(typeName, InternalCodes.NotGeneric, $"Type '{typeName.Name.Text}' is not generic and cannot receive type arguments.");
             return BindType(typeName, Types.PrimitiveType.Never);
         }
@@ -980,7 +985,7 @@ public sealed partial class TypeChecker
         return possibleReturnTypes.Count == 0 ? Types.PrimitiveType.Void : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
-    private Type GetType(Symbol symbol) =>
+    private Type GetTypeFromSymbol(Symbol symbol) =>
         symbol is { IsGlobal: true, IsIntrinsic: false } && symbol.File.AbsolutePath != _semanticModel.Tree.File.AbsolutePath
             ? Visit(symbol.Declaration)
             : _semanticModel.GetType(symbol.Declaration);

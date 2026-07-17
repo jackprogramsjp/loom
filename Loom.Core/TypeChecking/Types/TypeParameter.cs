@@ -5,7 +5,9 @@ public sealed class TypeParameter(string name, Type? constraint = null, Type? de
     public string Name { get; } = name;
     public Type? Constraint { get; } = constraint;
     public Type? DefaultType { get; } = defaultType;
-    
+
+    public override int GetHashCode() => HashCode.Combine(Name, Constraint?.GetHashCode() ?? 0, DefaultType?.GetHashCode() ?? 0);
+
     public override bool Equals(Type? other) =>
         other is TypeParameter parameter
         && Equals(Constraint, parameter.Constraint)

@@ -11,7 +11,8 @@ public class PrimitiveType(PrimitiveTypeKind kind) : Type
     public static readonly PrimitiveType Never = new(PrimitiveTypeKind.Never);
 
     public PrimitiveTypeKind Kind { get; } = kind;
-    
+
+    public override int GetHashCode() => Kind.GetHashCode();
     public override bool Equals(Type? other) => other?.GetType() == typeof(PrimitiveType) && ((PrimitiveType)other).Kind == Kind;
 
     public override bool IsAssignableTo(Type other)

@@ -7,12 +7,25 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
     private Type? _instantiatedBase;
 
     public override bool Equals(Type? other) =>
-        other is InstantiatedType instantiated
-        && GenericType.Equals(instantiated.GenericType)
-        && Arguments.Count == instantiated.Arguments.Count
-        && Arguments.All(t => instantiated.Arguments.Any(u => u.Equals(t)));
+        GuardedEquals(
+            this,
+            other,
+            () =>
+            {
+                if (ReferenceEquals(this, other)) return true;
+                return other is InstantiatedType instantiated
+                    && GenericType.Equals(instantiated.GenericType)
+                    && ListEquals(Arguments, instantiated.Arguments);
+            }
+        );
 
     public override bool IsAssignableTo(Type other) => Expand().IsAssignableTo(other);
+    
+    public override int GetHashCode()
+    {
+        var argHash = Arguments.Aggregate(0, (current, arg) => current ^ arg.GetHashCode());
+        return HashCode.Combine(GenericType.GetHashCode(), Arguments.Count, argHash);
+    }
 
     public override string ToString() => GenericType.Declaration.Name.Text + "<" + string.Join(", ", Arguments.ConvertAll(p => p.ToString())) + ">";
 
@@ -21,7 +34,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
         if (_instantiatedBase != null)
             return _instantiatedBase;
 
-        var substitution = new Dictionary<TypeParameter, Type>();
+        var substitution = new TypeParameterSubstitution();
         for (var i = 0; i < GenericType.Parameters.Count; i++)
         {
             var parameter = GenericType.Parameters[i];
@@ -34,7 +47,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
         return _instantiatedBase;
     }
 
-    private Type SubstituteTypeParameters(Type type, Dictionary<TypeParameter, Type> substitution) =>
+    private Type SubstituteTypeParameters(Type type, TypeParameterSubstitution substitution) =>
         type is TypeParameter tp && substitution.TryGetValue(tp, out var substituted)
             ? substituted
             : type switch
@@ -48,10 +61,10 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
                 InterfaceType interfaceType => SubstituteInterfaceType(interfaceType, substitution),
                 ObjectType objectType => SubstituteObjectType(objectType, substitution),
                 TypeParameter tp2 when substitution.TryGetValue(tp2, out var s) => s,
-                _ => TypeSolver.Transform(type, t => SubstituteTypeParameters(t, substitution))
+                _ => TypeSolver.Transform(type, t => SubstituteTypeParameters(t, substitution), simplify: false)
             };
 
-    private InterfaceType SubstituteInterfaceType(InterfaceType interfaceType, Dictionary<TypeParameter, Type> substitution)
+    private InterfaceType SubstituteInterfaceType(InterfaceType interfaceType, TypeParameterSubstitution substitution)
     {
         var substitutedObject = SubstituteObjectType(interfaceType.ObjectType, substitution);
         var substitutedConstraints = interfaceType.Constraints
@@ -62,7 +75,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
         return new InterfaceType(interfaceType.Name, substitutedConstraints, substitutedObject);
     }
 
-    private ObjectType SubstituteObjectType(ObjectType objectType, Dictionary<TypeParameter, Type> substitution)
+    private ObjectType SubstituteObjectType(ObjectType objectType, TypeParameterSubstitution substitution)
     {
         ObjectIndexer? substitutedIndexer = null;
         if (objectType.Indexer != null)

@@ -12,13 +12,18 @@ public sealed class InterfaceType(string name, List<InterfaceType> constraints, 
             : ObjectType;
 
     public HashSet<string> TraitMethodNames { get; set; } = traitMethodNames ?? [];
-    public ObjectIndexer? Indexer { get; } = objectType.Indexer ?? constraints.Select(c => c.Indexer).FirstOrDefault(i => i != null);
+    public ObjectIndexer? Indexer => ObjectType.Indexer ?? Constraints.Select(c => c.Indexer).FirstOrDefault(i => i != null);
     public ObjectProperty? GetProperty(string name) => ObjectType.GetProperty(name) ?? Constraints.Select(c => c.GetProperty(name)).FirstOrDefault(p => p != null);
 
-    public override bool Equals(Type? other) =>
-        other is InterfaceType interfaceType
-        && ListEquals(Constraints, interfaceType.Constraints)
-        && ObjectType.Equals(interfaceType.ObjectType);
+    public override int GetHashCode() => HashCode.Combine(Name, Constraints.Count, ObjectType.GetHashCode());
+    
+    public override bool Equals(Type? other)
+    {
+        if (ReferenceEquals(this, other)) return true;
+        return other is InterfaceType interfaceType
+            && ListEquals(Constraints, interfaceType.Constraints)
+            && ObjectType.Equals(interfaceType.ObjectType);
+    }
 
     public override bool IsAssignableTo(Type other) => AssignabilityType.IsAssignableTo(other);
 
