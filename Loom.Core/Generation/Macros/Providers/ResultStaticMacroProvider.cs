@@ -7,12 +7,17 @@ namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class ResultStaticMacroProvider : IMacroProvider
 {
-    public bool Supports(Type type) => type is InterfaceType { Name: "ResultStatic" };
-    public bool Supports(Parsing.AST.Expression _) => false;
+    public bool Supports(MacroContext _, Type type) => type is InterfaceType { Name: "ResultStatic" };
+    public bool Supports(MacroContext _, Parsing.AST.Expression __) => false;
 
     public bool IsInvocationOnlyMember(string memberName) => memberName is "ok" or "err";
 
-    public bool TryInvocation(MacroContext context, string name, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
+    public bool TryInvocation(
+        MacroContext context,
+        string name,
+        Parsing.AST.TypeArguments? typeArguments,
+        Call call,
+        [MaybeNullWhen(false)] out LuauExpression expression)
     {
         switch (name)
         {

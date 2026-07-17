@@ -8,8 +8,8 @@ namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class NumberMacroProvider : IMacroProvider
 {
-    public bool Supports(Type type) => type.IsAssignableTo(PrimitiveType.Number);
-    public bool Supports(Parsing.AST.Expression _) => false;
+    public bool Supports(MacroContext _, Type type) => type.IsAssignableTo(PrimitiveType.Number);
+    public bool Supports(MacroContext _, Parsing.AST.Expression __) => false;
 
     public bool IsInvocationOnlyMember(string _) => false;
 

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.Core.Diagnostics;
 using Loom.Luau.AST;
 using Type = Loom.Core.TypeChecking.Types.Type;
 
@@ -6,8 +7,8 @@ namespace Loom.Core.Generation.Macros;
 
 internal interface IMacroProvider
 {
-    public bool Supports(Type type);
-    public bool Supports(Parsing.AST.Expression expression);
+    public bool Supports(MacroContext context, Type type);
+    public bool Supports(MacroContext context, Parsing.AST.Expression expression);
 
     public bool IsInvocationOnlyMember(string memberName);
 
@@ -17,7 +18,7 @@ internal interface IMacroProvider
         return false;
     }
 
-    public bool TryInvocation(MacroContext context, string name, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
+    public bool TryInvocation(MacroContext context, string name, Parsing.AST.TypeArguments? typeArguments, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         expression = null;
         return false;

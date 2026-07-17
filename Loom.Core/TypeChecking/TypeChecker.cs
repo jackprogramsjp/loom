@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.FlowAnalysis;
+using Loom.Core.Generation;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.Text;
@@ -33,6 +34,8 @@ public sealed partial class TypeChecker
     private readonly TypeNarrower _narrower;
     private FlowState _flowState;
     private Symbol? _resolvingHoisted;
+    
+    private MacroContext EmptyMacroContext => new(_semanticModel, new LuauState());
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)
@@ -643,7 +646,7 @@ public sealed partial class TypeChecker
         {
             CheckInvocationMacroReference(identifier);
 
-            if (InvocationMacroReference.TryClassify(_semanticModel, identifier, out _, out _)
+            if (InvocationMacroReference.TryClassify(EmptyMacroContext, identifier, out _, out _)
                 && InvocationMacroReference.IsValidReferenceContext(identifier)
                 && GetContextualType(identifier) is Types.FunctionType contextualType)
             {
@@ -829,7 +832,7 @@ public sealed partial class TypeChecker
 
         CheckInvocationMacroReference(accessExpression);
 
-        if (InvocationMacroReference.TryClassify(_semanticModel, accessExpression, out _, out _)
+        if (InvocationMacroReference.TryClassify(EmptyMacroContext, accessExpression, out _, out _)
             && InvocationMacroReference.IsValidReferenceContext(accessExpression)
             && GetContextualType(accessExpression) is Types.FunctionType contextualType)
         {
@@ -909,14 +912,9 @@ public sealed partial class TypeChecker
 
     private void CheckInvocationMacroReference(Expression expression)
     {
-        if (!InvocationMacroReference.TryClassify(_semanticModel, expression, out _, out var memberName))
-            return;
-
-        if (InvocationMacroReference.IsValidReferenceContext(expression))
-            return;
-
-        if (InvocationMacroReference.IsDirectInvocationCallee(expression))
-            return;
+        if (!InvocationMacroReference.TryClassify(EmptyMacroContext, expression, out _, out var memberName)) return;
+        if (InvocationMacroReference.IsValidReferenceContext(expression)) return;
+        if (InvocationMacroReference.IsDirectInvocationCallee(expression)) return;
 
         _diagnostics.Error(
             expression,

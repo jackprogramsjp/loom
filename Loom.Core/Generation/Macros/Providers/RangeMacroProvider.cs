@@ -9,8 +9,8 @@ namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class RangeMacroProvider : IMacroProvider
 {
-    public bool Supports(Type type) => type.Equals(Intrinsics.Range);
-    public bool Supports(Parsing.AST.Expression _) => false;
+    public bool Supports(MacroContext _, Type type) => type.Equals(Intrinsics.Range);
+    public bool Supports(MacroContext _, Parsing.AST.Expression __) => false;
 
     public bool IsInvocationOnlyMember(string memberName) => memberName is "clamp";
 
@@ -41,7 +41,12 @@ internal sealed class RangeMacroProvider : IMacroProvider
         return false;
     }
 
-    public bool TryInvocation(MacroContext context, string name, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
+    public bool TryInvocation(
+        MacroContext context,
+        string name,
+        Parsing.AST.TypeArguments? typeArguments,
+        Call call,
+        [MaybeNullWhen(false)] out LuauExpression expression)
     {
         var range = MacroContext.GetCallObject(call);
         switch (name)

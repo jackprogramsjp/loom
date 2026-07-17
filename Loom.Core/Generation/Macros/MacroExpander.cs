@@ -22,14 +22,18 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     private readonly MacroContext _context = new(semanticModel, state);
     private static readonly IReadOnlyCollection<IMacroProvider> _providers =
     [
-        new NumberMacroProvider(), new RangeMacroProvider(), new ArrayMacroProvider(), new ResultStaticMacroProvider(), new GlobalInvocationMacroProvider()
+        new NumberMacroProvider(),
+        new RangeMacroProvider(),
+        new ArrayMacroProvider(),
+        new ResultStaticMacroProvider(),
+        new IntrinsicGlobalInvocationMacroProvider()
     ];
 
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         expression = null;
         return TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member)
-            && provider.TryInvocation(_context, member.Trim(), luauCall, out expression);
+            && provider.TryInvocation(_context, member.Trim(), invocation.TypeArguments, luauCall, out expression);
     }
 
     public bool TryGetInvocationMacroReference(
@@ -38,7 +42,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         [MaybeNullWhen(false)] out LuauExpression referenceExpression)
     {
         referenceExpression = null;
-        if (!InvocationMacroReference.TryClassify(semanticModel, expression, out var provider, out var memberName))
+        if (!InvocationMacroReference.TryClassify(_context, expression, out var provider, out var memberName))
             return false;
 
         if (!InvocationMacroReference.IsValidReferenceContext(expression))
@@ -50,7 +54,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         var parameters = functionType.ParameterTypes.Select((_, index) => new Parameter($"argument{index}")).ToList();
         var arguments = parameters.ConvertAll(LuauExpression (parameter) => new Luau.AST.Identifier(parameter.Name));
         var call = new Call(callee, arguments);
-        if (!provider.TryInvocation(_context, memberName.Trim(), call, out var body))
+        if (!provider.TryInvocation(_context, memberName.Trim(), null, call, out var body))
             return false;
 
         referenceExpression = new AnonymousFunction(
@@ -265,7 +269,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     }
 
     private IMacroProvider? GetProvider(Expression receiver) =>
-        GetProvider(semanticModel.GetType(receiver)) ?? _providers.FirstOrDefault(provider => provider.Supports(receiver));
+        GetProvider(semanticModel.GetType(receiver)) ?? _providers.FirstOrDefault(provider => provider.Supports(_context, receiver));
 
-    private static IMacroProvider? GetProvider(Type type) => _providers.FirstOrDefault(provider => provider.Supports(type));
+    private IMacroProvider? GetProvider(Type type) => _providers.FirstOrDefault(provider => provider.Supports(_context, type));
 }

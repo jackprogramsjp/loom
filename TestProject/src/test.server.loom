@@ -1,18 +1,1 @@
-declare interface Instance {
-	mut Archivable: bool;
-	mut Name: string;
-	mut Parent: Instance?;
-	mut Sandboxed: bool;
-}
-
-declare interface ServerStorage: Instance {
-    Poo: number;
-}
-
-declare interface Services {
-    ServerStorage: ServerStorage;
-}
-
-declare fn get_service<Name: keyof(Services)>(name: Name): Services[Name];
-
-get_service("ServerStorage").Poo + 69;
+let replicated = get_service("ReplicatedStorage");

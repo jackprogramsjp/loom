@@ -14,7 +14,7 @@ internal static class InvocationMacroReference
 {
     private static readonly IReadOnlyCollection<IMacroProvider> Providers =
     [
-        new NumberMacroProvider(), new RangeMacroProvider(), new ArrayMacroProvider(), new ResultStaticMacroProvider(), new GlobalInvocationMacroProvider()
+        new NumberMacroProvider(), new RangeMacroProvider(), new ArrayMacroProvider(), new ResultStaticMacroProvider(), new IntrinsicGlobalInvocationMacroProvider()
     ];
 
     public static bool IsValidReferenceContext(Expression expression)
@@ -35,7 +35,7 @@ internal static class InvocationMacroReference
         expression.Parent is Invocation invocation && invocation.Expression == expression;
 
     public static bool TryClassify(
-        SemanticModel semanticModel,
+        MacroContext context,
         Expression expression,
         [NotNullWhen(true)] out IMacroProvider? provider,
         [NotNullWhen(true)] out string? memberName)
@@ -47,7 +47,7 @@ internal static class InvocationMacroReference
         {
             Identifier identifier => TryClassifyIdentifier(identifier, out provider, out memberName),
             QualifiedName qualified => TryClassifyNamedAccess(
-                semanticModel,
+                context,
                 qualified.Identifier,
                 qualified.Names,
                 qualified.Names.Count - 1,
@@ -55,15 +55,15 @@ internal static class InvocationMacroReference
                 out memberName
             ),
             PropertyAccess property => TryClassifyNamedAccess(
-                semanticModel,
+                context,
                 property.Expression,
                 property.Names,
                 property.Names.Count - 1,
                 out provider,
                 out memberName
             ),
-            ElementAccess element when semanticModel.GetConstantValue(element.IndexExpression) is string name =>
-                TryClassifyElementAccess(semanticModel, element, name, out provider, out memberName),
+            ElementAccess element when context.SemanticModel.GetConstantValue(element.IndexExpression) is string name =>
+                TryClassifyElementAccess(context, element, name, out provider, out memberName),
             _ => false
         };
     }
@@ -77,19 +77,19 @@ internal static class InvocationMacroReference
         if (name is not ("string" or "number"))
             return false;
 
-        provider = Providers.OfType<GlobalInvocationMacroProvider>().First();
+        provider = Providers.OfType<IntrinsicGlobalInvocationMacroProvider>().First();
         memberName = name;
         return true;
     }
 
     private static bool TryClassifyElementAccess(
-        SemanticModel semanticModel,
+        MacroContext context,
         ElementAccess element,
         string name,
         out IMacroProvider? provider,
         out string? memberName)
     {
-        provider = GetProvider(semanticModel, element.Expression);
+        provider = GetProvider(context, element.Expression);
         if (provider is null || !provider.IsInvocationOnlyMember(name))
         {
             provider = null;
@@ -102,7 +102,7 @@ internal static class InvocationMacroReference
     }
 
     private static bool TryClassifyNamedAccess(
-        SemanticModel semanticModel,
+        MacroContext context,
         Expression rootExpression,
         List<DotName> names,
         int memberIndex,
@@ -115,13 +115,13 @@ internal static class InvocationMacroReference
         if (names.Count == 0)
             return false;
 
-        var currentType = semanticModel.GetType(rootExpression);
+        var currentType = context.SemanticModel.GetType(rootExpression);
         IMacroProvider? foundProvider = null;
         var foundIndex = -1;
 
         for (var i = 0; i < names.Count; i++)
         {
-            if (GetProvider(currentType) is { } macroProvider)
+            if (GetProvider(context, currentType) is { } macroProvider)
             {
                 foundProvider = macroProvider;
                 foundIndex = i;
@@ -143,10 +143,10 @@ internal static class InvocationMacroReference
         return true;
     }
 
-    private static IMacroProvider? GetProvider(SemanticModel semanticModel, Expression receiver) =>
-        GetProvider(semanticModel.GetType(receiver)) ?? Providers.FirstOrDefault(provider => provider.Supports(receiver));
+    private static IMacroProvider? GetProvider(MacroContext context, Expression receiver) =>
+        GetProvider(context, context.SemanticModel.GetType(receiver)) ?? Providers.FirstOrDefault(provider => provider.Supports(context, receiver));
 
-    private static IMacroProvider? GetProvider(Type? type) => type is not null ? Providers.FirstOrDefault(provider => provider.Supports(type)) : null;
+    private static IMacroProvider? GetProvider(MacroContext context, Type? type) => type is not null ? Providers.FirstOrDefault(provider => provider.Supports(context, type)) : null;
 
     private static Type? GetMemberPropertyType(Type type, string propertyName)
     {

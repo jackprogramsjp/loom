@@ -9,8 +9,8 @@ namespace Loom.Core.Generation.Macros.Providers;
 
 internal sealed class ArrayMacroProvider : IMacroProvider
 {
-    public bool Supports(Type type) => type is ArrayType;
-    public bool Supports(Parsing.AST.Expression _) => false;
+    public bool Supports(MacroContext _, Type type) => type is ArrayType;
+    public bool Supports(MacroContext _, Parsing.AST.Expression __) => false;
 
     public bool IsInvocationOnlyMember(string memberName) => memberName is "join" or "push" or "pop" or "insert" or "remove" or "index_of" or "has";
 
@@ -29,7 +29,12 @@ internal sealed class ArrayMacroProvider : IMacroProvider
         return false;
     }
 
-    public bool TryInvocation(MacroContext context, string name, Call call, [MaybeNullWhen(false)] out LuauExpression expression)
+    public bool TryInvocation(
+        MacroContext context,
+        string name,
+        Parsing.AST.TypeArguments? typeArguments,
+        Call call,
+        [MaybeNullWhen(false)] out LuauExpression expression)
     {
         var array = MacroContext.GetCallObject(call);
         switch (name)
