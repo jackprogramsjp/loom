@@ -180,11 +180,11 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             {
                 state = AnalyzeIdentifier(identifier, state);
                 state = AnalyzeExpression(assignment.Right, state);
-                CheckReassignment(assignment, identifier, symbol, state);
+                CheckReassignment(assignment, identifier, symbol);
                 return BindState(assignment, state);
             }
 
-            CheckReassignment(assignment, identifier, symbol, state);
+            CheckReassignment(assignment, identifier, symbol);
             state = AnalyzeExpression(assignment.Right, state);
             state.DefinitelyInitialized.Add(symbol);
             state.MaybeInitialized.Add(symbol);
@@ -198,7 +198,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         return BindState(assignment, state);
     }
 
-    private void CheckReassignment(AssignmentOperator assignment, Identifier identifier, Symbol symbol, FlowState state)
+    private void CheckReassignment(AssignmentOperator assignment, Identifier identifier, Symbol symbol)
     {
         if (symbol.IsMutable) return;
         _diagnostics.Error(

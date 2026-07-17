@@ -1,6 +1,7 @@
 namespace Loom.Core.Text;
 
 public readonly struct LocationSpan
+    : IEquatable<LocationSpan>
 {
     public LocationSpan(Location start, Location end)
     {
@@ -28,4 +29,14 @@ public readonly struct LocationSpan
 
     public string GetText() => File.SourceText.Substring(Start.Position, Length);
     public override string ToString() => $"{File.Name} @ {Start.Line}:{Start.Character} - {End.Line}:{End.Character}";
+
+    public bool Equals(LocationSpan other) =>
+        File.Equals(other.File)
+        && Start.Equals(other.Start)
+        && End.Equals(other.End)
+        && Length == other.Length;
+
+    public override bool Equals(object? obj) => obj is LocationSpan other && Equals(other);
+
+    public override int GetHashCode() => HashCode.Combine(File, Start, End, Length);
 }
