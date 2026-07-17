@@ -281,7 +281,7 @@ public sealed partial class TypeChecker
         var type = declare.Signature switch
         {
             InterfaceDeclaration interfaceDeclaration => Visit(interfaceDeclaration),
-            DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause),
+            DeclareVariableSignature variableSignature => Visit(variableSignature.ColonTypeClause!),
             DeclareFunctionSignature functionSignature => Visit(functionSignature),
             _ => Types.PrimitiveType.Never
         };

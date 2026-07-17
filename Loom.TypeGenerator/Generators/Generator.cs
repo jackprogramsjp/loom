@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Text;
 using Loom.TypeGenerator.ApiTypes;
 
 namespace Loom.TypeGenerator.Generators;

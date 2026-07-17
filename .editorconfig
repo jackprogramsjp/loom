@@ -7,7 +7,7 @@ indent_style = space
 indent_size = 4
 
 # Microsoft .NET properties
-csharp_preferred_modifier_order = public, private, protected, internal, file, new, static, abstract, virtual, sealed, readonly, override, extern, unsafe, volatile, async, required:suggestion
+csharp_preferred_modifier_order = public, private, protected, internal, file, new, static, abstract, virtual, sealed, readonly, override, extern, unsafe, volatile, async, required:none
 csharp_style_expression_bodied_accessors = true:warning
 csharp_style_expression_bodied_constructors = true:warning
 csharp_style_expression_bodied_methods = true:warning
@@ -57,10 +57,10 @@ dotnet_naming_symbols.local_functions_symbols.applicable_accessibilities = *
 dotnet_naming_symbols.local_functions_symbols.applicable_kinds = local_function
 dotnet_naming_symbols.local_functions_symbols.resharper_applicable_kinds = local_function
 dotnet_naming_symbols.local_functions_symbols.resharper_required_modifiers = any
-dotnet_naming_symbols.method_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.method_symbols.applicable_accessibilities = public, private
 dotnet_naming_symbols.method_symbols.applicable_kinds = method
 dotnet_naming_symbols.method_symbols.resharper_applicable_kinds = method
-dotnet_naming_symbols.method_symbols.resharper_required_modifiers = any
+dotnet_naming_symbols.method_symbols.resharper_required_modifiers = public,private
 dotnet_naming_symbols.private_static_readonly_symbols.applicable_accessibilities = private
 dotnet_naming_symbols.private_static_readonly_symbols.applicable_kinds = field
 dotnet_naming_symbols.private_static_readonly_symbols.required_modifiers = readonly,static
@@ -83,7 +83,7 @@ dotnet_style_qualification_for_event = false:suggestion
 dotnet_style_qualification_for_field = false:suggestion
 dotnet_style_qualification_for_method = false:suggestion
 dotnet_style_qualification_for_property = false:suggestion
-dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
+dotnet_style_require_accessibility_modifiers = always:suggestion
 
 # ReSharper properties
 resharper_align_linq_query = true
@@ -191,11 +191,9 @@ resharper_web_config_type_not_resolved_highlighting = warning
 resharper_web_config_wrong_module_highlighting = warning
 
 [{*.yaml,*.yml}]
-indent_style = space
 indent_size = 2
 
-[{*.har,*.jsb2,*.jsb3,*.json,*.jsonc,*.postman_collection,*.postman_collection.json,*.postman_environment,*.postman_environment.json,.babelrc,.eslintrc,.prettierrc,.stylelintrc,.ws-context,jest.config}]
-indent_style = space
+[{*.har,*.jsb2,*.jsb3,*.json,*.jsonc,*.postman_collection,*.postman_environment,.babelrc,.eslintrc,.prettierrc,.stylelintrc,.ws-context,jest.config}]
 indent_size = 2
 
 [{*.lua,*.luau}]
@@ -203,6 +201,4 @@ indent_style = tab
 tab_width = 4
 
 [*.{appxmanifest,asax,ascx,aspx,axaml,blockshader,c,c++,c++m,cc,ccm,cginc,compute,cp,cpp,cppm,cs,cshtml,cu,cuh,cxx,cxxm,dtd,fs,fsi,fsscript,fsx,fx,fxh,h,h++,hh,hlsl,hlsli,hlslinc,hp,hpp,hxx,icc,inc,inl,ino,ipp,ixx,master,ml,mli,mpp,mq4,mq5,mqh,mxx,nuspec,paml,pssl,pssli,razor,resw,resx,shader,shaderFoundry,skin,tcc,tpp,urtshader,usf,ush,uxml,vb,xaml,xamlx,xoml,xsd}]
-indent_style = space
-indent_size = 4
 tab_width = 4

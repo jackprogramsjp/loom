@@ -4,7 +4,6 @@ using Loom.Core.Diagnostics;
 using Loom.Core.Lexing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
-using Xunit;
 
 namespace Loom.Testing;
 

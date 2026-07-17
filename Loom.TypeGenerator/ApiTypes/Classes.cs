@@ -49,6 +49,6 @@ internal sealed class Class
     public string ThreadSafety { get; set; }
     public string Name { get; set; }
     public string Superclass { get; set; }
-    public HashSet<string> Subclasses { get; set; }
+    // public HashSet<string> Subclasses { get; set; }
     public string? Description { get; set; }
 }

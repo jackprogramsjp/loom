@@ -48,7 +48,6 @@ Return(
   Expression: null
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -56,13 +55,13 @@ VariableDeclaration(
       Value: 69
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 Return(
   Expression: null
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -70,6 +69,7 @@ VariableDeclaration(
       Value: 69
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 Return(

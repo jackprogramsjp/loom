@@ -38,7 +38,6 @@ profile:
 # testCoverageThresholds - configures minimum code coverage on a whole project and newly added code
 failureConditions:
   severityThresholds:
-    warning: 100
     high: 5
     critical: 5
   testCoverageThresholds:

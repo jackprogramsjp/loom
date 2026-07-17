@@ -1,5 +1,4 @@
 ﻿VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -9,10 +8,10 @@
       Expressions: []
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -27,10 +26,10 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -53,10 +52,10 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -97,10 +96,10 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -123,10 +122,10 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -159,10 +158,10 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -197,10 +196,10 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -210,10 +209,10 @@ VariableDeclaration(
       Expressions: []
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: ArrayLiteral(
@@ -236,5 +235,6 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )

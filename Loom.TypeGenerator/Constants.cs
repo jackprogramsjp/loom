@@ -198,7 +198,7 @@ internal static class Constants
         { "Part", "BasePart" }, { "Script", "LuaSourceContainer" }, { "Character", "Model" }, { "Input", "InputObject" }
     };
     
-    public static readonly Dictionary<string, string> PropertyTypeMap = new();
+    // public static readonly Dictionary<string, string> PropertyTypeMap = new();
     
     public static readonly Dictionary<string, string> ValueTypeMap = new()
     {

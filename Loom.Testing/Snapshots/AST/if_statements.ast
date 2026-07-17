@@ -237,7 +237,6 @@ If(
     RightBrace: Token(RBrace, "}")
     Statements: [
       VariableDeclaration(
-        ColonTypeClause: null
         EqualsValueClause(
           EqualsToken: Token(Equals, "=")
           Value: Literal(
@@ -245,10 +244,10 @@ If(
             Value: 1
           )
         )
+        ColonTypeClause: null
         Name: Token(Identifier, "x")
       )
       VariableDeclaration(
-        ColonTypeClause: null
         EqualsValueClause(
           EqualsToken: Token(Equals, "=")
           Value: Literal(
@@ -256,6 +255,7 @@ If(
             Value: 2
           )
         )
+        ColonTypeClause: null
         Name: Token(Identifier, "y")
       )
       Return(

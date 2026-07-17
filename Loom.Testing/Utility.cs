@@ -8,7 +8,6 @@ using Loom.Core.Parsing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
 using Loom.Core.TypeChecking;
-using Loom.Luau;
 using Loom.Luau.AST;
 using Resolver = Loom.Core.Resolving.Resolver;
 using Type = Loom.Core.TypeChecking.Types.Type;

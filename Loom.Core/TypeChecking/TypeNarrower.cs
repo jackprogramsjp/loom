@@ -314,7 +314,7 @@ public sealed class TypeNarrower
             var propertyType = GetTypeAtPath(member, remainingPath);
             if (propertyType == null) continue;
 
-            var matches = constantValue != null && propertyType is Types.LiteralType propertyLiteral
+            var matches = constantValue != null && propertyType is LiteralType propertyLiteral
                 ? Equals(propertyLiteral.Value, constantValue)
                 : propertyType.IsAssignableTo(literalType) && literalType.IsAssignableTo(propertyType);
 

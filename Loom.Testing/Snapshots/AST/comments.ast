@@ -1,5 +1,4 @@
 ﻿VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -7,10 +6,10 @@
       Value: 1
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -18,10 +17,10 @@ VariableDeclaration(
       Value: 2
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "y")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -29,10 +28,10 @@ VariableDeclaration(
       Value: 1
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: Literal(
@@ -40,5 +39,6 @@ VariableDeclaration(
       Value: 1
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )

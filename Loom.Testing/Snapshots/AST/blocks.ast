@@ -3,7 +3,6 @@
   RightBrace: Token(RBrace, "}")
   Statements: [
     VariableDeclaration(
-      ColonTypeClause: null
       EqualsValueClause(
         EqualsToken: Token(Equals, "=")
         Value: BinaryOperator(
@@ -18,6 +17,7 @@
           )
         )
       )
+      ColonTypeClause: null
       Name: Token(Identifier, "a")
     )
     ExpressionStatement(
