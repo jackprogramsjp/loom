@@ -10,7 +10,7 @@ internal static class MapLuau
             TypeChecking.Types.PrimitiveTypeKind.Bool => Luau.AST.PrimitiveTypeKind.Boolean,
             TypeChecking.Types.PrimitiveTypeKind.Unknown => Luau.AST.PrimitiveTypeKind.Unknown,
             TypeChecking.Types.PrimitiveTypeKind.Never => Luau.AST.PrimitiveTypeKind.Never,
-            _ => Luau.AST.PrimitiveTypeKind.Nil,
+            _ => Luau.AST.PrimitiveTypeKind.Nil
         };
 
     public static string BitwiseOperator(string op) =>

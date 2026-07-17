@@ -17,10 +17,10 @@ public sealed class ArrayType(Type elementType, bool isMutable)
         if (!isMutable)
             return properties;
 
-        properties.Add(new(false, "push", new FunctionType([], [elementType], PrimitiveType.Void)));
-        properties.Add(new(false, "pop", new FunctionType([], [], optionalElement)));
-        properties.Add(new(false, "insert", new FunctionType([], [PrimitiveType.Number, elementType], PrimitiveType.Void)));
-        properties.Add(new(false, "remove", new FunctionType([], [PrimitiveType.Number], optionalElement)));
+        properties.Add(new ObjectProperty(false, "push", new FunctionType([], [elementType], PrimitiveType.Void)));
+        properties.Add(new ObjectProperty(false, "pop", new FunctionType([], [], optionalElement)));
+        properties.Add(new ObjectProperty(false, "insert", new FunctionType([], [PrimitiveType.Number, elementType], PrimitiveType.Void)));
+        properties.Add(new ObjectProperty(false, "remove", new FunctionType([], [PrimitiveType.Number], optionalElement)));
 
         return properties;
     }
@@ -45,6 +45,6 @@ public sealed class ArrayType(Type elementType, bool isMutable)
         var validMutability = IsMutable || !targetArray.IsMutable;
         return validMutability && (IsNever(ElementType) || ElementType.Equals(targetArray.ElementType));
     }
-    
+
     public override string ToString() => $"{ParenthesizeIfNeeded(ElementType)}[{(IsMutable ? "mut" : "")}]";
 }

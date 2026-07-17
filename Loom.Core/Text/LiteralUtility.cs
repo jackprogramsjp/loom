@@ -11,7 +11,7 @@ public static class LiteralUtility
             SyntaxKind.StringLiteral => token.Text[1..^1],
             SyntaxKind.TrueLiteral => true,
             SyntaxKind.FalseLiteral => false,
-            _ => null,
+            _ => null
         };
 
 #pragma warning disable CA1859
@@ -39,7 +39,7 @@ public static class LiteralUtility
             _ when text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) => long.Parse(text[2..], NumberStyles.HexNumber),
             _ when text.StartsWith("0b", StringComparison.OrdinalIgnoreCase) => long.Parse(text[2..], NumberStyles.BinaryNumber),
             _ when text.StartsWith("0o", StringComparison.OrdinalIgnoreCase) => Convert.ToInt64(text[2..], 8),
-            _ => double.Parse(text),
+            _ => double.Parse(text)
         };
     }
 }

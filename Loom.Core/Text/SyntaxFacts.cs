@@ -31,7 +31,7 @@ public static class SyntaxFacts
             new("new", SyntaxKind.NewKeyword),
             new("sealed", SyntaxKind.SealedKeyword),
             new("trait", SyntaxKind.TraitKeyword),
-            new("implement", SyntaxKind.ImplementKeyword),
+            new("implement", SyntaxKind.ImplementKeyword)
         ]
     );
     public static readonly Dictionary<string, SyntaxKind> OperatorMap = new(

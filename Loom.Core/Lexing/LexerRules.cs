@@ -36,7 +36,7 @@ public static class LexerRules
         RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
         RegEx(Whitespace, @"\s+"),
         RegEx(BlockComment, @"#:[\s\S]*?:#"),
-        RegEx(Comment, @"##[^\n]*"),
+        RegEx(Comment, @"##[^\n]*")
     ];
 
     /// <summary>
@@ -70,7 +70,7 @@ public static class LexerRules
             @"\d[\d_]*\.(?![\d_.])",
             InternalCodes.MalformedNumber,
             m => $"Malformed float literal '{m}': expected one or more digits after the decimal point."
-        ),
+        )
     ];
 
     /// <summary>
@@ -94,7 +94,7 @@ public static class LexerRules
             @"#:[\s\S]*",
             InternalCodes.UnterminatedComment,
             _ => "Unterminated block comment: expected closing ':#'."
-        ),
+        )
     ];
     
     /// <summary>

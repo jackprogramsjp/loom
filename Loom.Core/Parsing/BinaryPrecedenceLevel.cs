@@ -22,8 +22,8 @@ internal sealed record BinaryPrecedenceLevel(bool RightAssociative, Predicate<Sy
         new(true, SyntaxKind.Caret),
         new(false, SyntaxKind.AsKeyword)
     ];
-    
-    public BinaryPrecedenceLevel(bool rightAssociative, params SyntaxKind[] kinds)
+
+    private BinaryPrecedenceLevel(bool rightAssociative, params SyntaxKind[] kinds)
         : this(rightAssociative, kinds.Contains)
     {
     }

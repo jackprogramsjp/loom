@@ -153,7 +153,7 @@ internal sealed class ClassGenerator(
     
     private void GenerateProperty(Property property, Class rbxClass)
     {
-        var valueType = ClassUtility.SafeValueType(property.ValueType)!;
+        var valueType = ClassUtility.SafeValueType(property.ValueType);
         var (name, description) = GetMemberNameAndDescription(property, rbxClass);
         var definitelyDefined = property.ValueType.Category != "Class";
         var extraPropertyData = CanWrite(rbxClass.Name, property) && !ClassUtility.HasTag(property, "ReadOnly") ? "mut " : "";
@@ -196,7 +196,7 @@ internal sealed class ClassGenerator(
             Property => Metadata.ReadPropertyDescription,
             Event => Metadata.ReadEventDescription,
             Function => Metadata.ReadFunctionDescription,
-            Callback => Metadata.ReadPropertyDescription,
+            Callback => Metadata.ReadCallbackDescription,
             _ => null
         };
         

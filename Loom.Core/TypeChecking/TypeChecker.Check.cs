@@ -27,7 +27,7 @@ public sealed partial class TypeChecker
         return actual;
     }
 
-    private Type CheckArrayLiteral(ArrayLiteral arrayLiteral, Types.ArrayType expected, FlowState state)
+    private Types.ArrayType CheckArrayLiteral(ArrayLiteral arrayLiteral, Types.ArrayType expected, FlowState state)
     {
         foreach (var element in arrayLiteral.Expressions)
             Check(element, expected.ElementType, state);

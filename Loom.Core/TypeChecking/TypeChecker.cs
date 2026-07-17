@@ -34,7 +34,7 @@ public sealed partial class TypeChecker
     private readonly TypeNarrower _narrower;
     private FlowState _flowState;
     private Symbol? _resolvingHoisted;
-    
+
     private MacroContext EmptyMacroContext => new(_semanticModel, new LuauState());
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
@@ -251,9 +251,9 @@ public sealed partial class TypeChecker
             declaredType = Visit(variableDeclaration.ColonTypeClause);
 
         var initializerType = variableDeclaration.EqualsValueClause != null
-            ? (declaredType != null
+            ? declaredType != null
                 ? Check(variableDeclaration.EqualsValueClause.Value, declaredType, _flowState)
-                : Visit(variableDeclaration.EqualsValueClause))
+                : Visit(variableDeclaration.EqualsValueClause)
             : null;
 
         Type finalType;
@@ -797,16 +797,9 @@ public sealed partial class TypeChecker
     private Type? GetInvocationArgumentType(Invocation invocation, Expression argument)
     {
         var index = invocation.Arguments.ArgumentList.IndexOf(argument);
-        if (index < 0)
-            return null;
-
-        if (_semanticModel.GetType(invocation.Expression) is not Types.FunctionType functionType)
-            return null;
-
-        if (index >= functionType.ParameterTypes.Count)
-            return null;
-
-        return functionType.ParameterTypes[index];
+        return index < 0 || _semanticModel.GetType(invocation.Expression) is not Types.FunctionType functionType || index >= functionType.ParameterTypes.Count
+            ? null
+            : functionType.ParameterTypes[index];
     }
 
     private Type? GetEnclosingDeclaredReturnType(Return @return)

@@ -76,7 +76,7 @@ internal static class Utility
     public static DiagnosticBag GetTypeCheckerDiagnostics(string source) => TypeCheck(source).Diagnostics;
 
     public static Token IdentifierToken(string name, LocationSpan? span = null) => Token(SyntaxKind.Identifier, name, span);
-    public static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
+    private static Token Token(SyntaxKind kind, string text, LocationSpan? span = null) => new(kind, span ?? Span, text);
 
     public static T AssertNoErrors<T>(T result)
         where T : DiagnosedResult

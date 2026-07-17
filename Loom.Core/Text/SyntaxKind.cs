@@ -94,5 +94,5 @@ public enum SyntaxKind : ushort
     ImplementKeyword,
 
     Identifier,
-    Eof,
+    Eof
 }

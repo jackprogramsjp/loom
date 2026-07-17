@@ -126,7 +126,7 @@ public class LexerTest
     public void ThrowsFor_UnterminatedBlockComment()
     {
         var diagnostics = Utility.GetLexerDiagnostics("#: hello!");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnterminatedComment, $"Unterminated block comment: expected closing ':#'.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.UnterminatedComment, "Unterminated block comment: expected closing ':#'.");
     }
     
     [Theory]
