@@ -145,7 +145,6 @@ ExpressionStatement(
   )
 )
 VariableDeclaration(
-  ColonTypeClause: null
   EqualsValueClause(
     EqualsToken: Token(Equals, "=")
     Value: MatchExpression(
@@ -184,6 +183,7 @@ VariableDeclaration(
       ]
     )
   )
+  ColonTypeClause: null
   Name: Token(Identifier, "x")
 )
 ExpressionStatement(
