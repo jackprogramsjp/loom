@@ -57,7 +57,9 @@ internal static class Utility
         return semanticModel;
     }
 
-    public static (FlowAnalyzerResult AnalyzerResult, Core.Resolving.SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(string source, bool disableRuntimeLib = true)
+    public static (FlowAnalyzerResult AnalyzerResult, Core.Resolving.SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(
+        string source,
+        bool disableRuntimeLib = true)
     {
         var semanticModel = GetSemanticModel(source, disableRuntimeLib: disableRuntimeLib);
         var flowAnalyzer = new FlowAnalyzer(semanticModel);
@@ -96,9 +98,9 @@ internal static class Utility
         Assert.Equal(hint, diagnostic.Value.Hint);
     }
 
-    public static IEnumerable<object[]> GetSnapshotFiles(string folderName, string targetExtension) =>
+    public static IEnumerable<TheoryDataRow<string, string>> GetSnapshotFiles(string folderName, string targetExtension) =>
         Directory.EnumerateFiles(AssemblyFixture.Snapshots + '/' + folderName, $"*{FileManager.LoomExtension}")
-            .Select(path => new object[] { path, path.Replace(FileManager.LoomExtension, targetExtension) });
+            .Select(path => new TheoryDataRow<string, string>(path, path.Replace(FileManager.LoomExtension, targetExtension)));
 
     public static SourceFile TestFile(string source) => new("test", source);
 
