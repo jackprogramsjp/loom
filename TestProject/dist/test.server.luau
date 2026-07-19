@@ -1,3 +1,2 @@
-const function abc<T>()
-  const t = Instance.new("Part")
-end
+const run_service = game:GetService("RunService")
+const part = Instance.new("Part")

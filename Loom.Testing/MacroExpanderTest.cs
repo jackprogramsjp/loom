@@ -6,11 +6,13 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class MacroExpanderTest
 {
-    [Fact(Skip = "No Roblox types (yet)")]
-    public void ThrowsFor_TypeParametersInNewInstanceCall()
+    [Theory(Skip = "No Roblox types (yet)")]
+    [InlineData("CreatableInstance", "new_instance")]
+    [InlineData("ServiceInstance", "get_service")]
+    public void ThrowsFor_TypeParametersInNewInstanceCall(string constraint, string fnName)
     {
-        var diagnostics = Utility.GetGeneratorDiagnostics("fn abc<T: CreatableInstance> -> new_instance::<T>();", true);
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.NewInstanceAbstractClassName, $"Cannot use type parameter 'T' with 'new_instance::<T>()'.");
+        var diagnostics = Utility.GetGeneratorDiagnostics($"fn abc<T: {constraint}> -> {fnName}::<T>();", true);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AbstractTypeParameterInMacro, "Cannot use type parameter 'T' with 'new_instance::<T>()'.");
     }
     
     [Fact]
