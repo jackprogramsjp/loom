@@ -1,0 +1,4 @@
+declare interface CreatableInstance: Instance { _is_creatable: true; }
+declare interface ServiceInstance: Instance { _is_service: true; }
+declare fn new_instance<T: CreatableInstance>: T;
+declare fn get_service<T: ServiceInstance>: T;

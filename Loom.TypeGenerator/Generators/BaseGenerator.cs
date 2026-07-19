@@ -5,11 +5,20 @@ namespace Loom.TypeGenerator.Generators;
 internal abstract class BaseGenerator(string filePath, ReflectionMetadataReader metadata)
 {
     public readonly StringBuilder Stream = new(4096);
-    
+
     protected readonly ReflectionMetadataReader Metadata = metadata;
     protected readonly string FilePath = filePath;
+    protected readonly string TypeGeneratorDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../.."));
 
     private int _indentLevel;
+    
+    protected void WriteContentsOfFile(string fileName)
+    {
+        var filePath = $"{TypeGeneratorDirectory}/{fileName}";
+        Stream.AppendLine(File.ReadAllText(filePath));
+        Write();
+        Log.Info($"wrote contents of '{filePath}'");
+    }
     
     protected void WriteBlock(string header, Action writeBlock, bool finalNewline = true)
     {
