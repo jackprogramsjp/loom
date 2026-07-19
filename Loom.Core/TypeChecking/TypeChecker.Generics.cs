@@ -81,6 +81,9 @@ public sealed partial class TypeChecker
     private bool CheckTypeParameterConstraints(Node node, Type type, Types.TypeParameter parameter)
     {
         if (parameter.Constraint == null) return true;
+        if (type is Types.TypeParameter otherParameter)
+            type = otherParameter.Constraint ?? PrimitiveType.Unknown;
+        
         if (type.IsAssignableTo(parameter.Constraint)) return true;
 
         _diagnostics.Error(
