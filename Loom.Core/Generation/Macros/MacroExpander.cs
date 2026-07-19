@@ -32,6 +32,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         expression = null;
+        _context.Node = invocation;
         return TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member)
             && provider.TryInvocation(_context, member.Trim(), invocation.TypeArguments, luauCall, out expression);
     }
@@ -41,6 +42,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         LuauExpression callee,
         [MaybeNullWhen(false)] out LuauExpression referenceExpression)
     {
+        _context.Node = expression;
         referenceExpression = null;
         if (!InvocationMacroReference.TryClassify(_context, expression, out var provider, out var memberName))
             return false;
@@ -69,6 +71,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
 
     public bool TryGetElementAccessMacro(ElementAccess access, Luau.AST.ElementAccess luauAccess, [MaybeNullWhen(false)] out LuauExpression expression)
     {
+        _context.Node = access;
         if (TryGetEnumConstant(access, out expression))
             return true;
 
@@ -160,6 +163,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         Luau.AST.PropertyAccess luauAccess,
         [MaybeNullWhen(false)] out LuauExpression expression)
     {
+        _context.Node = access;
         if (TryGetEnumConstant(access, out expression))
             return true;
 

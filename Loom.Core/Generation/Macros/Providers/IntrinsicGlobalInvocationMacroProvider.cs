@@ -15,7 +15,7 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
     public bool Supports(MacroContext context, Expression expression) =>
         expression is Parsing.AST.Identifier && context.SemanticModel.GetSymbol(expression) is { IsIntrinsic: true };
 
-    public bool IsInvocationOnlyMember(string memberName) => memberName is "string" or "number" or "new_instance" or "get_service";
+    public bool IsInvocationOnlyMember(string memberName) => memberName is "string" or "number" or "log" or "new_instance" or "get_service";
 
     public bool TryInvocation(
         MacroContext context,

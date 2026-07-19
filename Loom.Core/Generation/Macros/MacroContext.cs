@@ -7,6 +7,8 @@ namespace Loom.Core.Generation.Macros;
 
 internal record MacroContext(SemanticModel SemanticModel, LuauState State, DiagnosticBag Diagnostics)
 {
+    public Parsing.AST.Node Node { get; set; } = null!;
+    
     public static LuauExpression GetCallObject(Call call) =>
         call.Callee switch
         {

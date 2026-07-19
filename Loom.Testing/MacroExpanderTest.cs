@@ -12,7 +12,7 @@ public class MacroExpanderTest
     public void ThrowsFor_TypeParametersInNewInstanceCall(string constraint, string fnName)
     {
         var diagnostics = Utility.GetGeneratorDiagnostics($"fn abc<T: {constraint}> -> {fnName}::<T>();", true);
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.AbstractTypeParameterInMacro, "Cannot use type parameter 'T' with 'new_instance::<T>()'.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AbstractTypeParameterInMacro, $"Cannot use type parameter 'T' with '{fnName}::<T>()'.");
     }
     
     [Fact]

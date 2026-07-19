@@ -172,7 +172,7 @@ public sealed partial class LuauGenerator
             }
         );
     }
-    
+
     public override LuauNode VisitInvocation(Invocation invocation)
     {
         var isMethod = invocation.Expression.Children.FirstOrDefault() is { } child
@@ -288,7 +288,7 @@ public sealed partial class LuauGenerator
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
-    
+
     private LuauNode GenerateBitwiseOperator(BinaryOperator binaryOperator)
     {
         var left = Visit(binaryOperator.Left);
@@ -344,7 +344,7 @@ public sealed partial class LuauGenerator
 
         return true;
     }
-    
+
     private Chunk GenerateFunctionBody(FunctionDeclaration functionDeclaration) =>
         functionDeclaration.Body is ExpressionBody expressionBody
             ? new Chunk(GenerateStatements(expressionBody.Expression))
@@ -355,28 +355,6 @@ public sealed partial class LuauGenerator
 
     private Chunk GenerateChunk(Statement statement) => statement is Block block ? VisitBlock(block) : new Chunk(GenerateStatements(statement));
 
-    private List<LuauStatement> GenerateStatements(Expression expression)
-    {
-        var result = new List<LuauStatement>();
-        var (luauExpression, scope) = _state.Capture(() => Visit(expression));
-        result.AddRange(scope.PrereqStatements);
-        result.Add(new Luau.AST.Return(luauExpression));
-        result.AddRange(scope.PostreqStatements);
-
-        return result.FindAll(s => s is not NoOpStatement);
-    }
-
-    private List<LuauStatement> GenerateStatements(Statement statement)
-    {
-        var result = new List<LuauStatement>();
-        var (luauStatement, scope) = _state.Capture(() => Visit(statement));
-        result.AddRange(scope.PrereqStatements);
-        result.Add(luauStatement);
-        result.AddRange(scope.PostreqStatements);
-
-        return result.FindAll(s => s is not NoOpStatement);
-    }
-
     private List<LuauStatement> GenerateStatements(List<Statement> statements)
     {
         var result = new List<LuauStatement>();
@@ -384,6 +362,34 @@ public sealed partial class LuauGenerator
             result.AddRange(GenerateStatements(statement));
 
         return result.FindAll(s => s is not NoOpStatement);
+    }
+
+    private List<LuauStatement> GenerateStatements(Expression expression)
+    {
+        var result = new List<LuauStatement>();
+        var (luauExpression, scope) = _state.Capture(() => Visit(expression));
+        ApplyPrereqAndPostreq(result, scope, new Luau.AST.Return(luauExpression));
+
+        return result.FindAll(s => s is not NoOpStatement);
+    }
+
+    private List<LuauStatement> GenerateStatements(Statement statement)
+    {
+        if (statement is NamedDeclaration { Name.Text: var name })
+            _state.Scope.AddIdentifier(name);
+
+        var result = new List<LuauStatement>();
+        var (luauStatement, scope) = _state.Capture(() => Visit(statement));
+        ApplyPrereqAndPostreq(result, scope, luauStatement);
+
+        return result.FindAll(s => s is not NoOpStatement);
+    }
+
+    private static void ApplyPrereqAndPostreq(List<LuauStatement> result, LuauScope scope, LuauStatement luauStatement)
+    {
+        result.AddRange(scope.PrereqStatements);
+        result.Add(luauStatement);
+        result.AddRange(scope.PostreqStatements);
     }
 
     private List<LuauExpression> WrapFunctionArgument(Statement body, LuauType? returnType = null)
