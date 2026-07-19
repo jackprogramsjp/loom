@@ -35,7 +35,7 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
                     context.Diagnostics.Error(
                         typeName,
                         InternalCodes.NewInstanceAbstractClassName,
-                        "Cannot pass type parameters to 'new_instance::<T>()'."
+                        $"Cannot use type parameter '{typeName}' with 'new_instance::<T>()'."
                     );
 
                 expression = LuauFactory.LibraryCall(

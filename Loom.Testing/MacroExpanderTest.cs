@@ -1,3 +1,4 @@
+using Loom.Core.Diagnostics;
 using Loom.Luau.AST;
 
 namespace Loom.Testing;
@@ -5,6 +6,13 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class MacroExpanderTest
 {
+    [Fact]
+    public void ThrowsFor_TypeParametersInNewInstanceCall()
+    {
+        var diagnostics = Utility.GetGeneratorDiagnostics("fn abc<T: CreatableInstance> -> new_instance::<T>();", true);
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.NewInstanceAbstractClassName, $"Cannot use type parameter 'T' with 'new_instance::<T>()'.");
+    }
+    
     [Fact]
     public void Generates_InvocationMacroReference_AsFunctionArgument_Ok()
     {
