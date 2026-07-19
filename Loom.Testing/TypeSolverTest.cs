@@ -310,7 +310,7 @@ public class TypeSolverTest
         var solver = new TypeSolver(diagnostics);
         var baseA = new InterfaceType("Base", [], ObjectType.Empty);
         var a = new InterfaceType("A", [baseA], ObjectType.Empty);
-        var b = new InterfaceType("A", [], ObjectType.Empty);
+        var b = new InterfaceType("B", [], ObjectType.Empty);
 
         solver.AddConstraint(a, b, Utility.Span);
         Assert.True(solver.SolveConstraints());

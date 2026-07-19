@@ -117,11 +117,8 @@ public class TypesTest
     [Fact]
     public void ObjectType_GetTypeAtIndex_UsesSelfInErrorMessage()
     {
-        var obj = ObjectType.Empty;
-        var (body, error) = obj.GetTypeAtIndex(
-            new LiteralType("missing"),
-            new InterfaceType("Foo", [], ObjectType.Empty)
-        );
+        var interfaceType = new InterfaceType("Foo", [], ObjectType.Empty);
+        var (body, error) = interfaceType.GetTypeAtIndex(new LiteralType("missing"));
 
         Assert.Null(body);
         Assert.Contains("Foo", error);

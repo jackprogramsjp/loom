@@ -262,37 +262,13 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
     private bool UnifyObjectWithInterface(ObjectType objectType, InterfaceType interfaceType, LocationSpan span, out bool updated)
     {
         updated = false;
-        return UnifyObjectTypes(objectType, interfaceType.ObjectType, span, out updated);
+        return TryUnify(objectType, interfaceType.AssignabilityType, span, out updated);
     }
 
     private bool UnifyInterfaceTypes(InterfaceType a, InterfaceType b, LocationSpan span, out bool updated)
     {
         updated = false;
-        var success = true;
-        var aConstraints = a.Constraints;
-        var bConstraints = b.Constraints;
-        if (aConstraints.Count != bConstraints.Count)
-        {
-            if (!ReportTypeMismatch(a, b, span))
-                success = false;
-        }
-        else
-        {
-            for (var i = 0; i < aConstraints.Count; i++)
-            {
-                if (!TryUnify(aConstraints[i], bConstraints[i], span, out var constraintUpdated))
-                    success = false;
-                else if (constraintUpdated)
-                    updated = true;
-            }
-        }
-
-        if (!TryUnify(a.ObjectType, b.ObjectType, span, out var objectUpdated))
-            success = false;
-        else if (objectUpdated)
-            updated = true;
-
-        return success;
+        return TryUnify(a.AssignabilityType, b.AssignabilityType, span, out updated);
     }
 
     private bool UnifyFunctionTypes(FunctionType a, FunctionType b, LocationSpan span, out bool updated)

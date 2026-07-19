@@ -1,7 +1,11 @@
 namespace Loom.Core.TypeChecking.Types;
 
-public sealed class InterfaceType(string name, List<InterfaceType> constraints, ObjectType objectType, HashSet<string>? traitMethodNames = null)
-    : Type
+public sealed class InterfaceType(
+    string name,
+    List<InterfaceType> constraints,
+    ObjectType objectType,
+    HashSet<string>? traitMethodNames = null
+) : NativelyIndexableType
 {
     public string Name { get; } = name;
     public List<InterfaceType> Constraints { get; } = constraints;
@@ -12,11 +16,21 @@ public sealed class InterfaceType(string name, List<InterfaceType> constraints, 
             : ObjectType;
 
     public HashSet<string> TraitMethodNames { get; set; } = traitMethodNames ?? [];
-    public ObjectIndexer? Indexer => ObjectType.Indexer ?? Constraints.Select(c => c.Indexer).FirstOrDefault(i => i != null);
-    public ObjectProperty? GetProperty(string name) => ObjectType.GetProperty(name) ?? Constraints.Select(c => c.GetProperty(name)).FirstOrDefault(p => p != null);
+    public override ObjectIndexer? Indexer
+    {
+        get => ObjectType.Indexer ?? Constraints.Select(c => c.Indexer).FirstOrDefault(i => i != null);
+        internal set => throw new NotImplementedException();
+    }
+    public override List<ObjectProperty> Properties => [..ObjectType.Properties, ..Constraints.SelectMany(c => c.Properties)];
 
-    public override int GetHashCode() => HashCode.Combine(Name, Constraints.Count, ObjectType.GetHashCode());
-    
+    public override Type PropertyKeyUnion()
+    {
+        var baseType = ObjectType.PropertyKeyUnion();
+        var constraintTypes = Constraints.Select(constraint => constraint.ObjectType.PropertyKeyUnion());
+        var unionTypes = new List<Type>([baseType, ..constraintTypes]);
+        return TypeSimplifier.Simplify(new UnionType(unionTypes));
+    }
+
     public override bool Equals(Type? other)
     {
         if (ReferenceEquals(this, other)) return true;
@@ -25,7 +39,7 @@ public sealed class InterfaceType(string name, List<InterfaceType> constraints, 
             && ObjectType.Equals(interfaceType.ObjectType);
     }
 
+    public override int GetHashCode() => HashCode.Combine(Name, Constraints.Count, ObjectType.GetHashCode());
     public override bool IsAssignableTo(Type other) => AssignabilityType.IsAssignableTo(other);
-
     public override string ToString() => Name;
 }

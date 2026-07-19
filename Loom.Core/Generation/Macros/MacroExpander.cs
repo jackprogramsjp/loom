@@ -8,7 +8,6 @@ using Loom.Core.TypeChecking.Types;
 using Loom.Luau.AST;
 using ElementAccess = Loom.Core.Parsing.AST.ElementAccess;
 using Identifier = Loom.Core.Parsing.AST.Identifier;
-using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
 using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
 using Type = Loom.Core.TypeChecking.Types.Type;
 using UnionType = Loom.Core.TypeChecking.Types.UnionType;
@@ -227,8 +226,8 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         return type switch
         {
             UnionType union => ResolveUnionAccess(propertyName, union),
-            ObjectType objectType => objectType.GetTypeAtIndex(new LiteralType(propertyName)).BodyType?.ValueType,
-            InterfaceType interfaceType => interfaceType.ObjectType.GetTypeAtIndex(new LiteralType(propertyName), interfaceType).BodyType?.ValueType,
+            ObjectType objectType => objectType.GetProperty(propertyName)?.ValueType,
+            InterfaceType interfaceType => interfaceType.GetProperty(propertyName)?.ValueType,
             _ => null
         };
     }

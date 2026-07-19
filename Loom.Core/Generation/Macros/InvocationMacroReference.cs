@@ -25,7 +25,7 @@ internal static class InvocationMacroReference
         if (expression.FirstAncestorOfType<ArrayLiteral>() is not null)
             return false;
 
-        for (var node = (Node?)expression; node is not null; node = node.Parent)
+        for (Node? node = expression; node is not null; node = node.Parent)
         {
             if (node.Parent is Arguments && node.Parent.Parent is Invocation)
                 return true;
@@ -159,8 +159,7 @@ internal static class InvocationMacroReference
         return type switch
         {
             UnionType union => ResolveUnionAccess(propertyName, union),
-            ObjectType objectType => objectType.GetTypeAtIndex(new LiteralType(propertyName)).BodyType?.ValueType,
-            InterfaceType interfaceType => interfaceType.ObjectType.GetTypeAtIndex(new LiteralType(propertyName), interfaceType).BodyType?.ValueType,
+            NativelyIndexableType indexableType => indexableType.GetProperty(propertyName)?.ValueType,
             _ => null
         };
     }

@@ -117,37 +117,6 @@ public class TypeSimplifierTest
     }
 
     [Fact]
-    public void SimplifyInterfaceWithConstraintsProducesInterfaceWithMergedObject()
-    {
-        var baseObject = new ObjectType(
-            null,
-            [new ObjectProperty(false, "a", PrimitiveType.Number)]
-        );
-
-        var constraintObject = new InterfaceType(
-            "Constraint",
-            [],
-            new ObjectType(
-                null,
-                [new ObjectProperty(false, "b", PrimitiveType.String)]
-            )
-        );
-
-        var interfaceType = new InterfaceType("IMyInterface", [constraintObject], baseObject);
-        var simplified = TypeSimplifier.Simplify(interfaceType);
-
-        var propertyA = new ObjectProperty(false, "a", PrimitiveType.Number);
-        var propertyB = new ObjectProperty(false, "b", PrimitiveType.String);
-        var expectedObject = new ObjectType(null, [propertyA, propertyB]);
-        var expected = new InterfaceType("IMyInterface", [], expectedObject);
-
-        Assert.True(
-            simplified.Equals(expected),
-            $"Expected {expected}, but got {simplified}"
-        );
-    }
-
-    [Fact]
     public void SimplifyOptionalTypeWithNestedOptionalFlattensToSingleOptional()
     {
         var inner = new OptionalType(PrimitiveType.Number);

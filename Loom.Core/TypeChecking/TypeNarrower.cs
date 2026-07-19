@@ -496,13 +496,9 @@ public sealed class TypeNarrower
                 };
             }
 
-            case ObjectType objectType:
-                var (bodyType, _) = objectType.GetTypeAtIndex(new LiteralType(propertyName));
-                return bodyType?.ValueType;
-
-            case InterfaceType interfaceType:
-                var result = interfaceType.ObjectType.GetTypeAtIndex(new LiteralType(propertyName), interfaceType);
-                return result.BodyType?.ValueType;
+            case NativelyIndexableType indexableType:
+                var property = indexableType.GetProperty(propertyName);
+                return property?.ValueType;
         }
 
         return null;
@@ -531,12 +527,8 @@ public sealed class TypeNarrower
                 };
             }
             
-            case ObjectType objectType:
-                var (bodyType, _) = objectType.GetTypeAtIndex(indexType);
-                return bodyType?.ValueType;
-            
-            case InterfaceType interfaceType:
-                var result = interfaceType.ObjectType.GetTypeAtIndex(indexType, interfaceType);
+            case NativelyIndexableType indexableType:
+                var result = indexableType.GetTypeAtIndex(indexType);
                 return result.BodyType?.ValueType;
         }
 

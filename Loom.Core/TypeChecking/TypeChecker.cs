@@ -232,7 +232,6 @@ public sealed partial class TypeChecker
         {
             var type = Visit(typeAlias.EqualsTypeClause);
             _semanticModel.TypeSolver.CheckCircular(ref type, typeAlias.Name);
-
             return BindType(typeAlias, TypeSimplifier.Simplify(type));
         }
 
@@ -450,7 +449,7 @@ public sealed partial class TypeChecker
                 );
             }
 
-            case ObjectType or InterfaceType:
+            case NativelyIndexableType:
                 return GetTypeAtIndex(node, type, indexType);
         }
 
@@ -485,10 +484,10 @@ public sealed partial class TypeChecker
             _ => null!
         };
 
-        var objectType = expressionType switch
+        NativelyIndexableType? indexableType = expressionType switch
         {
             ObjectType o => o,
-            InterfaceType i => i.ObjectType,
+            InterfaceType i => i,
             _ => null
         };
 
@@ -499,20 +498,18 @@ public sealed partial class TypeChecker
             _ => []
         }).ToList();
 
-        if (objectType == null)
+        if (indexableType == null)
             return BindType(assignmentOperator, valueType);
 
         if (names.Count > 1)
         {
-            foreach (var property in names.SkipLast(1).Select(name => objectType.GetProperty(name.Name.Text)!))
-            {
-                objectType = property.ValueType is InterfaceType i ? i.ObjectType : (ObjectType)property.ValueType;
-            }
+            foreach (var property in names.SkipLast(1).Select(name => indexableType.GetProperty(name.Name.Text)!))
+                indexableType = (NativelyIndexableType)property.ValueType;
 
             indexType = new Types.LiteralType(names.Last().Name.Text);
         }
 
-        var (bodyType, _) = objectType.GetTypeAtIndex(indexType, expressionType);
+        var (bodyType, _) = indexableType.GetTypeAtIndex(indexType);
         if (bodyType is not { IsMutable: false })
             return BindType(assignmentOperator, valueType);
 
@@ -656,7 +653,7 @@ public sealed partial class TypeChecker
             if (symbol is PropertyVariableSymbol propertyVariableSymbol)
             {
                 var interfaceType = (InterfaceType)_semanticModel.GetType(propertyVariableSymbol.From.Declaration);
-                return GetTypeAtIndexInInterface(identifier, interfaceType, new Types.LiteralType(propertyVariableSymbol.Name));
+                return GetTypeAtIndexNative(identifier, interfaceType, new Types.LiteralType(propertyVariableSymbol.Name));
             }
 
             var declaredType = ResolveHoistedType(symbol);
@@ -742,7 +739,7 @@ public sealed partial class TypeChecker
 
             if (declaredType is GenericType genericType)
                 return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);
-
+            
             if (typeName.TypeArguments == null)
                 return BindType(typeName, declaredType);
 
@@ -824,7 +821,6 @@ public sealed partial class TypeChecker
         }
 
         CheckInvocationMacroReference(accessExpression);
-
         if (InvocationMacroReference.TryClassify(EmptyMacroContext, accessExpression, out _, out _)
             && InvocationMacroReference.IsValidReferenceContext(accessExpression)
             && GetContextualType(accessExpression) is Types.FunctionType contextualType)
@@ -840,8 +836,9 @@ public sealed partial class TypeChecker
         if (type is Types.UnionType union)
         {
             var results = union.Types
-                .ConvertAll(member => GetTypeAtIndexSingle(node, member, indexType))
-                .FindAll(memberResult => !Type.IsNever(memberResult) && !Type.IsUnknown(memberResult));
+                .Select(member => GetTypeAtIndexSingle(node, member, indexType))
+                .Where(memberResult => !Type.IsNever(memberResult) && !Type.IsUnknown(memberResult))
+                .ToList();
 
             return results.Count == 0
                 ? ReportCannotUseToIndex(node, type, indexType)
@@ -864,34 +861,18 @@ public sealed partial class TypeChecker
     private Type GetTypeAtIndexSingle(Node node, Type type, Type indexType) =>
         type switch
         {
-            ObjectType objectType => GetTypeAtIndexInObject(node, objectType, indexType),
-            InterfaceType interfaceType => GetTypeAtIndexInInterface(node, interfaceType, indexType),
+            NativelyIndexableType indexable => GetTypeAtIndexNative(node, indexable, indexType),
             InstantiatedType instantiated => GetTypeAtIndex(node, instantiated.Expand(), indexType),
             _ => type
         };
 
-    private Type GetTypeAtIndexInInterface(Node node, InterfaceType interfaceType, Type indexType)
+    private Type GetTypeAtIndexNative(Node node, NativelyIndexableType indexable, Type indexType)
     {
-        var result = interfaceType.ObjectType.GetTypeAtIndex(indexType, interfaceType);
+        var result = indexable.GetTypeAtIndex(indexType);
         var (bodyType, cannotFindReason) = result;
-        if (bodyType != null)
-            return BindType(node, bodyType.ValueType);
-
-        var type = interfaceType.Constraints.Count > 0
-            ? interfaceType.Constraints.ConvertAll(t => GetTypeAtIndexInInterface(node, t, indexType)).Find(Type.IsNotNever) ?? Types.PrimitiveType.Never
-            : Types.PrimitiveType.Never;
-
-        return Type.IsNever(type)
-            ? ReportCannotUseToIndex(node, interfaceType, indexType, cannotFindReason)
-            : BindType(node, type);
-    }
-
-    private Type GetTypeAtIndexInObject(Node node, ObjectType objectType, Type indexType)
-    {
-        var (bodyType, cannotFindReason) = objectType.GetTypeAtIndex(indexType);
         return bodyType != null
             ? BindType(node, bodyType.ValueType)
-            : ReportCannotUseToIndex(node, objectType, indexType, cannotFindReason);
+            : ReportCannotUseToIndex(node, indexable, indexType, cannotFindReason);
     }
 
     private static Type GetObjectValueType(Type type) =>

@@ -1,19 +1,19 @@
 namespace Loom.Core.TypeChecking.Types;
 
-public record ObjectBodyType(bool IsMutable, Type ValueType);
+public abstract record ObjectBodyType(bool IsMutable, Type ValueType);
 
-public record ObjectIndexer(bool IsMutable, Type KeyType, Type ValueType)
+public sealed record ObjectIndexer(bool IsMutable, Type KeyType, Type ValueType)
     : ObjectBodyType(IsMutable, ValueType);
 
-public record ObjectProperty(bool IsMutable, string Name, Type ValueType)
+public sealed record ObjectProperty(bool IsMutable, string Name, Type ValueType)
     : ObjectBodyType(IsMutable, ValueType);
 
-public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties) : Type
+public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties) : NativelyIndexableType
 {
     public static readonly ObjectType Empty = new(null, []);
 
-    public ObjectIndexer? Indexer { get; internal set; } = indexer;
-    public List<ObjectProperty> Properties { get; } = properties;
+    public override ObjectIndexer? Indexer { get; internal set; } = indexer;
+    public override List<ObjectProperty> Properties { get; } = properties;
 
     public Type KeyUnion()
     {
@@ -45,66 +45,9 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
         return TypeSimplifier.Simplify(new UnionType(types));
     }
 
-    private Type ValueUnionForKeyType(Type keyType)
-    {
-        var matches = (
-                from property in Properties
-                let literal = new LiteralType(property.Name)
-                where literal.IsAssignableTo(keyType)
-                select property.ValueType
-            )
-            .ToList();
-
-        if (Indexer != null)
-            matches.Add(Indexer.ValueType);
-
-        return TypeSimplifier.Simplify(new UnionType(matches));
-    }
-
-    public Type PropertyKeyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(Type (p) => new LiteralType(p.Name))));
+    public override Type PropertyKeyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(Type (p) => new LiteralType(p.Name))));
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
-    public ObjectProperty? GetProperty(string name) => Properties.Find(p => p.Name == name);
-
-    public (ObjectBodyType? BodyType, string CannotFindReason) GetTypeAtIndex(Type indexType, Type? self = null)
-    {
-        if (indexType is TypeParameter parameter)
-        {
-            if (parameter.Constraint == null)
-                return Indexer != null && indexType.IsAssignableTo(Indexer.KeyType)
-                    ? (Indexer, "")
-                    : (null, $" Type parameter '{parameter.Name}' is unconstrained.");
-
-            indexType = parameter.Constraint;
-        }
-        
-        if (indexType is LiteralType { Value: string name })
-        {
-            var property = GetProperty(name);
-            if (property != null)
-                return (property, "");
-
-            if (Indexer == null)
-                return (null, $" Property '{name}' does not exist on type '{self ?? this}'.");
-        }
-        
-        if (Properties.Count > 0 && indexType.Equals(PropertyKeyUnion()))
-        {
-            return (new ObjectIndexer(
-                IsMutable: Properties.Any(p => p.IsMutable),
-                KeyType: indexType,
-                ValueType: ValueUnionForKeyType(indexType)
-            ), "");
-        }
-
-        if (Indexer != null && indexType.IsAssignableTo(Indexer.KeyType))
-            return (Indexer, "");
-
-        return Indexer == null
-            ? (null, "")
-            : (null, $" Index is not of type '{Indexer.KeyType}'.");
-    }
-    
     public override int GetHashCode()
     {
         var hash = new HashCode();
@@ -114,6 +57,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             hash.Add(property.Name);
             hash.Add(property.IsMutable);
         }
+
         // hash.Add(Indexer != null);
         return hash.ToHashCode();
     }
@@ -212,7 +156,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
         if (Indexer == null && Properties.Count == 0)
             return "object";
 
-        var properties = string.Join(", ", Properties.ConvertAll(p => $"{(p.IsMutable ? "mut " : "")}{p.Name}: {p.ValueType}"));
+        var properties = string.Join(", ", Properties.Select(p => $"{(p.IsMutable ? "mut " : "")}{p.Name}: {p.ValueType}"));
         var indexer = Indexer != null
             ? $"{(Indexer.IsMutable ? "mut " : "")}[{Indexer.KeyType}]: {Indexer.ValueType}"
             : "";
