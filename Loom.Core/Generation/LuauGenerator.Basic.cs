@@ -30,8 +30,15 @@ public sealed partial class LuauGenerator
     public override LuauTree VisitTree(Tree tree)
     {
         var statements = tree.Tokens
-            .FindAll(t => t.Kind is SyntaxKind.Comment or SyntaxKind.BlockComment)
-            .ConvertAll(LuauStatement (token) => new Comment(token.Text.Replace("##", "").Replace("#:", "").Replace(":#", "")));
+            .Where(token => token.Kind is not SyntaxKind.Whitespace)
+            .TakeWhile(token => token.Kind is SyntaxKind.Comment or SyntaxKind.BlockComment)
+            .Select(LuauStatement (token) => new Comment(
+                    token.Text.Replace("##", "")
+                        .Replace("#:", "")
+                        .Replace(":#", "")
+                )
+            )
+            .ToList();
 
         statements.AddRange(GenerateStatements(tree.Statements));
         return new LuauTree(statements);

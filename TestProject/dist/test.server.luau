@@ -1,4 +1,3 @@
--- no properties
 type IAction<Kind> = {
   read kind: Kind & string,
 }

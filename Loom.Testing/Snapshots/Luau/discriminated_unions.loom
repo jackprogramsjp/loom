@@ -1,0 +1,23 @@
+interface IAction<Kind: string> { kind: Kind }
+
+interface LogOutAction: IAction<"LogOut">;
+
+interface SearchAction: IAction<"Search"> {
+    query: string;
+}
+
+interface ClickAction: IAction<"Click"> {
+    x: number;
+    y: number;
+}
+
+type Action = LogOutAction | SearchAction | ClickAction;
+
+let a = none as never as Action;
+if a.kind == "Search"
+    print(a.query);
+else if a.kind == "Click" {
+    print(a.x)
+    print(a.y)
+} else if a.kind == "LogOut"
+    print(a) ## no properties
