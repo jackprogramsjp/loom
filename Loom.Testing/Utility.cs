@@ -91,10 +91,10 @@ internal static class Utility
     {
         var diagnostic = diagnostics.Find(d => d.Code == code);
         Assert.NotNull(diagnostic);
-        Assert.Equal(message, diagnostic.Value.Message);
+        Assert.Equal(message, diagnostic.Message);
 
         if (hint == null) return;
-        Assert.Equal(hint, diagnostic.Value.Hint);
+        Assert.Equal(hint, diagnostic.Hint);
     }
 
     public static IEnumerable<TheoryDataRow<string, string>> GetSnapshotFiles(string folderName, string targetExtension) =>

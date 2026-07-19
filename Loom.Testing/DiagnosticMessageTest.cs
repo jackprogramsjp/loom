@@ -5,7 +5,7 @@ namespace Loom.Testing;
 
 public class DiagnosticMessageTest
 {
-    private static readonly SourceFile _testFile = new("test.loom", $"let x: number = 5;{Environment.NewLine}let y = x + 10;{Environment.NewLine}print(y);");
+    private static readonly SourceFile _testFile = new("test.loom", $"let x: number = 5;\nlet y = x + 10;\nprint(y);");
 
     [Fact]
     public void ToString_ErrorDiagnostic_FormatsCorrectly()
@@ -40,8 +40,8 @@ public class DiagnosticMessageTest
     [Fact]
     public void ToString_WarningDiagnostic_FormatsCorrectly()
     {
-        var start = new Location(_testFile, 28);
-        var end = new Location(_testFile, 34);
+        var start = new Location(_testFile, 27);
+        var end = new Location(_testFile, 33);
         var span = new LocationSpan(start, end);
         var diagnostic = new Diagnostic(span, DiagnosticSeverity.Warn, InternalCodes.RedundantCode, "Unnecessary null check.", null);
         var result = diagnostic.ToString();

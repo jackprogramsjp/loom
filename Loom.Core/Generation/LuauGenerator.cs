@@ -34,7 +34,7 @@ public sealed partial class LuauGenerator
         : base(_ => new NoOpStatement())
     {
         _semanticModel = semanticModel;
-        _macroExpander = new MacroExpander(semanticModel, _state);
+        _macroExpander = new MacroExpander(semanticModel, _state, _diagnostics);
     }
 
     public LuauGeneratorResult Generate()

@@ -6,10 +6,10 @@ public sealed record Token
     {
         Kind = kind;
         Span = span;
-        Text = text ?? Span.GetText();
+        Text = text;
     }
 
     public SyntaxKind Kind { get; }
     public LocationSpan Span { get; }
-    public string Text { get; }
+    public string Text => field ??= Span.GetText().ToString();
 }

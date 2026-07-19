@@ -1,2 +1,15 @@
-let a = 'a'
-let y = a + 10
+interface JsonUser {
+    name: string;
+    age: number;
+    tags: string[];
+}
+
+fn stringify(user: JsonUser): string ->
+    "{\n" +
+    "  name: '" + user.name + "',\n" +
+    "  age: " + string(user.age) + ",\n" +
+    "  tags: [" + user.tags.join(", ") + "]\n" +
+    "}";
+
+let user = new JsonUser { name: "Alice", age: 20, tags: ["admin", "staff"] };
+print(stringify(user));

@@ -28,7 +28,7 @@ public abstract class Node
     }
 
     public abstract T Accept<T>(Visitor<T> visitor);
-    public override string ToString() => Span.GetText();
+    public override string ToString() => Span.GetText().ToString();
 
     public List<T> GetDescendants<T>()
         where T : Node =>

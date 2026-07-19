@@ -30,11 +30,8 @@ public static class LexerRules
             ? SingleCharacter(pair.Value, pair.Key[0])
             : MultiCharacter(pair.Value, pair.Key)
         ),
-        ..SyntaxFacts.KeywordMap.Select(pair => MultiCharacter(pair.Value, pair.Key)),
         RegEx(NumberLiteral, $"{HzNumber}|{MsNumber}|{SecondsNumber}|{MinutesNumber}|{HoursNumber}|{Number}"),
         RegEx(StringLiteral, "\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'"),
-        RegEx(Identifier, "[a-zA-Z_]([a-zA-Z0-9_]*)"),
-        RegEx(Whitespace, @"\s+"),
         RegEx(BlockComment, @"#:[\s\S]*?:#"),
         RegEx(Comment, @"##[^\n]*")
     ];
@@ -113,5 +110,5 @@ public static class LexerRules
         _standardRules.Where(r => r.Kind == LexerRuleKind.RegEx).ToArray();
 
     private static LexerDiagnosticRule DiagnosticRule(string pattern, string code, Func<string, string> message) =>
-        new(new Regex(pattern, RegexOptions.Compiled), code, message);
+        new(new Regex($@"\G(?:{pattern})", RegexOptions.Compiled), code, message);
 }

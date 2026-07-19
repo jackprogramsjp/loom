@@ -31,14 +31,33 @@ public sealed class Lexer(SourceFile file)
 
     private IEnumerable<Token> GetTokens()
     {
-        var sourceLength = file.SourceText.Length;
-        while (_position < sourceLength)
+        while (!IsEof())
         {
             var start = GetLocation();
-            if (TryDiagnosticRule(start, LexerRules.PriorityDiagnostic)) continue;
+            var current = Current();
+            if (char.IsLetter(current) || current == '_')
+            {
+                _position++;
+                while (!IsEof() && (char.IsLetterOrDigit(Current()) || Current() == '_'))
+                    _position++;
 
-            var lexResult = LexWithRule();
-            if (lexResult is not { } result)
+                var span = GetSpan(start);
+                var kind = SyntaxFacts.KeywordMap.GetValueOrDefault(span.GetText().ToString(), SyntaxKind.Identifier);
+                yield return new Token(kind, span);
+                continue;
+            }
+            
+            if (char.IsWhiteSpace(current))
+            {
+                while (!IsEof() && char.IsWhiteSpace(Current()))
+                    _position++;
+                
+                yield return new Token(SyntaxKind.Whitespace, GetSpan(start));
+                continue;
+            }
+            
+            if (TryDiagnosticRule(start, LexerRules.PriorityDiagnostic)) continue;
+            if (LexWithRule() is not { } rule)
             {
                 if (!TryDiagnosticRule(start, LexerRules.Diagnostic))
                 {
@@ -54,7 +73,7 @@ public sealed class Lexer(SourceFile file)
                 break;
             }
 
-            yield return new Token(result.Rule.Syntax, GetSpan(start), result.Content);
+            yield return new Token(rule.Syntax, GetSpan(start));
         }
 
         yield return new Token(SyntaxKind.Eof, GetSpan(GetLocation()));
@@ -67,7 +86,7 @@ public sealed class Lexer(SourceFile file)
             var match = rule.Pattern.Match(file.SourceText, _position);
             if (!match.Success || match.Index != _position) continue;
 
-            Advance(match.Value);
+            Advance(match.Length);
             _diagnostics.Report(
                 GetSpan(start),
                 rule.Severity,
@@ -82,13 +101,13 @@ public sealed class Lexer(SourceFile file)
         return false;
     }
 
-    private (LexerRule Rule, string Content)? LexWithRule()
+    private LexerRule? LexWithRule()
     {
         LexerRule? bestRule = null;
-        var bestContent = "";
+        var advanceLength = 0;
         var bestScore = -1;
 
-        if (!IsEof() && LexerRules.LiteralRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
+        if (LexerRules.LiteralRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
         {
             foreach (var rule in candidates)
             {
@@ -99,28 +118,28 @@ public sealed class Lexer(SourceFile file)
 
                 bestScore = score;
                 bestRule = rule;
-                bestContent = content;
+                advanceLength = content.Length;
             }
         }
 
         foreach (var (rule, compiledRegex) in _compiledRegexRules)
         {
             var match = compiledRegex.Match(file.SourceText, _position);
-            if (!match.Success || match.Index != _position || match.Value.Length == 0) continue;
+            if (!match.Success || match.Index != _position || match.Length == 0) continue;
 
-            var score = match.Value.Length * (int)rule.Kind;
+            var score = match.Length * (int)rule.Kind;
             if (score <= bestScore) continue;
 
             bestScore = score;
             bestRule = rule;
-            bestContent = match.Value;
+            advanceLength = match.Length;
         }
 
         if (bestRule == null)
             return null;
 
-        Advance(bestContent);
-        return (bestRule.Value, bestContent);
+        Advance(advanceLength);
+        return bestRule;
     }
 
     private string? GetLiteralMatch(LexerRule rule) =>
@@ -135,7 +154,7 @@ public sealed class Lexer(SourceFile file)
             _ => null
         };
     
-    private void Advance(string content) => _position += content.Length;
+    private void Advance(int offset) => _position += offset;
     private bool MatchesPatternAt(string pattern) => file.SourceText.AsSpan(_position, pattern.Length).SequenceEqual(pattern);
     private char Current() => file.SourceText[_position];
     private bool IsEof(int offset = 0) => _position + offset >= file.SourceText.Length;
