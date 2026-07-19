@@ -392,6 +392,25 @@ public class LexerTest
         Assert.Equal(0, number.Span.Start.Character);
         Assert.Equal(3, number.Span.End.Character);
     }
+    
+    [Fact]
+    public void Tokenize_VeryLongFile()
+    {
+        const int identifierCount = 2000;
+        var source = string.Join('\n', Enumerable.Repeat("hello_world", identifierCount));
+        var tokens = Utility.GetTokens(source, withTrivia: true);
+        Assert.Equal(identifierCount * 2, tokens.Count);
+
+        for (var i = 0; i < identifierCount; i += 2)
+        {
+            var identifier = tokens[i];
+            var whitespace = tokens[i + 1];
+            Assert.Equal("hello_world", identifier.Text);
+            Assert.Equal(SyntaxKind.Identifier, identifier.Kind);
+            Assert.Equal("\n", whitespace.Text);
+            Assert.Equal(SyntaxKind.Whitespace, whitespace.Kind);
+        }
+    }
 
     [Fact]
     public void Tokenizes_ProperSpan_WithWhitespace()
