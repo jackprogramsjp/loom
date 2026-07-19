@@ -1,2 +1,3 @@
-  print("hi")
-
+do
+    print("hi")
+end

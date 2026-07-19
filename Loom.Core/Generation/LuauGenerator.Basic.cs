@@ -44,7 +44,7 @@ public sealed partial class LuauGenerator
         return new LuauTree(statements);
     }
 
-    public override Chunk VisitBlock(Block block) => new(GenerateStatements(block.Statements));
+    public override Do VisitBlock(Block block) => new(GenerateChunk(block));
     public override LuauNode VisitBreak(Break @break) => new Luau.AST.Break();
     public override LuauNode VisitContinue(Continue @continue) => new Luau.AST.Continue();
     public override LuauNode VisitWhile(While @while) => new WhileStatement(Visit(@while.Condition), GenerateChunk(@while.Body));

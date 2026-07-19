@@ -353,7 +353,10 @@ public sealed partial class LuauGenerator
     private Luau.AST.TypeParameters GenerateTypeParameters(TypeParameters? typeParameters) =>
         MaybeVisit<Luau.AST.TypeParameters>(typeParameters) ?? new Luau.AST.TypeParameters();
 
-    private Chunk GenerateChunk(Statement statement) => statement is Block block ? VisitBlock(block) : new Chunk(GenerateStatements(statement));
+    private Chunk GenerateChunk(Statement statement) =>
+        statement is Block block
+            ? new Chunk(GenerateStatements(block.Statements))
+            : new Chunk(GenerateStatements(statement));
 
     private List<LuauStatement> GenerateStatements(List<Statement> statements)
     {
