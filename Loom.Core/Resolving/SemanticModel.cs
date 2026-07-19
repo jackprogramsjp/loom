@@ -16,7 +16,9 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
         && !Tree.File.IsIntrinsic
         && (
             RuntimeReferences > 0
-            || References.Any(pair => !NodeId.Map[pair.Key].File.IsIntrinsic && pair.Value.Any(s => s.File.Name == "runtime.loom" && s.IsIntrinsic))
+            || References.Any(pair => !NodeId.Map[pair.Key].File.IsIntrinsic
+                && pair.Value.Any(s => s is { File.Name: "runtime.loom", IsIntrinsic: true, IsTypeSymbol: true })
+            )
         );
 
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
