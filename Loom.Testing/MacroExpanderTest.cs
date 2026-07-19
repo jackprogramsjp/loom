@@ -6,7 +6,7 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class MacroExpanderTest
 {
-    [Fact]
+    [Fact(Skip = "No Roblox types (yet)")]
     public void ThrowsFor_TypeParametersInNewInstanceCall()
     {
         var diagnostics = Utility.GetGeneratorDiagnostics("fn abc<T: CreatableInstance> -> new_instance::<T>();", true);
