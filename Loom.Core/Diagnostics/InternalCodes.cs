@@ -69,6 +69,7 @@ public static class InternalCodes
     public const string IntrinsicImplementation = "L345";
     public const string InvalidTypeArguments = "L346";
     public const string NewInstanceNoClassName = "L347";
+    public const string NewInstanceAbstractClassName = "L348";
     
     public const string SimplifiableCode = "L400";
 }

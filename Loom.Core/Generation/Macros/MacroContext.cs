@@ -1,10 +1,11 @@
+using Loom.Core.Diagnostics;
 using Loom.Core.Resolving;
 using Loom.Luau;
 using Loom.Luau.AST;
 
 namespace Loom.Core.Generation.Macros;
 
-internal record MacroContext(SemanticModel SemanticModel, LuauState State)
+internal record MacroContext(SemanticModel SemanticModel, LuauState State, DiagnosticBag Diagnostics)
 {
     public static LuauExpression GetCallObject(Call call) =>
         call.Callee switch

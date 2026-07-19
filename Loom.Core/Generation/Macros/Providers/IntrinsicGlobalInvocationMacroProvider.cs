@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.Core.Diagnostics;
 using Loom.Luau;
 using Loom.Luau.AST;
 using Type = Loom.Core.TypeChecking.Types.Type;
@@ -28,10 +29,19 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
 
                 return true;
             case "new_instance":
+                var typeName = typeArguments!.ArgumentsList[0];
+                var instanceType = context.SemanticModel.GetType(typeName);
+                if (instanceType is TypeChecking.Types.TypeParameter)
+                    context.Diagnostics.Error(
+                        typeName,
+                        InternalCodes.NewInstanceAbstractClassName,
+                        "Cannot pass type parameters to 'new_instance::<T>()'."
+                    );
+
                 expression = LuauFactory.LibraryCall(
                     "Instance",
                     ["new"],
-                    [new StringLiteral(typeArguments!.ArgumentsList[0].ToString())]
+                    [new StringLiteral(typeName.ToString())]
                 );
 
                 return true;

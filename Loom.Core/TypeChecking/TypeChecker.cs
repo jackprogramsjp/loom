@@ -35,7 +35,7 @@ public sealed partial class TypeChecker
     private FlowState _flowState;
     private Symbol? _resolvingHoisted;
 
-    private MacroContext EmptyMacroContext => new(_semanticModel, new LuauState());
+    private MacroContext EmptyMacroContext => new(_semanticModel, new LuauState(), _diagnostics);
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)

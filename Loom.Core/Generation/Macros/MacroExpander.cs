@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.Core.Diagnostics;
 using Loom.Core.Generation.Macros.Providers;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
@@ -17,9 +18,9 @@ using Parameter = Loom.Luau.AST.Parameter;
 
 namespace Loom.Core.Generation.Macros;
 
-internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state)
+internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state, DiagnosticBag diagnostics)
 {
-    private readonly MacroContext _context = new(semanticModel, state);
+    private readonly MacroContext _context = new(semanticModel, state, diagnostics);
     private static readonly IReadOnlyCollection<IMacroProvider> _providers =
     [
         new NumberMacroProvider(),
