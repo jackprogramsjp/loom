@@ -38,19 +38,11 @@ public sealed partial class Parser(LexerResult lexerResult)
         return nodes;
     }
 
-    private bool ValidateFunctionSignature(string kind, LocationSpan span, [NotNullWhen(true)] ColonTypeClause? returnType, Parameters? parameters)
+    private bool ValidateFunctionSignature(string kind, LocationSpan span, [NotNullWhen(true)] ColonTypeClause? returnType, Parameters? parameters) =>
+        ValidateSignatureReturnType(kind, span, returnType) && ValidateSignatureParameters(kind, parameters);
+
+    private bool ValidateSignatureParameters(string kind, Parameters? parameters)
     {
-        if (returnType == null)
-        {
-            _diagnostics.Error(
-                span,
-                InternalCodes.MissingDeclareFnReturnType,
-                $"{(kind.Length > 0 ? char.ToUpperInvariant(kind[0]) + kind[1..] : kind)} must have a return type."
-            );
-
-            return false;
-        }
-
         var parameterWithDefault = parameters?.ParameterList.Find(p => p.EqualsValueClause != null);
         if (parameterWithDefault != null)
         {
@@ -71,6 +63,20 @@ public sealed partial class Parser(LexerResult lexerResult)
             parameterWithoutType,
             InternalCodes.MissingDeclareFnParameterType,
             $"Parameters must have types in {kind}."
+        );
+
+        return false;
+    }
+
+    private bool ValidateSignatureReturnType(string kind, LocationSpan span, ColonTypeClause? returnType)
+    {
+        if (returnType != null)
+            return true;
+
+        _diagnostics.Error(
+            span,
+            InternalCodes.MissingDeclareFnReturnType,
+            $"{(kind.Length > 0 ? char.ToUpperInvariant(kind[0]) + kind[1..] : kind)} must have a return type."
         );
 
         return false;
@@ -169,7 +175,7 @@ public sealed partial class Parser(LexerResult lexerResult)
     {
         if (IsEof())
         {
-            var last = Last();
+            var last = lexerResult.Tokens[_position - 1];
             var text = SyntaxFacts.GetText(kind) ?? kind.ToString();
             _diagnostics.Error(last, InternalCodes.UnexpectedEof, message != null ? message(null) : $"Expected '{text}', got EOF.");
             return last;
@@ -196,9 +202,7 @@ public sealed partial class Parser(LexerResult lexerResult)
         return current;
     }
 
-    private Token Current() => Peek(0);
-    private Token Last() => Peek(-1);
-    private Token Peek(int offset) => lexerResult.Tokens[_position + offset];
+    private Token Current() => lexerResult.Tokens[_position];
     private bool IsEof() => Current().Kind == SyntaxKind.Eof;
     private static string SafeTokenText(Token? token) => token is { Kind: not SyntaxKind.Eof } ? $"'{token.Text}'" : "EOF";
 }

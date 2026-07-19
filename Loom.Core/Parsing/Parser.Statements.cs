@@ -3,10 +3,12 @@ using Loom.Core.Text;
 
 namespace Loom.Core.Parsing;
 
+using StatementParser = Func<Token, Statement>;
+
 public sealed partial class Parser
 {
-    private Dictionary<SyntaxKind, Func<Token, Statement>> StatementParsers =>
-        new()
+    private Dictionary<SyntaxKind, StatementParser> StatementParsers =>
+        field ??= new Dictionary<SyntaxKind, StatementParser>
         {
             [SyntaxKind.LBrace] = ParseBlock,
             [SyntaxKind.ReturnKeyword] = ParseReturn,
@@ -28,6 +30,37 @@ public sealed partial class Parser
             [SyntaxKind.ContinueKeyword] = ParseContinue
         };
 
+    private Statement ParseStatement()
+    {
+        var statement = ParseStatementCore();
+        Match(SyntaxKind.Semicolon);
+        return statement;
+    }
+
+    private Statement ParseStatementCore()
+    {
+        if (IsEof())
+            return new ExpressionStatement(ParseExpression());
+
+        var token = Advance();
+        var statementParser = StatementParsers.GetValueOrDefault(token.Kind);
+        if (statementParser != null)
+            return statementParser(token);
+
+        _position--;
+        return new ExpressionStatement(ParseExpression());
+    }
+
+    private Block ParseBlock(Token leftBrace)
+    {
+        var statements = new List<Statement>();
+        Token? rightBrace;
+        while (!Match(out rightBrace, SyntaxKind.RBrace))
+            statements.Add(ParseStatement());
+
+        return new Block(leftBrace, rightBrace, statements);
+    }
+    
     private Implement ParseImplement(Token keyword)
     {
         var traitNameIdentifier = ExpectIdentifier("trait name");
@@ -59,37 +92,6 @@ public sealed partial class Parser
         }
 
         return members.OfType<FunctionDeclaration>().ToList();
-    }
-
-    private Statement ParseStatement()
-    {
-        var statement = ParseStatementCore();
-        Match(SyntaxKind.Semicolon);
-        return statement;
-    }
-
-    private Statement ParseStatementCore()
-    {
-        if (IsEof())
-            return new ExpressionStatement(ParseExpression());
-
-        var token = Advance();
-        var statementParser = StatementParsers.GetValueOrDefault(token.Kind);
-        if (statementParser != null)
-            return statementParser(token);
-
-        _position--;
-        return new ExpressionStatement(ParseExpression());
-    }
-
-    private Block ParseBlock(Token leftBrace)
-    {
-        var statements = new List<Statement>();
-        while (!Match(SyntaxKind.RBrace))
-            statements.Add(ParseStatement());
-
-        var rightBrace = Last();
-        return new Block(leftBrace, rightBrace, statements);
     }
 
     private Return ParseReturn(Token keyword)
