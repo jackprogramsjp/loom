@@ -58,7 +58,7 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitExpressionStatement(ExpressionStatement expressionStatement) => WrapExpressionAsStatement(Visit(expressionStatement.Expression));
     public override LuauNode VisitNameOf(NameOf nameOf) => new StringLiteral(((TypeChecking.Types.LiteralType)_semanticModel.GetType(nameOf)).Value!.ToString()!);
 
-    public override LuauNode VisitAsExpression(AsExpression asExpression) => new TypeCast(Visit(asExpression.Expression), Visit(asExpression.Type));
+    public override LuauNode VisitAs(As @as) => new TypeCast(Visit(@as.Expression), Visit(@as.Type));
 
     public override LuauNode VisitTernaryOperator(TernaryOperator ternaryOperator) =>
         new IfExpression(Visit(ternaryOperator.Condition), Visit(ternaryOperator.ThenBranch), [], Visit(ternaryOperator.ElseBranch));

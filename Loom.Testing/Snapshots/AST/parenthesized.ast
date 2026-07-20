@@ -178,7 +178,7 @@
           LeftParen: Token(LParen, "(")
           RightParen: Token(RParen, ")")
           ArgumentList: [
-            AsExpression(
+            As(
               Expression: Identifier(
                 Name: Token(Identifier, "x")
                 Token(Identifier, "x")

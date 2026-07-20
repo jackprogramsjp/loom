@@ -401,7 +401,7 @@ public class VisitorTraversalTest
         AssertVisitOrder(
             "x as number",
             "ExpressionStatement",
-            "AsExpression",
+            "As",
             "Identifier",
             "PrimitiveType"
         );

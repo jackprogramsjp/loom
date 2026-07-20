@@ -69,6 +69,9 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
         return referenceSymbol == null ? null : GetDeclarationSymbol(referenceSymbol.Declaration, kind);
     }
 
+    public T? FindDeclarationSymbol<T>(string name) where T : Symbol =>
+        Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(s => s.Name == name);
+
     public Type GetType(Node node) => TypeSolver.GetType(node);
     public Type? GetDeclarationType(Node node) => GetSymbol(node) is { } symbol ? TypeSolver.GetType(symbol.Declaration) : null;
 

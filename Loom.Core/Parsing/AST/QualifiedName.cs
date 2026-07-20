@@ -1,6 +1,6 @@
 namespace Loom.Core.Parsing.AST;
 
-public class QualifiedName(Identifier identifier, List<DotName> names)
+public sealed class QualifiedName(Identifier identifier, List<DotName> names)
     : Name(identifier.Name, names.SelectMany(n => n.Tokens).ToList()!, [identifier])
 {
     public Identifier Identifier { get; } = identifier;

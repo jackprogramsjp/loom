@@ -2,7 +2,7 @@ using Loom.Core.Text;
 
 namespace Loom.Core.Parsing.AST;
 
-public class ElementAccess(Token leftBracket, Token rightBracket, Expression expression, Expression indexExpression)
+public sealed class ElementAccess(Token leftBracket, Token rightBracket, Expression expression, Expression indexExpression)
     : AssignmentTarget([..expression.Tokens, leftBracket, ..indexExpression.Tokens, rightBracket], [expression, indexExpression])
 {
     public Token LeftBracket { get; } = leftBracket;

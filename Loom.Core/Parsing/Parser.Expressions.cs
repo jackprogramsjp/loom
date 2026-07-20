@@ -22,7 +22,7 @@ public sealed partial class Parser
                 case SyntaxKind.AsKeyword:
                 {
                     var type = ParseType();
-                    left = new AsExpression(op, left, type);
+                    left = new As(op, left, type);
                     continue;
                 }
                 case SyntaxKind.Question:

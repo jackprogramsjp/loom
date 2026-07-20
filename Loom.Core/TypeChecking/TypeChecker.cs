@@ -316,14 +316,14 @@ public sealed partial class TypeChecker
         return BindType(parameter, declaredType ?? initializerType!);
     }
 
-    public override Type VisitAsExpression(AsExpression asExpression)
+    public override Type VisitAs(As @as)
     {
-        var expressionType = Visit(asExpression.Expression);
-        var castedType = TypeSimplifier.Simplify(Visit(asExpression.Type));
+        var expressionType = Visit(@as.Expression);
+        var castedType = TypeSimplifier.Simplify(Visit(@as.Type));
         if (Type.IsNotUnknown(expressionType) && Type.IsNotNever(castedType) && Type.IsNotUnknown(castedType))
-            _semanticModel.TypeSolver.AddConstraint(expressionType, castedType, asExpression);
+            _semanticModel.TypeSolver.AddConstraint(expressionType, castedType, @as);
 
-        return BindType(asExpression, castedType);
+        return BindType(@as, castedType);
     }
 
     public override Type VisitNameOf(NameOf nameOf) =>

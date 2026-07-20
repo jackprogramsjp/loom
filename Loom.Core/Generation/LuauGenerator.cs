@@ -175,13 +175,36 @@ public sealed partial class LuauGenerator
 
     public override LuauNode VisitInvocation(Invocation invocation)
     {
-        var isMethod = invocation.Expression.Children.FirstOrDefault() is { } child
+        var callee = Visit(invocation.Expression);
+        var isMethod = HasLuauMethodAttribute(invocation.Expression)
+            || invocation.Expression.Children.FirstOrDefault() is { } child
             && _semanticModel.GetType(child) is InterfaceType interfaceType
             && invocation.Expression.Tokens.LastOrDefault() is { Kind: SyntaxKind.Identifier } name
             && interfaceType.TraitMethodNames.Contains(name.Text);
 
-        var call = new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit), isMethod);
+        var call = new Call(callee, invocation.Arguments.ArgumentList.ConvertAll(Visit), isMethod);
         return _macroExpander.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
+    }
+
+    private bool HasLuauMethodAttribute(Expression callee)
+    {
+        var (objectExpression, names) = callee switch
+        {
+            QualifiedName name => (name.Identifier, name.Names),
+            PropertyAccess propertyAccess => (propertyAccess.Expression, propertyAccess.Names),
+            _ => (callee, [])
+        };
+
+        if (_semanticModel.GetType(objectExpression) is not InterfaceType interfaceType)
+            return false;
+
+        var interfaceSymbol = _semanticModel.FindDeclarationSymbol<InterfaceSymbol>(interfaceType.Name);
+        if (interfaceSymbol == null)
+            return false;
+
+        var propertyPath = names.Select(n => n.Name.Text).ToList();
+        return interfaceSymbol.GetPropertyAtPath(propertyPath) is { } property 
+            && property.Attributes.Any(a => a is { Name: "luau_method", IsIntrinsic: true });
     }
 
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName)

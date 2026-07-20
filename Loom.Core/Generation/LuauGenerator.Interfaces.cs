@@ -1,8 +1,10 @@
+using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Luau;
 using Loom.Luau.AST;
 using TypeName = Loom.Luau.AST.TypeName;
+using TypeParameters = Loom.Luau.AST.TypeParameters;
 
 namespace Loom.Core.Generation;
 
@@ -80,16 +82,12 @@ public sealed partial class LuauGenerator
             ? new TableTypeIndexer(indexer.MutKeyword == null ? LuauVisibility.Read : null, Visit(indexer.IndexType), Visit(indexer.ColonTypeClause))
             : null;
 
-        var properties = propertyDeclarations.Select(p => new TableTypeProperty(
-                    p.MutKeyword == null ? LuauVisibility.Read : null,
-                    p.Name.Text,
-                    Visit(p.ColonTypeClause)
-                )
-            )
+        var typeParameters = GenerateTypeParameters(interfaceDeclaration.TypeParameters);
+        var properties = propertyDeclarations
+            .Select(property => GenerateInterfacePropertyType(interfaceDeclaration, property, typeParameters))
             .ToList();
 
         var tableType = new TableType(tableIndexer, properties);
-        var typeParameters = GenerateTypeParameters(interfaceDeclaration.TypeParameters);
         return new Luau.AST.TypeAlias(
             interfaceDeclaration.Name.Text,
             typeParameters,
@@ -103,6 +101,36 @@ public sealed partial class LuauGenerator
                 )
                 : tableType
         );
+    }
+
+    private TableTypeProperty GenerateInterfacePropertyType(InterfaceDeclaration interfaceDeclaration, PropertyDeclaration property, TypeParameters typeParameters)
+    {
+        LuauVisibility? visibility = property.MutKeyword == null ? LuauVisibility.Read : null;
+        var name = property.Name.Text;
+        var propertySymbol = _semanticModel.GetDeclarationSymbol(property, SymbolKind.Property) as PropertySymbol;
+        var type = Visit(property.ColonTypeClause);
+        if (propertySymbol?.Attributes.Find(a => a is { Name: "luau_method", IsIntrinsic: true }) is not { } luauMethodAttribute)
+            return new TableTypeProperty(visibility, name, type);
+
+        if (type is not Luau.AST.FunctionType functionType)
+        {
+            _diagnostics.Error(
+                luauMethodAttribute.Declaration,
+                InternalCodes.InvalidLuauMethodAttribute,
+                "May only use function types directly when using 'luau_method' attribute"
+            );
+
+            return new TableTypeProperty(visibility, name, type);
+        }
+
+        var typeArguments = typeParameters.Parameters.Count > 0
+            ? typeParameters.Parameters.ConvertAll(LuauType (param) => new TypeName(param.Name))
+            : null;
+
+        var selfType = new TypeName(interfaceDeclaration.Name.Text, typeArguments);
+        functionType.ParameterTypes.Insert(0, selfType);
+
+        return new TableTypeProperty(visibility, name, type);
     }
 
     public override LuauNode VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
@@ -126,11 +154,11 @@ public sealed partial class LuauGenerator
 
     public override LuauNode VisitInterfaceInvocationIndexInitializer(InterfaceInvocationIndexInitializer indexInitializer) =>
         new ComputedPropertyTableInitializer(Visit(indexInitializer.IndexExpression), Visit(indexInitializer.Expression));
-    
+
     public override LuauNode VisitInterfaceInvocationPropertyInitializer(InterfaceInvocationPropertyInitializer propertyInitializer) =>
         new PropertyTableInitializer(propertyInitializer.Name.Text, Visit(propertyInitializer.Expression));
 
-    public override LuauNode VisitInterfaceInvocationShorthandPropertyInitializer(InterfaceInvocationShorthandPropertyInitializer shorthandPropertyInitializer) => 
+    public override LuauNode VisitInterfaceInvocationShorthandPropertyInitializer(InterfaceInvocationShorthandPropertyInitializer shorthandPropertyInitializer) =>
         new PropertyTableInitializer(shorthandPropertyInitializer.Identifier.Name.Text, Visit(shorthandPropertyInitializer.Identifier));
 
     private static string GetImplementationMetaName(Implement implement)
