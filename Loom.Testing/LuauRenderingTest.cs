@@ -308,6 +308,25 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_Call_MultipleArguments()
+    {
+        var call = new Call(
+            new Identifier("f"),
+            [new NumberLiteral(1), new StringLiteral("a"), new BooleanLiteral(true)]
+        );
+
+        Assert.Equal("f(1, \"a\", true)", call.Render());
+    }
+
+    [Fact]
+    public void Renders_Call_MethodFlag_WithNonPropertyAccess()
+    {
+        var call = new Call(new Identifier("f"), [], true);
+
+        Assert.Equal("f()", call.Render());
+    }
+    
+    [Fact]
     public void Renders_Call()
     {
         var emptyCall = new Call(new Identifier("abc"), []);
@@ -324,7 +343,7 @@ public class LuauRenderingTest
     }
 
     [Fact]
-    public void Renders_PropertyAccess_MultipleNames_DefaultDot()
+    public void Renders_PropertyAccess_MultipleNames()
     {
         var access = new PropertyAccess(
             new Identifier("obj"),
@@ -332,6 +351,28 @@ public class LuauRenderingTest
         );
 
         Assert.Equal("obj.a.b.c", access.Render());
+    }
+    
+    [Fact]
+    public void Renders_PropertyAccess_TwoNames()
+    {
+        var access = new PropertyAccess(
+            new Identifier("obj"),
+            ["foo", "bar"]
+        );
+
+        Assert.Equal("obj.foo.bar", access.Render());
+    }
+    
+    [Fact]
+    public void Renders_PropertyAccess_TwoNames_ColonOperator()
+    {
+        var access = new PropertyAccess(
+            new Identifier("obj"),
+            ["foo", "bar"]
+        ) {Operator = ':'};
+
+        Assert.Equal("obj.foo:bar", access.Render());
     }
 
     [Fact]
@@ -346,10 +387,10 @@ public class LuauRenderingTest
     {
         var access = new PropertyAccess(
             new Identifier("abc"),
-            ["foo", "bar"]
+            ["foo", "bar", "baz"]
         ) { Operator = ':' };
 
-        Assert.Equal("abc.foo:bar", access.Render());
+        Assert.Equal("abc.foo.bar:baz", access.Render());
     }
 
     [Fact]
