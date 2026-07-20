@@ -1,0 +1,12 @@
+interface RenamedFoo {
+    [luau_method, luau_name("DoFoo")]
+    do_foo: fn: void;
+    [luau_name("SuperGoob")]
+    goober: number;
+}
+
+let goober = 420;
+let foo = new RenamedFoo { goober, do_foo: none as never };
+foo.goober;
+foo['do_foo']();
+foo.do_foo();

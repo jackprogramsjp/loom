@@ -1,6 +1,2 @@
-let collection = get_service::<CollectionService>();
-let instances = collection.GetTagged("Lava");
-for i : instances {
-    if !i.IsA("BasePart") continue;
-    print(i)
-}
+let x=  1..10;
+let l = x["length"];

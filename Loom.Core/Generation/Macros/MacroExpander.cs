@@ -254,6 +254,8 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
 
     private bool TryGetNamedAccessMacro(Expression objectExpression, string name, LuauExpression target, [MaybeNullWhen(false)] out LuauExpression expression)
     {
+        Console.WriteLine(objectExpression);
+        Console.WriteLine(name);
         if (GetProvider(objectExpression) is { } provider)
             return provider.TryProperty(_context, name, target, out expression);
 

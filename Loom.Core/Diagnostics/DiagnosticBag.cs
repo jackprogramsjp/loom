@@ -30,9 +30,14 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     public void NotImplemented(LocationSpan span, string? feature = null, string? hint = null) =>
         Error(span, InternalCodes.NotImplemented, feature ?? "This feature is not yet implemented.", hint);
 
-    public void CompilerError(Node node, string message) => CompilerError(node.Span, message);
-    public void CompilerError(SourceFile file, string message) => CompilerError(LocationSpan.Empty(file), message);
-    public void CompilerError(LocationSpan span, string message) => Error(span, InternalCodes.CompilerError, message, "this is a compiler bug! please report an issue.");
+    public object? CompilerError(Node node, string message) => CompilerError(node.Span, message);
+    public object? CompilerError(SourceFile file, string message) => CompilerError(LocationSpan.Empty(file), message);
+
+    public object? CompilerError(LocationSpan span, string message)
+    {
+        Error(span, InternalCodes.CompilerError, message, "this is a compiler bug! please report an issue.");
+        return null;
+    }
 
     public Diagnostic? Find(Func<Diagnostic, bool> predicate) => Set.FirstOrDefault(predicate);
     public DiagnosticBag WithoutInfo() => new(Set.Where(d => d.Severity > DiagnosticSeverity.Info).ToHashSet());

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Parsing.AST;
 
 namespace Loom.Core.Resolving;
@@ -8,5 +9,10 @@ public class PropertySymbol(PropertyDeclaration propertyDeclaration, InterfaceSy
     public InterfaceSymbol? PointsTo { get; } = pointsTo;
     public List<AttributeSymbol> Attributes { get; } = attributes;
 
-    public bool HasIntrinsicAttribute(string name) => Attributes.Any(a => a.IsIntrinsic && a.Name == name);
+    public bool HasIntrinsicAttribute(string name) => TryGetIntrinsicAttribute(name, out _);
+    public bool TryGetIntrinsicAttribute(string name, [MaybeNullWhen(false)] out AttributeSymbol attribute)
+    {
+        attribute = Attributes.Find(a => a.IsIntrinsic && a.Name == name);
+        return attribute != null;
+    }
 }

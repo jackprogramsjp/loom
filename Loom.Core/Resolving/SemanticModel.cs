@@ -1,7 +1,9 @@
 global using SymbolTable = System.Collections.Generic.Dictionary<Loom.Core.Parsing.AST.NodeId, System.Collections.Generic.List<Loom.Core.Resolving.Symbol>>;
+using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.TypeChecking;
+using Loom.Core.TypeChecking.Types;
 using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core.Resolving;
@@ -68,12 +70,35 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
         var referenceSymbol = GetSymbol(node, kind);
         return referenceSymbol == null ? null : GetDeclarationSymbol(referenceSymbol.Declaration, kind);
     }
+    
+    public bool TryGetIntrinsicAttribute(Expression expression, string name, [MaybeNullWhen(false)] out AttributeSymbol attribute)
+    {
+        attribute = null;
+        var (objectExpression, names) = expression switch
+        {
+            QualifiedName qualified => (qualified.Identifier, qualified.Names.Select(d => d.Name.Text).ToList()),
+            PropertyAccess propertyAccess => (propertyAccess.Expression, propertyAccess.Names.Select(d => d.Name.Text).ToList()),
+            ElementAccess { IndexExpression: Literal { Value: string propertyName } } elementAccess => (elementAccess.Expression, [propertyName]),
+            _ => (expression, [])
+        };
 
-    public T? FindDeclarationSymbol<T>(string name) where T : Symbol =>
-        Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(s => s.Name == name);
+        if (names.Count == 0 || GetType(objectExpression) is not InterfaceType interfaceType)
+            return false;
+
+        var interfaceSymbol = FindDeclarationSymbol<InterfaceSymbol>(interfaceType.Name);
+        if (interfaceSymbol == null)
+            return false;
+
+        var property = interfaceSymbol.GetPropertyAtPath(names);
+        return property != null && property.TryGetIntrinsicAttribute(name, out attribute);
+    }
+    
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
     public Type? GetDeclarationType(Node node) => GetSymbol(node) is { } symbol ? TypeSolver.GetType(symbol.Declaration) : null;
+    
+    private T? FindDeclarationSymbol<T>(string name) where T : Symbol =>
+        Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(s => s.Name == name);
 
     private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
     {

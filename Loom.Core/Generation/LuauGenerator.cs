@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.Generation.Macros;
 using Loom.Core.Parsing.AST;
@@ -176,7 +177,7 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitInvocation(Invocation invocation)
     {
         var callee = Visit(invocation.Expression);
-        var isMethod = HasLuauMethodAttribute(invocation.Expression)
+        var isMethod = _semanticModel.TryGetIntrinsicAttribute(invocation.Expression, "luau_method", out _)
             || invocation.Expression.Children.FirstOrDefault() is { } child
             && _semanticModel.GetType(child) is InterfaceType interfaceType
             && invocation.Expression.Tokens.LastOrDefault() is { Kind: SyntaxKind.Identifier } name
@@ -186,37 +187,15 @@ public sealed partial class LuauGenerator
         return _macroExpander.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
     }
 
-    private bool HasLuauMethodAttribute(Expression callee)
-    {
-        var (objectExpression, names) = callee switch
-        {
-            QualifiedName name => (name.Identifier, name.Names),
-            PropertyAccess propertyAccess => (propertyAccess.Expression, propertyAccess.Names),
-            _ => (callee, [])
-        };
-
-        if (_semanticModel.GetType(objectExpression) is not InterfaceType interfaceType)
-            return false;
-
-        var interfaceSymbol = _semanticModel.FindDeclarationSymbol<InterfaceSymbol>(interfaceType.Name);
-        if (interfaceSymbol == null)
-            return false;
-
-        var propertyPath = names.Select(n => n.Name.Text).ToList();
-        var property = interfaceSymbol.GetPropertyAtPath(propertyPath);
-        return property != null && property.HasIntrinsicAttribute("luau_method");
-    }
-
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName)
     {
         var luauAccess = new Luau.AST.PropertyAccess(Visit(qualifiedName.Identifier), qualifiedName.Names.ConvertAll(dotName => dotName.Name.Text));
         if (_macroExpander.TryGetQualifiedNameMacro(qualifiedName, luauAccess, out var propertyReplacement))
             return propertyReplacement;
 
-        if (_macroExpander.TryGetInvocationMacroReference(qualifiedName, luauAccess, out var referenceReplacement))
-            return referenceReplacement;
-
-        return luauAccess;
+        return _macroExpander.TryGetInvocationMacroReference(qualifiedName, luauAccess, out var referenceReplacement)
+            ? referenceReplacement
+            : GenerateRenamedAccess(qualifiedName, luauAccess.Target, luauAccess.Names);
     }
 
     public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess)
@@ -225,10 +204,9 @@ public sealed partial class LuauGenerator
         if (_macroExpander.TryGetPropertyAccessMacro(propertyAccess, luauAccess, out var propertyReplacement))
             return propertyReplacement;
 
-        if (_macroExpander.TryGetInvocationMacroReference(propertyAccess, luauAccess, out var referenceReplacement))
-            return referenceReplacement;
-
-        return luauAccess;
+        return _macroExpander.TryGetInvocationMacroReference(propertyAccess, luauAccess, out var referenceReplacement)
+            ? referenceReplacement
+            : GenerateRenamedAccess(propertyAccess, luauAccess.Target, luauAccess.Names);
     }
 
     public override LuauNode VisitElementAccess(ElementAccess elementAccess)
@@ -236,7 +214,9 @@ public sealed partial class LuauGenerator
         var luauAccess = new Luau.AST.ElementAccess(Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression));
         return _macroExpander.TryGetElementAccessMacro(elementAccess, luauAccess, out var replacement)
             ? replacement
-            : luauAccess;
+            : luauAccess.Index is StringLiteral literal
+                ? GenerateRenamedAccess(elementAccess, luauAccess.Target, [literal.Value])
+                : luauAccess;
     }
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -311,6 +291,11 @@ public sealed partial class LuauGenerator
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
+
+    private Luau.AST.PropertyAccess GenerateRenamedAccess(Expression access, LuauExpression target, List<string> names) =>
+        _semanticModel.TryGetIntrinsicAttribute(access, "luau_name", out var attr) && ValidateLuauNameAttribute(attr, out var nameLiteral)
+            ? new Luau.AST.PropertyAccess(target, [..names.SkipLast(1), nameLiteral.Value])
+            : new Luau.AST.PropertyAccess(target, names);
 
     private LuauNode GenerateBitwiseOperator(BinaryOperator binaryOperator)
     {

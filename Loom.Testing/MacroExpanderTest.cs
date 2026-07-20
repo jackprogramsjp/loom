@@ -174,7 +174,7 @@ public class MacroExpanderTest
         Assert.Equal("concat", Assert.Single(concat.Names));
 
         var propertyAccess = Assert.IsType<PropertyAccess>(Assert.Single(concatCall.Arguments));
-        Assert.IsType<ElementAccess>(propertyAccess.Target);
+        Assert.IsType<PropertyAccess>(propertyAccess.Target);
         Assert.Equal(2, propertyAccess.Names.Count);
         Assert.Equal("b", propertyAccess.Names.First());
         Assert.Equal("a", propertyAccess.Names.Last());
@@ -199,7 +199,7 @@ public class MacroExpanderTest
         var unaryOperator = Assert.IsType<UnaryOperator>(variable.Initializer);
         var propertyAccess = Assert.IsType<PropertyAccess>(unaryOperator.Operand);
         var secondPropertyAccess = Assert.IsType<PropertyAccess>(propertyAccess.Target);
-        Assert.IsType<ElementAccess>(secondPropertyAccess.Target);
+        Assert.IsType<PropertyAccess>(secondPropertyAccess.Target);
         Assert.Equal("#", unaryOperator.Operator);
         Assert.Equal("b", Assert.Single(secondPropertyAccess.Names));
         Assert.Equal("a", Assert.Single(propertyAccess.Names));
