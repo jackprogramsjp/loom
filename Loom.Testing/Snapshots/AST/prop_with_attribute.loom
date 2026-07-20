@@ -1,0 +1,4 @@
+interface Abc {
+    [some_attribute, other_attribute(69, 420)]
+    some_prop: number;
+}

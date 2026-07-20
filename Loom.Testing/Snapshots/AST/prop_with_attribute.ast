@@ -1,0 +1,61 @@
+﻿InterfaceDeclaration(
+  SealedKeyword: null
+  ColonTypeListClause: null
+  Body: InterfaceBody(
+    LeftBrace: Token(LBrace, "{")
+    RightBrace: Token(RBrace, "}")
+    Members: [
+      PropertyDeclaration(
+        MutKeyword: null
+        Name: Token(Identifier, "some_prop")
+        ColonTypeClause(
+          ColonToken: Token(Colon, ":")
+          Type: PrimitiveType(
+            Kind: Number
+          )
+        )
+        Attributes(
+          LeftBracket: Token(LBracket, "[")
+          RightBracket: Token(RBracket, "]")
+          AttributeList: [
+            Attribute(
+              Expression: Identifier(
+                Name: Token(Identifier, "some_attribute")
+                Token(Identifier, "some_attribute")
+              )
+              TypeArguments: null
+              Arguments(
+                LeftParen: Token(Identifier, "some_attribute")
+                RightParen: Token(Identifier, "some_attribute")
+                ArgumentList: []
+              )
+            )
+            Attribute(
+              Expression: Identifier(
+                Name: Token(Identifier, "other_attribute")
+                Token(Identifier, "other_attribute")
+              )
+              TypeArguments: null
+              Arguments(
+                LeftParen: Token(LParen, "(")
+                RightParen: Token(RParen, ")")
+                ArgumentList: [
+                  Literal(
+                    Token(NumberLiteral, "69")
+                    Value: 69
+                  )
+                  Literal(
+                    Token(NumberLiteral, "420")
+                    Value: 420
+                  )
+                ]
+              )
+            )
+          ]
+        )
+      )
+    ]
+  )
+  TypeParameters: null
+  Name: Token(Identifier, "Abc")
+)
