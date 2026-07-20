@@ -1224,12 +1224,13 @@ public class ResolverTest
     [Theory]
     [InlineData("sealed interface Foo { foo: number }", true)]
     [InlineData("interface Foo { foo: number }")]
+    [InlineData("interface Nutz; interface Ballz; sealed interface Foo: Nutz, Ballz { foo: number }", true, null, 2)]
     [InlineData("declare sealed interface Foo { foo: number }", true, typeof(Declare))]
     [InlineData("declare interface Foo { foo: number }", false, typeof(Declare))]
-    public void Declares_InterfaceSymbol(string source, bool isSealed = false, Type? declarationType = null)
+    public void Declares_InterfaceSymbol(string source, bool isSealed = false, Type? declarationType = null, int constraintCount = 0)
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel(source));
-        var statement = model.Tree.Statements.First();
+        var statement = model.Tree.Statements.Last();
         Assert.IsType(declarationType ?? typeof(InterfaceDeclaration), statement);
 
         if (declarationType == typeof(Declare))

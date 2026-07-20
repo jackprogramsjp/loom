@@ -3,7 +3,7 @@ declare interface Foo {
     do_foo: fn: void;
 }
 
-declare interface Bar {
+declare interface Bar: Foo {
     foo: Foo;
 }
 
@@ -13,6 +13,7 @@ declare interface Baz {
 }
 
 let bar = none as never as Bar;
+bar.do_foo()
 bar.foo.do_foo();
 
 let baz = none as never as Baz;
