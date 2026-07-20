@@ -1,0 +1,9 @@
+let _range = 69;
+interface Foo {
+    bar: Range;
+}
+
+let foo = new Foo { bar: 1..69 };
+let x = foo.bar.clamp(69);
+let y = foo.bar.clamp(4);
+let z = foo.bar.clamp(2);

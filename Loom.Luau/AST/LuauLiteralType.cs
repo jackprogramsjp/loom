@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Loom.Luau.AST;
 
 public abstract class LuauLiteralType<T>(T value)
@@ -15,8 +13,5 @@ public abstract class LuauLiteralType<T>(T value)
 {
     public T Value { get; } = value;
 
-    public override string Render(RenderState state) =>
-        Value is double n
-            ? n.ToString(CultureInfo.InvariantCulture).Replace("E+", "e")
-            : Value.ToString() ?? "???";
+    public override string Render(RenderState state) => Value.ToString() ?? "???";
 }

@@ -232,13 +232,13 @@ public sealed partial class Parser
             return null;
 
         List<Parameter> parameters = [];
-        if (!Match(SyntaxKind.RParen))
+        if (!Match(out var rightParen, SyntaxKind.RParen))
         {
             parameters = ParseDelimited(ParseParameter);
-            Expect(SyntaxKind.RParen);
+            rightParen = Expect(SyntaxKind.RParen);
         }
 
-        return new Parameters(leftParen, Last(), parameters);
+        return new Parameters(leftParen, rightParen, parameters);
     }
 
     private Parameter ParseParameter()

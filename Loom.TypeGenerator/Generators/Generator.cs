@@ -22,17 +22,8 @@ internal class Generator(
 
             var classGenerator = new ClassGenerator(FilePath, Metadata, definedClassNames, security, lowerSecurity);
             classGenerator.Generate(dump.Classes);
-
-            var generatorDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../.."));
-            Log.Info($"writing within directory '{generatorDirectory}'");
-            var filesToCopy = Directory.GetFiles(generatorDirectory, "*.loom", SearchOption.TopDirectoryOnly);
-            foreach (var file in filesToCopy)
-            {
-                Stream.AppendLine(File.ReadAllText(file));
-                Write();
-                Log.Info($"wrote contents of '{Path.GetRelativePath(generatorDirectory, file)}'");
-            }
             
+            WriteContentsOfFile("roblox.loom");
             Stream.Append(enumGenerator.Stream);
             Stream.Append(classGenerator.Stream);
             WriteFile();

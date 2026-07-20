@@ -15,14 +15,6 @@ public static class TypeSimplifier
 
         var simplified = type switch
         {
-            InterfaceType interfaceType => interfaceType.Constraints.Count > 0
-                ? new InterfaceType(
-                    interfaceType.Name,
-                    [],
-                    (ObjectType)Simplify(new IntersectionType([interfaceType.ObjectType, ..interfaceType.Constraints.Select(Simplify)])),
-                    interfaceType.TraitMethodNames.Intersect(interfaceType.Constraints.SelectMany(c => c.TraitMethodNames)).ToHashSet()
-                )
-                : interfaceType,
             ObjectType objectType => SimplifyObject(objectType),
             UnionType union => SimplifyUnion(union),
             IntersectionType intersection => SimplifyIntersection(intersection),

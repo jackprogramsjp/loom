@@ -20,7 +20,7 @@ public sealed partial class TypeChecker
             var declarationType = (Types.FunctionType)GetTypeAtIndex(declaration, traitType, new LiteralType(declaration.Name.Text));
             BindType(declaration, declarationType);
             MaybeVisit(declaration.TypeParameters);
-            
+
             for (var i = 0; i < declarationType.ParameterTypes.Count; i++)
             {
                 var parameter = declaration.Parameters!.ParameterList[i];
@@ -61,10 +61,10 @@ public sealed partial class TypeChecker
             : new GenericType(traitDeclaration, typeParameters, interfaceType);
 
         BindType(traitDeclaration, publishedType);
-        
+
         var properties = ResolveTraitProperties(traitDeclaration.Body.Members);
         objectType.Properties.AddRange(properties);
-        
+
         return publishedType;
     }
 
@@ -72,7 +72,13 @@ public sealed partial class TypeChecker
     {
         var name = interfaceDeclaration.Name.Text;
         var typeParameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
-        var constraints = interfaceDeclaration.ColonTypeListClause?.Types.ConvertAll(Visit).OfType<InterfaceType>().ToList() ?? [];
+        var constraints = interfaceDeclaration.ColonTypeListClause?.Types
+                .Select(Visit)
+                .Select(TypeSimplifier.Simplify)
+                .OfType<InterfaceType>()
+                .ToList()
+            ?? [];
+
         var objectType = new ObjectType(null, []);
         var interfaceType = new InterfaceType(name, constraints, objectType);
         Type publishedType = typeParameters == null
@@ -80,15 +86,15 @@ public sealed partial class TypeChecker
             : new GenericType(interfaceDeclaration, typeParameters, interfaceType);
 
         BindType(interfaceDeclaration, publishedType);
-        
+
         var indexerDeclaration = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
         var indexer = ResolveInterfaceIndexer(constraints, indexerDeclaration);
         objectType.Indexer = indexer;
         var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>().ToList() ?? [];
         var properties = ResolveInterfaceProperties(constraints, propertyDeclarations);
         objectType.Properties.AddRange(properties);
-
-        return publishedType;
+        
+        return BindType(interfaceDeclaration, publishedType);
     }
 
     public override Type VisitInterfaceInvocation(InterfaceInvocation node)

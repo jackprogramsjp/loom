@@ -1,4 +1,4 @@
-## This file contains definitions that should import the runtime library if they are used.
+## This file contains definitions that should import the runtime library if their types are used.
 
 interface Range {
     minimum: number;

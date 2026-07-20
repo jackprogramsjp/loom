@@ -16,6 +16,25 @@ internal static class ClassUtility
     //         ? value
     //         : SafeName(name);
 
+    public static bool HasMatchingSuperclass(Class rbxClass, Dictionary<string, Class> classRefs, Func<Class, bool> predicate)
+    {
+        if (rbxClass.Superclass == Constants.RootClassName)
+            return false;
+        
+        var superclass = classRefs[AssertClassName(rbxClass.Superclass, classRefs)];
+        return predicate(superclass) || HasMatchingSuperclass(superclass, classRefs, predicate);
+    }
+
+    public static bool IsService(Class rbxClass) =>
+        HasTag(rbxClass, "Service")
+        && !HasTag(rbxClass, "Hidden")
+        && !Constants.ClassBlacklist.Contains(rbxClass.Name);
+    
+    public static bool IsCreatable(Class rbxClass) =>
+        !Constants.CreatableBlacklist.Contains(rbxClass.Name)
+        && !HasTag(rbxClass, "NotCreatable")
+        && !HasTag(rbxClass, "Service");
+
     public static string SafeValueType(ApiTypes.ValueType valueType)
     {
         if (valueType.Category == "Enum")
@@ -76,14 +95,7 @@ internal static class ClassUtility
     }
 
     public static bool HasTag(MemberBase container, string tag) => container.Tags != null && container.Tags.Select(t => t.ToString()).Contains(tag);
-
     public static bool HasTag(Class container, string tag) => container.Tags != null && container.Tags.Select(t => t.ToString()).Contains(tag);
-
-    public static bool IsCreatable(Class rbxClass) =>
-        !Constants.CreatableBlacklist.Contains(rbxClass.Name)
-        && !HasTag(rbxClass, "NotCreatable")
-        && !HasTag(rbxClass, "Service");
-
     public static string FormatComment(string s) => "#:\n" + string.Join('\n', s.Trim().Split('\n')) + "\n:#";
 
     public static string SafeName(string? name) =>
@@ -92,6 +104,16 @@ internal static class ClassUtility
             : ContainsBadCharacter(name)
                 ? name.Replace("\"", "\\\"")
                 : name;
+    
+    /// <summary>Returns the given <see cref="className"/> if it's in <see cref="_classRefs"/>, throws if not</summary>
+    public static string AssertClassName(string className, Dictionary<string, Class> classRefs)
+    {
+        if (classRefs.ContainsKey(className))
+            return className;
+
+        Log.Fatal($"undefined class name: {className}");
+        return null;
+    }
 
     private static bool ContainsBadCharacter(string name) => Constants.BadNameCharacters.Any(name.Contains);
 }

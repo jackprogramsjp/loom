@@ -8,7 +8,6 @@ using Loom.Core.TypeChecking.Types;
 using Loom.Luau.AST;
 using ElementAccess = Loom.Core.Parsing.AST.ElementAccess;
 using Identifier = Loom.Core.Parsing.AST.Identifier;
-using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
 using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
 using Type = Loom.Core.TypeChecking.Types.Type;
 using UnionType = Loom.Core.TypeChecking.Types.UnionType;
@@ -33,6 +32,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)
     {
         expression = null;
+        _context.Node = invocation;
         return TryDecomposeInvocationTarget(invocation.Expression, luauCall.Callee, out var provider, out var member)
             && provider.TryInvocation(_context, member.Trim(), invocation.TypeArguments, luauCall, out expression);
     }
@@ -42,6 +42,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         LuauExpression callee,
         [MaybeNullWhen(false)] out LuauExpression referenceExpression)
     {
+        _context.Node = expression;
         referenceExpression = null;
         if (!InvocationMacroReference.TryClassify(_context, expression, out var provider, out var memberName))
             return false;
@@ -70,6 +71,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
 
     public bool TryGetElementAccessMacro(ElementAccess access, Luau.AST.ElementAccess luauAccess, [MaybeNullWhen(false)] out LuauExpression expression)
     {
+        _context.Node = access;
         if (TryGetEnumConstant(access, out expression))
             return true;
 
@@ -161,6 +163,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         Luau.AST.PropertyAccess luauAccess,
         [MaybeNullWhen(false)] out LuauExpression expression)
     {
+        _context.Node = access;
         if (TryGetEnumConstant(access, out expression))
             return true;
 
@@ -227,8 +230,8 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         return type switch
         {
             UnionType union => ResolveUnionAccess(propertyName, union),
-            ObjectType objectType => objectType.GetTypeAtIndex(new LiteralType(propertyName)).BodyType?.ValueType,
-            InterfaceType interfaceType => interfaceType.ObjectType.GetTypeAtIndex(new LiteralType(propertyName), interfaceType).BodyType?.ValueType,
+            ObjectType objectType => objectType.GetProperty(propertyName)?.ValueType,
+            InterfaceType interfaceType => interfaceType.GetProperty(propertyName)?.ValueType,
             _ => null
         };
     }

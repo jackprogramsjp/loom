@@ -13,11 +13,6 @@ internal sealed class ClassGenerator(
 {
     private readonly Dictionary<string, Class> _classRefs = [];
     private readonly Dictionary<string, HashSet<string>> _definedMemberNames = [];
-    private const string ClassMacros = """
-    declare interface CreatableInstance: Instance { _is_creatable: true; }
-    declare fn new_instance<T: CreatableInstance>: T;
-    declare fn get_service<Name: keyof(Services)>(name: Name): Services[Name];
-    """;
 
     public void Generate(Class[] rbxClasses)
     {
@@ -32,25 +27,10 @@ internal sealed class ClassGenerator(
         }
 
         var classesToGenerate = rbxClasses.Where(ShouldGenerateClass).ToArray();
-        var services = rbxClasses.Where(rbxClass => !definedClassNames.Contains(rbxClass.Name)).ToArray();
         GenerateClasses(classesToGenerate);
-        GenerateServices(services);
-        Write(ClassMacros);
+        WriteContentsOfFile("roblox_ext.loom");
     }
 
-    private void GenerateServices(Class[] rbxClasses)
-    {
-        var services = rbxClasses.Where(rbxClass => ClassUtility.HasTag(rbxClass, "Service")
-            && !ClassUtility.HasTag(rbxClass, "Hidden")
-            && !Constants.ClassBlacklist.Contains(rbxClass.Name)
-            && security == (Constants.PluginOnlyClasses.Contains(rbxClass.Name) ? "PluginSecurity" : "None")
-        );
-
-        WriteBlock(
-            "declare interface Services",
-            () => WriteList(services, service => $"{service.Name}: {service.Name}")
-        );
-    }
 
     private void GenerateClasses(Class[] rbxClasses)
     {
@@ -65,7 +45,7 @@ internal sealed class ClassGenerator(
         definedClassNames.Add(rbxClass.Name);
         _definedMemberNames[rbxClass.Name] = [];
 
-        var className = AssertClassName(rbxClass.Name);
+        var className = ClassUtility.AssertClassName(rbxClass.Name, _classRefs);
         var members = rbxClass.Members;
         var noSecurity = security == "None" || IsPluginOnlyClass(rbxClass);
         switch (noSecurity)
@@ -89,14 +69,18 @@ internal sealed class ClassGenerator(
         var membersToGenerate = members.Where(member => ShouldGenerateMember(rbxClass, member)).ToArray();
         var isValidSuperclass = rbxClass.Superclass != Constants.RootClassName;
         var superclassText = isValidSuperclass ? $": {rbxClass.Superclass}" : "";
-        var isCreatable = ClassUtility.IsCreatable(rbxClass);
-        var useBraces = isCreatable || membersToGenerate.Length > 0;
+        var emitCreatable = ClassUtility.IsCreatable(rbxClass) && !ClassUtility.HasMatchingSuperclass(rbxClass, _classRefs, ClassUtility.IsCreatable);
+        var emitService = ClassUtility.IsService(rbxClass) && !ClassUtility.HasMatchingSuperclass(rbxClass, _classRefs, ClassUtility.IsService);
+        var useBraces = emitCreatable || emitService || membersToGenerate.Length > 0;
         Write($"declare interface {className}{superclassText}{(useBraces ? " {" : ";")}");
         if (useBraces)
             PushIndent();
-
-        if (isCreatable && !HasCreatableSuperclass(rbxClass))
+        
+        if (emitCreatable)
             Write("_is_creatable: true");
+
+        if (emitService)
+            Write("_is_service: true");
 
         foreach (var member in membersToGenerate)
         {
@@ -127,28 +111,10 @@ internal sealed class ClassGenerator(
         Write();
     }
 
-    private bool HasCreatableSuperclass(Class rbxClass)
-    {
-        if (rbxClass.Superclass == Constants.RootClassName)
-            return false;
-         
-        var superclass = _classRefs[AssertClassName(rbxClass.Superclass)];
-        return ClassUtility.IsCreatable(superclass) || HasCreatableSuperclass(superclass);
-    }
-
     private void WriteDescription(string description)
     {
         if (!string.IsNullOrEmpty(description))
             Write(ClassUtility.FormatComment(description));
-    }
-
-    /// <summary>Returns the given <see cref="className"/> if it's in <see cref="_classRefs"/>, throws if not</summary>
-    private string AssertClassName(string className)
-    {
-        if (_classRefs.ContainsKey(className)) return className;
-
-        Log.Fatal($"undefined class name: {className}");
-        return null;
     }
     
     private void GenerateProperty(Property property, Class rbxClass)
