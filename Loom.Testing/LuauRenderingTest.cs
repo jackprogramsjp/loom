@@ -12,21 +12,66 @@ public class LuauRenderingTest
 {
     [Fact]
     public void Renders_BlockComment() => Assert.Equal("[[\nhello!\n]]", new Comment("\nhello!\n").Render());
-    
+
     [Fact]
     public void Renders_Comment() => Assert.Equal("-- hello!", new Comment(" hello!").Render());
+
+    [Fact]
+    public void Renders_Simple_IfStatement_Break()
+    {
+        var chunk = new Chunk([new Break()]);
+        var statement = new IfStatement(
+            new Identifier("a"),
+            chunk,
+            [new ElseIfBranch(new Identifier("b"), chunk)],
+            chunk
+        );
+
+        Assert.Equal(
+            "if a then break elseif b then break else break end",
+            statement.Render()
+        );
+    }
     
+    [Fact]
+    public void Renders_Simple_IfStatement_Continue()
+    {
+        var chunk = new Chunk([new Continue()]);
+        var statement = new IfStatement(
+            new Identifier("a"),
+            chunk,
+            [new ElseIfBranch(new Identifier("b"), chunk)],
+            chunk
+        );
+
+        Assert.Equal(
+            "if a then continue elseif b then continue else continue end",
+            statement.Render()
+        );
+    }
+
+    [Fact]
+    public void Renders_Simple_IfStatement_Return()
+    {
+        var chunk = new Chunk([new Return()]);
+        var statement = new IfStatement(
+            new Identifier("a"),
+            chunk,
+            [new ElseIfBranch(new Identifier("b"), chunk)],
+            chunk
+        );
+
+        Assert.Equal(
+            "if a then return elseif b then return else return end",
+            statement.Render()
+        );
+    }
+
     [Fact]
     public void Renders_Do() =>
         Assert.Equal(
             "do\n  print(\"hi\")\nend",
-            new Do(
-                new Chunk([
-                    new ExpressionStatement(
-                        new Call(new Identifier("print"), [new StringLiteral("hi")])
-                    )
-                ])
-            ).Render()
+            new Do(new Chunk([new ExpressionStatement(new Call(new Identifier("print"), [new StringLiteral("hi")]))])).Render()
         );
 
     [Fact]
@@ -325,7 +370,7 @@ public class LuauRenderingTest
 
         Assert.Equal("f()", call.Render());
     }
-    
+
     [Fact]
     public void Renders_Call()
     {
@@ -335,6 +380,21 @@ public class LuauRenderingTest
         Assert.Equal("abc(\"foo\")", call.Render());
     }
 
+    [Fact]
+    public void Renders_PropertyAccess_MultipleNames_WithParenthesizedTarget()
+    {
+        var access = new PropertyAccess(
+            new BinaryOperator(
+                new Identifier("a"),
+                "+",
+                new Identifier("b")
+            ),
+            ["foo", "bar"]
+        );
+
+        Assert.Equal("(a + b).foo.bar", access.Render());
+    }
+    
     [Fact]
     public void Renders_PropertyAccess_SingleName_DefaultDot()
     {
@@ -352,7 +412,7 @@ public class LuauRenderingTest
 
         Assert.Equal("obj.a.b.c", access.Render());
     }
-    
+
     [Fact]
     public void Renders_PropertyAccess_TwoNames()
     {
@@ -363,14 +423,14 @@ public class LuauRenderingTest
 
         Assert.Equal("obj.foo.bar", access.Render());
     }
-    
+
     [Fact]
     public void Renders_PropertyAccess_TwoNames_ColonOperator()
     {
         var access = new PropertyAccess(
             new Identifier("obj"),
             ["foo", "bar"]
-        ) {Operator = ':'};
+        ) { Operator = ':' };
 
         Assert.Equal("obj.foo:bar", access.Render());
     }
@@ -563,13 +623,10 @@ public class LuauRenderingTest
             "{\n  read a: number,\n  b: string,\n}",
             new TableType(
                 null,
-                [
-                    new TableTypeProperty(LuauVisibility.Read, "a", PrimitiveType.Number),
-                    new TableTypeProperty(null, "b", PrimitiveType.String)
-                ]
+                [new TableTypeProperty(LuauVisibility.Read, "a", PrimitiveType.Number), new TableTypeProperty(null, "b", PrimitiveType.String)]
             ).Render()
         );
-    
+
     [Fact]
     public void Renders_TableType_WithProperties() =>
         Assert.Equal(

@@ -21,9 +21,9 @@ public class IfStatement(LuauExpression condition, Chunk thenBranch, List<ElseIf
         + RenderBranch(state, ThenBranch)
         + string.Join(
             Spacer,
-            ElseIfBranches.ConvertAll(elseIf => $"elseif {elseIf.Condition.Render(state)} then{NewLine}{Spacer}" + RenderBranch(state, elseIf.Branch))
+            ElseIfBranches.ConvertAll(elseIf => $"{Spacer}elseif {elseIf.Condition.Render(state)} then{NewLine}{Spacer}" + RenderBranch(state, elseIf.Branch))
         )
-        + (ElseBranch != null ? $"{Spacer}else{NewLine}" + RenderBranch(state, ElseBranch) : "")
+        + (ElseBranch != null ? $"{Spacer}else{NewLine}{Spacer}" + RenderBranch(state, ElseBranch) : "")
         + $"{Spacer}end";
 
     private string RenderBranch(RenderState state, Chunk branch)
