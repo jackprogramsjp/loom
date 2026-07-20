@@ -288,7 +288,7 @@ public sealed partial class Parser
         while (true)
         {
             patterns.Add(ParsePrimaryPattern());
-            if (!Match(out var pipe, SyntaxKind.Pipe))
+            if (IsEof() || !Match(out var pipe, SyntaxKind.Pipe))
                 break;
 
             pipes.Add(pipe);
