@@ -15,6 +15,26 @@ public class LuauRenderingTest
     
     [Fact]
     public void Renders_Comment() => Assert.Equal("-- hello!", new Comment(" hello!").Render());
+    
+    [Fact]
+    public void Renders_Do() =>
+        Assert.Equal(
+            "do\n  print(\"hi\")\nend",
+            new Do(
+                new Chunk([
+                    new ExpressionStatement(
+                        new Call(new Identifier("print"), [new StringLiteral("hi")])
+                    )
+                ])
+            ).Render()
+        );
+
+    [Fact]
+    public void Renders_Empty_Do() =>
+        Assert.Equal(
+            "do\nend",
+            new Do(new Chunk([])).Render()
+        );
 
     [Fact]
     public void Renders_TypeCast()
@@ -490,6 +510,26 @@ public class LuauRenderingTest
     public void Renders_StringLiteralType() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteralType("abc").Render());
 
     [Fact]
+    public void Renders_Empty_TableType() =>
+        Assert.Equal(
+            "{}",
+            new TableType(null, []).Render()
+        );
+
+    [Fact]
+    public void Renders_TableType_WithProperties_NoIndexer() =>
+        Assert.Equal(
+            "{\n  read a: number,\n  b: string,\n}",
+            new TableType(
+                null,
+                [
+                    new TableTypeProperty(LuauVisibility.Read, "a", PrimitiveType.Number),
+                    new TableTypeProperty(null, "b", PrimitiveType.String)
+                ]
+            ).Render()
+        );
+    
+    [Fact]
     public void Renders_TableType_WithProperties() =>
         Assert.Equal(
             "{\n  read [string]: number,\n  read a: number,\n  b: number,\n}",
@@ -601,6 +641,9 @@ public class LuauRenderingTest
     [InlineData(69.420, "69.42")]
     [InlineData(1e3, "1000")]
     [InlineData(0xFF, "255")]
+    [InlineData(1e-10, "1e-10")]
+    [InlineData(1.23e20, "1.23e20")]
+    [InlineData(-1.5, "-1.5")]
     public void Renders_NumberLiteral(double value, string expected) => Assert.Equal(expected, new NumberLiteral(value).Render());
 
     [Theory]
