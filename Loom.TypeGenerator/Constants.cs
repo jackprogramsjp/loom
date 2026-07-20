@@ -234,9 +234,10 @@ internal static class Constants
     
     public static readonly Dictionary<string, string> ReturnTypeMap = new() { { "null", "void" } };
 
-    public static readonly Dictionary<string, string> ParameterNameMap = new()
+    public static readonly Dictionary<string, string> RenameMap = new()
     {
         { "type", "_type" },
+        { "interface", "_interface" },
         { "old", "oldValue" },
         { "new", "newValue" }
     };

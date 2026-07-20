@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using Loom.TypeGenerator.ApiTypes;
 
 namespace Loom.TypeGenerator.Generators;
@@ -119,8 +121,13 @@ internal sealed class ClassGenerator(
         var (name, description) = GetMemberNameAndDescription(property, rbxClass);
         var definitelyDefined = property.ValueType.Category != "Class";
         var extraPropertyData = CanWrite(rbxClass.Name, property) && !ClassUtility.HasTag(property, "ReadOnly") ? "mut " : "";
+        var (snakeName, attributes) = GetMemberAttributes(name);
+
         WriteDescription(description);
-        Write($"{extraPropertyData}{name.Replace(" ", "")}: {valueType}{(definitelyDefined || valueType.EndsWith('?') ? "" : "?")};");
+        if (attributes != null)
+            Write(attributes);
+
+        Write($"{extraPropertyData}{snakeName}: {valueType}{(definitelyDefined || valueType.EndsWith('?') ? "" : "?")};");
     }
 
     // private void GenerateEvent(Event @event, Class rbxClass)
@@ -130,17 +137,23 @@ internal sealed class ClassGenerator(
     //     WriteDescription(description);
     //     Write($"event {name}{paramTypeList};");
     // }
-    
+
     private void GenerateFunction(Function function, Class rbxClass)
     {
         var returnType = ClassUtility.SafeReturnType(function.ReturnType);
         var parameterList = GenerateParameterList(function.Parameters);
         var (name, description) = GetMemberNameAndDescription(function, rbxClass);
         var mustOverride = ClassUtility.HasMatchingSuperclass(rbxClass, _classRefs, c => c.Members.Any(m => m.Name == function.Name));
-        var overrideText = mustOverride ? ", override" : "";
+        var attributeList = new List<string>();
+        if (mustOverride)
+            attributeList.Add("override");
+
+        attributeList.Add("luau_method");
+        var (snakeName, attributes) = GetMemberAttributes(name, attributeList);
+
         WriteDescription(description);
-        Write($"[luau_method{overrideText}]");
-        Write($"{name.Replace(" ", "")}: fn{parameterList}: {returnType};");
+        Write(attributes!);
+        Write($"{snakeName}: fn{parameterList}: {returnType};");
     }
 
     private void GenerateCallback(Callback callback, Class rbxClass)
@@ -151,8 +164,13 @@ internal sealed class ClassGenerator(
         var (name, description) = GetMemberNameAndDescription(callback, rbxClass);
         var parameterList = GenerateParameterList(callback.Parameters);
         var returnType = ClassUtility.SafeReturnType(callback.ReturnType);
+        var (snakeName, attributes) = GetMemberAttributes(name);
+
         WriteDescription(description);
-        Write($"mut {name}: fn{parameterList}: {returnType};");
+        if (attributes != null)
+            Write(attributes);
+
+        Write($"mut {snakeName}: fn{parameterList}: {returnType};");
     }
 
     private void WriteDescription(string description)
@@ -168,7 +186,7 @@ internal sealed class ClassGenerator(
         {
             var index = parameters.IndexOf(parameter);
             var name = parameterNames.ElementAtOrDefault(index) ?? $"arg{index}";
-            parameter.Name = ClassUtility.SafeParameterName(name) ?? name;
+            parameter.Name = ClassUtility.SafeRename(name) ?? name;
         }
 
         return parameters.Length > 0
@@ -200,7 +218,7 @@ internal sealed class ClassGenerator(
                 type = instanceName == null ? "Instance" : ClassUtility.SafeRenamedInstance(instanceName);
             }
         }
-        
+
         type = string.IsNullOrEmpty(type) ? "unknown" : $"{type}{(isOptional && !type.EndsWith('?') ? '?' : "")}";
         return $"{parameter.Name}: {type}";
     }
@@ -300,5 +318,52 @@ internal sealed class ClassGenerator(
         if (ClassUtility.HasTag(member, "Hidden")) return false;
         if (ClassUtility.HasTag(member, "NotScriptable")) return false;
         return !_definedMemberNames[rbxClass.Name].Contains(member.Name.Trim());
+    }
+
+    private static (string NewName, string? AttributeList) GetMemberAttributes(string originalName, IReadOnlyList<string>? existing = null)
+    {
+        var result = new List<string>();
+        var snake = ToSnakeCase(originalName.Replace(" ", ""));
+        if (snake != originalName)
+            result.Add($"luau_name(\"{originalName}\")");
+
+        if (existing != null)
+            result.AddRange(existing);
+
+        return (ClassUtility.SafeRename(snake), result.Count > 0 ? $"[{string.Join(", ", result)}]" : null);
+    }
+
+    private static string ToSnakeCase(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return name;
+
+        var builder = new StringBuilder();
+        for (var i = 0; i < name.Length; i++)
+        {
+            var c = name[i];
+
+            if (char.IsUpper(c))
+            {
+                var hasPrev = i > 0;
+                var hasNext = i + 1 < name.Length;
+
+                if (hasPrev &&
+                    (char.IsLower(name[i - 1]) ||
+                        char.IsDigit(name[i - 1]) ||
+                        (hasNext && char.IsLower(name[i + 1]))))
+                {
+                    builder.Append('_');
+                }
+
+                builder.Append(char.ToLowerInvariant(c));
+            }
+            else
+            {
+                builder.Append(c);
+            }
+        }
+
+        return builder.ToString();
     }
 }

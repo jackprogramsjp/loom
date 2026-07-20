@@ -7,6 +7,9 @@ interface UnknownRecord {
     [unknown]: unknown;
 }
 
+## Property attribute - renames the property to the specified name when used
+declare fn luau_name(name: string): void;
+
 ## Property attribute - marks that a method will be called with the ':' operator
 declare fn luau_method: void;
 

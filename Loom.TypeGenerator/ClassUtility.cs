@@ -65,10 +65,10 @@ internal static class ClassUtility
         };
     }
 
-    public static string? SafeParameterName(string? name) =>
-        name != null && Constants.ParameterNameMap.TryGetValue(name, out var value)
+    public static string SafeRename(string? name) =>
+        name != null && Constants.RenameMap.TryGetValue(name, out var value)
             ? value
-            : name;
+            : SafeName(name);
 
     public static Security GetSecurity(string className, MemberBase member)
     {
