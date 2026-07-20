@@ -9,15 +9,8 @@ interface MutRecord<K, V> {
 }
 
 declare fn print(a: unknown, b: unknown?, c: unknown?, d: unknown?, e: unknown?, f: unknown?, g: unknown?, h: unknown?): void;
-
-## Macros
-declare interface TextLocation {
-    file_name: string;
-    line: number;
-    character: number;
-}
-
-## Gets the start location of the parent node the macro is called from.
-declare fn text_location(depth: number?): TextLocation;
 declare fn string(value: unknown): string;
 declare fn number(value: unknown, radix: number?): number?;
+
+## Property attribute - marks that a method will be called with the ':' operator
+declare fn luau_method: void;

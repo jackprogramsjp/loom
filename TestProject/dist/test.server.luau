@@ -1,3 +1,3 @@
-do
-  print("hi")
-end
+type Foo = {
+  read do_foo: () -> (),
+}

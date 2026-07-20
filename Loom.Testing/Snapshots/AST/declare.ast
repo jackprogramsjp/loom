@@ -199,6 +199,7 @@ Declare(
               Kind: Number
             )
           )
+          Attributes: null
         )
       ]
     )

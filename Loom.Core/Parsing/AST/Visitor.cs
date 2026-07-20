@@ -31,7 +31,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration) =>
         CombineResults([Visit(indexerDeclaration.IndexType), Visit(indexerDeclaration.ColonTypeClause)]);
 
-    public virtual T VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration) => Visit(propertyDeclaration.ColonTypeClause);
+    public virtual T VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration) => CombineResults([Visit(propertyDeclaration.ColonTypeClause), VisitWithDefault(propertyDeclaration.Attributes)]);
     public virtual T VisitInterfaceBody(InterfaceBody interfaceBody) => VisitList(interfaceBody.Members);
 
     public virtual T VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration) =>
@@ -146,6 +146,8 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
         where TType : TypeExpression =>
         VisitList(typeArguments.ArgumentsList);
 
+    public virtual T VisitAttribute(Attribute attribute) => CombineResults([Visit(attribute.Expression), VisitWithDefault(attribute.Arguments)]);
+    public virtual T VisitAttributes(Attributes attributes) => VisitList(attributes.AttributeList);
     public virtual T VisitColonTypeListClause(ColonTypeListClause colonTypeListClause) => VisitList(colonTypeListClause.Types);
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
     public virtual T VisitEqualsTypeClause(EqualsTypeClause equalsTypeClause) => Visit(equalsTypeClause.Type);
@@ -185,4 +187,5 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
 
         return result;
     }
+
 }

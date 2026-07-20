@@ -87,38 +87,46 @@ public sealed partial class Parser
         var expression = ParsePrimary();
         while (!IsEof())
         {
-            if (Current() is { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow })
-            {
-                var typeArguments = ParseTypeArguments(forInvocation: true);
-                var leftParen = Expect(SyntaxKind.LParen);
-                var arguments = ParseArguments(leftParen);
-                expression = new Invocation(expression, typeArguments, arguments);
-            }
+            if (AtInvocationStart())
+                expression = ParseInvocation(expression);
             else if (Match(out var leftBracket, SyntaxKind.LBracket))
-            {
-                var indexExpression = ParseExpression();
-                var rightBracket = Expect(SyntaxKind.RBracket);
-                expression = new ElementAccess(leftBracket, rightBracket, expression, indexExpression);
-            }
+                expression = ParseElementAccess(leftBracket, expression);
             else if (Match(out var dot, SyntaxKind.Dot))
-            {
-                var name = ExpectIdentifier();
-                var names = new List<DotName> { new(dot, name) };
-                while (Match(out var nextDot, SyntaxKind.Dot))
-                    names.Add(new DotName(nextDot, ExpectIdentifier()));
-
-                expression = expression is Identifier identifier
-                    ? new QualifiedName(identifier, names)
-                    : new PropertyAccess(expression, names);
-            }
+                expression = ParseNamedAccess(dot, expression);
             else
-            {
-                // TODO: postfix unary operators
                 break;
-            }
         }
 
         return expression;
+    }
+
+    private bool AtInvocationStart() => Current() is { Kind: SyntaxKind.LParen or SyntaxKind.ColonColonLArrow };
+
+    private ElementAccess ParseElementAccess(Token leftBracket, Expression expression)
+    {
+        var indexExpression = ParseExpression();
+        var rightBracket = Expect(SyntaxKind.RBracket);
+        return new ElementAccess(leftBracket, rightBracket, expression, indexExpression);
+    }
+
+    private AssignmentTarget ParseNamedAccess(Token dot, Expression expression)
+    {
+        var name = ExpectIdentifier();
+        var names = new List<DotName> { new(dot, name) };
+        while (Match(out var nextDot, SyntaxKind.Dot))
+            names.Add(new DotName(nextDot, ExpectIdentifier()));
+        
+        return expression is Identifier identifier
+            ? new QualifiedName(identifier, names)
+            : new PropertyAccess(expression, names);
+    }
+
+    private Invocation ParseInvocation(Expression callee)
+    {
+        var typeArguments = ParseTypeArguments(forInvocation: true);
+        var leftParen = Expect(SyntaxKind.LParen);
+        var arguments = ParseArguments(leftParen);
+        return new Invocation(callee, typeArguments, arguments);
     }
 
     private Expression ParsePrimary()

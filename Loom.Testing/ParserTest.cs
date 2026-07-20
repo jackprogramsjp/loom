@@ -43,7 +43,7 @@ public class ParserTest
         new("type Fn = fn(x): number", InternalCodes.MissingDeclareFnParameterType, "Parameters must have types in function types.", null),
         new("type F = (fn())", InternalCodes.MissingDeclareFnReturnType, "Function types must have a return type.", null),
         new("interface I { name }", InternalCodes.ExpectedInterfaceMemberType, "Expected indexer type, got '}'.", null),
-        new("interface I { [int] }", InternalCodes.ExpectedInterfaceMemberType, "Expected indexer type, got '}'.", null),
+        new("interface I { [number] }", InternalCodes.UnexpectedToken, "Expected property name, got '}'.", null),
         new("interface { }", InternalCodes.UnexpectedToken, "Expected interface name, got '{'.", null),
         new("interface I { 123 }", InternalCodes.UnexpectedToken, "Expected property name, got '123'.", null),
         new("after { }", InternalCodes.UnexpectedToken, "Expected expression, got '{'.", null),

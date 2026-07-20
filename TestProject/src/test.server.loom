@@ -1,3 +1,4 @@
-{
-    print('hi');
+interface Foo {
+    [luau_method]
+    do_foo: fn: void;
 }

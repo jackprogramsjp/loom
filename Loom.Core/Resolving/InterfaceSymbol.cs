@@ -3,13 +3,11 @@ using Loom.Core.Parsing.AST;
 namespace Loom.Core.Resolving;
 
 
-public sealed class InterfaceSymbol(InterfaceDeclaration declaration, string name, bool isSealed)
+public sealed class InterfaceSymbol(InterfaceDeclaration declaration, string name, bool isSealed, IReadOnlySet<PropertySymbol> propertySymbols)
     : Symbol(declaration, SymbolKind.Interface, name)
 {
-    public sealed record InterfaceProperty(string Name, bool IsMutable);
-    
     public bool IsSealed { get; } = isSealed;
-    public IReadOnlySet<InterfaceProperty> Properties { get; } = declaration.Body?.Members.OfType<PropertyDeclaration>().Select(p => new InterfaceProperty(p.Name.Text, p.MutKeyword != null)).ToHashSet() ?? [];
+    public IReadOnlySet<PropertySymbol> Properties { get; } = propertySymbols;
     public List<TraitSymbol> Implements { get; } = [];
     public List<Implement> Implementations { get; } = [];
 

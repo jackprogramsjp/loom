@@ -1,6 +1,7 @@
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
+using Attribute = Loom.Core.Parsing.AST.Attribute;
 
 namespace Loom.Core.Parsing;
 
@@ -14,7 +15,7 @@ public sealed partial class Parser
 
         return new TraitDeclaration(keyword, name, typeParameters, body);
     }
-    
+
     private TraitBody ParseTraitBody()
     {
         var leftBrace = Expect(SyntaxKind.LBrace);
@@ -22,7 +23,7 @@ public sealed partial class Parser
         var rightBrace = Expect(SyntaxKind.RBrace);
         return new TraitBody(leftBrace, rightBrace, members);
     }
-    
+
     private List<DeclareFunctionSignature> ParseTraitMembers()
     {
         var members = new List<Statement>();
@@ -73,7 +74,25 @@ public sealed partial class Parser
         var members = new List<InterfaceMember>();
         while (!IsEof() && Current() is not { Kind: SyntaxKind.RBrace })
         {
-            var member = ParseInterfaceMember(Match(out var mutKeyword, SyntaxKind.MutKeyword) ? mutKeyword : null);
+            var token = Current();
+            InterfaceMember? member;
+            if (token.Kind != SyntaxKind.LBracket)
+            {
+                var mutKeyword = Match(out var kw, SyntaxKind.MutKeyword) ? kw : null;
+                member = ParseInterfaceMember(mutKeyword);
+            }
+            else if (LooksLikeIndexer())
+            {
+                member = ParseInterfaceMember(null);
+            }
+            else
+            {
+                Advance();
+                var attributes = ParseAttributes(token);
+                var mutKeyword = Match(out var kw, SyntaxKind.MutKeyword) ? kw : null;
+                member = ParsePropertyDeclaration(mutKeyword, attributes);
+            }
+
             if (member == null) return null;
             members.Add(member);
             Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
@@ -82,19 +101,52 @@ public sealed partial class Parser
         return members;
     }
 
-    private InterfaceMember? ParseInterfaceMember(Token? mutKeyword)
-    {
-        if (Match(out var leftBracket, SyntaxKind.LBracket))
-        {
-            var indexType = ParseType();
-            var rightBracket = Expect(SyntaxKind.RBracket);
-            var colonTypeClause = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(Current())}.");
-            return colonTypeClause == null ? null : new IndexerDeclaration(mutKeyword, leftBracket, rightBracket, indexType, colonTypeClause);
-        }
+    private InterfaceMember? ParseInterfaceMember(Token? mutKeyword) =>
+        Match(out var leftBracket, SyntaxKind.LBracket)
+            ? ParseIndexerDeclaration(mutKeyword, leftBracket)
+            : ParsePropertyDeclaration(mutKeyword, null);
 
+    private IndexerDeclaration? ParseIndexerDeclaration(Token? mutKeyword, Token leftBracket)
+    {
+        var indexType = ParseType();
+        var rightBracket = Expect(SyntaxKind.RBracket);
+        var colonTypeClause = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(Current())}.");
+        return colonTypeClause == null ? null : new IndexerDeclaration(mutKeyword, leftBracket, rightBracket, indexType, colonTypeClause);
+    }
+
+    private PropertyDeclaration? ParsePropertyDeclaration(Token? mutKeyword, Attributes? attributes)
+    {
         var name = ExpectIdentifier("property name");
         var propertyType = ExpectInterfaceMemberColonTypeClause($"Expected indexer type, got {SafeTokenText(Current())}.");
-        return propertyType == null ? null : new PropertyDeclaration(mutKeyword, name, propertyType);
+        return propertyType == null ? null : new PropertyDeclaration(mutKeyword, name, propertyType, attributes);
+    }
+
+    private bool LooksLikeIndexer()
+    {
+        var i = 0;
+        if (PeekKind(i) != SyntaxKind.LBracket)
+            return false;
+
+        var depth = 1;
+        i++;
+
+        while (depth > 0)
+        {
+            switch (PeekKind(i))
+            {
+                case SyntaxKind.LBracket:
+                    depth++;
+                    break;
+
+                case SyntaxKind.RBracket:
+                    depth--;
+                    break;
+            }
+
+            i++;
+        }
+
+        return PeekKind(i) == SyntaxKind.Colon;
     }
 
     private ColonTypeClause? ExpectInterfaceMemberColonTypeClause(string message)
@@ -105,6 +157,21 @@ public sealed partial class Parser
 
         _diagnostics.Error(Current(), InternalCodes.ExpectedInterfaceMemberType, message);
         return null;
+    }
+
+    private Attributes ParseAttributes(Token leftBracket)
+    {
+        var attributesList = ParseDelimited(ParseAttribute);
+        var rightBracket = Expect(SyntaxKind.RBracket);
+        return new Attributes(leftBracket, rightBracket, attributesList);
+    }
+
+    private Attribute ParseAttribute()
+    {
+        var baseExpression = ParsePostfix();
+        return baseExpression is Invocation invocation
+            ? new Attribute(invocation.Expression, invocation.TypeArguments, invocation.Arguments)
+            : new Attribute(baseExpression, null, null);
     }
 
     private Statement ParseDeclare(Token declareKeyword)

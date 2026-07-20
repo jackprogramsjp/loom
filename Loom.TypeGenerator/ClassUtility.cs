@@ -105,7 +105,7 @@ internal static class ClassUtility
                 ? name.Replace("\"", "\\\"")
                 : name;
     
-    /// <summary>Returns the given <see cref="className"/> if it's in <see cref="_classRefs"/>, throws if not</summary>
+    /// <summary>Returns the given <see cref="className"/> if it's in <see cref="classRefs"/>, throws if not</summary>
     public static string AssertClassName(string className, Dictionary<string, Class> classRefs)
     {
         if (classRefs.ContainsKey(className))

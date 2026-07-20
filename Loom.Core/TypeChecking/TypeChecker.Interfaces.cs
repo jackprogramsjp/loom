@@ -175,6 +175,8 @@ public sealed partial class TypeChecker
         var properties = new List<ObjectProperty>();
         foreach (var declaration in propertyDeclarations)
         {
+            MaybeVisit(declaration.Attributes);
+            
             var name = declaration.Name.Text;
             if (constraints.Find(i => i.GetProperty(name) != null) is { } subclass)
             {

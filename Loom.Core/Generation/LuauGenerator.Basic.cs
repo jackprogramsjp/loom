@@ -86,7 +86,7 @@ public sealed partial class LuauGenerator
         var luauIdentifier = new Luau.AST.Identifier(identifier.Name.Text);
         return _macroExpander.TryGetInvocationMacroReference(identifier, luauIdentifier, out var referenceReplacement)
             ? referenceReplacement
-            : _semanticModel.GetSymbol(identifier) is { Kind: SymbolKind.PropertyVariable }
+            : _semanticModel.GetSymbol(identifier) is { Kind: SymbolKind.InjectedPropertyVariable }
                 ? new Luau.AST.PropertyAccess(LuauFactory.Self, [luauIdentifier.Name])
                 : luauIdentifier;
     }

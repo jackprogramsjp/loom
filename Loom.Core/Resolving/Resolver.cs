@@ -110,7 +110,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         interfaceSymbol.Implements.Add(traitSymbol);
         traitSymbol.ImplementedBy.Add(interfaceSymbol);
         if (interfaceSymbol.Properties
-            .Any(property => !DeclareVariable(implement, new PropertyVariableSymbol(implement, property.Name, interfaceSymbol, property.IsMutable))))
+            .Any(property => !DeclareVariable(implement, new InjectedPropertyVariableSymbol(implement, property.Name, interfaceSymbol, property.IsMutable))))
         {
             return false;
         }
@@ -581,9 +581,17 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             return false;
         }
 
-        interfaceSymbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed);
+        var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>() ?? [];
+        var properties = new HashSet<PropertySymbol>();
+        interfaceSymbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed, properties);
+        foreach (var property in propertyDeclarations)
+        {
+            var symbol = new PropertySymbol(property, interfaceSymbol);
+            properties.Add(symbol);
+            AddDeclaration(symbol);
+        }
+        
         DeclareSymbol(interfaceSymbol);
-
         return true;
     }
 
@@ -675,7 +683,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private Symbol? LookupValueSymbol(string name) =>
         LookupSymbol(name, SymbolKind.Variable)
-        ?? LookupSymbol(name, SymbolKind.PropertyVariable)
+        ?? LookupSymbol(name, SymbolKind.InjectedPropertyVariable)
         ?? LookupSymbol(name, SymbolKind.Function)
         ?? LookupSymbol(name, SymbolKind.Parameter);
 
