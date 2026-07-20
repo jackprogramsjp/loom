@@ -68,8 +68,94 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         {
             AssignmentOperator assignmentOperator => AnalyzeAssignment(assignmentOperator, state),
             Identifier identifier => AnalyzeIdentifier(identifier, state),
+            MatchExpression matchExpression => AnalyzeMatchExpression(matchExpression, state),
             _ => new FlowState(expression.Children.Select(e => state = AnalyzeExpression(e, state)).LastOrDefault(state))
         };
+    }
+
+    private FlowState AnalyzeMatchExpression(MatchExpression matchExpression, FlowState state)
+    {
+        var afterScrutinee = AnalyzeExpression(matchExpression.Expression, state);
+        if (matchExpression.Arms.Count == 0)
+            return BindState(matchExpression, afterScrutinee);
+
+        FlowState? merged = null;
+        foreach (var arm in matchExpression.Arms)
+        {
+            var armState = AnalyzeMatchArm(arm, new FlowState(afterScrutinee));
+            merged = merged == null ? armState : merged.Merge(armState);
+        }
+
+        return BindState(matchExpression, merged!);
+    }
+
+    private FlowState AnalyzeMatchArm(MatchArm matchArm, FlowState state)
+    {
+        var armState = new FlowState(state);
+        MarkPatternBindingsInitialized(matchArm.Pattern, armState);
+
+        if (matchArm.Guard != null)
+            armState = AnalyzeExpression(matchArm.Guard, armState);
+
+        armState = AnalyzeExpression(matchArm.Body, armState);
+        return BindState(matchArm, armState);
+    }
+
+    private void MarkPatternBindingsInitialized(Pattern pattern, FlowState state)
+    {
+        switch (pattern)
+        {
+            case IdentifierPattern or LetPattern:
+                if (semanticModel.GetDeclarationSymbol(pattern) is { } binding)
+                {
+                    state.DefinitelyInitialized.Add(binding);
+                    state.MaybeInitialized.Add(binding);
+                }
+
+                break;
+
+            case TypedPattern typedPattern:
+                if (semanticModel.GetDeclarationSymbol(typedPattern) is { } typedBinding)
+                {
+                    state.DefinitelyInitialized.Add(typedBinding);
+                    state.MaybeInitialized.Add(typedBinding);
+                }
+
+                if (typedPattern.ObjectPattern != null)
+                    MarkPatternBindingsInitialized(typedPattern.ObjectPattern, state);
+                break;
+
+            case TypePattern typePattern:
+                if (typePattern.ObjectPattern != null)
+                    MarkPatternBindingsInitialized(typePattern.ObjectPattern, state);
+                break;
+
+            case ObjectPattern objectPattern:
+                foreach (var field in objectPattern.Fields)
+                    MarkPatternBindingsInitialized(field.Pattern, state);
+                break;
+
+            case ArrayPattern arrayPattern:
+                foreach (var element in arrayPattern.Elements)
+                    MarkPatternBindingsInitialized(element, state);
+                if (arrayPattern.Rest != null)
+                    MarkPatternBindingsInitialized(arrayPattern.Rest, state);
+                break;
+
+            case RestPattern restPattern:
+                MarkPatternBindingsInitialized(restPattern.Pattern, state);
+                break;
+
+            case OrPattern orPattern:
+                foreach (var alternative in orPattern.Patterns)
+                    MarkPatternBindingsInitialized(alternative, state);
+                break;
+
+            case RangePattern rangePattern:
+                MarkPatternBindingsInitialized(rangePattern.Minimum, state);
+                MarkPatternBindingsInitialized(rangePattern.Maximum, state);
+                break;
+        }
     }
 
     private FlowState AnalyzeBlock(Block block, FlowState state) => BindState(block, AnalyzeStatements(block.Statements, state));
