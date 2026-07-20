@@ -11,10 +11,10 @@ internal static class ClassUtility
     //         ? null
     //         : Constants.PropertyTypeMap.GetValueOrDefault(valueType, valueType);
 
-    // public static string SafeRenamedInstance(string? name) =>
-    //     name != null && Constants.RenamableAutoTypes.TryGetValue(name, out var value)
-    //         ? value
-    //         : SafeName(name);
+    public static string SafeRenamedInstance(string? name) =>
+        name != null && Constants.RenamableAutoTypes.TryGetValue(name, out var value)
+            ? value
+            : SafeName(name);
 
     public static bool HasMatchingSuperclass(Class rbxClass, Dictionary<string, Class> classRefs, Func<Class, bool> predicate)
     {
@@ -61,11 +61,11 @@ internal static class ClassUtility
             <= 0 => null,
             null => "void",
             1 => typeNames[0],
-            > 1 => $"({string.Join(", ", typeNames)})" // undecided tuple syntax
+            > 1 => "unknown[]" // $"({string.Join(", ", typeNames)})" // undecided tuple syntax
         };
     }
 
-    public static string? SafeParamName(string? name) =>
+    public static string? SafeParameterName(string? name) =>
         name != null && Constants.ParameterNameMap.TryGetValue(name, out var value)
             ? value
             : name;

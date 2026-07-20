@@ -1,12 +1,38 @@
 ## Handwritten Roblox types
 
+declare interface buffer;
+declare interface thread;
+
+interface UnknownRecord {
+    [unknown]: unknown;
+}
+
+## Property attribute - marks that a method will be called with the ':' operator
+declare fn luau_method: void;
+
+## Property attribute - allows overriding interface members
+declare fn override: void;
+
 declare fn print(msg: unknown): void;
+
+declare interface ScriptSignal;
+
+declare interface ScriptConnection {
+    Connected: bool;
+    [luau_method] Disconnect: fn: void;
+}
 
 declare interface SecurityCapabilities;
 
 declare interface DateTime {
     UnixTimestamp: number;
     UnixTimestampMillis: number;
+    
+    [luau_method] ToUniversalTime: fn: TimeTable;
+    [luau_method] ToLocalTime: fn: TimeTable;
+    [luau_method] ToIsoDate: fn: string;
+    [luau_method] FormatUniversalTime: fn(format: string, locale: string): string;
+    [luau_method] FormatLocalTime: fn(format: string, locale: string): string;
 }
 
 declare interface DateTimeStatic {
@@ -39,11 +65,21 @@ declare interface Vector2 {
     Y: number;
     Magnitude: number;
     Unit: Vector2;
+    
+    [luau_method] Abs: fn: Vector2;
+    [luau_method] Ceil: fn: Vector2;
+    [luau_method] Floor: fn: Vector2;
+    [luau_method] Sign: fn: Vector2;
+    [luau_method] Cross: fn(other: Vector2): Vector2;
+    [luau_method] Angle: fn(other: Vector2, isSigned: bool): number;
+    [luau_method] Dot: fn(other: Vector2): number;
+    [luau_method] FuzzyEq: fn(other: Vector2, epsilon: number?): bool;
+    [luau_method] Lerp: fn(goal: Vector2, alpha: number): Vector2;
+    [luau_method] Max: fn(other: Vector2): Vector2;
+    [luau_method] Min: fn(other: Vector2): Vector2;
 }
 
 declare interface Vector2Static {
-    X: number;
-    Y: number;
     zero: Vector2;
     one: Vector2;
     yAxis: Vector2;
@@ -64,6 +100,18 @@ declare interface Vector3 {
     Z: number;
     Magnitude: number;
     Unit: Vector3;
+    
+    [luau_method] Abs: fn: Vector3;
+    [luau_method] Ceil: fn: Vector3;
+    [luau_method] Floor: fn: Vector3;
+    [luau_method] Sign: fn: Vector3;
+    [luau_method] Cross: fn(other: Vector3): Vector3;
+    [luau_method] Angle: fn(other: Vector3, isSigned: bool): number;
+    [luau_method] Dot: fn(other: Vector3): number;
+    [luau_method] FuzzyEq: fn(other: Vector3, epsilon: number?): bool;
+    [luau_method] Lerp: fn(goal: Vector3, alpha: number): Vector3;
+    [luau_method] Max: fn(other: Vector3): Vector3;
+    [luau_method] Min: fn(other: Vector3): Vector3;
 }
 
 declare interface Vector3Static {
@@ -318,6 +366,14 @@ declare interface FloatCurveKey {
     RightTangent: number;
 }
 
+declare interface ValueCurveKey {
+    Interpolation: Enum["KeyInterpolationMode"];
+    Time: number;
+    Value: unknown;
+    LeftTangent: number;
+    RightTangent: number;
+}
+
 declare interface Font {
     Family: string;
     Weight: Enum["FontWeight"];
@@ -434,6 +490,7 @@ declare interface GetGroupsAsyncResult {
     IsInClan: bool;
 }
 
+declare interface CollectionHandle;
 declare interface ClipEvaluator: Instance;
 declare interface SystemAddress: Instance;
 declare interface OpenCloudModel: Instance;

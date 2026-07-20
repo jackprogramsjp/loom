@@ -19,6 +19,7 @@ internal sealed class ClassGenerator(
         foreach (var rbxClass in rbxClasses)
         {
             var className = rbxClass.Name;
+
             // rbxClass.Subclasses = [];
             _classRefs[className] = rbxClass;
 
@@ -31,7 +32,6 @@ internal sealed class ClassGenerator(
         WriteContentsOfFile("roblox_ext.loom");
     }
 
-
     private void GenerateClasses(Class[] rbxClasses)
     {
         Write("## Generated Roblox instance classes");
@@ -39,7 +39,7 @@ internal sealed class ClassGenerator(
         foreach (var rbxClass in rbxClasses)
             GenerateClass(rbxClass);
     }
-    
+
     private void GenerateClass(Class rbxClass)
     {
         definedClassNames.Add(rbxClass.Name);
@@ -55,7 +55,7 @@ internal sealed class ClassGenerator(
                 var description = !string.IsNullOrEmpty(rbxClass.Description)
                     ? rbxClass.Description
                     : Metadata.ReadClassDescription(rbxClass.Name);
-                
+
                 WriteDescription(description);
                 break;
             }
@@ -65,7 +65,7 @@ internal sealed class ClassGenerator(
         }
 
         if (className == "Studio") return;
-        
+
         var membersToGenerate = members.Where(member => ShouldGenerateMember(rbxClass, member)).ToArray();
         var isValidSuperclass = rbxClass.Superclass != Constants.RootClassName;
         var superclassText = isValidSuperclass ? $": {rbxClass.Superclass}" : "";
@@ -75,12 +75,12 @@ internal sealed class ClassGenerator(
         Write($"declare interface {className}{superclassText}{(useBraces ? " {" : ";")}");
         if (useBraces)
             PushIndent();
-        
+
         if (emitCreatable)
-            Write("_is_creatable: true");
+            Write("_is_creatable: true;");
 
         if (emitService)
-            Write("_is_service: true");
+            Write("_is_service: true;");
 
         foreach (var member in membersToGenerate)
         {
@@ -90,15 +90,17 @@ internal sealed class ClassGenerator(
                 case Property property:
                     GenerateProperty(property, rbxClass);
                     continue;
+
                 // case Event @event:
                 //     GenerateEvent(@event, rbxClass);
                 //     break;
-                // case Function function:
-                //     GenerateFunction(function, rbxClass);
-                //     break;
+                case Function function:
+                    GenerateFunction(function, rbxClass);
+                    break;
                 case not Event and not Function and Callback callback:
                     GenerateCallback(callback, rbxClass);
                     continue;
+
                 // default:
                 //     Log.Fatal($"received unsupported member type: {member.MemberType}");
                 //     break;
@@ -111,12 +113,6 @@ internal sealed class ClassGenerator(
         Write();
     }
 
-    private void WriteDescription(string description)
-    {
-        if (!string.IsNullOrEmpty(description))
-            Write(ClassUtility.FormatComment(description));
-    }
-    
     private void GenerateProperty(Property property, Class rbxClass)
     {
         var valueType = ClassUtility.SafeValueType(property.ValueType);
@@ -135,11 +131,23 @@ internal sealed class ClassGenerator(
     //     Write($"event {name}{paramTypeList};");
     // }
     
+    private void GenerateFunction(Function function, Class rbxClass)
+    {
+        var returnType = ClassUtility.SafeReturnType(function.ReturnType);
+        var parameterList = GenerateParameterList(function.Parameters);
+        var (name, description) = GetMemberNameAndDescription(function, rbxClass);
+        var mustOverride = ClassUtility.HasMatchingSuperclass(rbxClass, _classRefs, c => c.Members.Any(m => m.Name == function.Name));
+        var overrideText = mustOverride ? ", override" : "";
+        WriteDescription(description);
+        Write($"[luau_method{overrideText}]");
+        Write($"{name.Replace(" ", "")}: fn{parameterList}: {returnType};");
+    }
+
     private void GenerateCallback(Callback callback, Class rbxClass)
     {
         if (callback.ReturnType is { Length: > 1 })
             return; // skip for now cause no tuple types
-        
+
         var (name, description) = GetMemberNameAndDescription(callback, rbxClass);
         var parameterList = GenerateParameterList(callback.Parameters);
         var returnType = ClassUtility.SafeReturnType(callback.ReturnType);
@@ -147,12 +155,73 @@ internal sealed class ClassGenerator(
         Write($"mut {name}: fn{parameterList}: {returnType};");
     }
 
-    private static string GenerateParameterList(Parameter[] parameters) =>
-        parameters.Length > 0
+    private void WriteDescription(string description)
+    {
+        if (!string.IsNullOrEmpty(description))
+            Write(ClassUtility.FormatComment(description));
+    }
+
+    private string GenerateParameterList(Parameter[] parameters)
+    {
+        var parameterNames = GetParameterNames(parameters);
+        foreach (var parameter in parameters)
+        {
+            var index = parameters.IndexOf(parameter);
+            var name = parameterNames.ElementAtOrDefault(index) ?? $"arg{index}";
+            parameter.Name = ClassUtility.SafeParameterName(name) ?? name;
+        }
+
+        return parameters.Length > 0
             ? '(' + string.Join(", ", parameters.Select(GenerateParameter)) + ')'
             : "";
+    }
 
-    private static string GenerateParameter(Parameter param) => ClassUtility.SafeParamName(param.Name) + ": " + ClassUtility.SafeValueType(param.Type);
+    private string GenerateParameter(Parameter parameter)
+    {
+        var type = ClassUtility.SafeValueType(parameter.Type);
+        var isOptional = !string.IsNullOrEmpty(parameter.Default) || type == "any" || type.EndsWith('?');
+        if (!string.IsNullOrEmpty(parameter.Name) && type == "Instance")
+        {
+            var findings = _classRefs.Keys.Concat(["Character", "Input"])
+                .Where(k => k != "Instance" && parameter.Name.Contains(k, StringComparison.CurrentCultureIgnoreCase))
+                .ToList();
+
+            if (findings.Count != 0)
+            {
+                var partPosition = findings.IndexOf("Part");
+                var doSplice = !findings.Contains("Part")
+                    && findings.Count != 0
+                    && !parameter.Name.Contains("or", StringComparison.CurrentCultureIgnoreCase);
+
+                if (doSplice && partPosition != -1)
+                    findings.RemoveAt(partPosition);
+
+                var instanceName = findings.FirstOrDefault(found => string.Equals(found, parameter.Name, StringComparison.CurrentCultureIgnoreCase));
+                type = instanceName == null ? "Instance" : ClassUtility.SafeRenamedInstance(instanceName);
+            }
+        }
+        
+        type = string.IsNullOrEmpty(type) ? "unknown" : $"{type}{(isOptional && !type.EndsWith('?') ? '?' : "")}";
+        return $"{parameter.Name}: {type}";
+    }
+
+    private static string[] GetParameterNames(Parameter[] parameters)
+    {
+        var parameterNames = parameters.Select(param => param.Name).ToArray();
+        for (var i = 0; i < parameterNames.Length; i++)
+        {
+            if (parameterNames.IndexOf(parameterNames[i]) != i + 1) continue;
+
+            var n = 0;
+            for (var j = i; j < parameters.Length; j++)
+            {
+                parameterNames[j] = $"{parameterNames[i]}{n}";
+                n++;
+            }
+        }
+
+        return parameterNames;
+    }
 
     private (string Name, string Description) GetMemberNameAndDescription(MemberBase member, Class rbxClass)
     {
@@ -165,14 +234,14 @@ internal sealed class ClassGenerator(
             Callback => Metadata.ReadCallbackDescription,
             _ => null
         };
-        
+
         var description = readDescription == null || !string.IsNullOrWhiteSpace(member.Description)
             ? member.Description
             : readDescription(rbxClass.Name, name);
 
         return (name, description);
     }
-    
+
     private Class? GetSuperclass(Class rbxClass) =>
         rbxClass.Superclass != Constants.RootClassName
             ? _classRefs[rbxClass.Superclass]
