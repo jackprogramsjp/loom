@@ -1,0 +1,7 @@
+let collection = get_service::<CollectionService>();
+let instances = collection.get_tagged("Lava");
+for i : instances {
+    if !i.is_a("BasePart") continue;
+    print(i.name)
+    print(i.class_name)
+}
