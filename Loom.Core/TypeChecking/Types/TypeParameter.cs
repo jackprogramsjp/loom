@@ -6,7 +6,17 @@ public sealed class TypeParameter(string name, Type? constraint = null, Type? de
     public Type? Constraint { get; } = constraint;
     public Type? DefaultType { get; } = defaultType;
 
-    public override int GetHashCode() => HashCode.Combine(Name, Constraint?.GetHashCode() ?? 0, DefaultType?.GetHashCode() ?? 0);
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Name);
+        if (Constraint != null)
+            hash.Add(Constraint.GetHashCode());
+        if (DefaultType != null)
+            hash.Add(DefaultType.GetHashCode());
+        
+        return hash.ToHashCode();
+    }
 
     public override bool Equals(Type? other) =>
         other is TypeParameter parameter

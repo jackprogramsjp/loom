@@ -159,7 +159,7 @@ ExpressionStatement(
       Name: Token(Identifier, "b")
       Token(Identifier, "b")
     )
-    ElseBranch: AsExpression(
+    ElseBranch: As(
       Expression: Identifier(
         Name: Token(Identifier, "c")
         Token(Identifier, "c")

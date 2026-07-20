@@ -58,7 +58,6 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             hash.Add(property.IsMutable);
         }
 
-        // hash.Add(Indexer != null);
         return hash.ToHashCode();
     }
 
@@ -68,7 +67,6 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             other,
             () =>
             {
-                if (ReferenceEquals(this, other)) return true;
                 if (other is not ObjectType objectType)
                     return false;
 

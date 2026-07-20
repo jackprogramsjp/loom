@@ -203,6 +203,7 @@ public sealed partial class Parser(LexerResult lexerResult)
     }
 
     private Token Current() => lexerResult.Tokens[_position];
+    private SyntaxKind PeekKind(int offset) => lexerResult.Tokens[_position + offset].Kind;
     private bool IsEof() => Current().Kind == SyntaxKind.Eof;
     private static string SafeTokenText(Token? token) => token is { Kind: not SyntaxKind.Eof } ? $"'{token.Text}'" : "EOF";
 }

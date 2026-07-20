@@ -215,8 +215,8 @@ internal static class Constants
         { "double", "number" },
         { "int", "number" },
         { "int64", "number" },
-        { "Dictionary", "Record<unknown, unknown>" },
-        { "Map", "Record<unknown, unknown>" },
+        { "Dictionary", "UnknownRecord" },
+        { "Map", "UnknownRecord" },
         { "RBXScriptSignal", "ScriptSignal" },
         { "RBXScriptConnection", "ScriptConnection" },
         { "Objects", "Object[]" },
@@ -234,11 +234,11 @@ internal static class Constants
     
     public static readonly Dictionary<string, string> ReturnTypeMap = new() { { "null", "void" } };
 
-    public static readonly Dictionary<string, string> ParameterNameMap = new()
+    public static readonly Dictionary<string, string> RenameMap = new()
     {
-        { "debugger", "debug" },
+        { "type", "_type" },
+        { "interface", "_interface" },
         { "old", "oldValue" },
-        { "new", "newValue" },
-        { "string", "str" }
+        { "new", "newValue" }
     };
 }

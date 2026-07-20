@@ -5,7 +5,7 @@
       Name: Token(Identifier, "a")
       Token(Identifier, "a")
     )
-    Right: AsExpression(
+    Right: As(
       Expression: Identifier(
         Name: Token(Identifier, "b")
         Token(Identifier, "b")
@@ -23,7 +23,7 @@ ExpressionStatement(
       Name: Token(Identifier, "a")
       Token(Identifier, "a")
     )
-    Right: AsExpression(
+    Right: As(
       Expression: Identifier(
         Name: Token(Identifier, "b")
         Token(Identifier, "b")
@@ -41,7 +41,7 @@ ExpressionStatement(
       Name: Token(Identifier, "a")
       Token(Identifier, "a")
     )
-    Right: AsExpression(
+    Right: As(
       Expression: Identifier(
         Name: Token(Identifier, "b")
         Token(Identifier, "b")
@@ -55,7 +55,7 @@ ExpressionStatement(
 ExpressionStatement(
   Expression: BinaryOperator(
     Operator: Token(LArrow, "<")
-    Left: AsExpression(
+    Left: As(
       Expression: Identifier(
         Name: Token(Identifier, "a")
         Token(Identifier, "a")
@@ -73,7 +73,7 @@ ExpressionStatement(
 ExpressionStatement(
   Expression: BinaryOperator(
     Operator: Token(EqualsEquals, "==")
-    Left: AsExpression(
+    Left: As(
       Expression: Identifier(
         Name: Token(Identifier, "a")
         Token(Identifier, "a")
@@ -82,7 +82,7 @@ ExpressionStatement(
         Kind: Bool
       )
     )
-    Right: AsExpression(
+    Right: As(
       Expression: Identifier(
         Name: Token(Identifier, "b")
         Token(Identifier, "b")
@@ -96,8 +96,8 @@ ExpressionStatement(
 ExpressionStatement(
   Expression: BinaryOperator(
     Operator: Token(Plus, "+")
-    Left: AsExpression(
-      Expression: AsExpression(
+    Left: As(
+      Expression: As(
         Expression: Identifier(
           Name: Token(Identifier, "a")
           Token(Identifier, "a")
@@ -117,7 +117,7 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: AsExpression(
+  Expression: As(
     Expression: Identifier(
       Name: Token(Identifier, "x")
       Token(Identifier, "x")
@@ -141,7 +141,7 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: AsExpression(
+  Expression: As(
     Expression: Identifier(
       Name: Token(Identifier, "x")
       Token(Identifier, "x")
@@ -170,7 +170,7 @@ ExpressionStatement(
     Left: Parenthesized(
       LeftParen: Token(LParen, "(")
       RightParen: Token(RParen, ")")
-      Expression: AsExpression(
+      Expression: As(
         Expression: Identifier(
           Name: Token(Identifier, "x")
           Token(Identifier, "x")
@@ -187,7 +187,7 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: AsExpression(
+  Expression: As(
     Expression: Identifier(
       Name: Token(Identifier, "x")
       Token(Identifier, "x")
@@ -206,9 +206,9 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: AsExpression(
-    Expression: AsExpression(
-      Expression: AsExpression(
+  Expression: As(
+    Expression: As(
+      Expression: As(
         Expression: Identifier(
           Name: Token(Identifier, "x")
           Token(Identifier, "x")
@@ -227,7 +227,7 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: AsExpression(
+  Expression: As(
     Expression: Identifier(
       Name: Token(Identifier, "x")
       Token(Identifier, "x")
@@ -247,8 +247,8 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: AsExpression(
-    Expression: AsExpression(
+  Expression: As(
+    Expression: As(
       Expression: Identifier(
         Name: Token(Identifier, "x")
         Token(Identifier, "x")
@@ -263,7 +263,7 @@ ExpressionStatement(
   )
 )
 ExpressionStatement(
-  Expression: AsExpression(
+  Expression: As(
     Expression: Identifier(
       Name: Token(Identifier, "x")
       Token(Identifier, "x")

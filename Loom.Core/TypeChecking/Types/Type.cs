@@ -2,27 +2,48 @@ namespace Loom.Core.TypeChecking.Types;
 
 public abstract class Type : IEquatable<Type>
 {
-    private static readonly ThreadLocal<HashSet<(Type, Type)>> _equalsVisiting =
-        new(() => []);
+    private static readonly HashSet<(Type, Type)> _equalsVisiting = [];
 
     protected static bool GuardedEquals(Type a, Type? b, Func<bool> compare)
     {
         if (ReferenceEquals(a, b)) return true;
         if (b == null) return false;
-        
-        var visiting = _equalsVisiting.Value!;
+
         var pair = (a, b);
-        if (!visiting.Add(pair)) return true; // already comparing this pair up the stack — assume equal, cycle closes
+        if (!_equalsVisiting.Add(pair))
+            return true;
+
         try
         {
             return compare();
         }
         finally
         {
-            visiting.Remove(pair);
+            _equalsVisiting.Remove(pair);
         }
     }
+
+    protected static int GetTypeListHash<T>(List<T> types)
+        where T : Type =>
+        types.Aggregate(0, (current, arg) => current ^ arg.GetHashCode());
     
+    protected static bool ListEquals<T>(List<T> list, List<T> otherList)
+        where T : Type
+    {
+        if (list.Count != otherList.Count)
+            return false;
+
+        var equals = true;
+        for (var i = 0; i < list.Count; i++)
+        {
+            var type = list[i];
+            var otherType = otherList[i];
+            equals &= ReferenceEquals(type, otherType) || type.Equals(otherType);
+        }
+
+        return equals;
+    }
+
     public abstract bool Equals(Type? other);
     public abstract override string ToString();
     public override bool Equals(object? obj) => Equals(obj as Type);
@@ -38,7 +59,7 @@ public abstract class Type : IEquatable<Type>
     public static bool IsOptional(Type type) => IsNone(type) || type is OptionalType || type is UnionType union && union.Types.Any(t => IsNone(t) || IsOptional(t));
     protected static string ParenthesizeIfNeeded(Type type) => RequiresParentheses(type) ? $"({type})" : type.ToString();
     private static bool RequiresParentheses(Type type) => type is (UnionType or IntersectionType or FunctionType) and not OptionalType;
-    
+
     public Type NonNullable() =>
         IsNone(this)
             ? PrimitiveType.Never
@@ -60,8 +81,4 @@ public abstract class Type : IEquatable<Type>
             InstantiatedType instantiated => IsAssignableTo(instantiated.Expand()),
             _ => Equals(other)
         };
-    
-    protected static bool ListEquals<T>(List<T> list, List<T> otherList) where T : Type =>
-        list.Count == otherList.Count
-        && list.All(t => otherList.Any(u => u.Equals(t)));
 }

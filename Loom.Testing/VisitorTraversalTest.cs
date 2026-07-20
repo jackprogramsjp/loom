@@ -33,7 +33,7 @@ public class VisitorTraversalTest
     [Fact]
     public void InterfaceInvocation_VisitsTypeArgumentsAndBody() =>
         AssertVisitOrder(
-            "new Foo::<number> { foo: 69, [69]: true }",
+            "new Foo::<number> { foo: 69, [69]: true, bar }",
             "ExpressionStatement",
             "InterfaceInvocation",
             "Identifier",
@@ -44,13 +44,15 @@ public class VisitorTraversalTest
             "Literal",
             "InterfaceInvocationIndexInitializer",
             "Literal",
-            "Literal"
+            "Literal",
+            "InterfaceInvocationShorthandPropertyInitializer",
+            "Identifier"
         );
 
     [Fact]
     public void Interface_VisitsConstraintsAndMembers() =>
         AssertVisitOrder(
-            "interface A: B, C { [bool]: number, a: number, b: number }",
+            "interface A: B, C { [bool]: number, a: number, [some_attribute(69), balls] b: number }",
             "InterfaceDeclaration",
             "ColonTypeListClause",
             "TypeName",
@@ -64,6 +66,14 @@ public class VisitorTraversalTest
             "ColonTypeClause",
             "PrimitiveType",
             "PropertyDeclaration",
+            "Attributes",
+            "Attribute",
+            "Identifier",
+            "Arguments",
+            "Literal",
+            "Attribute",
+            "Identifier",
+            "Arguments",
             "ColonTypeClause",
             "PrimitiveType"
         );
@@ -401,7 +411,7 @@ public class VisitorTraversalTest
         AssertVisitOrder(
             "x as number",
             "ExpressionStatement",
-            "AsExpression",
+            "As",
             "Identifier",
             "PrimitiveType"
         );

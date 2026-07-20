@@ -6,13 +6,13 @@ namespace Loom.Testing;
 [Collection("Assembly")]
 public class MacroExpanderTest
 {
-    [Theory(Skip = "No Roblox types (yet)")]
+    [Theory]
     [InlineData("CreatableInstance", "new_instance")]
     [InlineData("ServiceInstance", "get_service")]
     public void ThrowsFor_TypeParametersInNewInstanceCall(string constraint, string fnName)
     {
         var diagnostics = Utility.GetGeneratorDiagnostics($"fn abc<T: {constraint}> -> {fnName}::<T>();", true);
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.AbstractTypeParameterInMacro, $"Cannot use type parameter 'T' with '{fnName}::<T>()'.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.AbstractTypeParameterInMacro, $"Cannot use type parameter 'T' with '{fnName}::<T>()' macro.");
     }
     
     [Fact]
@@ -174,7 +174,7 @@ public class MacroExpanderTest
         Assert.Equal("concat", Assert.Single(concat.Names));
 
         var propertyAccess = Assert.IsType<PropertyAccess>(Assert.Single(concatCall.Arguments));
-        Assert.IsType<ElementAccess>(propertyAccess.Target);
+        Assert.IsType<PropertyAccess>(propertyAccess.Target);
         Assert.Equal(2, propertyAccess.Names.Count);
         Assert.Equal("b", propertyAccess.Names.First());
         Assert.Equal("a", propertyAccess.Names.Last());
@@ -199,7 +199,7 @@ public class MacroExpanderTest
         var unaryOperator = Assert.IsType<UnaryOperator>(variable.Initializer);
         var propertyAccess = Assert.IsType<PropertyAccess>(unaryOperator.Operand);
         var secondPropertyAccess = Assert.IsType<PropertyAccess>(propertyAccess.Target);
-        Assert.IsType<ElementAccess>(secondPropertyAccess.Target);
+        Assert.IsType<PropertyAccess>(secondPropertyAccess.Target);
         Assert.Equal("#", unaryOperator.Operator);
         Assert.Equal("b", Assert.Single(secondPropertyAccess.Names));
         Assert.Equal("a", Assert.Single(propertyAccess.Names));

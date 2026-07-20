@@ -57,7 +57,9 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitIndexerDeclaration(IndexerDeclaration indexerDeclaration) =>
         CombineResults([Visit(indexerDeclaration.IndexType), Visit(indexerDeclaration.ColonTypeClause)]);
 
-    public virtual T VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration) => Visit(propertyDeclaration.ColonTypeClause);
+    public virtual T VisitPropertyDeclaration(PropertyDeclaration propertyDeclaration) =>
+        CombineResults([VisitWithDefault(propertyDeclaration.Attributes), Visit(propertyDeclaration.ColonTypeClause)]);
+
     public virtual T VisitInterfaceBody(InterfaceBody interfaceBody) => VisitList(interfaceBody.Members);
 
     public virtual T VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration) =>
@@ -138,7 +140,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitPropertyAccess(PropertyAccess propertyAccess) => Visit(propertyAccess.Expression);
     public virtual T VisitElementAccess(ElementAccess elementAccess) => CombineResults([Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression)]);
 
-    public virtual T VisitAsExpression(AsExpression asExpression) => CombineResults([Visit(asExpression.Expression), Visit(asExpression.Type)]);
+    public virtual T VisitAs(As @as) => CombineResults([Visit(@as.Expression), Visit(@as.Type)]);
 
     public virtual T VisitAssignmentOperator(AssignmentOperator assignmentOperator) =>
         CombineResults([Visit(assignmentOperator.Left), Visit(assignmentOperator.Right)]);
@@ -172,6 +174,8 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
         where TType : TypeExpression =>
         VisitList(typeArguments.ArgumentsList);
 
+    public virtual T VisitAttribute(Attribute attribute) => CombineResults([Visit(attribute.Expression), VisitWithDefault(attribute.Arguments)]);
+    public virtual T VisitAttributes(Attributes attributes) => VisitList(attributes.AttributeList);
     public virtual T VisitColonTypeListClause(ColonTypeListClause colonTypeListClause) => VisitList(colonTypeListClause.Types);
     public virtual T VisitColonTypeClause(ColonTypeClause colonTypeClause) => Visit(colonTypeClause.Type);
     public virtual T VisitEqualsTypeClause(EqualsTypeClause equalsTypeClause) => Visit(equalsTypeClause.Type);

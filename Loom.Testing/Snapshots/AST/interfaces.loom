@@ -1,13 +1,12 @@
 interface I { }
 interface IPoint { x: number y: number }
-interface I { mut count: int }
+interface I { mut count: number }
 interface I { [number]: string }
 interface I { mut [string]: number }
-interface I { x: number, [int]: bool }
+interface I { x: number, [number]: bool }
 interface I<T> { value: T }
-interface I<T, U: number> : Base, IDisposable { }
+interface I<T, U: number>: Base, IDisposable { }
 interface Empty;
 sealed interface I;
 declare interface I;
 interface I<T, U>: A, B;
-interface I { x: number y: string }

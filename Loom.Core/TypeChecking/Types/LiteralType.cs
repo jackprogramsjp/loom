@@ -21,7 +21,7 @@ public sealed class LiteralType(object? value)
         _ => throw new ArgumentException($"Unsupported literal type: {value.GetType()}")
     };
 
-    public override int GetHashCode() => HashCode.Combine(typeof(LiteralType), Value);
+    public override int GetHashCode() => HashCode.Combine(typeof(LiteralType), Kind, Value);
     public override bool Equals(Type? other) => other is LiteralType literal && (Value?.Equals(literal.Value) ?? literal.Value == null);
 
     public override bool IsAssignableTo(Type other) =>

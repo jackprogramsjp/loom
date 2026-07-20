@@ -10,23 +10,13 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
         GuardedEquals(
             this,
             other,
-            () =>
-            {
-                if (ReferenceEquals(this, other)) return true;
-                return other is InstantiatedType instantiated
-                    && GenericType.Equals(instantiated.GenericType)
-                    && ListEquals(Arguments, instantiated.Arguments);
-            }
+            () => other is InstantiatedType instantiated
+                && GenericType.Equals(instantiated.GenericType)
+                && ListEquals(Arguments, instantiated.Arguments)
         );
 
     public override bool IsAssignableTo(Type other) => Expand().IsAssignableTo(other);
-    
-    public override int GetHashCode()
-    {
-        var argHash = Arguments.Aggregate(0, (current, arg) => current ^ arg.GetHashCode());
-        return HashCode.Combine(GenericType.GetHashCode(), Arguments.Count, argHash);
-    }
-
+    public override int GetHashCode() => HashCode.Combine(GenericType.GetHashCode(), Arguments.Count, GetTypeListHash(Arguments));
     public override string ToString() => GenericType.Declaration.Name.Text + "<" + string.Join(", ", Arguments.ConvertAll(p => p.ToString())) + ">";
 
     public Type Expand()

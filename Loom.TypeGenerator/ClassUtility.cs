@@ -11,10 +11,10 @@ internal static class ClassUtility
     //         ? null
     //         : Constants.PropertyTypeMap.GetValueOrDefault(valueType, valueType);
 
-    // public static string SafeRenamedInstance(string? name) =>
-    //     name != null && Constants.RenamableAutoTypes.TryGetValue(name, out var value)
-    //         ? value
-    //         : SafeName(name);
+    public static string SafeRenamedInstance(string? name) =>
+        name != null && Constants.RenamableAutoTypes.TryGetValue(name, out var value)
+            ? value
+            : SafeName(name);
 
     public static bool HasMatchingSuperclass(Class rbxClass, Dictionary<string, Class> classRefs, Func<Class, bool> predicate)
     {
@@ -61,14 +61,14 @@ internal static class ClassUtility
             <= 0 => null,
             null => "void",
             1 => typeNames[0],
-            > 1 => $"({string.Join(", ", typeNames)})" // undecided tuple syntax
+            > 1 => "unknown[]" // $"({string.Join(", ", typeNames)})" // undecided tuple syntax
         };
     }
 
-    public static string? SafeParamName(string? name) =>
-        name != null && Constants.ParameterNameMap.TryGetValue(name, out var value)
+    public static string SafeRename(string? name) =>
+        name != null && Constants.RenameMap.TryGetValue(name, out var value)
             ? value
-            : name;
+            : SafeName(name);
 
     public static Security GetSecurity(string className, MemberBase member)
     {
@@ -105,7 +105,7 @@ internal static class ClassUtility
                 ? name.Replace("\"", "\\\"")
                 : name;
     
-    /// <summary>Returns the given <see cref="className"/> if it's in <see cref="_classRefs"/>, throws if not</summary>
+    /// <summary>Returns the given <see cref="className"/> if it's in <see cref="classRefs"/>, throws if not</summary>
     public static string AssertClassName(string className, Dictionary<string, Class> classRefs)
     {
         if (classRefs.ContainsKey(className))

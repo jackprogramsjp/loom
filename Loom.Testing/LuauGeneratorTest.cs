@@ -1011,11 +1011,10 @@ public class LuauGeneratorTest
     {
         var luauTree = Utility.GetLuauAST("interface I { [string]: number } let x = none as never as I; x['key']", typeCheck: true);
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
-        var elementAccess = Assert.IsType<ElementAccess>(variable.Initializer);
-        var target = Assert.IsType<Identifier>(elementAccess.Target);
+        var propertyAccess = Assert.IsType<PropertyAccess>(variable.Initializer);
+        var target = Assert.IsType<Identifier>(propertyAccess.Target);
         Assert.Equal("x", target.Name);
-        var index = Assert.IsType<StringLiteral>(elementAccess.Index);
-        Assert.Equal("key", index.Value);
+        Assert.Equal("key", Assert.Single(propertyAccess.Names));
     }
 
     [Fact]

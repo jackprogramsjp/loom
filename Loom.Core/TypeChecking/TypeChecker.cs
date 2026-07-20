@@ -8,6 +8,7 @@ using Loom.Core.Text;
 using Loom.Core.TypeChecking.Types;
 using Loom.Core.Generation.Macros;
 using ArrayType = Loom.Core.Parsing.AST.ArrayType;
+using Attribute = Loom.Core.Parsing.AST.Attribute;
 using FunctionType = Loom.Core.Parsing.AST.FunctionType;
 using IndexedType = Loom.Core.Parsing.AST.IndexedType;
 using IntersectionType = Loom.Core.Parsing.AST.IntersectionType;
@@ -89,6 +90,15 @@ public sealed partial class TypeChecker
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement) => BindType(expressionStatement, Visit(expressionStatement.Expression));
     public override Type VisitBlock(Block block) => BindType(block, CheckStatements(block, block.Statements).LastOrDefault(Types.PrimitiveType.Void));
+
+    public override Type VisitAttribute(Attribute attribute)
+    {
+        var expressionType = Visit(attribute.Expression);
+        if (expressionType is not Types.FunctionType)
+            _diagnostics.Error(attribute, InternalCodes.NonFunctionAttribute, "Only functions may be used as attributes.");
+
+        return expressionType;
+    }
 
     public override Type VisitBreak(Break @break)
     {
@@ -306,14 +316,14 @@ public sealed partial class TypeChecker
         return BindType(parameter, declaredType ?? initializerType!);
     }
 
-    public override Type VisitAsExpression(AsExpression asExpression)
+    public override Type VisitAs(As @as)
     {
-        var expressionType = Visit(asExpression.Expression);
-        var castedType = TypeSimplifier.Simplify(Visit(asExpression.Type));
+        var expressionType = Visit(@as.Expression);
+        var castedType = TypeSimplifier.Simplify(Visit(@as.Type));
         if (Type.IsNotUnknown(expressionType) && Type.IsNotNever(castedType) && Type.IsNotUnknown(castedType))
-            _semanticModel.TypeSolver.AddConstraint(expressionType, castedType, asExpression);
+            _semanticModel.TypeSolver.AddConstraint(expressionType, castedType, @as);
 
-        return BindType(asExpression, castedType);
+        return BindType(@as, castedType);
     }
 
     public override Type VisitNameOf(NameOf nameOf) =>
@@ -650,7 +660,7 @@ public sealed partial class TypeChecker
                 return BindType(identifier, contextualType);
             }
 
-            if (symbol is PropertyVariableSymbol propertyVariableSymbol)
+            if (symbol is InjectedPropertyVariableSymbol propertyVariableSymbol)
             {
                 var interfaceType = (InterfaceType)_semanticModel.GetType(propertyVariableSymbol.From.Declaration);
                 return GetTypeAtIndexNative(identifier, interfaceType, new Types.LiteralType(propertyVariableSymbol.Name));

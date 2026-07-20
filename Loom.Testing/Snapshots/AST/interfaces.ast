@@ -25,6 +25,7 @@ InterfaceDeclaration(
             Kind: Number
           )
         )
+        Attributes: null
       )
       PropertyDeclaration(
         MutKeyword: null
@@ -35,6 +36,7 @@ InterfaceDeclaration(
             Kind: Number
           )
         )
+        Attributes: null
       )
     ]
   )
@@ -53,11 +55,11 @@ InterfaceDeclaration(
         Name: Token(Identifier, "count")
         ColonTypeClause(
           ColonToken: Token(Colon, ":")
-          Type: TypeName(
-            Name: Token(Identifier, "int")
-            TypeArguments: null
+          Type: PrimitiveType(
+            Kind: Number
           )
         )
+        Attributes: null
       )
     ]
   )
@@ -132,14 +134,14 @@ InterfaceDeclaration(
             Kind: Number
           )
         )
+        Attributes: null
       )
       IndexerDeclaration(
         MutKeyword: null
         LeftBracket: Token(LBracket, "[")
         RightBracket: Token(RBracket, "]")
-        IndexType: TypeName(
-          Name: Token(Identifier, "int")
-          TypeArguments: null
+        IndexType: PrimitiveType(
+          Kind: Number
         )
         ColonTypeClause(
           ColonToken: Token(Colon, ":")
@@ -170,6 +172,7 @@ InterfaceDeclaration(
             TypeArguments: null
           )
         )
+        Attributes: null
       )
     ]
   )
@@ -284,37 +287,5 @@ InterfaceDeclaration(
       )
     ]
   )
-  Name: Token(Identifier, "I")
-)
-InterfaceDeclaration(
-  SealedKeyword: null
-  ColonTypeListClause: null
-  Body: InterfaceBody(
-    LeftBrace: Token(LBrace, "{")
-    RightBrace: Token(RBrace, "}")
-    Members: [
-      PropertyDeclaration(
-        MutKeyword: null
-        Name: Token(Identifier, "x")
-        ColonTypeClause(
-          ColonToken: Token(Colon, ":")
-          Type: PrimitiveType(
-            Kind: Number
-          )
-        )
-      )
-      PropertyDeclaration(
-        MutKeyword: null
-        Name: Token(Identifier, "y")
-        ColonTypeClause(
-          ColonToken: Token(Colon, ":")
-          Type: PrimitiveType(
-            Kind: String
-          )
-        )
-      )
-    ]
-  )
-  TypeParameters: null
   Name: Token(Identifier, "I")
 )

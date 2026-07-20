@@ -285,7 +285,7 @@ ExpressionStatement(
       Name: Token(Identifier, "a")
       Token(Identifier, "a")
     )
-    Right: AsExpression(
+    Right: As(
       Expression: Identifier(
         Name: Token(Identifier, "b")
         Token(Identifier, "b")
@@ -429,7 +429,7 @@ ExpressionStatement(
           )
         )
       )
-      Right: AsExpression(
+      Right: As(
         Expression: Invocation(
           Expression: Identifier(
             Name: Token(Identifier, "f")
@@ -459,7 +459,7 @@ ExpressionStatement(
         )
       )
     )
-    Right: AsExpression(
+    Right: As(
       Expression: Identifier(
         Name: Token(Identifier, "c")
         Token(Identifier, "c")

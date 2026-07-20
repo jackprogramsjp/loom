@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.Generation.Macros;
 using Loom.Core.Parsing.AST;
@@ -175,12 +176,14 @@ public sealed partial class LuauGenerator
 
     public override LuauNode VisitInvocation(Invocation invocation)
     {
-        var isMethod = invocation.Expression.Children.FirstOrDefault() is { } child
+        var callee = Visit(invocation.Expression);
+        var isMethod = _semanticModel.TryGetIntrinsicAttribute(invocation.Expression, "luau_method", out _)
+            || invocation.Expression.Children.FirstOrDefault() is { } child
             && _semanticModel.GetType(child) is InterfaceType interfaceType
             && invocation.Expression.Tokens.LastOrDefault() is { Kind: SyntaxKind.Identifier } name
             && interfaceType.TraitMethodNames.Contains(name.Text);
 
-        var call = new Call(Visit(invocation.Expression), invocation.Arguments.ArgumentList.ConvertAll(Visit), isMethod);
+        var call = new Call(callee, invocation.Arguments.ArgumentList.ConvertAll(Visit), isMethod);
         return _macroExpander.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
     }
 
@@ -190,10 +193,9 @@ public sealed partial class LuauGenerator
         if (_macroExpander.TryGetQualifiedNameMacro(qualifiedName, luauAccess, out var propertyReplacement))
             return propertyReplacement;
 
-        if (_macroExpander.TryGetInvocationMacroReference(qualifiedName, luauAccess, out var referenceReplacement))
-            return referenceReplacement;
-
-        return luauAccess;
+        return _macroExpander.TryGetInvocationMacroReference(qualifiedName, luauAccess, out var referenceReplacement)
+            ? referenceReplacement
+            : GenerateRenamedAccess(qualifiedName, luauAccess.Target, luauAccess.Names);
     }
 
     public override LuauNode VisitPropertyAccess(PropertyAccess propertyAccess)
@@ -202,10 +204,9 @@ public sealed partial class LuauGenerator
         if (_macroExpander.TryGetPropertyAccessMacro(propertyAccess, luauAccess, out var propertyReplacement))
             return propertyReplacement;
 
-        if (_macroExpander.TryGetInvocationMacroReference(propertyAccess, luauAccess, out var referenceReplacement))
-            return referenceReplacement;
-
-        return luauAccess;
+        return _macroExpander.TryGetInvocationMacroReference(propertyAccess, luauAccess, out var referenceReplacement)
+            ? referenceReplacement
+            : GenerateRenamedAccess(propertyAccess, luauAccess.Target, luauAccess.Names);
     }
 
     public override LuauNode VisitElementAccess(ElementAccess elementAccess)
@@ -213,7 +214,9 @@ public sealed partial class LuauGenerator
         var luauAccess = new Luau.AST.ElementAccess(Visit(elementAccess.Expression), Visit(elementAccess.IndexExpression));
         return _macroExpander.TryGetElementAccessMacro(elementAccess, luauAccess, out var replacement)
             ? replacement
-            : luauAccess;
+            : luauAccess.Index is StringLiteral literal
+                ? GenerateRenamedAccess(elementAccess, luauAccess.Target, [literal.Value])
+                : luauAccess;
     }
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
@@ -288,6 +291,11 @@ public sealed partial class LuauGenerator
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
+
+    private Luau.AST.PropertyAccess GenerateRenamedAccess(Expression access, LuauExpression target, List<string> names) =>
+        _semanticModel.TryGetIntrinsicAttribute(access, "luau_name", out var attr) && ValidateLuauNameAttribute(attr, out var nameLiteral)
+            ? new Luau.AST.PropertyAccess(target, [..names.SkipLast(1), nameLiteral.Value])
+            : new Luau.AST.PropertyAccess(target, names);
 
     private LuauNode GenerateBitwiseOperator(BinaryOperator binaryOperator)
     {
