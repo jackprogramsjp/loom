@@ -189,13 +189,13 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     }
 
     public override bool VisitIdentifierPattern(IdentifierPattern identifierPattern)
-        => DeclareVariable(identifierPattern, identifierPattern.Name.Text, SymbolKind.Variable, out _);
+        => DeclareVariable(identifierPattern, identifierPattern.Name.Text, SymbolKind.Variable);
 
     public override bool VisitLetPattern(LetPattern letPattern)
-        => DeclareVariable(letPattern, letPattern.Name.Text, SymbolKind.Variable, out _);
+        => DeclareVariable(letPattern, letPattern.Name.Text, SymbolKind.Variable);
 
     public override bool VisitTypedPattern(TypedPattern typedPattern)
-        => DeclareVariable(typedPattern, typedPattern.Name.Text, SymbolKind.Variable, out _)
+        => DeclareVariable(typedPattern, typedPattern.Name.Text, SymbolKind.Variable)
         && Visit(typedPattern.Type)
         && (typedPattern.ObjectPattern == null || Visit(typedPattern.ObjectPattern));
 
