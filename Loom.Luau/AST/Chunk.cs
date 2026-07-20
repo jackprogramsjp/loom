@@ -3,6 +3,7 @@ namespace Loom.Luau.AST;
 public class Chunk(List<LuauStatement> statements) : LuauStatement
 {
     public List<LuauStatement> Statements { get; } = statements;
+    public bool IsSimple { get; } = statements is [Continue or Break or Return { Expression: null }];
 
     public override string Render(RenderState state)
     {
