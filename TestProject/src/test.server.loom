@@ -1,0 +1,9 @@
+interface Base {
+    [luau_method]
+    my_method: fn: void;
+}
+
+interface Derived: Base;
+
+let d = none as never as Derived;
+d.my_method();

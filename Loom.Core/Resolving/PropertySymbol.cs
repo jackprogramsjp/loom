@@ -7,4 +7,6 @@ public class PropertySymbol(PropertyDeclaration propertyDeclaration, InterfaceSy
 {
     public InterfaceSymbol? PointsTo { get; } = pointsTo;
     public List<AttributeSymbol> Attributes { get; } = attributes;
+
+    public bool HasIntrinsicAttribute(string name) => Attributes.Any(a => a.IsIntrinsic && a.Name == name);
 }

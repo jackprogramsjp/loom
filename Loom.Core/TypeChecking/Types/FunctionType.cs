@@ -6,7 +6,16 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
     public List<Type> ParameterTypes { get; } = parameterTypes;
     public Type ReturnType { get; } = returnType;
 
-    public override int GetHashCode() => HashCode.Combine(TypeParameters.Count, ParameterTypes.Count, ReturnType.GetHashCode());
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(TypeParameters.Count);
+        hash.Add(GetTypeListHash(TypeParameters));
+        hash.Add(ParameterTypes.Count);
+        hash.Add(GetTypeListHash(ParameterTypes));
+        hash.Add(ReturnType);
+        return hash.ToHashCode();
+    }
 
     public override bool Equals(Type? other) =>
         other is FunctionType functionType

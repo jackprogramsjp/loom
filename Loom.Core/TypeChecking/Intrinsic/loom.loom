@@ -12,5 +12,5 @@ declare fn print(a: unknown, b: unknown?, c: unknown?, d: unknown?, e: unknown?,
 declare fn string(value: unknown): string;
 declare fn number(value: unknown, radix: number?): number?;
 
-## Property attribute - marks that a method will be called with the ':' operator
 declare fn luau_method: void;
+declare fn override: void;

@@ -31,13 +31,14 @@ public sealed class InterfaceType(
         return TypeSimplifier.Simplify(new UnionType(unionTypes));
     }
 
-    public override bool Equals(Type? other)
-    {
-        if (ReferenceEquals(this, other)) return true;
-        return other is InterfaceType interfaceType
-            && ListEquals(Constraints, interfaceType.Constraints)
-            && ObjectType.Equals(interfaceType.ObjectType);
-    }
+    public override bool Equals(Type? other) =>
+        GuardedEquals(
+            this,
+            other,
+            () => other is InterfaceType interfaceType
+                && ListEquals(Constraints, interfaceType.Constraints)
+                && ObjectType.Equals(interfaceType.ObjectType)
+        );
 
     public override int GetHashCode() => HashCode.Combine(Name, Constraints.Count, ObjectType.GetHashCode());
     public override bool IsAssignableTo(Type other) => AssignabilityType.IsAssignableTo(other);

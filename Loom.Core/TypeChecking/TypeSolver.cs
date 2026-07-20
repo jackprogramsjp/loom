@@ -20,7 +20,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         public Type Actual { get; }
         public Type Expected { get; }
         public LocationSpan Span { get; }
-        
+
         public TypeConstraint(Type actual, Type expected, LocationSpan span)
         {
             ArgumentNullException.ThrowIfNull(actual);
@@ -32,7 +32,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
     }
 
     public DiagnosticBag Diagnostics { get; } = diagnostics;
-    
+
     private readonly List<TypeConstraint> _constraints = [];
     private readonly Dictionary<NodeId, Type> _nodeTypes = [];
     private readonly Dictionary<int, Type> _substitutions = [];
@@ -52,46 +52,46 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
                 ReportInfiniteType(name.Span, name.Text);
                 return true;
         }
-        
+
         return false;
     }
 
     public static Type Transform(Type type, Converter<Type, Type> fn, Type? defaultValue = null, bool simplify = true)
     {
         var transformed = type switch
-            {
-                IndexedType indexedType => new IndexedType(fn(indexedType.Target), fn(indexedType.Index)),
-                ArrayType arrayType => new ArrayType(fn(arrayType.ElementType), arrayType.IsMutable),
-                InterfaceType interfaceType => new InterfaceType(
-                    interfaceType.Name,
-                    interfaceType.Constraints.ConvertAll(fn).OfType<InterfaceType>().ToList(),
-                    (ObjectType)fn(interfaceType.ObjectType),
-                    interfaceType.TraitMethodNames
-                ),
-                ObjectType objectType => new ObjectType(
-                    objectType.Indexer != null
-                        ? new ObjectIndexer(objectType.Indexer.IsMutable, fn(objectType.Indexer.KeyType), fn(objectType.Indexer.ValueType))
-                        : null,
-                    objectType.Properties.ConvertAll(p => new ObjectProperty(p.IsMutable, p.Name, fn(p.ValueType)))
-                ),
-                IntersectionType intersectionType => new IntersectionType(intersectionType.Types.ConvertAll(fn)),
-                UnionType unionType => new UnionType(unionType.Types.ConvertAll(fn)),
-                FunctionType functionType => new FunctionType(
-                    functionType.TypeParameters,
-                    functionType.ParameterTypes.ConvertAll(fn),
-                    fn(functionType.ReturnType)
-                ),
-                GenericType genericType => new GenericType(
-                    genericType.Declaration,
-                    genericType.Parameters,
-                    fn(genericType.UnderlyingType)
-                ),
-                InstantiatedType instantiatedType => new InstantiatedType(
-                    instantiatedType.GenericType,
-                    instantiatedType.Arguments.ConvertAll(fn)
-                ),
-                _ => defaultValue ?? type
-            };
+        {
+            IndexedType indexedType => new IndexedType(fn(indexedType.Target), fn(indexedType.Index)),
+            ArrayType arrayType => new ArrayType(fn(arrayType.ElementType), arrayType.IsMutable),
+            InterfaceType interfaceType => new InterfaceType(
+                interfaceType.Name,
+                interfaceType.Constraints.ConvertAll(fn).OfType<InterfaceType>().ToList(),
+                (ObjectType)fn(interfaceType.ObjectType),
+                interfaceType.TraitMethodNames
+            ),
+            ObjectType objectType => new ObjectType(
+                objectType.Indexer != null
+                    ? new ObjectIndexer(objectType.Indexer.IsMutable, fn(objectType.Indexer.KeyType), fn(objectType.Indexer.ValueType))
+                    : null,
+                objectType.Properties.ConvertAll(p => new ObjectProperty(p.IsMutable, p.Name, fn(p.ValueType)))
+            ),
+            IntersectionType intersectionType => new IntersectionType(intersectionType.Types.ConvertAll(fn)),
+            UnionType unionType => new UnionType(unionType.Types.ConvertAll(fn)),
+            FunctionType functionType => new FunctionType(
+                functionType.TypeParameters,
+                functionType.ParameterTypes.ConvertAll(fn),
+                fn(functionType.ReturnType)
+            ),
+            GenericType genericType => new GenericType(
+                genericType.Declaration,
+                genericType.Parameters,
+                fn(genericType.UnderlyingType)
+            ),
+            InstantiatedType instantiatedType => new InstantiatedType(
+                instantiatedType.GenericType,
+                instantiatedType.Arguments.ConvertAll(fn)
+            ),
+            _ => defaultValue ?? type
+        };
 
         return simplify ? TypeSimplifier.Simplify(transformed) : transformed;
     }
@@ -343,8 +343,14 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
             _ => Transform(type, t => SubstituteTypeParameters(mapping, t))
         };
 
-    private Type Substitute(Type type)
+    private Type Substitute(Type type) => Substitute(type, new Dictionary<Type, Type>());
+
+    private Type Substitute(Type type, Dictionary<Type, Type> visitedSubstitutions)
     {
+        if (visitedSubstitutions.TryGetValue(type, out var existing))
+            return existing;
+
+        var original = type;
         var visited = new HashSet<int>();
         while (type is TypeVariable tv && _substitutions.TryGetValue(tv.Id, out var replacement))
         {
@@ -352,10 +358,13 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
             type = replacement;
         }
 
-        type = Transform(type, Substitute);
+        visitedSubstitutions[original] = type;
+        type = Transform(type, t => Substitute(t, visitedSubstitutions), null, false);
         if (type is InstantiatedType instantiated && instantiated.Arguments.All(a => a is not TypeVariable))
             type = instantiated.Expand();
 
+        type = TypeSimplifier.Simplify(type);
+        visitedSubstitutions[original] = type;
         return type;
     }
 

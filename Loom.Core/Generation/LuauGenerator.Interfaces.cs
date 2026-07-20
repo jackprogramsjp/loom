@@ -107,9 +107,8 @@ public sealed partial class LuauGenerator
     {
         LuauVisibility? visibility = property.MutKeyword == null ? LuauVisibility.Read : null;
         var name = property.Name.Text;
-        var propertySymbol = _semanticModel.GetDeclarationSymbol(property, SymbolKind.Property) as PropertySymbol;
         var type = Visit(property.ColonTypeClause);
-        if (propertySymbol?.Attributes.Find(a => a is { Name: "luau_method", IsIntrinsic: true }) is not { } luauMethodAttribute)
+        if (!property.TryGetIntrinsicAttribute(_semanticModel, "luau_method", out var luauMethodAttribute))
             return new TableTypeProperty(visibility, name, type);
 
         if (type is not Luau.AST.FunctionType functionType)

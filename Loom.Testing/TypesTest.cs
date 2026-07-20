@@ -793,6 +793,8 @@ public class TypesTest
         var innerNarrow = new FunctionType([], [Number], String);
         var outerWide = new FunctionType([], [innerWide], Bool);
         var outerNarrow = new FunctionType([], [innerNarrow], Bool);
+        Assert.False(innerWide.Equals(innerNarrow));
+        Assert.False(outerWide.Equals(outerNarrow));
         Assert.True(outerWide.IsAssignableTo(outerNarrow));
         Assert.False(outerNarrow.IsAssignableTo(outerWide));
     }

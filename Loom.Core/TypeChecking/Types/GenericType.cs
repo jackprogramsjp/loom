@@ -12,14 +12,10 @@ public sealed class GenericType(GenericNamedDeclaration declaration, List<TypePa
         GuardedEquals(
             this,
             other,
-            () =>
-            {
-                if (ReferenceEquals(this, other)) return true;
-                return other is GenericType generic
-                    && Declaration.Id == generic.Declaration.Id
-                    && ListEquals(Parameters, generic.Parameters)
-                    && UnderlyingType.Equals(generic.UnderlyingType);
-            }
+            () => other is GenericType generic
+                && Declaration.Id == generic.Declaration.Id
+                && ListEquals(Parameters, generic.Parameters)
+                && UnderlyingType.Equals(generic.UnderlyingType)
         );
     
     public override int GetHashCode() => HashCode.Combine(Declaration.Id, Parameters.Count);

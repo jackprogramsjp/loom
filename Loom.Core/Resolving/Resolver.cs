@@ -151,7 +151,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         Visit(@for.CollectionExpression);
         PushScope();
-        if (@for.Names.Any(name => !DeclareVariable(name, name.Token.Text, SymbolKind.Variable, out _)))
+        if (@for.Names.Any(name => !DeclareVariable(name, name.Token.Text, SymbolKind.Variable)))
             return false;
 
         var lastContext = _context;
@@ -219,7 +219,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             return false;
         }
 
-        if (!DeclareVariable(functionDeclaration, SymbolKind.Function, out _))
+        if (!DeclareVariable(functionDeclaration, SymbolKind.Function))
             return false;
 
         PushScope();
@@ -250,7 +250,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitVariableDeclaration(VariableDeclaration variableDeclaration)
     {
         var isMutable = variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword;
-        if (!DeclareVariable(variableDeclaration, SymbolKind.Variable, out _, isMutable))
+        if (!DeclareVariable(variableDeclaration, SymbolKind.Variable, isMutable))
             return false;
 
         base.VisitVariableDeclaration(variableDeclaration);
@@ -264,7 +264,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
         var isSealed = interfaceDeclaration.SealedKeyword != null;
-        if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out _)
+        if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable)
             || !DeclareInterface(interfaceDeclaration, isSealed, out var symbol)
             || !ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
         {
@@ -309,7 +309,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     public override bool VisitDeclareFunctionSignature(DeclareFunctionSignature declareFunctionSignature)
     {
-        if (!DeclareVariable(declareFunctionSignature, SymbolKind.Function, out _))
+        if (!DeclareVariable(declareFunctionSignature, SymbolKind.Function))
             return false;
 
         PushScope();
@@ -333,7 +333,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         }
 
         var isMutable = declareVariableSignature.Keyword.Kind == SyntaxKind.MutKeyword;
-        return DeclareVariable(declareVariableSignature, SymbolKind.Variable, out _, isMutable) && base.VisitDeclareVariableSignature(declareVariableSignature);
+        return DeclareVariable(declareVariableSignature, SymbolKind.Variable, isMutable) && base.VisitDeclareVariableSignature(declareVariableSignature);
     }
 
     public override bool VisitFunctionType(FunctionType functionType)
@@ -373,7 +373,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     }
 
     public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration) =>
-        DeclareVariable(enumDeclaration, SymbolKind.Variable, out _) && DeclareType(enumDeclaration, SymbolKind.EnumType);
+        DeclareVariable(enumDeclaration, SymbolKind.Variable) && DeclareType(enumDeclaration, SymbolKind.EnumType);
 
     public override bool VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
@@ -540,12 +540,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                     DeclareTrait(traitDeclaration);
                     break;
                 case InterfaceDeclaration interfaceDeclaration:
-                    if (DeclareVariable(interfaceDeclaration, SymbolKind.Variable, out _))
+                    if (DeclareVariable(interfaceDeclaration, SymbolKind.Variable))
                         DeclareInterface(interfaceDeclaration, interfaceDeclaration.SealedKeyword != null, out _);
 
                     break;
                 case EnumDeclaration enumDeclaration:
-                    if (DeclareVariable(enumDeclaration, SymbolKind.Variable, out _))
+                    if (DeclareVariable(enumDeclaration, SymbolKind.Variable))
                         DeclareType(enumDeclaration, SymbolKind.EnumType);
 
                     break;
@@ -601,7 +601,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             return false;
         }
 
-        var finalSymbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed);
+        var constraints = interfaceDeclaration.ColonTypeListClause?.Types
+            .Select(t => t is TypeName c ? LookupSymbol(c.Name.Text, SymbolKind.Interface) : null)
+            .OfType<InterfaceSymbol>()
+            .ToList();
+
+        var finalSymbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed, constraints);
         DeclareSymbol(finalSymbol);
         interfaceSymbol = finalSymbol;
         return true;
@@ -614,14 +619,11 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return new AttributeSymbol(attribute, name) { IsIntrinsic = declarationSymbol?.IsIntrinsic ?? false };
     }
 
-    private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false) =>
-        DeclareVariable(node, node.Name.Text, symbolKind, out symbol, isMutable);
+    private bool DeclareVariable(NamedDeclaration node, SymbolKind symbolKind, bool isMutable = false) =>
+        DeclareVariable(node, node.Name.Text, symbolKind, isMutable);
 
-    private bool DeclareVariable(Node node, string name, SymbolKind symbolKind, [MaybeNullWhen(false)] out Symbol symbol, bool isMutable = false)
-    {
-        symbol = new Symbol(node, symbolKind, name, isMutable);
-        return DeclareVariable(node, symbol);
-    }
+    private bool DeclareVariable(Node node, string name, SymbolKind symbolKind, bool isMutable = false) =>
+        DeclareVariable(node, new Symbol(node, symbolKind, name, isMutable));
 
     private bool DeclareVariable(Node node, Symbol symbol)
     {
@@ -662,9 +664,16 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         AddDeclaration(symbol);
         _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
 
-        if (!parserResult.Tree.File.IsDeclaration) return;
-        symbol.IsGlobal = true;
-        _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
+        if (parserResult.Tree.File.IsDeclaration)
+        {
+            symbol.IsGlobal = true;
+            _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
+        }
+
+        if (!parserResult.Tree.File.IsIntrinsic) return;
+
+        symbol.IsIntrinsic = true;
+        _diagnostics.Debug(symbol.Declaration, $"{symbol} is intrinsic");
     }
 
     private void AddToLookup(Symbol symbol)

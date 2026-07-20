@@ -203,8 +203,8 @@ public sealed partial class LuauGenerator
             return false;
 
         var propertyPath = names.Select(n => n.Name.Text).ToList();
-        return interfaceSymbol.GetPropertyAtPath(propertyPath) is { } property 
-            && property.Attributes.Any(a => a is { Name: "luau_method", IsIntrinsic: true });
+        var property = interfaceSymbol.GetPropertyAtPath(propertyPath);
+        return property != null && property.HasIntrinsicAttribute("luau_method");
     }
 
     public override LuauNode VisitQualifiedName(QualifiedName qualifiedName)

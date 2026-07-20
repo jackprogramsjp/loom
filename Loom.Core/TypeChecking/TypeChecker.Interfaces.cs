@@ -93,7 +93,7 @@ public sealed partial class TypeChecker
         var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>().ToList() ?? [];
         var properties = ResolveInterfaceProperties(constraints, propertyDeclarations);
         objectType.Properties.AddRange(properties);
-        
+
         return BindType(interfaceDeclaration, publishedType);
     }
 
@@ -173,19 +173,20 @@ public sealed partial class TypeChecker
     private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
     {
         var properties = new List<ObjectProperty>();
-        foreach (var declaration in propertyDeclarations)
+        foreach (var property in propertyDeclarations)
         {
-            MaybeVisit(declaration.Attributes);
-            
-            var name = declaration.Name.Text;
-            if (constraints.Find(i => i.GetProperty(name) != null) is { } subclass)
+            MaybeVisit(property.Attributes);
+
+            var name = property.Name.Text;
+            if (constraints.Find(i => i.GetProperty(name) != null) is { } subclass
+                && !property.TryGetIntrinsicAttribute(_semanticModel, "override", out _))
             {
-                _diagnostics.Error(declaration, InternalCodes.ConstraintPropertyOverride, $"Property '{name}' is already declared within constraint '{subclass}'.");
+                _diagnostics.Error(property, InternalCodes.ConstraintPropertyOverride, $"Property '{name}' is already declared within constraint '{subclass}'.");
                 return properties;
             }
 
-            var isMutable = declaration.MutKeyword != null;
-            var valueType = Visit(declaration.ColonTypeClause);
+            var isMutable = property.MutKeyword != null;
+            var valueType = Visit(property.ColonTypeClause);
             properties.Add(new ObjectProperty(isMutable, name, valueType));
         }
 
