@@ -470,18 +470,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         }
 
         var properties = body.Members.OfType<PropertyDeclaration>().ToList();
-        foreach (var property in properties)
+        foreach (var symbol in
+                 from property in properties
+                 let attributeSymbols = property.Attributes?.AttributeList.Select(DeclareAttribute).ToList() ?? []
+                 let pointsTo = _semanticModel.GetSymbol(property.ColonTypeClause.Type, SymbolKind.Interface) as InterfaceSymbol
+                 select new PropertySymbol(property, pointsTo, attributeSymbols) { IsIntrinsic = interfaceSymbol.IsIntrinsic })
         {
-            var attributeSymbols = property.Attributes?.AttributeList.Select(DeclareAttribute).ToList() ?? [];
-            var pointsTo = _semanticModel.GetSymbol(property.ColonTypeClause.Type, SymbolKind.Interface) as InterfaceSymbol;
-            Console.WriteLine(property.ColonTypeClause.Type);
-            Console.WriteLine(pointsTo);
-            Console.WriteLine(_semanticModel.GetDeclaringSymbol(property.ColonTypeClause.Type));
-            Console.WriteLine(_semanticModel.GetDeclarationSymbol(property.ColonTypeClause.Type));
-            Console.WriteLine(_semanticModel.GetSymbol(property.ColonTypeClause.Type));
-            Console.WriteLine("________");
-
-            var symbol = new PropertySymbol(property, pointsTo, attributeSymbols) { IsIntrinsic = interfaceSymbol.IsIntrinsic };
             interfaceSymbol.Properties.Add(symbol);
             AddDeclaration(symbol);
         }

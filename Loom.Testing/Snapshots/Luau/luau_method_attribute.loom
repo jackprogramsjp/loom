@@ -1,0 +1,19 @@
+declare interface Foo {
+    [luau_method]
+    do_foo: fn: void;
+}
+
+declare interface Bar {
+    foo: Foo;
+}
+
+declare interface Baz {
+    [luau_method]
+    do_baz: fn(p: number): void;
+}
+
+let bar = none as never as Bar;
+bar.foo.do_foo();
+
+let baz = none as never as Baz;
+baz.do_baz(69);
