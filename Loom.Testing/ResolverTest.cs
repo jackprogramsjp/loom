@@ -502,6 +502,183 @@ public class ResolverTest
 
     #region Resolves
     [Fact]
+    public void Resolves_InterfaceAndTraitRelationship()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface List { }
+
+                implement Iterator for List {
+                    fn next() { return 0; }
+                }
+                """
+            )
+        );
+
+        var trait = Assert.IsType<TraitDeclaration>(model.Tree.Statements[0]);
+        var iface = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements[1]);
+
+        var traitSymbol = Assert.IsType<TraitSymbol>(
+            model.GetDeclarationSymbol(trait, SymbolKind.Trait));
+
+        var interfaceSymbol = Assert.IsType<InterfaceSymbol>(
+            model.GetDeclarationSymbol(iface, SymbolKind.Interface));
+
+        Assert.Single(interfaceSymbol.Implements);
+        Assert.Same(traitSymbol, interfaceSymbol.Implements[0]);
+
+        Assert.Single(traitSymbol.ImplementedBy);
+        Assert.Same(interfaceSymbol, traitSymbol.ImplementedBy[0]);
+    }
+    
+    [Fact]
+    public void Resolves_InterfaceImplementationDeclaration()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                trait Iterator {
+                    fn next(): number
+                }
+
+                interface List { }
+
+                implement Iterator for List {
+                    fn next() { return 0; }
+                }
+                """
+            )
+        );
+
+        var implement = Assert.IsType<Implement>(model.Tree.Statements[2]);
+
+        var iface = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements[1]);
+        var symbol = Assert.IsType<InterfaceSymbol>(
+            model.GetDeclarationSymbol(iface, SymbolKind.Interface));
+
+        var implementation = Assert.Single(symbol.Implementations);
+
+        Assert.Same(implement, implementation);
+    }
+    
+    [Fact]
+    public void Resolves_PropertyPointsToInterface()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                interface Address { }
+
+                interface Person {
+                    address: Address
+                }
+                """
+            )
+        );
+
+        var person = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements[1]);
+
+        var symbol = Assert.IsType<InterfaceSymbol>(
+            model.GetDeclarationSymbol(person, SymbolKind.Interface));
+
+        var property = Assert.Single(symbol.Properties);
+
+        Assert.NotNull(property.PointsTo);
+        Assert.Equal("Address", property.PointsTo!.Name);
+    }
+    
+    [Fact]
+    public void Resolves_PropertyPath()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                interface City {
+                    name: string
+                }
+
+                interface Address {
+                    city: City
+                }
+
+                interface Person {
+                    address: Address
+                }
+                """
+            )
+        );
+
+        var person = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements[2]);
+
+        var symbol = Assert.IsType<InterfaceSymbol>(
+            model.GetDeclarationSymbol(person, SymbolKind.Interface));
+
+        var property = symbol.GetPropertyAtPath(["address", "city", "name"]);
+
+        Assert.NotNull(property);
+        Assert.Equal("name", property!.Name);
+    }
+    
+    [Fact]
+    public void Resolves_PropertyAttributes()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                declare fn some_attribute: fn: void;
+                interface Person {
+                    [some_attribute]
+                    name: string
+                }
+                """
+            )
+        );
+
+        Assert.Equal(2, model.Tree.Statements.Count);
+        var person = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.Last());
+        var symbol = Assert.IsType<InterfaceSymbol>(model.GetDeclarationSymbol(person, SymbolKind.Interface));
+        var property = Assert.Single(symbol.Properties);
+        var attribute = Assert.Single(property.Attributes);
+        Assert.Equal("some_attribute", attribute.Name);
+    }
+    
+    [Fact]
+    public void Resolves_MultipleImplementedTraits()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                trait A { fn a(): void }
+                trait B { fn b(): void }
+
+                interface Foo { }
+
+                implement A for Foo {
+                    fn a() { }
+                }
+
+                implement B for Foo {
+                    fn b() { }
+                }
+                """
+            )
+        );
+
+        var iface = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements[2]);
+
+        var symbol = Assert.IsType<InterfaceSymbol>(
+            model.GetDeclarationSymbol(iface, SymbolKind.Interface));
+
+        Assert.Equal(2, symbol.Implements.Count);
+        Assert.Equal(2, symbol.Implementations.Count);
+    }
+    
+    [Fact]
     public void Resolves_ImplementTraitReference()
     {
         var model = Utility.AssertNoErrors(

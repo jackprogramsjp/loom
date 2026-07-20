@@ -3,14 +3,13 @@ using Loom.Core.Text;
 
 namespace Loom.Core.Resolving;
 
-public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutable = false, Symbol? underlying = null) : IEquatable<Symbol>
+public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutable = false) : IEquatable<Symbol>
 {
     public SourceFile File { get; } = declaration.File;
     public Node Declaration { get; } = declaration;
     public SymbolKind Kind { get; } = kind;
     public string Name { get; } = name;
     public bool IsMutable { get; } = isMutable;
-    public Symbol? Underlying { get; } = underlying;
     public bool IsIntrinsic { get; internal set; }
     public bool IsGlobal { get; internal set; }
     public bool IsTypeSymbol { get; } = IsTypeKind(kind);
