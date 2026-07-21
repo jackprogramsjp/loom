@@ -53,13 +53,13 @@ declare let DateTime: DateTimeStatic;
 declare interface Content {
     SourceType: Enum["ContentSourceType"];
     Uri: string?;
-    ## Object: Object?;
+    Object: Object?;
 }
 
 declare interface ContentStatic {
-    ## none: Content;
+    none: Content;
     fromUri: fn(uri: string): Content;
-    ## fromObject: fn(object: Object): Content;
+    fromObject: fn(object: Object): Content;
 }
 
 declare let Content: ContentStatic;
