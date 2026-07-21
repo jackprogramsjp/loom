@@ -6,6 +6,7 @@ namespace Loom.Core.Lexing;
 public sealed class Lexer(SourceFile file)
 {
     private readonly DiagnosticBag _diagnostics = new();
+    private readonly int _sourceLength = file.SourceText.Length;
     private int _position;
 
     public LexerResult Tokenize()
@@ -359,7 +360,7 @@ public sealed class Lexer(SourceFile file)
     private bool MatchesPatternAt(string pattern) => file.SourceText.AsSpan(_position, pattern.Length).SequenceEqual(pattern);
     private char Current() => Peek(0);
     private char Peek(int offset) => file.SourceText[_position + offset];
-    private bool IsEof(int offset = 0) => _position + offset >= file.SourceText.Length;
+    private bool IsEof(int offset = 0) => _position + offset >= _sourceLength;
     private LocationSpan GetSpan(Location start) => new(start, CurrentLocation);
     private Location CurrentLocation => new(file, _position);
 }

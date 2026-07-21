@@ -1,1 +1,1 @@
-const _ = { minimum = 1, maximum = 5 }
+const _ = 123456
