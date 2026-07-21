@@ -409,7 +409,7 @@ public class LexerTest
     [Fact]
     public void Tokenize_VeryLongFile()
     {
-        const int identifierCount = 2000;
+        const int identifierCount = 50000;
         var source = string.Join('\n', Enumerable.Repeat("hello_world", identifierCount));
         var tokens = Utility.GetTokens(source, withTrivia: true);
         Assert.Equal(identifierCount * 2, tokens.Count);

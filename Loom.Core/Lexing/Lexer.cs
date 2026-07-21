@@ -54,15 +54,21 @@ public sealed class Lexer(SourceFile file)
                 continue;
             }
             
-            if (LexWithRule() is { } rule)
+            if (OperatorTrie.TryMatch(file.SourceText, _position, out var operatorKind, out var operatorLength))
             {
-                yield return CreateToken(rule.Syntax, GetSpan(start));
+                Advance(operatorLength);
+                yield return CreateToken(operatorKind, GetSpan(start));
+                continue;
             }
-            else
+
+            if (TryLexRegexRule(start, out var regexToken))
             {
-                RecoverUnexpectedCharacterDiagnostic(start);
-                break;
+                yield return regexToken;
+                continue;
             }
+
+            RecoverUnexpectedCharacterDiagnostic(start);
+            break;
         }
 
         yield return CreateToken(SyntaxKind.Eof, GetSpan(CurrentLocation));
@@ -91,46 +97,23 @@ public sealed class Lexer(SourceFile file)
         return CreateToken(SyntaxKind.StringLiteral, GetSpan(start));
     }
 
-    private LexerRule? LexWithRule()
+    private bool TryLexRegexRule(Location start, out Token token)
     {
-        LexerRule? bestRule = null;
-        var advanceLength = 0;
-        var bestScore = -1;
-
-        if (LexerRules.LiteralRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
+        if (LexerRules.RegexRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
         {
-            foreach (var rule in candidates)
+            foreach (var (rule, regex) in candidates)
             {
-                if (GetLiteralMatch(rule) is not { } content) continue;
-                scoreDance(rule, content.Length);
-            }
-        }
-
-        if (LexerRules.RegexRulesByFirstCharacter.TryGetValue(Current(), out var regexCandidates))
-        {
-            foreach (var (rule, compiledRegex) in regexCandidates)
-            {
-                var match = compiledRegex.Match(file.SourceText, _position);
+                var match = regex.Match(file.SourceText, _position);
                 if (!match.Success || match.Index != _position || match.Length == 0) continue;
-                scoreDance(rule, match.Length);
+
+                Advance(match.Length);
+                token = CreateToken(rule.Syntax, GetSpan(start));
+                return true;
             }
         }
 
-        if (bestRule == null)
-            return null;
-
-        Advance(advanceLength);
-        return bestRule;
-
-        void scoreDance(LexerRule rule, int length)
-        {
-            var score = length * (int)rule.Kind;
-            if (score <= bestScore) return;
-
-            bestScore = score;
-            bestRule = rule;
-            advanceLength = length;
-        }
+        token = null!;
+        return false;
     }
 
     private Token LexWhitespace(Location start)

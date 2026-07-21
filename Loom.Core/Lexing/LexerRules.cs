@@ -15,14 +15,7 @@ public static class LexerRules
         (RegEx(Comment, @"##[^\n]*"), ['#'])
     ];
 
-    private static readonly IReadOnlyList<LexerRule> _standardRules =
-    [
-        ..SyntaxFacts.OperatorMap.Select(pair => pair.Key.Length == 1
-            ? SingleCharacter(pair.Value, pair.Key[0])
-            : MultiCharacter(pair.Value, pair.Key)
-        ),
-        .._regexRuleSpecs.Select(s => s.Rule)
-    ];
+    private static readonly IReadOnlyList<LexerRule> _standardRules = _regexRuleSpecs.Select(s => s.Rule).ToArray();
 
     public static readonly IReadOnlyDictionary<char, (LexerRule Rule, Regex CompiledRegex)[]> RegexRulesByFirstCharacter = _regexRuleSpecs
         .SelectMany(spec => spec.LeadChars.Select(c => (Char: c, spec.Rule)))
