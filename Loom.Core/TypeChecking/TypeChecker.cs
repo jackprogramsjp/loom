@@ -26,6 +26,8 @@ using Type = Types.Type;
 public sealed partial class TypeChecker
     : Visitor<Type>
 {
+    public static bool EmitDebugDiagnostics { get; set; }
+
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<Node, FlowState> _exitStates = [];
     private readonly Stack<List<FlowState>> _loopExitScopes = [];
@@ -35,8 +37,9 @@ public sealed partial class TypeChecker
     private readonly TypeNarrower _narrower;
     private FlowState _flowState;
     private Symbol? _resolvingHoisted;
+    private MacroContext? _emptyMacroContext;
 
-    private MacroContext EmptyMacroContext => new(_semanticModel, new LuauState(), _diagnostics);
+    private MacroContext EmptyMacroContext => _emptyMacroContext ??= new(_semanticModel, new LuauState(), _diagnostics);
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)
@@ -657,9 +660,9 @@ public sealed partial class TypeChecker
         var symbol = _semanticModel.GetSymbol(identifier);
         if (symbol != null)
         {
-            CheckInvocationMacroReference(identifier);
+            var isMacroReference = CheckInvocationMacroReference(identifier);
 
-            if (InvocationMacroReference.TryClassify(EmptyMacroContext, identifier, out _, out _)
+            if (isMacroReference
                 && InvocationMacroReference.IsValidReferenceContext(identifier)
                 && GetContextualType(identifier) is Types.FunctionType contextualType)
             {
@@ -836,8 +839,8 @@ public sealed partial class TypeChecker
                 return type;
         }
 
-        CheckInvocationMacroReference(accessExpression);
-        if (InvocationMacroReference.TryClassify(EmptyMacroContext, accessExpression, out _, out _)
+        var isMacroReference = CheckInvocationMacroReference(accessExpression);
+        if (isMacroReference
             && InvocationMacroReference.IsValidReferenceContext(accessExpression)
             && GetContextualType(accessExpression) is Types.FunctionType contextualType)
         {
@@ -900,17 +903,28 @@ public sealed partial class TypeChecker
             _ => Types.PrimitiveType.Never
         };
 
-    private void CheckInvocationMacroReference(Expression expression)
+    /// <summary>
+    /// Reports an invalid macro-reference diagnostic if needed and returns whether
+    /// <paramref name="expression"/> classifies as an invocation macro reference, so
+    /// callers can avoid re-running the classification.
+    /// </summary>
+    private bool CheckInvocationMacroReference(Expression expression)
     {
-        if (!InvocationMacroReference.TryClassify(EmptyMacroContext, expression, out _, out var memberName)) return;
-        if (InvocationMacroReference.IsValidReferenceContext(expression)) return;
-        if (InvocationMacroReference.IsDirectInvocationCallee(expression)) return;
+        if (!InvocationMacroReference.TryClassify(EmptyMacroContext, expression, out _, out var memberName))
+            return false;
+
+        if (InvocationMacroReference.IsValidReferenceContext(expression))
+            return true;
+        if (InvocationMacroReference.IsDirectInvocationCallee(expression))
+            return true;
 
         _diagnostics.Error(
             expression,
             InternalCodes.InvalidMacroReference,
             $"Invocation macro '{memberName}' cannot be used as a value. Call it directly (e.g. {memberName}(...)) or pass it as a function argument."
         );
+
+        return true;
     }
 
     private void CheckInvalidAccessAssignment(ElementAccess elementAccess, Type type, Type indexType)
@@ -1053,7 +1067,7 @@ public sealed partial class TypeChecker
         where T : Type
     {
         _semanticModel.TypeSolver.SetType(node, type);
-        if (node is Tree or ExpressionStatement)
+        if (!EmitDebugDiagnostics || node is Tree or ExpressionStatement)
             return type;
 
         var simplified = TypeSimplifier.Simplify(type);

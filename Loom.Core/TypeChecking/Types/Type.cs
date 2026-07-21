@@ -50,9 +50,9 @@ public abstract class Type : IEquatable<Type>
     public override int GetHashCode() => 0;
 
     public static bool IsNotNever(Type type) => !IsNever(type);
-    public static bool IsNever(Type type) => type.Equals(PrimitiveType.Never);
+    public static bool IsNever(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Never } and not LiteralType;
     public static bool IsNotUnknown(Type type) => !IsUnknown(type);
-    public static bool IsUnknown(Type type) => type.Equals(PrimitiveType.Unknown);
+    public static bool IsUnknown(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Unknown } and not LiteralType;
     public static bool IsDefined(Type type) => !IsNone(type);
     public static bool IsNone(Type type) => type is PrimitiveType { Kind: PrimitiveTypeKind.Void or PrimitiveTypeKind.None };
     public static bool IsNotOptional(Type type) => !IsOptional(type);

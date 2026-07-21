@@ -42,7 +42,7 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     public Diagnostic? Find(Func<Diagnostic, bool> predicate) => Set.FirstOrDefault(predicate);
     public DiagnosticBag WithoutInfo() => new(Set.Where(d => d.Severity > DiagnosticSeverity.Info).ToHashSet());
     public DiagnosticBag Errors() => new(Set.Where(d => d.Severity == DiagnosticSeverity.Error).ToHashSet());
-    public bool ContainsErrors() => Errors().Set.Count > 0;
+    public bool ContainsErrors() => Set.Any(d => d.Severity == DiagnosticSeverity.Error);
 
     public override string ToString() => string.Join('\n', Set);
 

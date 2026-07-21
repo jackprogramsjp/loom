@@ -15,8 +15,6 @@ public static class LexerRules
         (RegEx(Comment, @"##[^\n]*"), ['#'])
     ];
 
-    private static readonly IReadOnlyList<LexerRule> _standardRules = _regexRuleSpecs.Select(s => s.Rule).ToArray();
-
     public static readonly IReadOnlyDictionary<char, (LexerRule Rule, Regex CompiledRegex)[]> RegexRulesByFirstCharacter = _regexRuleSpecs
         .SelectMany(spec => spec.LeadChars.Select(c => (Char: c, spec.Rule)))
         .GroupBy(x => x.Char)
@@ -25,17 +23,6 @@ public static class LexerRules
             g => g.Select(x => (x.Rule, new Regex($@"\G(?:{x.Rule.Pattern})", RegexOptions.Compiled))).ToArray()
         );
 
-    /// <summary>
-    /// Literal (non-regex) rules from <see cref="_standardRules"/>, bucketed by first
-    /// character and sorted longest-pattern-first within each bucket, so the
-    /// lexer can look up only the handful of candidates that could possibly
-    /// match at a given position instead of scanning every literal rule.
-    /// </summary>
-    public static readonly IReadOnlyDictionary<char, LexerRule[]> LiteralRulesByFirstCharacter = _standardRules
-        .Where(r => r.Kind is LexerRuleKind.SingleCharacter or LexerRuleKind.MultiCharacter)
-        .GroupBy(r => r.Pattern[0])
-        .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Pattern.Length).ToArray());
-    
     public static readonly IReadOnlyList<LexerDiagnosticRule> Diagnostic =
     [
         DiagnosticRule(

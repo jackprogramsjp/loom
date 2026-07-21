@@ -52,11 +52,27 @@ public abstract class Node
         return Parent?.FirstAncestorOfType<T>();
     }
 
-    private static List<Node> SortChildren(IEnumerable<Node?> children) =>
-        children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();
+    private static List<Node> SortChildren(IEnumerable<Node?> children)
+    {
+        var result = new List<Node>();
+        foreach (var child in children)
+            if (child != null)
+                result.Add(child);
 
-    private static List<Token> SortTokens(IEnumerable<Token?> tokens) =>
-        tokens.Where(token => token != null).Cast<Token>().OrderBy(token => token.Span.Position).ToList();
+        result.Sort(static (a, b) => a.Span.Start.Position.CompareTo(b.Span.Start.Position));
+        return result;
+    }
+
+    private static List<Token> SortTokens(IEnumerable<Token?> tokens)
+    {
+        var result = new List<Token>();
+        foreach (var token in tokens)
+            if (token != null)
+                result.Add(token);
+
+        result.Sort(static (a, b) => a.Span.Position.CompareTo(b.Span.Position));
+        return result;
+    }
 
     private LocationSpan DeriveSpan() =>
         Tokens.Count == 0
