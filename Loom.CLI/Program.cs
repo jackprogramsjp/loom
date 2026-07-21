@@ -12,7 +12,12 @@ if (loomConfig == null)
 var compilationUnit = new CompilationUnit(loomConfig);
 var result = compilationUnit.Compile();
 var debugInfo = result.Files
-    .FindAll(f => !f.SourceFile.IsDeclaration)
-    .ConvertAll(f => f.GetDebugInfo(rebuilt: false, debugDiagnostics: false));
+    .Where(f => !f.SourceFile.IsDeclaration)
+    .Select(f =>
+    {
+        foreach (var t in f.Tokens)
+            Console.WriteLine(t);
+        return f.GetDebugInfo(rebuilt: false, debugDiagnostics: false);
+    });
 
 Console.WriteLine(string.Join(Environment.NewLine, debugInfo));

@@ -9,20 +9,12 @@ using static SyntaxKind;
 
 public static class LexerRules
 {
-    private const string Int = @"\d[\d_]*\d*_*";
-    private const string FloatScientific = $"({Float}{Exponent})";
-    private const string Float = $@"({Int}\.{Int}|\.{Int}|{Int}\.{Int})";
-    private const string IntScientific = $"({Int}{Exponent})";
-    private const string Exponent = $"[eE]-?{Int}";
-    private const string HexInt = "(0[xX][a-fA-F0-9_]+)";
-    private const string BinaryInt = "(0[bB][01_]+)";
-    private const string OctalInt = "(0[oO][0-7_]+)";
-    private const string Number = $"({HexInt}|{BinaryInt}|{OctalInt}|{FloatScientific}|{IntScientific}|{Float}|{Int})";
-    private const string HzNumber = $"({Number}[hH][zZ])";
-    private const string MsNumber = $"({Number}[mM][sS])";
-    private const string SecondsNumber = $"({Number}[sS])";
-    private const string MinutesNumber = $"({Number}[mM])";
-    private const string HoursNumber = $"({Number}[hH])";
+    private static readonly (LexerRule Rule, IReadOnlyList<char> LeadChars)[] _regexRuleSpecs =
+    [
+        (RegEx(StringLiteral, "\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'"), ['"', '\'']),
+        (RegEx(BlockComment, @"#:[\s\S]*?:#"), ['#']),
+        (RegEx(Comment, @"##[^\n]*"), ['#'])
+    ];
 
     private static readonly IReadOnlyList<LexerRule> _standardRules =
     [
@@ -30,51 +22,28 @@ public static class LexerRules
             ? SingleCharacter(pair.Value, pair.Key[0])
             : MultiCharacter(pair.Value, pair.Key)
         ),
-        RegEx(NumberLiteral, $"{HzNumber}|{MsNumber}|{SecondsNumber}|{MinutesNumber}|{HoursNumber}|{Number}"),
-        RegEx(StringLiteral, "\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'"),
-        RegEx(BlockComment, @"#:[\s\S]*?:#"),
-        RegEx(Comment, @"##[^\n]*")
+        .._regexRuleSpecs.Select(s => s.Rule)
     ];
 
-    /// <summary>
-    /// Checked BEFORE standard rules. These must take priority because the
-    /// standard Int pattern would otherwise greedily consume the numeric prefix
-    /// (e.g. the '0' in '0x'), preventing the error rule from ever firing.
-    /// </summary>
-    public static readonly IReadOnlyList<LexerDiagnosticRule> PriorityDiagnostic =
-    [
-        DiagnosticRule(
-            "0[xX](?![a-fA-F0-9_])",
-            InternalCodes.MalformedNumber,
-            m => $"Malformed hexadecimal literal '{m}': expected at least one hex digit after '0x'."
-        ),
-        DiagnosticRule(
-            "0[bB](?![01_])",
-            InternalCodes.MalformedNumber,
-            m => $"Malformed binary literal '{m}': expected at least one binary digit after '0b'."
-        ),
-        DiagnosticRule(
-            "0[oO](?![0-7_])",
-            InternalCodes.MalformedNumber,
-            m => $"Malformed octal literal '{m}': expected at least one octal digit after '0o'."
-        ),
-        DiagnosticRule(
-            @"\d[\d_]*(?:\.\d[\d_]*)?[eE](?:-(?![\d_])|(?!-?[\d_]))",
-            InternalCodes.MalformedNumber,
-            m => $"Malformed scientific notation '{m}': expected one or more digits after the exponent."
-        ),
-        DiagnosticRule(
-            @"\d[\d_]*\.(?![\d_.])",
-            InternalCodes.MalformedNumber,
-            m => $"Malformed float literal '{m}': expected one or more digits after the decimal point."
-        )
-    ];
+    public static readonly IReadOnlyDictionary<char, (LexerRule Rule, Regex CompiledRegex)[]> RegexRulesByFirstCharacter = _regexRuleSpecs
+        .SelectMany(spec => spec.LeadChars.Select(c => (Char: c, spec.Rule)))
+        .GroupBy(x => x.Char)
+        .ToDictionary(
+            g => g.Key,
+            g => g.Select(x => (x.Rule, new Regex($@"\G(?:{x.Rule.Pattern})", RegexOptions.Compiled))).ToArray()
+        );
 
     /// <summary>
-    /// Checked AFTER standard rules fail. Safe as fallbacks because their
-    /// opening characters ('\"', '\'', '#') only reach here when no valid
-    /// token matched.
+    /// Literal (non-regex) rules from <see cref="_standardRules"/>, bucketed by first
+    /// character and sorted longest-pattern-first within each bucket, so the
+    /// lexer can look up only the handful of candidates that could possibly
+    /// match at a given position instead of scanning every literal rule.
     /// </summary>
+    public static readonly IReadOnlyDictionary<char, LexerRule[]> LiteralRulesByFirstCharacter = _standardRules
+        .Where(r => r.Kind is LexerRuleKind.SingleCharacter or LexerRuleKind.MultiCharacter)
+        .GroupBy(r => r.Pattern[0])
+        .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Pattern.Length).ToArray());
+    
     public static readonly IReadOnlyList<LexerDiagnosticRule> Diagnostic =
     [
         DiagnosticRule(
@@ -93,21 +62,6 @@ public static class LexerRules
             _ => "Unterminated block comment: expected closing ':#'."
         )
     ];
-    
-    /// <summary>
-    /// Literal (non-regex) rules from <see cref="_standardRules"/>, bucketed by first
-    /// character and sorted longest-pattern-first within each bucket, so the
-    /// lexer can look up only the handful of candidates that could possibly
-    /// match at a given position instead of scanning every literal rule.
-    /// </summary>
-    public static readonly IReadOnlyDictionary<char, LexerRule[]> LiteralRulesByFirstCharacter =
-        _standardRules
-            .Where(r => r.Kind is LexerRuleKind.SingleCharacter or LexerRuleKind.MultiCharacter)
-            .GroupBy(r => r.Pattern[0])
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Pattern.Length).ToArray());
-
-    public static readonly IReadOnlyList<LexerRule> RegExRules =
-        _standardRules.Where(r => r.Kind == LexerRuleKind.RegEx).ToArray();
 
     private static LexerDiagnosticRule DiagnosticRule(string pattern, string code, Func<string, string> message) =>
         new(new Regex($@"\G(?:{pattern})", RegexOptions.Compiled), code, message);

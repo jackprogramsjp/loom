@@ -255,6 +255,17 @@ public class LexerTest
         Assert.Equal(SyntaxKind.FalseLiteral, tokens[4].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[5].Kind);
     }
+    
+    [Fact]
+    public void Tokenizes_Range()
+    {
+        var tokens = Utility.GetTokens("1..5");
+        Assert.Equal(4, tokens.Count);
+        Assert.Equal(SyntaxKind.NumberLiteral, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.DotDot, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.NumberLiteral, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
+    }
 
     [Fact]
     public void Tokenizes_MultipleOperators()
@@ -298,6 +309,7 @@ public class LexerTest
     [InlineData("69")]
     [InlineData("69_420")]
     [InlineData("123456")]
+    [InlineData("1234567890")]
     [InlineData("1e5")]
     [InlineData("420_69.69_420")]
     [InlineData("420.69")]
