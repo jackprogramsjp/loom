@@ -200,7 +200,7 @@ public sealed partial class Parser
         var expression = ParseExpression();
         var rightParen = Expect(
             SyntaxKind.RParen,
-            got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
+            got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.GetLocation().Start.Character}, got {SafeTokenText(got)}."
         );
 
         return new Parenthesized(leftParen, rightParen, expression);

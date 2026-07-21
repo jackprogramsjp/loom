@@ -216,7 +216,7 @@ public sealed partial class Parser
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
-        if (!ValidateFunctionSignature("declared function signatures", parameters?.Span ?? typeParameters?.Span ?? name.Span, returnType, parameters))
+        if (!ValidateFunctionSignature("declared function signatures", parameters?.Span ?? typeParameters?.Span ?? name.GetLocation(), returnType, parameters))
             return new NullStatement(fnKeyword);
 
         return new DeclareFunctionSignature(fnKeyword, name, typeParameters, parameters, returnType);

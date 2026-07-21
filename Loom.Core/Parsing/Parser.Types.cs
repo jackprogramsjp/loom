@@ -85,7 +85,7 @@ public sealed partial class Parser
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
-        if (!ValidateFunctionSignature("function types", parameters?.Span ?? typeParameters?.Span ?? fnKeyword.Span, returnType, parameters))
+        if (!ValidateFunctionSignature("function types", parameters?.Span ?? typeParameters?.Span ?? fnKeyword.GetLocation(), returnType, parameters))
             return new NullTypeExpression(fnKeyword);
 
         return new FunctionType(fnKeyword, typeParameters, parameters, returnType);
@@ -96,7 +96,7 @@ public sealed partial class Parser
         var type = ParseType();
         var rightParen = Expect(
             SyntaxKind.RParen,
-            got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
+            got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.GetLocation().Start.Character}, got {SafeTokenText(got)}."
         );
 
         return new ParenthesizedType(leftParen, rightParen, type);

@@ -21,7 +21,6 @@ public readonly struct LocationSpan
     public Location End { get; }
 
     public static LocationSpan Empty(SourceFile? file = null) => new(Location.Empty(file ?? SourceFile.Empty), Location.Empty(file ?? SourceFile.Empty));
-    public static LocationSpan operator+(LocationSpan span, int n) => new(span.Start + n, span.End + n);
     public static bool operator ==(LocationSpan left, LocationSpan right) => left.Equals(right);
     public static bool operator !=(LocationSpan left, LocationSpan right) => !(left == right);
 

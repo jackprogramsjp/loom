@@ -58,7 +58,7 @@ public class DiagnosticBagTest
         Assert.Equal("w1", diag.Code);
         Assert.Equal("watch out", diag.Message);
         Assert.Equal("use bar", diag.Hint);
-        Assert.Equal(token.Span, diag.Span);
+        Assert.Equal(token.GetLocation(), diag.Span);
     }
 
     [Fact]
