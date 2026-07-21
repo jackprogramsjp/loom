@@ -54,8 +54,7 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
         Set.Add(diagnostic);
         if (!FailFast || diagnostic.Severity < DiagnosticSeverity.Error) return;
 
-        var code = (diagnostic.Code ?? InternalCodes.Unknown).GetHashCode();
         Console.WriteLine(diagnostic.ToString());
-        Environment.Exit(code);
+        Environment.Exit(1);
     }
 }

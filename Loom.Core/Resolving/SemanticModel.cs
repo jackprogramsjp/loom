@@ -12,13 +12,22 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
     : DiagnosedResult(Diagnostics)
 {
     internal int RuntimeReferences = 0;
+
+    /// <summary>
+    /// Node ids of reference-site nodes that originate from a non-intrinsic source file.
+    /// Populated by the resolver as references are recorded, so
+    /// <see cref="MustImportRuntimeLibrary"/> can filter references by the file of the
+    /// referencing node without holding on to the node instances themselves.
+    /// </summary>
+    internal HashSet<NodeId> NonIntrinsicReferenceNodes { get; } = [];
+
     public bool DisableRuntimeLibraryImport { get; set; }
     public bool MustImportRuntimeLibrary =>
         !DisableRuntimeLibraryImport
         && !Tree.File.IsIntrinsic
         && (
             RuntimeReferences > 0
-            || References.Any(pair => !NodeId.Map[pair.Key].File.IsIntrinsic
+            || References.Any(pair => NonIntrinsicReferenceNodes.Contains(pair.Key)
                 && pair.Value.Any(s => s is { File.Name: "runtime.loom", IsIntrinsic: true, IsTypeSymbol: true })
             )
         );

@@ -80,7 +80,7 @@ public sealed class Lexer(SourceFile file)
     private Token LexString(int start, char terminator)
     {
         Advance();
-        while (!IsEof() && Current() != terminator)
+        while (!IsEof() && Current() != terminator && Current() != '\n')
         {
             if (Current() == '\\' && !IsEof(1))
                 Advance();

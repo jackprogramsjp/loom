@@ -734,6 +734,23 @@ public class LuauRenderingTest
     [Fact]
     public void Renders_StringLiteral() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteral("abc").Render());
 
+    [Fact]
+    public void Renders_StringLiteral_EscapesBackslash() =>
+        Assert.Equal("\"a\\\\b\"", new StringLiteral("a\\b").Render());
+
+    [Fact]
+    public void Renders_StringLiteral_EscapesDelimiter() =>
+        Assert.Equal("\"say \\\"hi\\\"\"", new StringLiteral("say \"hi\"").Render());
+
+    [Fact]
+    public void Renders_MultilineString_LeadingNewlineIsPreserved()
+    {
+        // Long-bracket strings swallow a single newline right after the opening bracket,
+        // so an extra leading newline must be emitted to preserve a value starting with '\n'.
+        var literal = new StringLiteral("\nabc");
+        Assert.Equal("[[\n\nabc]]", literal.Render());
+    }
+
     [Theory]
     [InlineData(12, "12")]
     [InlineData(69.420, "69.42")]

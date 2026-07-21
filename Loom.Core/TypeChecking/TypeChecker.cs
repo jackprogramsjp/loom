@@ -192,8 +192,8 @@ public sealed partial class TypeChecker
         var (trueState, falseState) = _narrower.ComputeBranchStates(@if.Condition, _flowState);
         var thenType = CheckBody(@if.ThenBranch, trueState);
         var thenExit = _exitStates.GetValueOrDefault(@if.ThenBranch, trueState);
-        var elseExit = @if.ElseBranch != null ? _exitStates.GetValueOrDefault(@if.ElseBranch, falseState) : falseState;
         var elseType = @if.ElseBranch != null ? CheckBody(@if.ElseBranch, falseState) : Types.PrimitiveType.None;
+        var elseExit = @if.ElseBranch != null ? _exitStates.GetValueOrDefault(@if.ElseBranch, falseState) : falseState;
 
         _exitStates[@if] = MergeExitStates(thenExit, elseExit);
         return BindType(@if, TypeSimplifier.Simplify(new Types.UnionType([thenType, elseType])));
@@ -513,8 +513,14 @@ public sealed partial class TypeChecker
 
         if (names.Count > 1)
         {
-            foreach (var property in names.SkipLast(1).Select(name => indexableType.GetProperty(name.Name.Text)!))
-                indexableType = (NativelyIndexableType)property.ValueType;
+            foreach (var name in names.SkipLast(1))
+            {
+                var property = indexableType.GetProperty(name.Name.Text);
+                if (property?.ValueType is not NativelyIndexableType nestedIndexable)
+                    return BindType(assignmentOperator, valueType);
+
+                indexableType = nestedIndexable;
+            }
 
             indexType = new Types.LiteralType(names.Last().Name.Text);
         }

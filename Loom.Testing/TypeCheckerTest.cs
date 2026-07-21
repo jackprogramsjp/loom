@@ -31,6 +31,28 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Allows_UseAfterIf_WhenElseBranchTerminates()
+    {
+        // The else branch returns, so after the if the only reachable path is the
+        // then branch which initializes 'x'. VisitIf must read the else branch's exit
+        // state after visiting it, otherwise 'x' is treated as maybe-uninitialized.
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            fn test(c: bool): number {
+                mut x: number;
+                if c {
+                    x = 1;
+                } else {
+                    return 0;
+                }
+                return x + 1;
+            }
+            """
+        );
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
     public void Allows_MacroReference_AsFunctionArgument()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(

@@ -137,8 +137,13 @@ public sealed partial class Parser
         if (Match(out var leftParen, SyntaxKind.LParen))
             return ParseParenthesized(leftParen);
 
-        if (Match(out var mutKeyword, SyntaxKind.MutKeyword) && ParseArrayLiteral(mutKeyword) is { } mutableArrayLiteral)
-            return mutableArrayLiteral;
+        if (Match(out var mutKeyword, SyntaxKind.MutKeyword))
+        {
+            if (ParseArrayLiteral(mutKeyword) is { } mutableArrayLiteral)
+                return mutableArrayLiteral;
+
+            _diagnostics.Error(mutKeyword, InternalCodes.UnexpectedToken, "Expected array literal after 'mut'.");
+        }
 
         if (ParseArrayLiteral() is { } arrayLiteral)
             return arrayLiteral;

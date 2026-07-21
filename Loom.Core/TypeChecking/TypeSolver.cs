@@ -43,9 +43,41 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         switch (type)
         {
             case UnionType unionType:
-                return unionType.Types.Any(t => CheckCircular(ref t, name));
+            {
+                var members = unionType.Types.ToList();
+                var circular = false;
+                for (var i = 0; i < members.Count; i++)
+                {
+                    var member = members[i];
+                    if (!CheckCircular(ref member, name)) continue;
+
+                    members[i] = member;
+                    circular = true;
+                }
+
+                if (circular)
+                    type = new UnionType(members);
+
+                return circular;
+            }
             case IntersectionType intersectionType:
-                return intersectionType.Types.Any(t => CheckCircular(ref t, name));
+            {
+                var members = intersectionType.Types.ToList();
+                var circular = false;
+                for (var i = 0; i < members.Count; i++)
+                {
+                    var member = members[i];
+                    if (!CheckCircular(ref member, name)) continue;
+
+                    members[i] = member;
+                    circular = true;
+                }
+
+                if (circular)
+                    type = new IntersectionType(members);
+
+                return circular;
+            }
 
             case TypeVariable:
                 type = PrimitiveType.Never;

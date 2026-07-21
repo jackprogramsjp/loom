@@ -175,7 +175,7 @@ public sealed partial class Parser(LexerResult lexerResult)
     {
         if (IsEof())
         {
-            var last = lexerResult.Tokens[_position - 1];
+            var last = lexerResult.Tokens[Math.Max(_position - 1, 0)];
             var text = SyntaxFacts.GetText(kind) ?? kind.ToString();
             _diagnostics.Error(last, InternalCodes.UnexpectedEof, message != null ? message(null) : $"Expected '{text}', got EOF.");
             return last;
@@ -203,7 +203,11 @@ public sealed partial class Parser(LexerResult lexerResult)
     }
 
     private Token Current() => lexerResult.Tokens[_position];
-    private SyntaxKind PeekKind(int offset) => lexerResult.Tokens[_position + offset].Kind;
+    private SyntaxKind PeekKind(int offset)
+    {
+        var index = _position + offset;
+        return index >= 0 && index < lexerResult.Tokens.Count ? lexerResult.Tokens[index].Kind : SyntaxKind.Eof;
+    }
     private bool IsEof() => Current().Kind == SyntaxKind.Eof;
     private static string SafeTokenText(Token? token) => token is { Kind: not SyntaxKind.Eof } ? $"'{token.Text}'" : "EOF";
 }

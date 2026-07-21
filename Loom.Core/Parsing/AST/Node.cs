@@ -17,7 +17,6 @@ public abstract class Node
     protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children, LocationSpan? span = null)
     {
         Id = new NodeId(Interlocked.Increment(ref _nextId));
-        NodeId.Map.Add(Id, this);
 
         Children = SortChildren(children);
         Tokens = SortTokens(theseTokens);

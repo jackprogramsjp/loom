@@ -109,6 +109,12 @@ public sealed partial class Parser
     {
         var names = ParseDelimited(() => new Identifier(ExpectIdentifier()));
         var colon = Expect(SyntaxKind.Colon);
+        // A 'mut' prefix on the collection marks a mutable iteration binding; it does not
+        // form an array literal here, so consume it before parsing the collection so
+        // ParsePrimary does not treat it as an orphaned 'mut'.
+        if (PeekKind(0) == SyntaxKind.MutKeyword && PeekKind(1) != SyntaxKind.LBracket)
+            Advance();
+
         var expression = ParseExpression();
         var body = ParseStatement();
         return new For(keyword, names, colon, expression, body);

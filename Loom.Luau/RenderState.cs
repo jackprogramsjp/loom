@@ -30,6 +30,7 @@ public sealed class RenderState
 
     public static string Escape(string input) =>
         input
+            .Replace("\\", "\\\\")
             .Replace("\n", "\\n")
             .Replace("\r", "\\r")
             .Replace("\t", "\\t")
@@ -37,7 +38,8 @@ public sealed class RenderState
             .Replace("\a", "\\a")
             .Replace("\b", "\\b")
             .Replace("\f", "\\f")
-            .Replace("\v", "\\v");
+            .Replace("\v", "\\v")
+            .Replace(StringDelimiter.ToString(), "\\" + StringDelimiter);
 
     public string Block(Func<string> callback)
     {
@@ -49,5 +51,5 @@ public sealed class RenderState
     }
 
     private void PushIndent() => _indent += Indent;
-    private void PopIndent() => _indent = _indent[..^2];
+    private void PopIndent() => _indent = _indent[..^Indent.Length];
 }
