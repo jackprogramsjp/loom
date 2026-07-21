@@ -108,6 +108,7 @@ public class LexerTest
     [Theory]
     [InlineData("'abc\"", true)]
     [InlineData("\"abc'")]
+    [InlineData("\"abc\n\n")]
     [InlineData("\"abc")]
     [InlineData("'abc", true)]
     [InlineData("\"")]

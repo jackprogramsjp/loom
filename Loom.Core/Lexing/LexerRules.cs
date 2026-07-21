@@ -11,7 +11,6 @@ public static class LexerRules
 {
     private static readonly (LexerRule Rule, IReadOnlyList<char> LeadChars)[] _regexRuleSpecs =
     [
-        (RegEx(StringLiteral, "\"([^\"\\\\]|\\\\.)*\"|'([^'\\\\]|\\\\.)*'"), ['"', '\'']),
         (RegEx(BlockComment, @"#:[\s\S]*?:#"), ['#']),
         (RegEx(Comment, @"##[^\n]*"), ['#'])
     ];

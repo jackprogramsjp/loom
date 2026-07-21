@@ -41,6 +41,12 @@ public sealed class Lexer(SourceFile file)
                 yield return LexWhitespace(start);
                 continue;
             }
+            
+            if (current is '"' or '\'')
+            {
+                yield return LexString(start, current);
+                continue;
+            }
 
             if (AtNumber())
             {
@@ -60,6 +66,29 @@ public sealed class Lexer(SourceFile file)
         }
 
         yield return CreateToken(SyntaxKind.Eof, GetSpan(CurrentLocation));
+    }
+
+    private Token LexString(Location start, char terminator)
+    {
+        Advance();
+        while (!IsEof() && Current() != terminator)
+        {
+            if (Current() == '\\' && !IsEof(1))
+                Advance();
+            Advance();
+        }
+
+        if (IsEof() || Current() == '\n')
+        {
+            var quotedQuote = terminator == '"' ? "'\"'" : "\"'\"";
+            _diagnostics.Error(GetSpan(start), InternalCodes.UnterminatedString, $"Unterminated string literal: expected closing {quotedQuote}.");
+        }
+        else
+        {
+            Advance();
+        }
+
+        return CreateToken(SyntaxKind.StringLiteral, GetSpan(start));
     }
 
     private LexerRule? LexWithRule()
@@ -106,18 +135,14 @@ public sealed class Lexer(SourceFile file)
 
     private Token LexWhitespace(Location start)
     {
-        while (!IsEof() && char.IsWhiteSpace(Current()))
-            _position++;
-
+        AdvanceWhile(char.IsWhiteSpace);
         return CreateToken(SyntaxKind.Whitespace, GetSpan(start));
     }
 
     private Token LexIdentifier(Location start)
     {
-        _position++;
-        while (!IsEof() && (char.IsLetterOrDigit(Current()) || Current() == '_'))
-            _position++;
-
+        Advance();
+        AdvanceWhile(ch => char.IsLetterOrDigit(ch) || ch == '_');
         var span = GetSpan(start);
         var identifierText = span.GetText().ToString();
         var kind = SyntaxFacts.KeywordMap.GetValueOrDefault(identifierText, SyntaxKind.Identifier);
