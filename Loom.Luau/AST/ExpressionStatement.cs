@@ -1,6 +1,6 @@
 namespace Loom.Luau.AST;
 
-public class ExpressionStatement(LuauExpression expression) : LuauStatement
+public sealed class ExpressionStatement(LuauExpression expression) : LuauStatement
 {
     public LuauExpression Expression { get; } = expression;
     

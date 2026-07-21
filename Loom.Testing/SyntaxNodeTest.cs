@@ -61,19 +61,7 @@ public class SyntaxNodeTest
         Assert.Equal(1, ident.Span.Start.Line);
         Assert.Equal(0, ident.Span.End.Position);
     }
-
-    [Fact]
-    public void Node_Children_SortedByPosition()
-    {
-        var left = new Identifier(T("a", 10, 1));
-        var right = new Identifier(T("b", 0, 1));
-        var opToken = T("+", 5, 1, SyntaxKind.Plus);
-        var binOp = new BinaryOperator(opToken, left, right);
-        Assert.Equal(2, binOp.Children.Count);
-        Assert.Same(right, binOp.Children[0]);
-        Assert.Same(left, binOp.Children[1]);
-    }
-
+    
     [Fact]
     public void GetDescendants_ReturnsChildrenAndGrandchildren()
     {

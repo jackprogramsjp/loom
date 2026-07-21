@@ -749,7 +749,7 @@ public sealed partial class TypeChecker
 
             if (declaredType is GenericType genericType)
                 return InstantiateGenericType(typeName, typeName.TypeArguments, genericType);
-            
+
             if (typeName.TypeArguments == null)
                 return BindType(typeName, declaredType);
 
@@ -1018,10 +1018,13 @@ public sealed partial class TypeChecker
             ? [Visit(body)]
             : functionDeclaration.Body
                 .GetDescendants<Return>()
-                .FindAll(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
-                .ConvertAll(Visit);
+                .Where(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
+                .Select(Visit)
+                .ToList();
 
-        return possibleReturnTypes.Count == 0 ? Types.PrimitiveType.Void : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
+        return possibleReturnTypes.Count == 0 
+            ? Types.PrimitiveType.Void 
+            : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
     private Type ResolveHoistedType(Symbol symbol)

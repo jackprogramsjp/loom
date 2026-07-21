@@ -235,7 +235,7 @@ public class LexerTest
     }
     
     [Fact]
-    public void Tokenize_WithTriviaFalse_ExcludesWhitespaceAndComments()
+    public void Tokenizes_WithTriviaFalse_ExcludesWhitespaceAndComments()
     {
         var tokens = Utility.GetTokens("true  ## comment\nfalse", withTrivia: false);
         Assert.Equal(3, tokens.Count);
@@ -245,7 +245,7 @@ public class LexerTest
     }
 
     [Fact]
-    public void Tokenize_WithTriviaTrue_IncludesWhitespaceAndComments()
+    public void Tokenizes_WithTriviaTrue_IncludesWhitespaceAndComments()
     {
         var tokens = Utility.GetTokens("true  ## comment\nfalse", withTrivia: true);
         Assert.Equal(6, tokens.Count);
@@ -384,7 +384,7 @@ public class LexerTest
     }
     
     [Fact]
-    public void Tokenize_TracksLineAndColumnNumbers()
+    public void Tokenizes_TracksLineAndColumnNumbers()
     {
         var tokens = Utility.GetTokens("abc\n123\nxyz", withTrivia: true);
         Assert.Equal(6, tokens.Count);
@@ -412,7 +412,7 @@ public class LexerTest
     [InlineData("123456", SyntaxKind.NumberLiteral)]
     [InlineData("+=", SyntaxKind.PlusEquals)]
     [InlineData("## hello", SyntaxKind.Comment)]
-    public void Tokenize_VeryLongFile(string lineText, SyntaxKind syntaxKind)
+    public void Tokenizes_VeryLongFile(string lineText, SyntaxKind syntaxKind)
     {
         const int identifierCount = 60000;
         var source = string.Join('\n', Enumerable.Repeat(lineText, identifierCount));
