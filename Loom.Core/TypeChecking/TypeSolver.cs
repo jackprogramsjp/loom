@@ -49,7 +49,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
 
             case TypeVariable:
                 type = PrimitiveType.Never;
-                ReportInfiniteType(name.Span, name.Text);
+                ReportInfiniteType(name.GetLocation(), name.Text);
                 return true;
         }
 

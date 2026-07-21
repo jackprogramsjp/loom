@@ -179,9 +179,9 @@ public class LexerTest
         Assert.Equal(SyntaxKind.TrueLiteral, tokens[2].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
 
-        Assert.Equal(1, tokens[0].Span.Start.Line);
-        Assert.Equal(1, tokens[0].Span.End.Line);
-        Assert.Equal(2, tokens[2].Span.Start.Line);
+        Assert.Equal(1, tokens[0].GetLocation().Start.Line);
+        Assert.Equal(1, tokens[0].GetLocation().End.Line);
+        Assert.Equal(2, tokens[2].GetLocation().Start.Line);
     }
 
     [Fact]
@@ -193,8 +193,8 @@ public class LexerTest
         Assert.Equal(SyntaxKind.Eof, tokens[1].Kind);
 
         var comment = tokens[0];
-        Assert.Equal(1, comment.Span.Start.Line);
-        Assert.Equal(3, comment.Span.End.Line);
+        Assert.Equal(1, comment.GetLocation().Start.Line);
+        Assert.Equal(3, comment.GetLocation().End.Line);
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public class LexerTest
         Assert.Equal(SyntaxKind.TrueLiteral, tokens[2].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
 
-        Assert.Equal(2, tokens[1].Span.Start.Line);
+        Assert.Equal(2, tokens[1].GetLocation().Start.Line);
     }
     
     [Fact]
@@ -390,20 +390,20 @@ public class LexerTest
         Assert.Equal(6, tokens.Count);
 
         var first = tokens[0];
-        Assert.Equal(1, first.Span.Start.Line);
-        Assert.Equal(0, first.Span.Start.Character);
-        Assert.Equal(3, first.Span.End.Character);
+        Assert.Equal(1, first.GetLocation().Start.Line);
+        Assert.Equal(0, first.GetLocation().Start.Character);
+        Assert.Equal(3, first.GetLocation().End.Character);
 
         var firstWhitespace = tokens[1];
-        Assert.Equal(1, firstWhitespace.Span.Start.Line);
-        Assert.Equal(3, firstWhitespace.Span.Start.Character);
-        Assert.Equal(2, firstWhitespace.Span.End.Line);
-        Assert.Equal(0, firstWhitespace.Span.End.Character);
+        Assert.Equal(1, firstWhitespace.GetLocation().Start.Line);
+        Assert.Equal(3, firstWhitespace.GetLocation().Start.Character);
+        Assert.Equal(2, firstWhitespace.GetLocation().End.Line);
+        Assert.Equal(0, firstWhitespace.GetLocation().End.Character);
 
         var number = tokens[2];
-        Assert.Equal(2, number.Span.Start.Line);
-        Assert.Equal(0, number.Span.Start.Character);
-        Assert.Equal(3, number.Span.End.Character);
+        Assert.Equal(2, number.GetLocation().Start.Line);
+        Assert.Equal(0, number.GetLocation().Start.Character);
+        Assert.Equal(3, number.GetLocation().End.Character);
     }
     
     [Fact]
@@ -434,12 +434,12 @@ public class LexerTest
         var first = tokens[0];
         var second = tokens[^2];
         var eof = tokens[^1];
-        var firstStart = first.Span.Start;
-        var firstEnd = first.Span.End;
-        var secondStart = second.Span.Start;
-        var secondEnd = second.Span.End;
-        var eofStart = eof.Span.Start;
-        var eofEnd = eof.Span.End;
+        var firstStart = first.GetLocation().Start;
+        var firstEnd = first.GetLocation().End;
+        var secondStart = second.GetLocation().Start;
+        var secondEnd = second.GetLocation().End;
+        var eofStart = eof.GetLocation().Start;
+        var eofEnd = eof.GetLocation().End;
         Assert.Equal(firstStart.Line, firstEnd.Line);
         Assert.Equal(firstStart.Character, firstStart.Position);
         Assert.Equal(firstEnd.Character, firstEnd.Position);
@@ -466,8 +466,8 @@ public class LexerTest
         Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
-        var start = token.Span.Start;
-        var end = token.Span.End;
+        var start = token.GetLocation().Start;
+        var end = token.GetLocation().End;
         Assert.Equal(start.Line, end.Line);
         Assert.Equal(start.Character, start.Position);
         Assert.Equal(end.Character, end.Position);

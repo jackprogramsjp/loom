@@ -57,10 +57,10 @@ public abstract class Node
         children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();
 
     private static List<Token> SortTokens(IEnumerable<Token?> tokens) =>
-        tokens.Where(token => token != null).Cast<Token>().OrderBy(token => token.Span.Start.Position).ToList();
+        tokens.Where(token => token != null).Cast<Token>().OrderBy(token => token.Span.Position).ToList();
 
     private LocationSpan DeriveSpan() =>
         Tokens.Count == 0
             ? LocationSpan.Empty(SourceFile.Empty)
-            : new LocationSpan(Tokens.First().Span.Start, Tokens.Last().Span.End);
+            : new LocationSpan(Tokens.First().GetLocation().Start, Tokens.Last().GetLocation().End);
 }

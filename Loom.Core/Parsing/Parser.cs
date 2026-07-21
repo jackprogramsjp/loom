@@ -116,12 +116,12 @@ public sealed partial class Parser(LexerResult lexerResult)
     private bool SplitAndAdvance(int splitIndex, SyntaxKind remainderKind, out Token closingArrow)
     {
         var token = Current();
-        var firstSpan = new LocationSpan(token.Span.Start, splitIndex);
-        closingArrow = new Token(SyntaxKind.RArrow, firstSpan, token.Text[..splitIndex]);
+        closingArrow = new Token(SyntaxKind.RArrow, token.File, new TextSpan(token.Span.Position, splitIndex), token.Text[..splitIndex]);
 
         var remainder = new Token(
             remainderKind,
-            new LocationSpan(token.Span.Start + splitIndex, token.Span.Length - splitIndex),
+            token.File,
+            new TextSpan(token.Span.Position + splitIndex, token.Span.Length - splitIndex),
             token.Text[splitIndex..]
         );
 
