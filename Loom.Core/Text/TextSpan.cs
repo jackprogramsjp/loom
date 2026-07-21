@@ -18,5 +18,5 @@ public readonly struct TextSpan(int position, int length) : IEquatable<TextSpan>
     public bool Equals(TextSpan other) => Position == other.Position && Length == other.Length;
     public override bool Equals(object? obj) => obj is TextSpan other && Equals(other);
     public override int GetHashCode() => HashCode.Combine(Position, Length);
-    public override string ToString() => $"[{Position}..{End})";
+    public override string ToString() => $"[{Position}..{End}]";
 }

@@ -79,6 +79,7 @@ internal static class Constants
         "VersionControlService"
     ];
 
+    public static readonly HashSet<string> DirectClassBlacklist = ["Object", "Instance"]; // handwritten
     public static readonly HashSet<string> ClassBlacklist =
     [
         // Classes which Roblox leverages internally/in the CoreScripts but serve no purpose to developers

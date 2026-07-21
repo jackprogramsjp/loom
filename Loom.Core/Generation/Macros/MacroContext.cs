@@ -2,13 +2,17 @@ using Loom.Core.Diagnostics;
 using Loom.Core.Resolving;
 using Loom.Luau;
 using Loom.Luau.AST;
+using BinaryOperator = Loom.Luau.AST.BinaryOperator;
+using ElementAccess = Loom.Luau.AST.ElementAccess;
+using PropertyAccess = Loom.Luau.AST.PropertyAccess;
+using UnaryOperator = Loom.Luau.AST.UnaryOperator;
 
 namespace Loom.Core.Generation.Macros;
 
 internal record MacroContext(SemanticModel SemanticModel, LuauState State, DiagnosticBag Diagnostics)
 {
     public Parsing.AST.Node Node { get; set; } = null!;
-    
+
     public static LuauExpression GetCallObject(Call call) =>
         call.Callee switch
         {
@@ -17,7 +21,7 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State, Diagn
                 propertyAccess.Names.Count > 1
                     ? new PropertyAccess(LuauFactory.UnwrapParentheses(propertyAccess.Target), propertyAccess.Names.SkipLast(1).ToList())
                     : LuauFactory.UnwrapParentheses(propertyAccess.Target),
-            
+
             var callee => LuauFactory.UnwrapParentheses(callee)
         };
 
@@ -63,5 +67,25 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State, Diagn
         }
 
         return false;
+    }
+
+    public Call TypeArgumentAsStringCall(string name, string newName, Parsing.AST.TypeArguments? typeArguments, LuauExpression instance, bool isMethod = true)
+    {
+        var instanceName = GetStringFromOnlyTypeArgument(typeArguments, name);
+        return new Call(new PropertyAccess(instance, [newName]), [instanceName], isMethod);
+    }
+
+    public StringLiteral GetStringFromOnlyTypeArgument(Parsing.AST.TypeArguments? typeArguments, string fnName)
+    {
+        var typeName = typeArguments!.ArgumentsList[0];
+        var instanceType = SemanticModel.GetType(typeName);
+        if (instanceType is TypeChecking.Types.TypeParameter)
+            Diagnostics.Error(
+                typeName,
+                InternalCodes.AbstractTypeParameterInMacro,
+                $"Cannot use type parameter '{typeName}' with '{fnName}::<T>()' macro."
+            );
+
+        return new StringLiteral(typeName.ToString());
     }
 }

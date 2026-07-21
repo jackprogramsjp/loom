@@ -27,12 +27,12 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
         switch (name)
         {
             case "get_service":
-                var serviceName = GetStringFromOnlyTypeArgument(context, typeArguments, name);
+                var serviceName = context.GetStringFromOnlyTypeArgument(typeArguments, name);
                 expression = LuauFactory.LibraryCall("game", ["GetService"], [serviceName], true);
 
                 return true;
             case "new_instance":
-                var instanceName = GetStringFromOnlyTypeArgument(context, typeArguments, name);
+                var instanceName = context.GetStringFromOnlyTypeArgument(typeArguments, name);
                 expression = LuauFactory.LibraryCall("Instance", ["new"], [instanceName]);
 
                 return true;
@@ -46,19 +46,5 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
 
         expression = null;
         return false;
-    }
-
-    private static StringLiteral GetStringFromOnlyTypeArgument(MacroContext context, TypeArguments? typeArguments, string fnName)
-    {
-        var typeName = typeArguments!.ArgumentsList[0];
-        var instanceType = context.SemanticModel.GetType(typeName);
-        if (instanceType is TypeChecking.Types.TypeParameter)
-            context.Diagnostics.Error(
-                typeName,
-                InternalCodes.AbstractTypeParameterInMacro,
-                $"Cannot use type parameter '{typeName}' with '{fnName}::<T>()' macro."
-            );
-
-        return new StringLiteral(typeName.ToString());
     }
 }

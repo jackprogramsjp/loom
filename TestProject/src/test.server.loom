@@ -1,0 +1,5 @@
+let world = get_service::<Workspace>();
+let is_root = world.is_a::<WorldRoot>();
+let part = world.find_first_child_of_class::<Part>();
+if part != none
+    print(part.name);

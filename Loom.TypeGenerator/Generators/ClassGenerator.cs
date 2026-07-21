@@ -29,7 +29,10 @@ internal sealed class ClassGenerator(
             // superclass?.Subclasses.Add(className);
         }
 
-        var classesToGenerate = rbxClasses.Where(ShouldGenerateClass).ToArray();
+        var classesToGenerate = rbxClasses
+            .Where(rbxClass => !Constants.DirectClassBlacklist.Contains(rbxClass.Name) && ShouldGenerateClass(rbxClass))
+            .ToArray();
+        
         GenerateClasses(classesToGenerate);
         WriteContentsOfFile("roblox_ext.loom");
     }
@@ -348,10 +351,7 @@ internal sealed class ClassGenerator(
                 var hasPrev = i > 0;
                 var hasNext = i + 1 < name.Length;
 
-                if (hasPrev &&
-                    (char.IsLower(name[i - 1]) ||
-                        char.IsDigit(name[i - 1]) ||
-                        (hasNext && char.IsLower(name[i + 1]))))
+                if (hasPrev && (char.IsLower(name[i - 1]) || char.IsDigit(name[i - 1]) || (hasNext && char.IsLower(name[i + 1]))))
                 {
                     builder.Append('_');
                 }

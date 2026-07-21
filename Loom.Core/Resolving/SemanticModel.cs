@@ -76,19 +76,19 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
         attribute = null;
         var (objectExpression, names) = expression switch
         {
-            QualifiedName qualified => (qualified.Identifier, qualified.Names.Select(d => d.Name.Text).ToList()),
-            PropertyAccess propertyAccess => (propertyAccess.Expression, propertyAccess.Names.Select(d => d.Name.Text).ToList()),
+            QualifiedName qualified => (qualified.Identifier, qualified.Names.Select(d => d.Name.Text).ToArray()),
+            PropertyAccess propertyAccess => (propertyAccess.Expression, propertyAccess.Names.Select(d => d.Name.Text).ToArray()),
             ElementAccess { IndexExpression: Literal { Value: string propertyName } } elementAccess => (elementAccess.Expression, [propertyName]),
             _ => (expression, [])
         };
 
-        if (names.Count == 0 || GetType(objectExpression) is not InterfaceType interfaceType)
+        if (names.Length == 0 || GetType(objectExpression) is not InterfaceType interfaceType)
             return false;
 
         var interfaceSymbol = FindDeclarationSymbol<InterfaceSymbol>(interfaceType.Name);
         if (interfaceSymbol == null)
             return false;
-
+        
         var property = interfaceSymbol.GetPropertyAtPath(names);
         return property != null && property.TryGetIntrinsicAttribute(name, out attribute);
     }
