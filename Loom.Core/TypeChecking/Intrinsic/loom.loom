@@ -8,10 +8,43 @@ interface MutRecord<K, V> {
     mut [K]: V;
 }
 
+declare fn luau_name(name: string): void;
+declare fn luau_method: void;
+
+declare interface Event<
+    T1 = none, 
+    T2 = none, 
+    T3 = none, 
+    T4 = none, 
+    T5 = none, 
+    T6 = none, 
+    T7 = none, 
+    T8 = none
+> {
+    [luau_name("Wait"), luau_method]
+    wait: fn: T1;
+}
+
+declare sealed interface UserEvent<
+    T1 = none, 
+    T2 = none, 
+    T3 = none, 
+    T4 = none, 
+    T5 = none, 
+    T6 = none, 
+    T7 = none, 
+    T8 = none
+> : Event<T1, T2, T3, T4, T5, T6, T7, T8>
+{
+    [luau_name("Destroy"), luau_method]
+    destroy: fn: void;
+}
+
+declare sealed interface EventConnection {
+    [luau_name("Disconnect"), luau_method]
+    disconnect: fn: void;
+}
+
 declare fn print(a: unknown, b: unknown?, c: unknown?, d: unknown?, e: unknown?, f: unknown?, g: unknown?, h: unknown?): void;
 declare fn string(value: unknown): string;
 declare fn number(value: unknown, radix: number?): number?;
-
-declare fn luau_name(name: string): void;
-declare fn luau_method: void;
-declare fn override: void;

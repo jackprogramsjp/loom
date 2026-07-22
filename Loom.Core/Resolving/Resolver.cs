@@ -281,7 +281,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitDeclare(Declare declare)
     {
         var lastContext = _context;
-        _context = ResolverContext.Declaration;
+        _context = ResolverContext.Ambient;
 
         bool result;
         if (declare.Signature is InterfaceDeclaration interfaceDeclaration)
@@ -373,7 +373,12 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     }
 
     public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration) =>
-        DeclareVariable(enumDeclaration, SymbolKind.Variable) && DeclareType(enumDeclaration, SymbolKind.EnumType);
+        DeclareVariable(enumDeclaration, SymbolKind.Variable)
+        && DeclareType(enumDeclaration, SymbolKind.EnumType)
+        && base.VisitEnumDeclaration(enumDeclaration);
+
+    public override bool VisitEventDeclaration(EventDeclaration eventDeclaration) =>
+        DeclareVariable(eventDeclaration, SymbolKind.Event) && base.VisitEventDeclaration(eventDeclaration);
 
     public override bool VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
@@ -389,7 +394,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                 _diagnostics.Error(
                     interfaceInvocation,
                     InternalCodes.InvokeDeclaredInterface,
-                    $"Cannot invoke interface '{name}' because it was declared as type."
+                    $"Cannot invoke interface '{name}' because it was declared as a type."
                 );
 
                 return false;
@@ -480,6 +485,15 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             AddDeclaration(symbol);
         }
 
+        var events = body.Members.OfType<EventDeclaration>().ToList();
+        foreach (var symbol in
+                 from eventDeclaration in events
+                 select new PropertySymbol(eventDeclaration, null, [], SymbolKind.Event) { IsIntrinsic = interfaceSymbol.IsIntrinsic })
+        {
+            interfaceSymbol.Properties.Add(symbol);
+            AddDeclaration(symbol);
+        }
+
         var propertyNames = properties.Select(p => p.Name.Text);
         var duplicates = propertyNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (duplicates.Count <= 0)
@@ -549,6 +563,9 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                         DeclareType(enumDeclaration, SymbolKind.EnumType);
 
                     break;
+                case EventDeclaration enumDeclaration:
+                    DeclareVariable(enumDeclaration, SymbolKind.Event);
+                    break;
                 case Declare { Signature: InterfaceDeclaration nested }:
                     DeclareInterface(nested, nested.SealedKeyword != null, out _);
                     break;
@@ -558,7 +575,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool ResolveStatement(Statement statement)
     {
-        if (!parserResult.Tree.File.IsDeclaration || statement is Declare or TypeAlias or TraitDeclaration)
+        if (!IsDeclarationFile() || statement is Declare or TypeAlias or TraitDeclaration)
         {
             Visit(statement);
             return true;
@@ -664,11 +681,14 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         AddDeclaration(symbol);
         _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
 
-        if (parserResult.Tree.File.IsDeclaration)
+        if (IsDeclarationFile())
         {
             symbol.IsGlobal = true;
             _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
         }
+
+        if (_context == ResolverContext.Ambient)
+            symbol.IsAmbient = true;
 
         if (!parserResult.Tree.File.IsIntrinsic) return;
 
@@ -767,6 +787,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             DeclareSymbol(symbol);
     }
 
+    private bool IsDeclarationFile() => parserResult.Tree.File.IsDeclaration;
     private ResolverScope CurrentScope() => _scopes.Peek();
     private void PopScope() => _scopes.Pop();
     private void PushScope() => _scopes.Push(new ResolverScope());

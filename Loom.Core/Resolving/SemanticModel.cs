@@ -79,7 +79,7 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
         var referenceSymbol = GetSymbol(node, kind);
         return referenceSymbol == null ? null : GetDeclarationSymbol(referenceSymbol.Declaration, kind);
     }
-    
+
     public bool TryGetIntrinsicAttribute(Expression expression, string name, [MaybeNullWhen(false)] out AttributeSymbol attribute)
     {
         attribute = null;
@@ -97,17 +97,17 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
         var interfaceSymbol = FindDeclarationSymbol<InterfaceSymbol>(interfaceType.Name);
         if (interfaceSymbol == null)
             return false;
-        
+
         var property = interfaceSymbol.GetPropertyAtPath(names);
         return property != null && property.TryGetIntrinsicAttribute(name, out attribute);
     }
-    
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
     public Type? GetDeclarationType(Node node) => GetSymbol(node) is { } symbol ? TypeSolver.GetType(symbol.Declaration) : null;
-    
-    private T? FindDeclarationSymbol<T>(string name) where T : Symbol =>
-        Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(s => s.Name == name);
+    public T? FindIntrinsicDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(s => s.IsIntrinsic && s.Name == name);
+
+    private T? FindDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(s => s.Name == name);
+    private T? FindDeclarationSymbol<T>(Func<T, bool> predicate) where T : Symbol => Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(predicate);
 
     private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
     {

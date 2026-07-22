@@ -37,9 +37,8 @@ public sealed partial class TypeChecker
     private readonly TypeNarrower _narrower;
     private FlowState _flowState;
     private Symbol? _resolvingHoisted;
-    private MacroContext? _emptyMacroContext;
 
-    private MacroContext EmptyMacroContext => _emptyMacroContext ??= new(_semanticModel, new LuauState(), _diagnostics);
+    private MacroContext EmptyMacroContext => field ??= new MacroContext(_semanticModel, new LuauState(), _diagnostics);
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)
@@ -93,6 +92,22 @@ public sealed partial class TypeChecker
 
     public override Type VisitExpressionStatement(ExpressionStatement expressionStatement) => BindType(expressionStatement, Visit(expressionStatement.Expression));
     public override Type VisitBlock(Block block) => BindType(block, CheckStatements(block, block.Statements).LastOrDefault(Types.PrimitiveType.Void));
+
+    public override Type VisitEventDeclaration(EventDeclaration eventDeclaration)
+    {
+        var symbol = _semanticModel.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event);
+        if (symbol == null)
+        {
+            _diagnostics.Error(eventDeclaration, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of event '{eventDeclaration.Name.Text}'.");
+            return BindType(eventDeclaration, Types.PrimitiveType.Never);
+        }
+
+        var parameterTypes = eventDeclaration.Parameters?.ParameterList.ConvertAll(VisitParameter) ?? [];
+        var genericType = GetIntrinsicType<GenericType>(eventDeclaration, symbol.IsAmbient ? "Event" : "UserEvent");
+        var fullArguments = FillGenericArguments(genericType.Parameters, parameterTypes);
+        var type = new InstantiatedType(genericType, fullArguments);
+        return BindType(eventDeclaration, type);
+    }
 
     public override Type VisitAttribute(Attribute attribute)
     {
@@ -473,7 +488,7 @@ public sealed partial class TypeChecker
     public override Type VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
         if (assignmentOperator.Operator.Kind != SyntaxKind.Equals)
-            return base.VisitBinaryOperator(assignmentOperator);
+            return VisitBinaryOperator(assignmentOperator);
 
         var targetType = Visit(assignmentOperator.Left);
         var valueType = Check(assignmentOperator.Right, targetType);
@@ -599,6 +614,14 @@ public sealed partial class TypeChecker
             return BindType(binaryOperator, TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]).NonNullable()));
         }
 
+        if (binaryOperator.Operator.Kind is SyntaxKind.PlusEquals or SyntaxKind.MinusEquals
+            && TryGetEventParameterTypes(binaryOperator, leftType, out var eventParameters))
+        {
+            var assignableFunction = new Types.FunctionType([], eventParameters, Types.PrimitiveType.Void);
+            _semanticModel.TypeSolver.AddConstraint(rightType, assignableFunction, binaryOperator.Right);
+            return BindType(binaryOperator, GetIntrinsicType(binaryOperator, "EventConnection"));
+        }
+
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
         var hint = Diagnostic.FormatBinaryHint(binaryOperator, leftType, rightType, suggestion);
         _diagnostics.Error(
@@ -663,7 +686,7 @@ public sealed partial class TypeChecker
             var isMacroReference = CheckInvocationMacroReference(identifier);
 
             if (isMacroReference
-                && InvocationMacroReference.IsValidReferenceContext(identifier)
+                && InvocationMacroReference.IsValidReferenceContext(identifier, _semanticModel)
                 && GetContextualType(identifier) is Types.FunctionType contextualType)
             {
                 return BindType(identifier, contextualType);
@@ -841,7 +864,7 @@ public sealed partial class TypeChecker
 
         var isMacroReference = CheckInvocationMacroReference(accessExpression);
         if (isMacroReference
-            && InvocationMacroReference.IsValidReferenceContext(accessExpression)
+            && InvocationMacroReference.IsValidReferenceContext(accessExpression, _semanticModel)
             && GetContextualType(accessExpression) is Types.FunctionType contextualType)
         {
             return BindType(accessExpression, contextualType);
@@ -913,9 +936,7 @@ public sealed partial class TypeChecker
         if (!InvocationMacroReference.TryClassify(EmptyMacroContext, expression, out _, out var memberName))
             return false;
 
-        if (InvocationMacroReference.IsValidReferenceContext(expression))
-            return true;
-        if (InvocationMacroReference.IsDirectInvocationCallee(expression))
+        if (InvocationMacroReference.IsValidReferenceContext(expression, _semanticModel) || InvocationMacroReference.IsDirectInvocationCallee(expression))
             return true;
 
         _diagnostics.Error(
@@ -1042,8 +1063,8 @@ public sealed partial class TypeChecker
                 .Select(Visit)
                 .ToList();
 
-        return possibleReturnTypes.Count == 0 
-            ? Types.PrimitiveType.Void 
+        return possibleReturnTypes.Count == 0
+            ? Types.PrimitiveType.Void
             : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
     }
 
@@ -1059,6 +1080,40 @@ public sealed partial class TypeChecker
         _resolvingHoisted = outer;
 
         return type;
+    }
+
+    private bool TryGetEventParameterTypes(Node failNode, Type type, [MaybeNullWhen(false)] out List<Type> typeArguments)
+    {
+        if (!IsEventType(failNode, type, out var instantiated))
+        {
+            typeArguments = null;
+            return false;
+        }
+
+        typeArguments = instantiated.Arguments.TakeWhile(Type.IsDefined).ToList();
+        return true;
+    }
+
+    private bool IsEventType(Node failNode, Type type, [MaybeNullWhen(false)] out InstantiatedType instantiatedType)
+    {
+        instantiatedType = null;
+        if (type is not InstantiatedType instantiated)
+            return false;
+
+        instantiatedType = instantiated;
+        return instantiated.GenericType.Equals(GetIntrinsicType<GenericType>(failNode, "UserEvent"));
+    }
+
+    private Type GetIntrinsicType(Node failNode, string name) => GetIntrinsicType<Type>(failNode, name);
+
+    private T GetIntrinsicType<T>(Node failNode, string name) where T : Type
+    {
+        var symbol = _semanticModel.FindIntrinsicDeclarationSymbol<Symbol>(name);
+        if (symbol != null && GetTypeFromSymbol(symbol) is T type)
+            return type;
+
+        _diagnostics.CompilerError(failNode, $"Failed to find  intrinsic type for name '{name}'");
+        return null!;
     }
 
     private Type GetTypeFromSymbol(Symbol symbol) =>

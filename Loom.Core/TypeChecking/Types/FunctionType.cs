@@ -4,7 +4,22 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
 {
     public List<TypeParameter> TypeParameters { get; } = typeParameters;
     public List<Type> ParameterTypes { get; } = parameterTypes;
+    public List<Type> RequiredParameterTypes { get; } = GetRequiredParameterTypes(parameterTypes);
     public Type ReturnType { get; } = returnType;
+    
+    private static List<Type> GetRequiredParameterTypes(List<Type> parameterTypes)
+    {
+        var cutoffIndex = parameterTypes.Count;
+        for (var i = parameterTypes.Count - 1; i >= 0; i--)
+        {
+            if (!IsNotOptional(parameterTypes[i])) continue;
+
+            cutoffIndex = i + 1;
+            break;
+        }
+        
+        return parameterTypes.Take(cutoffIndex).ToList();
+    }
 
     public override int GetHashCode()
     {
@@ -20,7 +35,7 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
     public override bool Equals(Type? other) =>
         other is FunctionType functionType
         && ListEquals(TypeParameters, functionType.TypeParameters)
-        && ListEquals(ParameterTypes, functionType.ParameterTypes)
+        && ListEquals(RequiredParameterTypes, functionType.RequiredParameterTypes)
         && ReturnType.Equals(functionType.ReturnType);
 
     public override bool IsAssignableTo(Type other)

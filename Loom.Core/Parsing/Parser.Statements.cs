@@ -17,6 +17,7 @@ public sealed partial class Parser
             [SyntaxKind.MutKeyword] = ParseVariableDeclaration,
             [SyntaxKind.TypeKeyword] = ParseTypeAlias,
             [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
+            [SyntaxKind.EventKeyword] = ParseEventDeclaration,
             [SyntaxKind.DeclareKeyword] = ParseDeclare,
             [SyntaxKind.ImplementKeyword] = ParseImplement,
             [SyntaxKind.TraitKeyword] = ParseTraitDeclaration,
@@ -63,12 +64,11 @@ public sealed partial class Parser
             var previousPosition = _position;
             statements.Add(ParseStatement());
 
+            if (_position != previousPosition) continue;
+
+            Synchronize();
             if (_position == previousPosition)
-            {
-                Synchronize();
-                if (_position == previousPosition)
-                    Advance();
-            }
+                Advance();
         }
 
         return new Block(leftBrace, MissingToken(SyntaxKind.RBrace), statements);

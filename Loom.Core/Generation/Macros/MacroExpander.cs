@@ -49,7 +49,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         if (!InvocationMacroReference.TryClassify(_context, expression, out var provider, out var memberName))
             return false;
 
-        if (!InvocationMacroReference.IsValidReferenceContext(expression))
+        if (!InvocationMacroReference.IsValidReferenceContext(expression, _context.SemanticModel))
             return false;
 
         if (semanticModel.GetType(expression) is not FunctionType functionType)

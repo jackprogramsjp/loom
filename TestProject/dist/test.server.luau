@@ -1,14 +1,21 @@
-type Item = {
-  read name: string,
-  read price: number,
-  read quantity: number,
-}
-const function total(items: { Item }): number
-  local sum = 0
-  for _, item in items do
-    sum += item.price * item.quantity
-  end
-  return sum
+const Loom = require("@game/ReplicatedStorage/include/loom_runtime")
+const my_event: Loom.Event<number> = Loom.Event.new()
+const function on_event(p: number): ()
+  print("param: " .. tostring(p))
 end
-const items = {{ name = "Keyboard", price = 80, quantity = 2 }, { name = "Mouse", price = 25, quantity = 4 }, { name = "Monitor", price = 300, quantity = 1 }}
-print(total(items))
+type Execute = {
+  execute: (Execute, number) -> (),
+}
+type Foo = {} & Execute
+local Execute_for_Foo = {}
+Execute_for_Foo.__index = Execute_for_Foo
+Execute_for_Foo = Execute_for_Foo :: Foo
+function Execute_for_Foo.execute(self: Foo, p)
+  return print(p)
+end
+const foo = setmetatable({}, Loom.merge_meta(Execute_for_Foo)) :: Foo
+my_event:Connect(function(...): ()
+  foo:execute(...)
+end)
+const conn = my_event:Connect(on_event)
+conn:Disconnect()

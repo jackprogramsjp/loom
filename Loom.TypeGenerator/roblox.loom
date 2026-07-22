@@ -98,8 +98,6 @@ interface UnknownRecord {
     [unknown]: unknown;
 }
 
-declare fn print(msg: unknown): void;
-
 declare interface ScriptSignal;
 
 declare interface ScriptConnection {

@@ -1,21 +1,23 @@
-interface Item {
-    name: string;
-    price: number;
-    quantity: number;
+event my_event(param: number);
+
+fn on_event(p: number): void {
+    print("param: " + string(p))
 }
 
-fn total(items: Item[]): number {
-    mut sum = 0;
-    for item : items
-        sum += item.price * item.quantity;
-
-    return sum;
+trait Execute {
+    fn execute(p: number): void;
 }
 
-let items = [
-    new Item { name: "Keyboard", price: 80, quantity: 2 },
-    new Item { name: "Mouse", price: 25, quantity: 4 },
-    new Item { name: "Monitor", price: 300, quantity: 1 }
-];
+interface Foo;
 
-print(total(items));
+implement Execute for Foo {
+    fn execute(p) -> print(p);
+}
+
+let foo = new Foo {};
+my_event += foo.execute;
+my_event += (mut []).push;
+let conn = my_event += on_event;
+conn.disconnect();
+
+my_event -= on_event

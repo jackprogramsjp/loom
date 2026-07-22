@@ -265,7 +265,7 @@ public class ResolverTest
     public void ThrowsFor_DeclaredInterface_Invocation()
     {
         var diagnostics = Utility.GetSemanticModel("declare interface A; let a = new A {}").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvokeDeclaredInterface, "Cannot invoke interface 'A' because it was declared as type.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvokeDeclaredInterface, "Cannot invoke interface 'A' because it was declared as a type.");
     }
 
     [Fact]

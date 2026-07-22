@@ -8,7 +8,8 @@ export type Range = { minimum: number, maximum: number }
 export type ResultOk<T> = { ok: true, value: T }
 export type ResultError<Error> = { ok: false, error: Error }
 export type Result<T, Error> = ResultOk<T> | ResultError<Error>
-export type Event<T...> = Event.Event<T...>
+export type Event<T... = ...any> = Event.Event<T...>
+export type UserEvent<T... = ...any> = Event.UserEvent<T...>
 export type EventConnection = Event.Connection
 
 Loom.Event = Event

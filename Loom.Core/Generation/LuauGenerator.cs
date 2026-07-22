@@ -1,5 +1,6 @@
 using Loom.Core.Diagnostics;
 using Loom.Core.Generation.Macros;
+using Loom.Core.Parsing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.Text;
@@ -47,6 +48,15 @@ public sealed partial class LuauGenerator
     }
 
     protected override LuauNode Visit(Node node) => node.Accept(this);
+
+    public override LuauNode VisitEventDeclaration(EventDeclaration eventDeclaration)
+    {
+        // TODO: generic events
+        _semanticModel.RuntimeReferences += 2;
+        var parameterTypes = eventDeclaration.Parameters?.ParameterList.ConvertAll(p => Visit(p.ColonTypeClause!.Type)) ?? [];
+        var eventType = LuauFactory.QualifyRuntimeType(new Luau.AST.TypeName("Event", parameterTypes));
+        return new ConstVariable(eventDeclaration.Name.Text, eventType, LuauFactory.RuntimeLibraryCall(["Event", "new"], []));
+    }
 
     public override LuauNode VisitFor(For @for)
     {
@@ -220,6 +230,10 @@ public sealed partial class LuauGenerator
 
     public override LuauNode VisitAssignmentOperator(AssignmentOperator assignmentOperator)
     {
+        var leftSymbol = _semanticModel.GetSymbol(assignmentOperator.Left);
+        if (leftSymbol is { Kind: SymbolKind.Event } && assignmentOperator.Operator.Kind is SyntaxKind.PlusEquals or SyntaxKind.MinusEquals)
+            return GenerateEventAssignment(assignmentOperator);
+
         if (assignmentOperator.Parent is ExpressionStatement)
             return VisitBinaryOperator(assignmentOperator);
 
@@ -247,6 +261,20 @@ public sealed partial class LuauGenerator
         _state.Prereq(new Luau.AST.ExpressionStatement(boundAssignment));
 
         return assigned;
+    }
+
+    private Call GenerateEventAssignment(AssignmentOperator assignmentOperator)
+    {
+        var eventName = Visit(assignmentOperator.Left);
+        if (assignmentOperator.Operator.Kind == SyntaxKind.PlusEquals)
+        {
+            var fn = assignmentOperator.Right;
+            var luauFn = WrapAnonymousFunction(fn, Visit(fn), new UnitType());
+            return new Call(new Luau.AST.PropertyAccess(eventName, ["Connect"]), [luauFn], true);
+        }
+
+        // TODO
+        return new Call(new Luau.AST.PropertyAccess(eventName, ["Disconnect"]), [], true);
     }
 
     public override LuauNode VisitBinaryOperator(BinaryOperator binaryOperator)
@@ -285,7 +313,7 @@ public sealed partial class LuauGenerator
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
         var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
         if (symbol.IsIntrinsic)
-            return new QualifiedTypeName([LuauFactory.RuntimeImportName], luauTypeName);
+            return LuauFactory.QualifyRuntimeType(luauTypeName);
 
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
@@ -402,7 +430,27 @@ public sealed partial class LuauGenerator
         result.AddRange(scope.PostreqStatements);
     }
 
-    private List<LuauExpression> WrapFunctionArgument(Statement body, LuauType? returnType = null)
+    private LuauExpression WrapAnonymousFunction(Expression expression, LuauExpression luauExpression, LuauType? returnType = null)
+    {
+        if (luauExpression is Luau.AST.Identifier)
+            return luauExpression;
+
+        var asCall = (Call)VisitInvocation(
+            new Invocation(expression, null, new Arguments(TokenFactory.Operator(SyntaxKind.LParen), TokenFactory.Operator(SyntaxKind.RParen), []))
+        );
+
+        if (!asCall.IsMethod)
+            return luauExpression;
+
+        return new AnonymousFunction(
+            null,
+            [Luau.AST.Parameter.Vararg()],
+            returnType,
+            new Chunk([new Luau.AST.ExpressionStatement(new Call(luauExpression, [new Luau.AST.Identifier("...")], true))])
+        );
+    }
+
+    private List<LuauExpression> UnwrapFunctionArgument(Statement body, LuauType? returnType = null)
     {
         var chunk = GenerateChunk(body);
         return chunk is { Statements: [Luau.AST.ExpressionStatement { Expression: Call { IsMethod: false } call }] }
@@ -417,7 +465,9 @@ public sealed partial class LuauGenerator
 
     private static bool IsUnorphanableExpression(LuauExpression expression) =>
         expression is Call
-        || expression is Luau.AST.BinaryOperator binaryOperator && binaryOperator.Operator.EndsWith('=') && binaryOperator.Operator is not ("==" or "~=" or "<=" or ">=");
+        || expression is Luau.AST.BinaryOperator binaryOperator
+        && binaryOperator.Operator.EndsWith('=')
+        && binaryOperator.Operator is not ("==" or "~=" or "<=" or ">=");
 
     private LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
     private LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);

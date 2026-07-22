@@ -306,7 +306,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
     private bool UnifyFunctionTypes(FunctionType a, FunctionType b, LocationSpan span, out bool updated)
     {
         updated = false;
-        if (a.TypeParameters.Count != b.TypeParameters.Count || a.ParameterTypes.Count != b.ParameterTypes.Count)
+        if (a.TypeParameters.Count != b.TypeParameters.Count || a.RequiredParameterTypes.Count < b.RequiredParameterTypes.Count)
             return ReportTypeMismatch(a, b, span);
 
         var success = true;

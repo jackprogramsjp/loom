@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Generation.Macros.Providers;
 using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
 using Loom.Core.TypeChecking;
 using Loom.Core.TypeChecking.Types;
 using Type = Loom.Core.TypeChecking.Types.Type;
@@ -10,15 +11,18 @@ namespace Loom.Core.Generation.Macros;
 
 internal static class InvocationMacroReference
 {
-    public static bool IsValidReferenceContext(Expression expression)
+    public static bool IsValidReferenceContext(Expression expression, SemanticModel semanticModel)
     {
-        if (expression.FirstAncestorOfType<ArrayLiteral>() is not null)
+        if (expression.IsDescendantOf<ArrayLiteral>())
             return false;
 
         for (Node? node = expression; node is not null; node = node.Parent)
         {
-            if (node.Parent is Arguments && node.Parent.Parent is Invocation)
+            if (node.Parent is AssignmentOperator assignmentOperator && semanticModel.GetSymbol(assignmentOperator.Left) is { Kind: SymbolKind.Event }
+                || node.Parent is Arguments && node.Parent.Parent is Invocation)
+            {
                 return true;
+            }
         }
 
         return false;

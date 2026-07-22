@@ -10,6 +10,7 @@ public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutab
     public SymbolKind Kind { get; } = kind;
     public string Name { get; } = name;
     public bool IsMutable { get; } = isMutable;
+    public bool IsAmbient { get; internal set; }
     public bool IsIntrinsic { get; internal set; }
     public bool IsGlobal { get; internal set; }
     public bool IsTypeSymbol { get; } = IsTypeKind(kind);
