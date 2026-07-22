@@ -168,6 +168,42 @@ public class ParserTest
     }
 
     [Fact]
+    public void ParseBlock_UnterminatedAtEof_Terminates()
+    {
+        var result = Utility.Parse("fn foo() {");
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(SyntaxKind.RBrace, block.RightBrace.Kind);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+        Assert.Equal("}", block.RightBrace.Text);
+    }
+
+    [Fact]
+    public void ParseBlock_Unterminated_KeepsInnerStatements()
+    {
+        const string source = """
+            fn foo() {
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(block.Statements));
+        Assert.Equal("y", declaration.Name.Text);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void ParseBlock_UnterminatedIf_Terminates()
+    {
+        var result = Utility.Parse("if true {");
+        var @if = Assert.IsType<If>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(@if.ThenBranch);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
     public void Unfinished_ProducesNull()
     {
         var tree = Utility.GetAST("let");
