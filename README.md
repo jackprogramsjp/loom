@@ -615,11 +615,9 @@ end
 
 ##
 
-```ts
-for n :
-1.
-.10
-print(n)
+```rs
+for n : 1. .10
+    print(n)
 ```
 
 ```luau
@@ -630,11 +628,9 @@ end
 
 ##
 
-```ts
-for n :
-10.
-.1
-print(n)
+```rs
+for n : 10..1
+    print(n)
 ```
 
 ```luau
