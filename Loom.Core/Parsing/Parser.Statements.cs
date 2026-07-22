@@ -64,7 +64,11 @@ public sealed partial class Parser
             statements.Add(ParseStatement());
 
             if (_position == previousPosition)
-                Advance(); // Guarantee progress
+            {
+                Synchronize();
+                if (_position == previousPosition)
+                    Advance();
+            }
         }
 
         return new Block(leftBrace, MissingToken(SyntaxKind.RBrace), statements);

@@ -204,6 +204,59 @@ public class ParserTest
     }
 
     [Fact]
+    public void Synchronize_JunkInsideBlock_PreservesFollowingDeclaration()
+    {
+        // Use a real token ('+') bc'@' is dropped by the lexer and truncates the file.
+        const string source = """
+            fn f() {
+            +
+            let y = 1;
+            }
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '+'.");
+
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(2, block.Statements.Count);
+        Assert.IsType<NullExpression>(Assert.IsType<ExpressionStatement>(block.Statements[0]).Expression);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(block.Statements[1]).Name.Text);
+        Assert.Equal(1, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void Synchronize_JunkBeforeClosingBrace_DoesNotConsumeBrace()
+    {
+        const string source = """
+            fn f() {
+            +
+            }
+            """;
+
+        var result = Utility.Parse(source);
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(SyntaxKind.RBrace, block.RightBrace.Kind);
+        Assert.Equal(1, block.RightBrace.Span.Length);
+        Assert.Equal("}", block.RightBrace.Text);
+    }
+
+    [Fact]
+    public void Synchronize_TopLevelJunk_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            +
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        Assert.Equal(2, result.Tree.Statements.Count);
+        Assert.IsType<NullExpression>(Assert.IsType<ExpressionStatement>(result.Tree.Statements[0]).Expression);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]).Name.Text);
+    }
+
+    [Fact]
     public void Unfinished_ProducesNull()
     {
         var tree = Utility.GetAST("let");
