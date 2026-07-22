@@ -14,7 +14,7 @@ namespace Loom.Core.TypeChecking;
 
 public sealed class TypeNarrower
 {
-    public record struct BranchStates(FlowState True, FlowState False);
+    public sealed record BranchStates(FlowState True, FlowState False);
 
     private readonly Literal _trueLiteral = new(TokenFactory.Keyword(SyntaxKind.TrueLiteral), true);
     private readonly SemanticModel _semanticModel;
@@ -60,41 +60,26 @@ public sealed class TypeNarrower
     {
         var type = GetBaseExpressionType(expression, current);
         if (type == null || !type.IsAssignableTo(PrimitiveType.Bool))
-            return new BranchStates(new FlowState(current), new FlowState(current));
+            return new BranchStates(current, current); // no narrowing info added - safe to share the same instance
 
-        var trueState = new FlowState(current);
-        var falseState = new FlowState(current);
-        ApplyBinaryNarrowing(
-            expression,
-            _trueLiteral,
-            SyntaxKind.EqualsEquals,
-            current,
-            trueState,
-            falseState
-        );
-
-        return new BranchStates(trueState, falseState);
+        var trueBuilder = current.ToBuilder();
+        var falseBuilder = current.ToBuilder();
+        ApplyBinaryNarrowing(expression, _trueLiteral, SyntaxKind.EqualsEquals, current, trueBuilder, falseBuilder);
+        return new BranchStates(trueBuilder.ToImmutable(), falseBuilder.ToImmutable());
     }
 
     private BranchStates NarrowEquality(BinaryOperator binaryOperator, FlowState current)
     {
-        var trueState = new FlowState(current);
-        var falseState = new FlowState(current);
-
-        if (TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expression, out var literal)
-            || TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expression, out literal))
+        if (!TryGetExpressionAndLiteral(binaryOperator.Left, binaryOperator.Right, out var expression, out var literal)
+            && !TryGetExpressionAndLiteral(binaryOperator.Right, binaryOperator.Left, out expression, out literal))
         {
-            ApplyBinaryNarrowing(
-                expression,
-                literal,
-                binaryOperator.Operator.Kind,
-                current,
-                trueState,
-                falseState
-            );
+            return new BranchStates(current, current);
         }
 
-        return new BranchStates(trueState, falseState);
+        var trueBuilder = current.ToBuilder();
+        var falseBuilder = current.ToBuilder();
+        ApplyBinaryNarrowing(expression, literal, binaryOperator.Operator.Kind, current, trueBuilder, falseBuilder);
+        return new BranchStates(trueBuilder.ToImmutable(), falseBuilder.ToImmutable());
     }
 
     private BranchStates NarrowLogicalAnd(BinaryOperator andOp, FlowState current)
@@ -127,19 +112,22 @@ public sealed class TypeNarrower
 
     private static FlowState MergeStates(FlowState a, FlowState b)
     {
-        var result = new FlowState(a);
+        if (a.NarrowedTypes.IsEmpty && b.NarrowedTypes.IsEmpty)
+            return a;
+
+        var builder = a.NarrowedTypes.ToBuilder();
         foreach (var key in a.NarrowedTypes.Keys.Concat(b.NarrowedTypes.Keys).Distinct())
         {
             var aType = ResolveEffectiveType(key, a);
             var bType = ResolveEffectiveType(key, b);
 
             if (aType != null && bType != null)
-                result.NarrowedTypes[key] = TypeSimplifier.Simplify(new UnionType([aType, bType]));
+                builder[key] = TypeSimplifier.Simplify(new UnionType([aType, bType]));
             else
-                result.NarrowedTypes.Remove(key);
+                builder.Remove(key);
         }
 
-        return result;
+        return new FlowState(a.DefinitelyInitialized, a.MaybeInitialized, a.IsUnreachable, builder.ToImmutable());
     }
 
     private static Type? ResolveEffectiveType(FlowAddress address, FlowState state)
@@ -182,8 +170,8 @@ public sealed class TypeNarrower
         Expression literal,
         SyntaxKind operatorKind,
         FlowState currentState,
-        FlowState trueState,
-        FlowState falseState)
+        FlowState.Builder trueState,
+        FlowState.Builder falseState)
     {
         var address = GetFlowAddress(expression);
         if (address == null) return;
@@ -278,8 +266,8 @@ public sealed class TypeNarrower
         Type literalType,
         bool isEquals,
         FlowState currentState,
-        FlowState trueState,
-        FlowState falseState)
+        FlowState.Builder trueState,
+        FlowState.Builder falseState)
     {
         var baseAddress = GetFlowAddress(baseExpression);
         if (baseAddress == null) return;
@@ -344,8 +332,8 @@ public sealed class TypeNarrower
         Type literalType,
         bool isEquals,
         FlowState currentState,
-        FlowState trueState,
-        FlowState falseState)
+        FlowState.Builder trueState,
+        FlowState.Builder falseState)
     {
         var baseAddress = GetFlowAddress(baseExpression);
         if (baseAddress == null) return;
@@ -526,7 +514,7 @@ public sealed class TypeNarrower
                     _ => TypeSimplifier.Simplify(new UnionType(members))
                 };
             }
-            
+
             case NativelyIndexableType indexableType:
                 var result = indexableType.GetTypeAtIndex(indexType);
                 return result.BodyType?.ValueType;
