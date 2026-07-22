@@ -18,7 +18,6 @@ public abstract class Node
     protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children)
     {
         Id = new NodeId(Interlocked.Increment(ref _nextId));
-        NodeId.Map.Add(Id, this);
 
         Children = children.OfType<Node>().ToArray();
         Tokens = theseTokens.OfType<Token>().ToArray();

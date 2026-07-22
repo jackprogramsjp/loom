@@ -417,7 +417,7 @@ public sealed partial class LuauGenerator
 
     private static bool IsUnorphanableExpression(LuauExpression expression) =>
         expression is Call
-        || expression is Luau.AST.BinaryOperator binaryOperator && binaryOperator.Operator.EndsWith('=') && binaryOperator.Operator is not ("==" or "~=");
+        || expression is Luau.AST.BinaryOperator binaryOperator && binaryOperator.Operator.EndsWith('=') && binaryOperator.Operator is not ("==" or "~=" or "<=" or ">=");
 
     private LuauType Visit(TypeExpression node) => (LuauType)node.Accept(this);
     private LuauExpression Visit(Expression node) => (LuauExpression)node.Accept(this);

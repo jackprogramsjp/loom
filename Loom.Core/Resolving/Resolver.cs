@@ -701,6 +701,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             _allReferences[node.Id] = [];
 
         _allReferences[node.Id].Add(symbol);
+        if (!node.File.IsIntrinsic)
+            _semanticModel.NonIntrinsicReferenceNodes.Add(node.Id);
     }
 
     private Symbol? LookupTypeSymbol(string name) =>

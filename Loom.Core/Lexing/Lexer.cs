@@ -80,7 +80,7 @@ public sealed class Lexer(SourceFile file)
     private Token LexString(int start, char terminator)
     {
         Advance();
-        while (!IsEof() && Current() != terminator)
+        while (!IsEof() && Current() != terminator && Current() != '\n')
         {
             if (Current() == '\\' && !IsEof(1))
                 Advance();
@@ -335,18 +335,6 @@ public sealed class Lexer(SourceFile file)
         return false;
     }
 
-    private string? GetLiteralMatch(LexerRule rule) =>
-        rule.Kind switch
-        {
-            LexerRuleKind.SingleCharacter when rule.Pattern.Length == 1 && Current() == rule.Pattern[0] =>
-                rule.Pattern,
-
-            LexerRuleKind.MultiCharacter when !IsEof(rule.Pattern.Length - 1) && MatchesPatternAt(rule.Pattern) =>
-                rule.Pattern,
-
-            _ => null
-        };
-
     private void Match(char c)
     {
         if (IsEof() || char.ToLowerInvariant(Current()) != c) return;
@@ -367,7 +355,6 @@ public sealed class Lexer(SourceFile file)
 
     private Token CreateToken(SyntaxKind kind, int start) => new(kind, file, new TextSpan(start, _position - start));
     private void Advance(int offset = 1) => _position += offset;
-    private bool MatchesPatternAt(string pattern) => file.SourceText.AsSpan(_position, pattern.Length).SequenceEqual(pattern);
     private char Current() => Peek(0);
     private char Peek(int offset) => file.SourceText[_position + offset];
     private bool IsEof(int offset = 0) => _position + offset >= _sourceLength;
