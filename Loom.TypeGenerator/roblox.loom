@@ -360,116 +360,116 @@ declare interface time_t {
 }
 
 declare interface TimeTable {
-    Year: number
-    Month: number;
-    Day: number;
-    Hour: number;
-    Minute: number;
-    Second: number;
-    Millisecond: number;
+    [luau_name("Year")] year: number
+    [luau_name("Month")] month: number;
+    [luau_name("Day")] day: number;
+    [luau_name("Hour")] hour: number;
+    [luau_name("Minute")] minute: number;
+    [luau_name("Second")] second: number;
+    [luau_name("Millisecond")] millisecond: number;
 }
 
 declare interface NumberRange {
-    Min: number;
-    Max: number;
+    [luau_name("Min")] min: number;
+    [luau_name("Max")] max: number;
 }
 
 declare interface NumberSequenceKeypoint {
-    Envelope: number;
-    Time: number;
-    Value: number;
+    [luau_name("Envelope")] envelope: number;
+    [luau_name("Time")] time: number;
+    [luau_name("Value")] value: number;
 }
 
 declare interface NumberSequence {
-    Keypoints: NumberSequenceKeypoint[];
+     [luau_name("Keypoints")] keypoints: NumberSequenceKeypoint[];
 }
 
 declare interface ColorSequenceKeypoint {
-    Time: number;
-    Value: Color3;
+    [luau_name("Time")] time: number;
+    [luau_name("Value")] value: Color3;
 }
 
 declare interface ColorSequence {
-    Keypoints: ColorSequenceKeypoint[];
+    [luau_name("Keypoints")] keypoints: ColorSequenceKeypoint[];
 }
 
 declare interface Rect {
-    Width: number;
-    Height: number;
-    Min: Vector2;
-    Max: Vector2;
+    [luau_name("Width")] width: number;
+    [luau_name("Height")] height: number;
+    [luau_name("Min")] min: Vector2;
+    [luau_name("Max")] max: Vector2;
 }
 
 declare interface Axes {
-    X: bool;
-    Y: bool;
-    Z: bool;
-    Top: bool;
-    Bottom: bool;
-    Left: bool;
-    Right: bool;
-    Back: bool;
-    Front: bool;
+    [luau_name("X")] x: bool;
+    [luau_name("Y")] y: bool;
+    [luau_name("Z")] z: bool;
+    [luau_name("Top")] top: bool;
+    [luau_name("Bottom")] bottom: bool;
+    [luau_name("Left")] left: bool;
+    [luau_name("Right")] right: bool;
+    [luau_name("Back")] back: bool;
+    [luau_name("Front")] front: bool;
 }
 
 declare interface Faces {
-    Top: bool;
-    Bottom: bool;
-    Left: bool;
-    Right: bool;
-    Back: bool;
-    Front: bool;
+    [luau_name("Top")] top: bool;
+    [luau_name("Bottom")] bottom: bool;
+    [luau_name("Left")] left: bool;
+    [luau_name("Right")] right: bool;
+    [luau_name("Back")] back: bool;
+    [luau_name("Front")] front: bool;
 }
 
 declare interface PhysicalProperties {
-    Density: number;
-    Friction: number;
-    Elasticity: number;
-    FrictionWeight: number;
-    ElasticityWeight: number;
+    [luau_name("Density")] density: number;
+    [luau_name("Friction")] friction: number;
+    [luau_name("Elasticity")] elasticity: number;
+    [luau_name("FrictionWeight")] friction_weight: number;
+    [luau_name("ElasticityWeight")] elasticity_weight: number;
 }
 
 declare interface Path2DControlPoint {
-    Position: UDim2;
-    LeftTangent: UDim2;
-    RightTangent: UDim2;
+    [luau_name("Position")] position: UDim2;
+    [luau_name("LeftTangent")] left_tangent: UDim2;
+    [luau_name("RightTangent")] right_tangent: UDim2;
 }
 
 declare interface RotationCurveKey {
-    Interpolation: Enum["KeyInterpolationMode"];
-    Time: number;
-    Value: CFrame;
-    LeftTangent: number;
-    RightTangent: number;
+    [luau_name("Interpolation")] interpolation: Enum["KeyInterpolationMode"];
+    [luau_name("Time")] time: number;
+    [luau_name("Value")] value: CFrame;
+    [luau_name("LeftTangent")] left_tangent: number;
+    [luau_name("RightTangent")] right_tangent: number;
 }
 
 declare interface FloatCurveKey {
-    Interpolation: Enum["KeyInterpolationMode"];
-    Time: number;
-    Value: number;
-    LeftTangent: number;
-    RightTangent: number;
+    [luau_name("Interpolation")] interpolation: Enum["KeyInterpolationMode"];
+    [luau_name("Time")] time: number;
+    [luau_name("Value")] value: number;
+    [luau_name("LeftTangent")] left_tangent: number;
+    [luau_name("RightTangent")] right_tangent: number;
 }
 
 declare interface ValueCurveKey {
-    Interpolation: Enum["KeyInterpolationMode"];
-    Time: number;
-    Value: unknown;
-    LeftTangent: number;
-    RightTangent: number;
+    [luau_name("Interpolation")] interpolation: Enum["KeyInterpolationMode"];
+    [luau_name("Time")] time: number;
+    [luau_name("Value")] value: unknown;
+    [luau_name("LeftTangent")] left_tangent: number;
+    [luau_name("RightTangent")] right_tangent: number;
 }
 
 declare interface Font {
-    Family: string;
-    Weight: Enum["FontWeight"];
-    Style: Enum["FontStyle"];
-    Bold: bool;
+    [luau_name("Family")] family: string;
+    [luau_name("Weight")] weight: Enum["FontWeight"];
+    [luau_name("Style")] style: Enum["FontStyle"];
+    [luau_name("Bold")] bold: bool;
 }
 
 declare interface FontStatic {
-    fromEnum: fn(font: Enum["Font"]): Font;
-    fromName: fn(name: string, weight: Enum["FontWeight"]?, style: Enum["FontStyle"]?): Font;
-    fromId: fn(id: number, weight: Enum["FontWeight"]?, style: Enum["FontStyle"]?): Font;
+    [luau_name("fromEnum")] from_enum: fn(font: Enum["Font"]): Font;
+    [luau_name("fromName")] from_name: fn(name: string, weight: Enum["FontWeight"]?, style: Enum["FontStyle"]?): Font;
+    [luau_name("fromId")] from_id: fn(id: number, weight: Enum["FontWeight"]?, style: Enum["FontStyle"]?): Font;
 }
 
 declare let Font: FontStatic;
@@ -477,36 +477,36 @@ declare let Font: FontStatic;
 declare interface Secret;
 
 declare interface DockWidgetPluginGuiInfo {
-    InitialEnabled: bool;
-    InitialEnabledShouldOverrideRestore: bool;
-    FloatingXSize: number;
-    FloatingYSize: number;
-    MinWidth: number;
-    MinHeight: number;
+    [luau_name("InitialEnabled")] initial_enabled: bool;
+    [luau_name("InitialEnabledShouldOverrideRestore")] initial_enabled_should_override_restore: bool;
+    [luau_name("FloatingXSize")] floating_x_size: number;
+    [luau_name("FloatingYSize")] floating_y_size: number;
+    [luau_name("MinWidth")] min_width: number;
+    [luau_name("MinHeight")] min_height: number;
 }
 
 declare interface CatalogSearchParams {
-    mut SearchKeyword: string?;
-    mut MinPrice: number?;
-    mut MaxPrice: number?;
-    mut SortType: Enum["CatalogSortType"]?;
-    mut SortAggregation: Enum["CatalogSortAggregation"]?;
-    mut CategoryFilter: Enum["CatalogCategoryFilter"]?;
-    mut SalesTypeFilter: Enum["SalesTypeFilter"]?;
-    mut BundleTypes: Enum["BundleType"][]?;
-    mut AssetTypes: Enum["AvatarAssetType"][]?;
-    mut IncludeOffSale: bool?;
-    mut CreatorName: string?;
-    mut Limit: number?;
+    [luau_name("SearchKeyword")] mut search_keyword: string?;
+    [luau_name("MinPrice")] mut min_price: number?;
+    [luau_name("MaxPrice")] mut max_price: number?;
+    [luau_name("SortType")] mut sort_type: Enum["CatalogSortType"]?;
+    [luau_name("SortAggregation")] mut sort_aggregation: Enum["CatalogSortAggregation"]?;
+    [luau_name("CategoryFilter")] mut category_filter: Enum["CatalogCategoryFilter"]?;
+    [luau_name("SalesTypeFilter")] mut sales_type_filter: Enum["SalesTypeFilter"]?;
+    [luau_name("BundleTypes")] mut bundle_types: Enum["BundleType"][]?;
+    [luau_name("AssetTypes")] mut asset_types: Enum["AvatarAssetType"][]?;
+    [luau_name("IncludeOffSale")] mut include_off_sale: bool?;
+    [luau_name("CreatorName")] mut creator_name: string?;
+    [luau_name("Limit")] mut limit: number?;
 }
 
 declare interface TweenInfo {
-    EasingStyle: Enum["EasingStyle"];
-    EasingDirection: Enum["EasingDirection"];
-    Time: number;
-    DelayTime: number;
-    RepeatCount: number;
-    Reverses: bool;
+    [luau_name("EasingStyle")] easing_style: Enum["EasingStyle"];
+    [luau_name("EasingDirection")] easing_direction: Enum["EasingDirection"];
+    [luau_name("Time")] time: number;
+    [luau_name("DelayTime")] delay_time: number;
+    [luau_name("RepeatCount")] repeat_count: number;
+    [luau_name("Reverses")] reverses: bool;
 }
 
 declare interface SharedTable {
@@ -529,50 +529,50 @@ enum EmoteSlot {
 }
 
 declare interface EquippedEmote {
-    Name: string;
-    Slot: EmoteSlot;
+    [luau_name("Name")] name: string;
+    [luau_name("Slot")] slot: EmoteSlot;
 }
 
 declare interface UserInfo {
-    Id: number;
-    Username: string;
-    DisplayName: string;
+    [luau_name("Id")] id: number;
+    [luau_name("Username")] username: string;
+    [luau_name("DisplayName")] display_name: string;
 }
 
 declare interface User {
-    Id: number;
-    DomainType: Enum["DomainType"];
-    DomainId: number;
+    [luau_name("Id")] id: number;
+    [luau_name("DomainType")] domain_type: Enum["DomainType"];
+    [luau_name("DomainId")] domain_id: number;
 }
 
 declare interface GroupOwner {
-    Id: number;
-    Name: string;
+    [luau_name("Id")] id: number;
+    [luau_name("Name")] name: string;
 }
 
 declare interface GroupRole {
-    Name: string;
-    Rank: number;
+    [luau_name("Name")] name: string;
+    [luau_name("Rank")] rank: number;
 }
 
 declare interface GroupInfo {
-    Id: number;
-    Name: string;
-    Owner: GroupOwner;
-    EmblemUrl: string;
-    Description: string;
-    Roles: GroupRole[];
+    [luau_name("Id")] id: number;
+    [luau_name("Name")] name: string;
+    [luau_name("Owner")] owner: GroupOwner;
+    [luau_name("EmblemUrl")] emblem_url: string;
+    [luau_name("Description")] description: string;
+    [luau_name("Roles")] roles: GroupRole[];
 }
 
 declare interface GetGroupsAsyncResult {
-    Id: number;
-    Name: string;
-    EmblemUrl: string;
-    Description: string;
-    Rank: number;
-    Role: string;
-    IsPrimary: bool;
-    IsInClan: bool;
+    [luau_name("Id")] id: number;
+    [luau_name("Name")] name: string;
+    [luau_name("EmblemUrl")] emblem_url: string;
+    [luau_name("Description")] description: string;
+    [luau_name("Rank")] rank: number;
+    [luau_name("Role")] role: string;
+    [luau_name("IsPrimary")] is_primary: bool;
+    [luau_name("IsInClan")] is_in_clan: bool;
 }
 
 declare interface CollectionHandle;
