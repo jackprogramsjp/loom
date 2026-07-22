@@ -1,6 +1,7 @@
 using Loom.Core.Debug;
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 
 namespace Loom.Testing;
 
@@ -107,6 +108,63 @@ public class ParserTest
         var actual = AstInspector.Inspect(result.Tree).Replace(Environment.NewLine, "\n");
         var expected = File.ReadAllText(snapshotPath).Replace(Environment.NewLine, "\n");
         Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Expect_MissingParen_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            let x = foo(1, 2
+            let y = 3;
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected ')', got 'let'.");
+
+        Assert.Equal(2, result.Tree.Statements.Count);
+        var first = Assert.IsType<VariableDeclaration>(result.Tree.Statements[0]);
+        var second = Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]);
+        Assert.Equal("x", first.Name.Text);
+        Assert.Equal("y", second.Name.Text);
+
+        var invocation = Assert.IsType<Invocation>(first.EqualsValueClause!.Value);
+        var rightParen = invocation.Arguments.RightParen;
+        Assert.Equal(SyntaxKind.RParen, rightParen.Kind);
+        Assert.Equal(0, rightParen.Span.Length);
+        Assert.Equal(")", rightParen.Text);
+    }
+
+    [Fact]
+    public void Expect_MissingParen_AtEof_InsertsZeroWidthToken()
+    {
+        var result = Utility.Parse("let x = foo(");
+        var expectDiagnostic = result.Diagnostics.Find(d =>
+            d.Code == InternalCodes.UnexpectedEof && d.Message == "Expected ')', got EOF."
+        );
+        Assert.NotNull(expectDiagnostic);
+
+        var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(result.Tree.Statements));
+        var invocation = Assert.IsType<Invocation>(declaration.EqualsValueClause!.Value);
+        var rightParen = invocation.Arguments.RightParen;
+        Assert.Equal(SyntaxKind.RParen, rightParen.Kind);
+        Assert.Equal(0, rightParen.Span.Length);
+        Assert.Equal(")", rightParen.Text);
+    }
+
+    [Fact]
+    public void Expect_MissingBracket_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            let x = arr[0
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected ']', got 'let'.");
+
+        Assert.Equal(2, result.Tree.Statements.Count);
+        Assert.Equal("x", Assert.IsType<VariableDeclaration>(result.Tree.Statements[0]).Name.Text);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]).Name.Text);
     }
 
     [Fact]
