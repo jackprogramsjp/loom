@@ -229,10 +229,11 @@ public sealed class Lexer(SourceFile file)
             return null;
         }
 
+        var span = GetSpan(start);
         _diagnostics.Error(
-            GetSpan(start),
+            span,
             InternalCodes.MalformedNumber,
-            $"Malformed float literal '{GetSpan(start).GetText()}': expected one or more digits after the decimal point."
+            $"Malformed float literal '{span.GetText()}': expected one or more digits after the decimal point."
         );
 
         return CreateToken(SyntaxKind.NumberLiteral, start);
@@ -254,10 +255,11 @@ public sealed class Lexer(SourceFile file)
             return null;
         }
 
+        var span = GetSpan(start);
         _diagnostics.Error(
-            GetSpan(start),
+            span,
             InternalCodes.MalformedNumber,
-            $"Malformed scientific notation '{GetSpan(start).GetText()}': expected one or more digits after the exponent."
+            $"Malformed scientific notation '{span.GetText()}': expected one or more digits after the exponent."
         );
 
         return CreateToken(SyntaxKind.NumberLiteral, start);
@@ -272,11 +274,11 @@ public sealed class Lexer(SourceFile file)
 
     private Token ReportMalformedHex(int start)
     {
-        // Currently positioned after "0x"
+        var span = GetSpan(start);
         _diagnostics.Error(
-            GetSpan(start),
+            span,
             InternalCodes.MalformedNumber,
-            $"Malformed hexadecimal literal '{GetSpan(start).GetText()}': expected at least one hex digit after '0x'."
+            $"Malformed hexadecimal literal '{span.GetText()}': expected at least one hex digit after '0x'."
         );
 
         return CreateToken(SyntaxKind.NumberLiteral, start);
@@ -284,10 +286,11 @@ public sealed class Lexer(SourceFile file)
 
     private Token ReportMalformedBinary(int start)
     {
+        var span = GetSpan(start);
         _diagnostics.Error(
-            GetSpan(start),
+            span,
             InternalCodes.MalformedNumber,
-            $"Malformed binary literal '{GetSpan(start).GetText()}': expected at least one binary digit after '0b'."
+            $"Malformed binary literal '{span.GetText()}': expected at least one binary digit after '0b'."
         );
 
         return CreateToken(SyntaxKind.NumberLiteral, start);
@@ -295,10 +298,11 @@ public sealed class Lexer(SourceFile file)
 
     private Token ReportMalformedOctal(int start)
     {
+        var span = GetSpan(start);
         _diagnostics.Error(
-            GetSpan(start),
+            span,
             InternalCodes.MalformedNumber,
-            $"Malformed octal literal '{GetSpan(start).GetText()}': expected at least one octal digit after '0o'."
+            $"Malformed octal literal '{span.GetText()}': expected at least one octal digit after '0o'."
         );
 
         return CreateToken(SyntaxKind.NumberLiteral, start);
