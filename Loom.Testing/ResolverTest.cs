@@ -1244,6 +1244,24 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Interface, interfaceSymbol.Kind);
         Assert.Equal(statement, interfaceSymbol.Declaration);
         Assert.Equal(isSealed, interfaceSymbol.IsSealed);
+        Assert.Empty(interfaceSymbol.Implementations);
+        Assert.Empty(interfaceSymbol.Implements);
+        
+        var property = Assert.Single(interfaceSymbol.Properties);
+        Assert.Equal("foo", property.Name);
+        Assert.False(property.HasIntrinsicAttribute("hello"));
+        Assert.True(property.IsValueSymbol);
+        Assert.False(property.IsTypeSymbol);
+        Assert.False(property.IsMutable);
+        Assert.Null(property.PointsTo);
+        Assert.Empty(property.Attributes);
+        
+        if (constraintCount > 0)
+        {
+            Assert.NotNull(interfaceSymbol.Constraints);
+            Assert.Equal(constraintCount, interfaceSymbol.Constraints.Count);
+        }
+        
         Assert.False(interfaceSymbol.IsIntrinsic);
         Assert.False(interfaceSymbol.IsMutable);
     }

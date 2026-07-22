@@ -17,10 +17,10 @@ public class TypeNarrowerTest
         new TypeChecker(semanticModel, flowAnalyzer).Check();
         
         var tree = semanticModel.Tree;
-        var ifNode = tree.GetDescendants<If>().FirstOrDefault() ?? tree.GetDescendants<While>().FirstOrDefault() as Statement;
+        var conditionalNode = tree.GetDescendants<If>().FirstOrDefault() ?? tree.GetDescendants<While>().FirstOrDefault() as Statement;
 
-        Assert.NotNull(ifNode);
-        var condition = ifNode is If ifStmt ? ifStmt.Condition : ((While)ifNode).Condition;
+        Assert.NotNull(conditionalNode);
+        var condition = conditionalNode is If ifStmt ? ifStmt.Condition : ((While)conditionalNode).Condition;
         return (semanticModel, condition);
     }
 

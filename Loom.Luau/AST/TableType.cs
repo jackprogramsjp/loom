@@ -2,6 +2,8 @@ namespace Loom.Luau.AST;
 
 public class TableType(TableTypeIndexer? indexer, List<TableTypeProperty> properties) : LuauType
 {
+    public static TableType Array(LuauType elementType) => new(new TableTypeIndexer(null, null, elementType), []);
+    
     public TableTypeIndexer? Indexer { get; } = indexer;
     public List<TableTypeProperty> Properties { get; } = properties;
 

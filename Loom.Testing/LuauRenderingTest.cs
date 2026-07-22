@@ -346,11 +346,7 @@ public class LuauRenderingTest
     }
 
     [Fact]
-    public void Renders_Empty_Table()
-    {
-        var table = new Table([]);
-        Assert.Equal("{}", table.Render());
-    }
+    public void Renders_Empty_Table() => Assert.Equal("{}", Table.Empty.Render());
 
     [Fact]
     public void Renders_Call_MultipleArguments()
@@ -642,7 +638,7 @@ public class LuauRenderingTest
         Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(null, PrimitiveType.String, PrimitiveType.Number), []).Render());
 
     [Fact]
-    public void Renders_Array_TableType() => Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, null, PrimitiveType.Number), []).Render());
+    public void Renders_Array_TableType() => Assert.Equal("{ number }", TableType.Array(PrimitiveType.Number).Render());
 
     [Theory]
     [InlineData(true, "true")]

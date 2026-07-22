@@ -8,7 +8,7 @@ using Loom.Core.Text;
 namespace Loom.Testing;
 
 [Collection("Assembly")]
-public class ASTInspectorTest
+public class AstInspectorTest
 {
     private static string Inspect(object node)
     {

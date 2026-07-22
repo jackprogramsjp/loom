@@ -10,15 +10,6 @@ namespace Loom.Core.Generation.Macros;
 
 internal static class InvocationMacroReference
 {
-    private static readonly IReadOnlyCollection<IMacroProvider> _providers =
-    [
-        new NumberMacroProvider(),
-        new RangeMacroProvider(),
-        new ArrayMacroProvider(),
-        new ResultStaticMacroProvider(),
-        new IntrinsicGlobalInvocationMacroProvider()
-    ];
-
     public static bool IsValidReferenceContext(Expression expression)
     {
         if (expression.FirstAncestorOfType<ArrayLiteral>() is not null)
@@ -78,7 +69,7 @@ internal static class InvocationMacroReference
         if (name is not ("string" or "number"))
             return false;
 
-        provider = _providers.OfType<IntrinsicGlobalInvocationMacroProvider>().First();
+        provider = MacroExpander.Providers.OfType<IntrinsicGlobalInvocationMacroProvider>().First();
         memberName = name;
         return true;
     }
@@ -145,10 +136,10 @@ internal static class InvocationMacroReference
     }
 
     private static IMacroProvider? GetProvider(MacroContext context, Expression receiver) =>
-        GetProvider(context, context.SemanticModel.GetType(receiver)) ?? _providers.FirstOrDefault(provider => provider.Supports(context, receiver));
+        GetProvider(context, context.SemanticModel.GetType(receiver)) ?? MacroExpander.Providers.FirstOrDefault(provider => provider.Supports(context, receiver));
 
     private static IMacroProvider? GetProvider(MacroContext context, Type? type) =>
-        type is not null ? _providers.FirstOrDefault(provider => provider.Supports(context, type)) : null;
+        type is not null ? MacroExpander.Providers.FirstOrDefault(provider => provider.Supports(context, type)) : null;
 
     private static Type? GetMemberPropertyType(Type type, string propertyName)
     {

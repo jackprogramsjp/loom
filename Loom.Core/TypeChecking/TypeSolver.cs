@@ -140,7 +140,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         return variable;
     }
 
-    public void AddConstraint(Type actual, Type expected, Node node) => AddConstraint(actual, expected, node.Span);
+    public void AddConstraint(Type actual, Type expected, Node node) => AddConstraint(actual, expected, node.LocationSpan);
     public void AddConstraint(Type actual, Type expected, LocationSpan span) => _constraints.Add(new TypeConstraint(actual, expected, span));
 
     public bool SolveConstraints()

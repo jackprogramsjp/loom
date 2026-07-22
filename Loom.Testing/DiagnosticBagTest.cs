@@ -27,7 +27,7 @@ public class DiagnosticBagTest
         Assert.Equal(DiagnosticSeverity.Debug, diag.Severity);
         Assert.Equal("my-code", diag.Code);
         Assert.Equal("hello", diag.Message);
-        Assert.Equal(node.Span, diag.Span);
+        Assert.Equal(node.LocationSpan, diag.Span);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class DiagnosticBagTest
         Assert.Equal(DiagnosticSeverity.Info, diag.Severity);
         Assert.Equal("my-code", diag.Code);
         Assert.Equal("hello", diag.Message);
-        Assert.Equal(node.Span, diag.Span);
+        Assert.Equal(node.LocationSpan, diag.Span);
     }
 
     [Fact]

@@ -19,15 +19,17 @@ namespace Loom.Core.Generation.Macros;
 
 internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state, DiagnosticBag diagnostics)
 {
-    private readonly MacroContext _context = new(semanticModel, state, diagnostics);
-    private static readonly IReadOnlyCollection<IMacroProvider> _providers =
+    internal static readonly IReadOnlyCollection<IMacroProvider> Providers =
     [
         new NumberMacroProvider(),
         new RangeMacroProvider(),
         new ArrayMacroProvider(),
+        new InstanceMacroProvider(),
         new ResultStaticMacroProvider(),
         new IntrinsicGlobalInvocationMacroProvider()
     ];
+    
+    private readonly MacroContext _context = new(semanticModel, state, diagnostics);
 
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)
     {
@@ -273,7 +275,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
     }
 
     private IMacroProvider? GetProvider(Expression receiver) =>
-        GetProvider(semanticModel.GetType(receiver)) ?? _providers.FirstOrDefault(provider => provider.Supports(_context, receiver));
+        GetProvider(semanticModel.GetType(receiver)) ?? Providers.FirstOrDefault(provider => provider.Supports(_context, receiver));
 
-    private IMacroProvider? GetProvider(Type type) => _providers.FirstOrDefault(provider => provider.Supports(_context, type));
+    private IMacroProvider? GetProvider(Type type) => Providers.FirstOrDefault(provider => provider.Supports(_context, type));
 }

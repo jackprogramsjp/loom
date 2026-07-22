@@ -43,4 +43,6 @@ public sealed class InterfaceType(
     public override int GetHashCode() => HashCode.Combine(Name, Constraints.Count, ObjectType.GetHashCode());
     public override bool IsAssignableTo(Type other) => AssignabilityType.IsAssignableTo(other);
     public override string ToString() => Name;
+
+    internal bool MatchOrMatchConstraint(Predicate<InterfaceType> predicate) => predicate(this) || Constraints.Any(c => c.MatchOrMatchConstraint(predicate));
 }

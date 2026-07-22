@@ -9,10 +9,32 @@ public class MacroExpanderTest
     [Theory]
     [InlineData("CreatableInstance", "new_instance")]
     [InlineData("ServiceInstance", "get_service")]
-    public void ThrowsFor_TypeParametersInNewInstanceCall(string constraint, string fnName)
+    [InlineData("Instance", "is_a", "get_service::<Workspace>().")]
+    [InlineData("Instance", "find_first_child_of_class", "get_service::<Workspace>().")]
+    [InlineData("Instance", "find_first_child_which_is_a", "get_service::<Workspace>().")]
+    [InlineData("Instance", "find_first_ancestor_of_class", "get_service::<Workspace>().")]
+    [InlineData("Instance", "find_first_ancestor_which_is_a", "get_service::<Workspace>().")]
+    public void ThrowsFor_TypeParametersInNewInstanceCall(string constraint, string fnName, string extra = "")
     {
-        var diagnostics = Utility.GetGeneratorDiagnostics($"fn abc<T: {constraint}> -> {fnName}::<T>();", true);
+        var diagnostics = Utility.GetGeneratorDiagnostics($"fn abc<T: {constraint}> -> {extra}{fnName}::<T>();", true);
         Utility.AssertDiagnostic(diagnostics, InternalCodes.AbstractTypeParameterInMacro, $"Cannot use type parameter 'T' with '{fnName}::<T>()' macro.");
+    }
+
+    [Theory]
+    [InlineData("is_a")]
+    [InlineData("find_first_child_of_class")]
+    [InlineData("find_first_child_which_is_a")]
+    [InlineData("find_first_ancestor_of_class")]
+    [InlineData("find_first_ancestor_which_is_a")]
+    public void Generates_InstanceQuery(string methodName)
+    {
+        var source = $"let x = get_service::<Workspace>().{methodName}::<Part>()";
+        var luauTree = Utility.GetLuauAST(source, true);
+        Utility.AssertNoErrors(Utility.GetGeneratorDiagnostics(source, true));
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        var call = Assert.IsType<Call>(variable.Initializer);
+        Assert.Equal("Part", Assert.IsType<StringLiteral>(Assert.Single(call.Arguments)).Value);
     }
     
     [Fact]

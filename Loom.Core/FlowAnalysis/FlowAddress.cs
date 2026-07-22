@@ -9,12 +9,12 @@ public sealed record FlowAddress(Symbol? Symbol, FlowAddress? Parent, string? Fi
     public static FlowAddress Element(FlowAddress @base, object constantIndex) => new(null, @base, null, constantIndex);
 
     public bool Equals(FlowAddress? other) =>
-        other != null
+        ReferenceEquals(this, other)
+        || other != null
         && Equals(Symbol, other.Symbol)
         && Equals(Parent, other.Parent)
         && FieldName == other.FieldName
         && Equals(ElementIndex, other.ElementIndex);
 
-    public override int GetHashCode() =>
-        HashCode.Combine(Symbol, Parent, FieldName, ElementIndex);
+    public override int GetHashCode() => HashCode.Combine(Symbol, Parent, FieldName, ElementIndex);
 }

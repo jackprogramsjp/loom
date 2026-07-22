@@ -11,7 +11,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     private readonly Stack<List<FlowState>?> _loopExitScopes = [];
     private readonly Dictionary<Node, FlowState> _states = [];
 
-    public FlowState GetState(Node node) => _states.TryGetValue(node, out var existingState) ? existingState : new FlowState();
+    public FlowState GetState(Node node) => _states.TryGetValue(node, out var existingState) ? existingState : FlowState.Empty;
     public FlowAnalyzerResult Analyze() => new(BindState(semanticModel.Tree, AnalyzeStatements(semanticModel.Tree.Statements, new FlowState())), _diagnostics);
 
     private FlowState AnalyzeStatements(IReadOnlyList<Statement> statements, FlowState state) =>
@@ -24,6 +24,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             Block block => AnalyzeBlock(block, state),
             VariableDeclaration variableDeclaration => AnalyzeVariableDeclaration(variableDeclaration, state),
             FunctionDeclaration functionDeclaration => AnalyzeFunctionDeclaration(functionDeclaration, state),
+            InterfaceDeclaration interfaceDeclaration => AnalyzeInterfaceDeclaration(interfaceDeclaration, state),
             Implement implement => AnalyzeImplement(implement, state),
             Return @return => AnalyzeReturn(@return, state),
             Break @break => AnalyzeBreak(@break, state),
@@ -33,7 +34,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             While @while => AnalyzeWhile(@while, state),
             For @for => AnalyzeFor(@for, state),
             ExpressionStatement expressionStatement => AnalyzeExpressionStatement(expressionStatement, state),
-            _ => new FlowState(statement.Children.OfType<Statement>().Select(e => state = AnalyzeStatement(e, state)).LastOrDefault(state))
+            _ => AnalyzeUnhandledStatement(statement, state, out state)
         };
 
         if (state.IsUnreachable)
@@ -42,21 +43,27 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         return newState;
     }
 
-    private FlowState AnalyzeImplement(Implement implement, FlowState state)
+    private FlowState AnalyzeUnhandledStatement(Statement statement, FlowState state, out FlowState exitState)
     {
-        var bodyState = new FlowState(state);
-        foreach (var symbol in semanticModel.GetDeclarationSymbols(implement))
+        foreach (var child in statement.Children)
         {
-            bodyState.DefinitelyInitialized.Add(symbol);
-            bodyState.MaybeInitialized.Add(symbol);
+            if (child is Statement childStatement)
+                state = AnalyzeStatement(childStatement, state);
         }
 
-        foreach (var declaration in implement.Body.Implementations)
-        {
-            if (semanticModel.GetDeclarationSymbol(declaration, SymbolKind.Function) is not { } symbol) continue;
-            bodyState.DefinitelyInitialized.Add(symbol);
-            bodyState.MaybeInitialized.Add(symbol);
-        }
+        exitState = state;
+        return state;
+    }
+
+    private FlowState AnalyzeImplement(Implement implement, FlowState state)
+    {
+        var bodyState = state
+            .WithInitialized(semanticModel.GetDeclarationSymbols(implement))
+            .WithInitialized(
+                implement.Body.Implementations
+                    .Select(declaration => semanticModel.GetDeclarationSymbol(declaration, SymbolKind.Function))
+                    .OfType<Symbol>()
+            );
 
         return AnalyzeStatement(implement.Body, bodyState);
     }
@@ -68,31 +75,36 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         {
             AssignmentOperator assignmentOperator => AnalyzeAssignment(assignmentOperator, state),
             Identifier identifier => AnalyzeIdentifier(identifier, state),
-            _ => new FlowState(expression.Children.Select(e => state = AnalyzeExpression(e, state)).LastOrDefault(state))
+            _ => AnalyzeUnhandledExpression(expression, state)
         };
     }
 
+    private FlowState AnalyzeUnhandledExpression(Expression expression, FlowState state) =>
+        expression.Children.Aggregate(state, (current, child) => AnalyzeExpression(child, current));
+
     private FlowState AnalyzeBlock(Block block, FlowState state) => BindState(block, AnalyzeStatements(block.Statements, state));
+
+    private FlowState AnalyzeInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration, FlowState state) =>
+        BindState(
+            interfaceDeclaration,
+            semanticModel.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Variable) is { } symbol
+                ? state.WithInitialized(symbol)
+                : state
+        );
 
     private FlowState AnalyzeFunctionDeclaration(FunctionDeclaration functionDeclaration, FlowState state)
     {
-        var newState = new FlowState(state);
-        if (semanticModel.GetDeclarationSymbol(functionDeclaration) is { } symbol)
-        {
-            newState.DefinitelyInitialized.Add(symbol);
-            newState.MaybeInitialized.Add(symbol);
-        }
+        var newState = semanticModel.GetDeclarationSymbol(functionDeclaration) is { } symbol
+            ? state.WithInitialized(symbol)
+            : state;
 
-        var functionState = new FlowState(newState);
-        if (functionDeclaration.Parameters != null)
-        {
-            foreach (var parameter in functionDeclaration.Parameters.ParameterList)
-            {
-                if (semanticModel.GetDeclarationSymbol(parameter) is not { } parameterSymbol) continue;
-                functionState.DefinitelyInitialized.Add(parameterSymbol);
-                functionState.MaybeInitialized.Add(parameterSymbol);
-            }
-        }
+        var functionState = functionDeclaration.Parameters is { } parameters
+            ? newState.WithInitialized(
+                parameters.ParameterList
+                    .Select(parameter => semanticModel.GetDeclarationSymbol(parameter))
+                    .OfType<Symbol>()
+            )
+            : newState;
 
         AnalyzeStatement(functionDeclaration.Body, functionState);
         return BindState(functionDeclaration, newState);
@@ -101,48 +113,39 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     private FlowState AnalyzeVariableDeclaration(VariableDeclaration variableDeclaration, FlowState state)
     {
         if (variableDeclaration.EqualsValueClause == null)
-            return BindState(variableDeclaration, new FlowState(state));
+            return BindState(variableDeclaration, state);
 
-        var result = new FlowState(AnalyzeExpression(variableDeclaration.EqualsValueClause.Value, state));
+        var result = AnalyzeExpression(variableDeclaration.EqualsValueClause.Value, state);
         var symbol = semanticModel.GetDeclarationSymbol(variableDeclaration);
-        if (symbol == null)
-            return BindState(variableDeclaration, result);
-
-        result.DefinitelyInitialized.Add(symbol);
-        result.MaybeInitialized.Add(symbol);
-        return BindState(variableDeclaration, result);
+        return BindState(variableDeclaration, symbol == null ? result : result.WithInitialized(symbol));
     }
 
     private FlowState AnalyzeIf(If @if, FlowState state)
     {
         AnalyzeExpression(@if.Condition, state);
-        var thenState = AnalyzeStatement(@if.ThenBranch, new FlowState(state));
-        var elseState = @if.ElseBranch != null ? AnalyzeStatement(@if.ElseBranch.Branch, new FlowState(state)) : new FlowState(state);
+        var thenState = AnalyzeStatement(@if.ThenBranch, state);
+        var elseState = @if.ElseBranch != null ? AnalyzeStatement(@if.ElseBranch.Branch, state) : state;
         return BindState(@if, thenState.Merge(elseState));
     }
 
     private FlowState AnalyzeAfter(After after, FlowState state)
     {
-        var bodyState = new FlowState(AnalyzeExpression(after.Duration, state));
+        var bodyState = AnalyzeExpression(after.Duration, state);
         var (body, _) = CaptureExitStates(after.Body, bodyState, null);
         return BindState(after, state.Merge(body));
     }
 
     private FlowState AnalyzeWhile(While @while, FlowState state)
     {
-        var bodyState = new FlowState(AnalyzeExpression(@while.Condition, state));
+        var bodyState = AnalyzeExpression(@while.Condition, state);
         var (body, breakStates) = CaptureExitStates(@while.Body, bodyState, []);
         return BindState(@while, ComputeLoopExitState(state, body, breakStates));
     }
 
     private FlowState AnalyzeFor(For @for, FlowState state)
     {
-        var bodyState = new FlowState(AnalyzeExpression(@for.CollectionExpression, state));
-        foreach (var symbol in @for.Names.Select(name => semanticModel.GetDeclarationSymbol(name)).OfType<Symbol>())
-        {
-            bodyState.DefinitelyInitialized.Add(symbol);
-            bodyState.MaybeInitialized.Add(symbol);
-        }
+        var bodyState = AnalyzeExpression(@for.CollectionExpression, state)
+            .WithInitialized(@for.Names.Select(name => semanticModel.GetDeclarationSymbol(name)).OfType<Symbol>());
 
         var (body, breakStates) = CaptureExitStates(@for.Body, bodyState, []);
         return BindState(@for, ComputeLoopExitState(state, body, breakStates));
@@ -185,9 +188,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             }
 
             CheckReassignment(assignment, identifier, symbol);
-            state = AnalyzeExpression(assignment.Right, state);
-            state.DefinitelyInitialized.Add(symbol);
-            state.MaybeInitialized.Add(symbol);
+            state = AnalyzeExpression(assignment.Right, state).WithInitialized(symbol);
         }
         else
         {
@@ -238,18 +239,16 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
 
     private static FlowState ComputeLoopExitState(FlowState entryState, FlowState bodyState, List<FlowState> breakStates)
     {
-        var exitPaths = breakStates.Prepend(entryState);
-        var definitely = exitPaths.Aggregate<FlowState, HashSet<Symbol>?>(
-            null,
-            (current, exit) => current == null ? [..exit.DefinitelyInitialized] : [..current.Intersect(exit.DefinitelyInitialized)]
-        );
-
-        var maybe = new HashSet<Symbol>(entryState.MaybeInitialized);
-        maybe.UnionWith(bodyState.MaybeInitialized);
+        var definitely = entryState.DefinitelyInitialized;
         foreach (var exit in breakStates)
-            maybe.UnionWith(exit.MaybeInitialized);
+            definitely = definitely.Intersect(exit.DefinitelyInitialized);
 
-        return new FlowState(definitely ?? [], maybe, isUnreachable: entryState.IsUnreachable);
+        var maybeBuilder = entryState.MaybeInitialized.ToBuilder();
+        maybeBuilder.UnionWith(bodyState.MaybeInitialized);
+        foreach (var exit in breakStates)
+            maybeBuilder.UnionWith(exit.MaybeInitialized);
+
+        return new FlowState(definitely, maybeBuilder.ToImmutable(), entryState.IsUnreachable);
     }
 
     private FlowState BindState(Node node, FlowState state)

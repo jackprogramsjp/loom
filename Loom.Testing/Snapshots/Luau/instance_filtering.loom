@@ -1,0 +1,5 @@
+let world = get_service::<Workspace>();
+let children = world.get_children();
+let parts = world.get_children::<BasePart>();
+let descendants = world.get_descendants();
+let descendant_parts = world.get_descendants::<BasePart>();
