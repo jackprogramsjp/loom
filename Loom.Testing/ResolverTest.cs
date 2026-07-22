@@ -1113,8 +1113,50 @@ public class ResolverTest
     [Theory]
     [InlineData("Range")]
     [InlineData("Record<string, bool>")]
+    [InlineData("MutRecord<string, bool>")]
+    [InlineData("Event<number, string>")]
+    [InlineData("UserEvent<number, string>")]
     public void Declares_IntrinsicType_Symbols(string name) => Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
 
+    [Fact]
+    public void Declares_EventPropertySymbol()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("interface Foo { event abc; }"));
+        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.Single());
+        Assert.NotNull(interfaceDeclaration.Body);
+        
+        var eventDeclaration = Assert.IsType<EventDeclaration>(Assert.Single(interfaceDeclaration.Body.Members));
+        var symbol = model.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Interface);
+        Assert.NotNull(symbol);
+        
+        var interfaceSymbol = Assert.IsType<InterfaceSymbol>(symbol);
+        Assert.Equal("Foo", interfaceSymbol.Name);
+        Assert.Single(interfaceSymbol.Properties);
+
+        var property = interfaceSymbol.GetPropertyAtPath(["abc"]);
+        Assert.NotNull(property);
+        Assert.Equal(SymbolKind.Event, property.Kind);
+        Assert.Equal(eventDeclaration, property.Declaration);
+        Assert.False(property.IsIntrinsic);
+        Assert.False(property.IsMutable);
+    }
+    
+    [Fact]
+    public void Declares_EventSymbol()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("event abc;"));
+        var eventDeclaration = Assert.IsType<EventDeclaration>(model.Tree.Statements.Single());
+
+        var symbol = model.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event);
+        Assert.NotNull(symbol);
+        Assert.Equal("abc", symbol.Name);
+        Assert.Equal(SymbolKind.Event, symbol.Kind);
+        Assert.Equal(eventDeclaration, symbol.Declaration);
+        Assert.False(symbol.IsAmbient);
+        Assert.False(symbol.IsIntrinsic);
+        Assert.False(symbol.IsMutable);
+    }
+    
     [Fact]
     public void Declares_TraitSymbol()
     {
@@ -1224,10 +1266,10 @@ public class ResolverTest
     [Theory]
     [InlineData("sealed interface Foo { foo: number }", true)]
     [InlineData("interface Foo { foo: number }")]
-    [InlineData("interface Nutz; interface Ballz; sealed interface Foo: Nutz, Ballz { foo: number }", true, null, 2)]
-    [InlineData("declare sealed interface Foo { foo: number }", true, typeof(Declare))]
-    [InlineData("declare interface Foo { foo: number }", false, typeof(Declare))]
-    public void Declares_InterfaceSymbol(string source, bool isSealed = false, Type? declarationType = null, int constraintCount = 0)
+    [InlineData("interface Nutz; interface Ballz; sealed interface Foo: Nutz, Ballz { foo: number }", true, false, null, 2)]
+    [InlineData("declare sealed interface Foo { foo: number }", true, true, typeof(Declare))]
+    [InlineData("declare interface Foo { foo: number }", false, true, typeof(Declare))]
+    public void Declares_InterfaceSymbol(string source, bool isSealed = false, bool isAmbient = false, Type? declarationType = null, int constraintCount = 0)
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel(source));
         var statement = model.Tree.Statements.Last();
@@ -1244,6 +1286,7 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Interface, interfaceSymbol.Kind);
         Assert.Equal(statement, interfaceSymbol.Declaration);
         Assert.Equal(isSealed, interfaceSymbol.IsSealed);
+        Assert.Equal(isAmbient, interfaceSymbol.IsAmbient);
         Assert.Empty(interfaceSymbol.Implementations);
         Assert.Empty(interfaceSymbol.Implements);
         

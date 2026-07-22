@@ -292,10 +292,11 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
             if (result)
             {
+                interfaceSymbol!.IsAmbient = true;
                 PushScope();
                 result &= base.VisitInterfaceDeclaration(interfaceDeclaration);
                 PopScope();
-                result &= ResolveInterfaceBody(interfaceDeclaration.Body, interfaceSymbol!);
+                result &= ResolveInterfaceBody(interfaceDeclaration.Body, interfaceSymbol);
             }
         }
         else

@@ -24,6 +24,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             Block block => AnalyzeBlock(block, state),
             VariableDeclaration variableDeclaration => AnalyzeVariableDeclaration(variableDeclaration, state),
             FunctionDeclaration functionDeclaration => AnalyzeFunctionDeclaration(functionDeclaration, state),
+            EventDeclaration eventDeclaration => AnalyzeEventDeclaration(eventDeclaration, state),
             InterfaceDeclaration interfaceDeclaration => AnalyzeInterfaceDeclaration(interfaceDeclaration, state),
             Implement implement => AnalyzeImplement(implement, state),
             Return @return => AnalyzeReturn(@return, state),
@@ -84,6 +85,14 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
 
     private FlowState AnalyzeBlock(Block block, FlowState state) => BindState(block, AnalyzeStatements(block.Statements, state));
 
+    private FlowState AnalyzeEventDeclaration(EventDeclaration eventDeclaration, FlowState state) =>
+        BindState(
+            eventDeclaration,
+            semanticModel.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event) is { } symbol
+                ? state.WithInitialized(symbol)
+                : state
+        );
+    
     private FlowState AnalyzeInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration, FlowState state) =>
         BindState(
             interfaceDeclaration,
