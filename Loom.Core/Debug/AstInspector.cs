@@ -7,7 +7,7 @@ namespace Loom.Core.Debug;
 public static class AstInspector
 {
     private static int _indent;
-    private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "Tokens", "Children", "Id", "File", "Keyword"];
+    private static readonly HashSet<string> _ignoredProperties = ["Parent", "Span", "LocationSpan", "Tokens", "Children", "Id", "File", "Keyword"];
 
     public static string Inspect(Tree tree) => string.Join(Environment.NewLine, tree.Statements.ConvertAll(Inspect));
     

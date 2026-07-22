@@ -1,15 +1,14 @@
-const world = game:GetService("Workspace")
-const children = world:GetChildren()
-const _result: { BasePart } = {}
-for _, child in world:GetChildren() do
-  if not child:IsA("BasePart") then continue end
-  table.insert(_result, child)
+type Item = {
+  read name: string,
+  read price: number,
+  read quantity: number,
+}
+const function total(items: { Item }): number
+  local sum = 0
+  for _, item in items do
+    sum += item.price * item.quantity
+  end
+  return sum
 end
-const parts = _result
-const descendants = world:GetDescendants()
-const _result_1: { BasePart } = {}
-for _, child in world:GetDescendants() do
-  if not child:IsA("BasePart") then continue end
-  table.insert(_result_1, child)
-end
-const descendant_parts = _result_1
+const items = {{ name = "Keyboard", price = 80, quantity = 2 }, { name = "Mouse", price = 25, quantity = 4 }, { name = "Monitor", price = 300, quantity = 1 }}
+print(total(items))

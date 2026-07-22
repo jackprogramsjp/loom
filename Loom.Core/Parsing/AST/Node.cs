@@ -10,24 +10,25 @@ public abstract class Node
     public NodeId Id { get; }
     public IReadOnlyList<Node> Children { get; }
     public IReadOnlyList<Token> Tokens { get; }
-    public LocationSpan Span { get; }
-    public SourceFile File => field ??= Span.File;
+    public TextSpan Span { get; }
+    public LocationSpan LocationSpan => new(new Location(File, Span.Position), new Location(File, Span.End));
+    public SourceFile File => field ??= Tokens.Count == 0 ? SourceFile.Empty : Tokens[0].File;
     [MaybeNull] public Node Parent { get; private set; }
 
-    protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children, LocationSpan? span = null)
+    protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children)
     {
         Id = new NodeId(Interlocked.Increment(ref _nextId));
         NodeId.Map.Add(Id, this);
 
         Children = children.OfType<Node>().ToArray();
         Tokens = theseTokens.OfType<Token>().ToArray();
-        Span = span ?? DeriveSpan();
+        Span = DeriveSpan();
         foreach (var child in Children)
             child.Parent = this;
     }
 
     public abstract T Accept<T>(Visitor<T> visitor);
-    public override string ToString() => Span.GetText().ToString();
+    public override string ToString() => LocationSpan.GetText().ToString();
     public IReadOnlyList<T> GetDescendants<T>() where T : Node => GetDescendants().OfType<T>().ToArray();
     public IReadOnlyList<Node> GetDescendants() => [..Children, ..Children.SelectMany(c => c.GetDescendants())];
     public bool IsDescendantOf<T>() where T : Node => FirstAncestorOfType<T>() != null;
@@ -44,8 +45,8 @@ public abstract class Node
         return null;
     }
 
-    private LocationSpan DeriveSpan() =>
+    private TextSpan DeriveSpan() =>
         Tokens.Count == 0
-            ? LocationSpan.Empty(SourceFile.Empty)
-            : new LocationSpan(Tokens[0].GetLocation().Start, Tokens[^1].GetLocation().End);
+            ? TextSpan.Empty
+            : TextSpan.FromStartEnd(Tokens[0].Span.Position, Tokens[^1].Span.End);
 }

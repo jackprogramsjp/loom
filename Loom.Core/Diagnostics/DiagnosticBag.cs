@@ -10,27 +10,27 @@ public sealed class DiagnosticBag(HashSet<Diagnostic>? diagnostics = null)
     
     public HashSet<Diagnostic> Set { get; } = diagnostics ?? [];
     
-    public void Debug(Node node, string message) => Debug(node.Span, message);
+    public void Debug(Node node, string message) => Debug(node.LocationSpan, message);
     public void Debug(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Debug, null, message, null);
-    public void Debug(Node node, string code, string message) => Debug(node.Span, code, message);
+    public void Debug(Node node, string code, string message) => Debug(node.LocationSpan, code, message);
     public void Debug(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Debug, code, message, null);
-    public void Info(Node node, string message) => Info(node.Span, message);
+    public void Info(Node node, string message) => Info(node.LocationSpan, message);
     public void Info(LocationSpan span, string message) => Report(span, DiagnosticSeverity.Info, null, message, null);
-    public void Info(Node node, string code, string message) => Info(node.Span, code, message);
+    public void Info(Node node, string code, string message) => Info(node.LocationSpan, code, message);
     public void Info(LocationSpan span, string code, string message) => Report(span, DiagnosticSeverity.Info, code, message, null);
-    public void Warn(Node node, string code, string message, string? hint = null) => Warn(node.Span, code, message, hint);
+    public void Warn(Node node, string code, string message, string? hint = null) => Warn(node.LocationSpan, code, message, hint);
     public void Warn(Token token, string code, string message, string? hint = null) => Warn(token.GetLocation(), code, message, hint);
     public void Warn(LocationSpan span, string code, string message, string? hint = null) => Report(span, DiagnosticSeverity.Warn, code, message, hint);
-    public void Error(Node node, string code, string message, string? hint = null) => Error(node.Span, code, message, hint);
+    public void Error(Node node, string code, string message, string? hint = null) => Error(node.LocationSpan, code, message, hint);
     public void Error(Token token, string code, string message, string? hint = null) => Error(token.GetLocation(), code, message, hint);
     public void Error(LocationSpan span, string code, string message, string? hint = null) => Report(span, DiagnosticSeverity.Error, code, message, hint);
-    public void NotImplemented(Node node, string? feature = null, string? hint = null) => NotImplemented(node.Span, feature, hint);
+    public void NotImplemented(Node node, string? feature = null, string? hint = null) => NotImplemented(node.LocationSpan, feature, hint);
     public void NotImplemented(Token token, string? feature = null, string? hint = null) => NotImplemented(token.GetLocation(), feature, hint);
 
     public void NotImplemented(LocationSpan span, string? feature = null, string? hint = null) =>
         Error(span, InternalCodes.NotImplemented, feature ?? "This feature is not yet implemented.", hint);
 
-    public object? CompilerError(Node node, string message) => CompilerError(node.Span, message);
+    public object? CompilerError(Node node, string message) => CompilerError(node.LocationSpan, message);
     public object? CompilerError(SourceFile file, string message) => CompilerError(LocationSpan.Empty(file), message);
 
     public object? CompilerError(LocationSpan span, string message)

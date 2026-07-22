@@ -225,7 +225,7 @@ public sealed partial class Parser
         }
 
         _diagnostics.Error(
-            typeArguments?.Span ?? expression!.Span,
+            typeArguments?.LocationSpan ?? expression!.LocationSpan,
             InternalCodes.InvalidNameOf,
             $"'{typeArguments?.ArgumentsList.FirstOrDefault()?.ToString() ?? expression!.ToString()}' is not a valid name."
         );

@@ -40,7 +40,7 @@ public sealed partial class TypeChecker
             }
 
             var actualType = GetReturnType(declaration);
-            _semanticModel.TypeSolver.AddConstraint(actualType, declarationType.ReturnType, declaration.ReturnType?.Type.Span ?? declaration.Span);
+            _semanticModel.TypeSolver.AddConstraint(actualType, declarationType.ReturnType, declaration.ReturnType?.Type.LocationSpan ?? declaration.LocationSpan);
             if (declaration.ReturnType != null)
                 BindType(declaration.ReturnType, declarationType.ReturnType);
 

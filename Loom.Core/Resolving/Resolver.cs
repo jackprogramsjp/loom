@@ -449,7 +449,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         foreach (var duplicate in duplicates)
         {
             var property = body.Members.FindLast(m => m.Name.Text == duplicate)!;
-            _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Method '{duplicate}' already exists on trait '{name}'");
+            _diagnostics.Error(property, InternalCodes.DuplicateName, $"Method '{duplicate}' already exists on trait '{name}'");
         }
 
         return false;
@@ -488,7 +488,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         foreach (var duplicate in duplicates)
         {
             var property = properties.FindLast(p => p.Name.Text == duplicate)!;
-            _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{interfaceSymbol.Name}'");
+            _diagnostics.Error(property, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{interfaceSymbol.Name}'");
         }
 
         return false;
