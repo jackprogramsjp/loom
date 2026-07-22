@@ -1,6 +1,7 @@
 using Loom.Core.Debug;
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 
 namespace Loom.Testing;
 
@@ -107,6 +108,152 @@ public class ParserTest
         var actual = AstInspector.Inspect(result.Tree).Replace(Environment.NewLine, "\n");
         var expected = File.ReadAllText(snapshotPath).Replace(Environment.NewLine, "\n");
         Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Expect_MissingParen_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            let x = foo(1, 2
+            let y = 3;
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected ')', got 'let'.");
+
+        Assert.Equal(2, result.Tree.Statements.Count);
+        var first = Assert.IsType<VariableDeclaration>(result.Tree.Statements[0]);
+        var second = Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]);
+        Assert.Equal("x", first.Name.Text);
+        Assert.Equal("y", second.Name.Text);
+
+        var invocation = Assert.IsType<Invocation>(first.EqualsValueClause!.Value);
+        var rightParen = invocation.Arguments.RightParen;
+        Assert.Equal(SyntaxKind.RParen, rightParen.Kind);
+        Assert.Equal(0, rightParen.Span.Length);
+        Assert.Equal(")", rightParen.Text);
+    }
+
+    [Fact]
+    public void Expect_MissingParen_AtEof_InsertsZeroWidthToken()
+    {
+        var result = Utility.Parse("let x = foo(");
+        var expectDiagnostic = result.Diagnostics.Find(d =>
+            d.Code == InternalCodes.UnexpectedEof && d.Message == "Expected ')', got EOF."
+        );
+        Assert.NotNull(expectDiagnostic);
+
+        var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(result.Tree.Statements));
+        var invocation = Assert.IsType<Invocation>(declaration.EqualsValueClause!.Value);
+        var rightParen = invocation.Arguments.RightParen;
+        Assert.Equal(SyntaxKind.RParen, rightParen.Kind);
+        Assert.Equal(0, rightParen.Span.Length);
+        Assert.Equal(")", rightParen.Text);
+    }
+
+    [Fact]
+    public void Expect_MissingBracket_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            let x = arr[0
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected ']', got 'let'.");
+
+        Assert.Equal(2, result.Tree.Statements.Count);
+        Assert.Equal("x", Assert.IsType<VariableDeclaration>(result.Tree.Statements[0]).Name.Text);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]).Name.Text);
+    }
+
+    [Fact]
+    public void ParseBlock_UnterminatedAtEof_Terminates()
+    {
+        var result = Utility.Parse("fn foo() {");
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(SyntaxKind.RBrace, block.RightBrace.Kind);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+        Assert.Equal("}", block.RightBrace.Text);
+    }
+
+    [Fact]
+    public void ParseBlock_Unterminated_KeepsInnerStatements()
+    {
+        const string source = """
+            fn foo() {
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(block.Statements));
+        Assert.Equal("y", declaration.Name.Text);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void ParseBlock_UnterminatedIf_Terminates()
+    {
+        var result = Utility.Parse("if true {");
+        var @if = Assert.IsType<If>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(@if.ThenBranch);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void Synchronize_JunkInsideBlock_PreservesFollowingDeclaration()
+    {
+        // Use a real token ('+') bc'@' is dropped by the lexer and truncates the file.
+        const string source = """
+            fn f() {
+            +
+            let y = 1;
+            }
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '+'.");
+
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(2, block.Statements.Count);
+        Assert.IsType<NullExpression>(Assert.IsType<ExpressionStatement>(block.Statements[0]).Expression);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(block.Statements[1]).Name.Text);
+        Assert.Equal(1, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void Synchronize_JunkBeforeClosingBrace_DoesNotConsumeBrace()
+    {
+        const string source = """
+            fn f() {
+            +
+            }
+            """;
+
+        var result = Utility.Parse(source);
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(SyntaxKind.RBrace, block.RightBrace.Kind);
+        Assert.Equal(1, block.RightBrace.Span.Length);
+        Assert.Equal("}", block.RightBrace.Text);
+    }
+
+    [Fact]
+    public void Synchronize_TopLevelJunk_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            +
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        Assert.Equal(2, result.Tree.Statements.Count);
+        Assert.IsType<NullExpression>(Assert.IsType<ExpressionStatement>(result.Tree.Statements[0]).Expression);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]).Name.Text);
     }
 
     [Fact]

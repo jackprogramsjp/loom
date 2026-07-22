@@ -173,26 +173,30 @@ public sealed partial class Parser(LexerResult lexerResult)
 
     private Token Expect(SyntaxKind kind, Func<Token?, string>? message = null)
     {
+        if (Current().Kind == kind)
+            return Advance();
+        
+        var current = Current();
+        var expected = SyntaxFacts.GetText(kind) ?? kind.ToString();
+        
         if (IsEof())
         {
-            var last = lexerResult.Tokens[Math.Max(_position - 1, 0)];
-            var text = SyntaxFacts.GetText(kind) ?? kind.ToString();
-            _diagnostics.Error(last, InternalCodes.UnexpectedEof, message != null ? message(null) : $"Expected '{text}', got EOF.");
-            return last;
+            _diagnostics.Error(
+                current,
+                InternalCodes.UnexpectedEof,
+                message != null ? message(null) : $"Expected '{expected}', got EOF."
+            );
         }
-
-        var token = Advance();
-        if (token.Kind == kind)
-            return token;
-
-        var expected = SyntaxFacts.GetText(kind) ?? kind.ToString();
-        _diagnostics.Error(
-            token,
-            InternalCodes.UnexpectedToken,
-            message != null ? message(token) : $"Expected '{expected}', got {SafeTokenText(token)}."
-        );
-
-        return token;
+        else
+        {
+            _diagnostics.Error(
+                current,
+                InternalCodes.UnexpectedToken,
+                message != null ? message(current) : $"Expected '{expected}', got {SafeTokenText(current)}."
+            );
+        }
+        
+        return MissingToken(kind);
     }
 
     private Token Advance()
@@ -200,6 +204,44 @@ public sealed partial class Parser(LexerResult lexerResult)
         var current = Current();
         _position++;
         return current;
+    }
+
+    /// <summary>
+    /// Skip tokens until a statement boundary so later syntax can still be parsed.
+    /// Consumes ';' ; leaves '}' and statement keywords for the caller.
+    /// </summary>
+    private void Synchronize()
+    {
+        while (!IsEof())
+        {
+            switch (Current().Kind)
+            {
+                case SyntaxKind.Semicolon:
+                    Advance();
+                    return;
+                case SyntaxKind.RBrace:
+                    return;
+                default:
+                    if (AtStatementKeyword())
+                        return;
+
+                    Advance();
+                    break;
+            }
+        }
+    }
+
+    private Token MissingToken(SyntaxKind kind)
+    {
+        var current = Current();
+        var text = SyntaxFacts.GetText(kind) ?? string.Empty;
+
+        return new Token(
+            kind,
+            current.File,
+            new TextSpan(current.Span.Position, 0),
+            text
+        );
     }
 
     private Token Current() => lexerResult.Tokens[_position];
