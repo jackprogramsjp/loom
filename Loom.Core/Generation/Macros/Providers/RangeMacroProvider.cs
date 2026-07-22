@@ -76,7 +76,7 @@ internal sealed class RangeMacroProvider : IMacroProvider
         var maximum = LuauFactory.MathClampCall(maximumValue, one, length);
         expression = targetType.IsAssignableTo(PrimitiveType.String)
             ? LuauFactory.StringCall("sub", [access.Target, minimum, maximum])
-            : LuauFactory.TableCall("move", [access.Target, minimum, maximum, one, new Table([])]);
+            : LuauFactory.TableCall("move", [access.Target, minimum, maximum, one, Table.Empty]);
 
         return true;
     }

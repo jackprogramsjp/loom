@@ -27,13 +27,13 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
         switch (name)
         {
             case "get_service":
-                var serviceName = context.GetStringFromOnlyTypeArgument(typeArguments, name);
-                expression = LuauFactory.LibraryCall("game", ["GetService"], [serviceName], true);
+                var serviceName = context.GetTextOfOnlyTypeArgument(typeArguments, name);
+                expression = LuauFactory.LibraryCall("game", ["GetService"], [new StringLiteral(serviceName)], true);
 
                 return true;
             case "new_instance":
-                var instanceName = context.GetStringFromOnlyTypeArgument(typeArguments, name);
-                expression = LuauFactory.LibraryCall("Instance", ["new"], [instanceName]);
+                var instanceName = context.GetTextOfOnlyTypeArgument(typeArguments, name);
+                expression = LuauFactory.LibraryCall("Instance", ["new"], [new StringLiteral(instanceName)]);
 
                 return true;
             case "string":

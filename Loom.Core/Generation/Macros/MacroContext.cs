@@ -2,10 +2,6 @@ using Loom.Core.Diagnostics;
 using Loom.Core.Resolving;
 using Loom.Luau;
 using Loom.Luau.AST;
-using BinaryOperator = Loom.Luau.AST.BinaryOperator;
-using ElementAccess = Loom.Luau.AST.ElementAccess;
-using PropertyAccess = Loom.Luau.AST.PropertyAccess;
-using UnaryOperator = Loom.Luau.AST.UnaryOperator;
 
 namespace Loom.Core.Generation.Macros;
 
@@ -69,23 +65,57 @@ internal record MacroContext(SemanticModel SemanticModel, LuauState State, Diagn
         return false;
     }
 
-    public Call TypeArgumentAsStringCall(string name, string newName, Parsing.AST.TypeArguments? typeArguments, LuauExpression instance, bool isMethod = true)
+    public Identifier FilterResults(LuauExpression collection, LuauType resultType, Func<Identifier, LuauExpression> condition)
     {
-        var instanceName = GetStringFromOnlyTypeArgument(typeArguments, name);
-        return new Call(new PropertyAccess(instance, [newName]), [instanceName], isMethod);
+        const string childName = "child";
+        var childIdentifier = new Identifier(childName);
+        var resultIdentifier = State.PushToVariable("_result", Table.Empty, TableType.Array(resultType));
+        
+        State.Prereq(
+            new ForStatement(
+                ["_", childName],
+                collection,
+                new Chunk(
+                    [
+                        new IfStatement(
+                            new UnaryOperator("not ", condition(childIdentifier)),
+                            new Chunk([new Continue()]),
+                            [],
+                            null
+                        ),
+                        new ExpressionStatement(LuauFactory.LibraryCall("table", ["insert"], [resultIdentifier, childIdentifier]))
+                    ]
+                )
+            )
+        );
+
+        return resultIdentifier;
     }
 
-    public StringLiteral GetStringFromOnlyTypeArgument(Parsing.AST.TypeArguments? typeArguments, string fnName)
+    public Call TypeArgumentAsStringCall(string name, string newName, Parsing.AST.TypeArguments? typeArguments, LuauExpression instance, bool isMethod = true)
     {
-        var typeName = typeArguments!.ArgumentsList[0];
-        var instanceType = SemanticModel.GetType(typeName);
-        if (instanceType is TypeChecking.Types.TypeParameter)
-            Diagnostics.Error(
-                typeName,
-                InternalCodes.AbstractTypeParameterInMacro,
-                $"Cannot use type parameter '{typeName}' with '{fnName}::<T>()' macro."
-            );
+        var instanceName = GetTextOfOnlyTypeArgument(typeArguments, name);
+        return new Call(new PropertyAccess(instance, [newName]), [new StringLiteral(instanceName)], isMethod);
+    }
 
-        return new StringLiteral(typeName.ToString());
+    public string GetTextOfOnlyTypeArgument(Parsing.AST.TypeArguments? typeArguments, string fnName) => MaybeGetTextOfOnlyTypeArgument(typeArguments, fnName)!;
+
+    public string? MaybeGetTextOfOnlyTypeArgument(Parsing.AST.TypeArguments? typeArguments, string fnName)
+    {
+        var typeName = typeArguments?.ArgumentsList.FirstOrDefault();
+        if (typeName == null)
+            return null;
+
+        var instanceType = SemanticModel.GetType(typeName);
+        if (instanceType is not TypeChecking.Types.TypeParameter)
+            return typeName.ToString();
+
+        Diagnostics.Error(
+            typeName,
+            InternalCodes.AbstractTypeParameterInMacro,
+            $"Cannot use type parameter '{typeName}' with '{fnName}::<T>()' macro."
+        );
+
+        return null;
     }
 }

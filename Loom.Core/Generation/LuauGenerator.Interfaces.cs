@@ -16,13 +16,13 @@ public sealed partial class LuauGenerator
         var interfaceName = Visit(implement.InterfaceName);
         var metaName = GetImplementationMetaName(implement);
         var identifier = new Luau.AST.Identifier(metaName);
-        var variable = new LocalVariable(metaName, null, new Table([]));
+        var variable = new LocalVariable(metaName, null, Table.Empty);
         _state.Postreq(new Luau.AST.ExpressionStatement(new Luau.AST.BinaryOperator(new Luau.AST.PropertyAccess(identifier, ["__index"]), "=", identifier)));
         _state.Postreq(new Luau.AST.ExpressionStatement(new Luau.AST.BinaryOperator(identifier, "=", new TypeCast(identifier, interfaceName))));
 
         foreach (var declaration in implement.Body.Implementations)
         {
-            var typeParameters = MaybeVisit<Luau.AST.TypeParameters>(declaration.TypeParameters);
+            var typeParameters = MaybeVisit<TypeParameters>(declaration.TypeParameters);
             var parameters = declaration.Parameters?.ParameterList.ConvertAll(Visit<Luau.AST.Parameter>) ?? [];
             parameters.Insert(0, new Luau.AST.Parameter("self", interfaceName));
 
