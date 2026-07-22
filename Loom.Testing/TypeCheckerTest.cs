@@ -993,7 +993,7 @@ public class TypeCheckerTest
                     value: number
                 }
 
-                implement Iterator on Foo {
+                implement Iterator for Foo {
                     fn next() {
                         return 420 * value
                     }
@@ -1018,13 +1018,13 @@ public class TypeCheckerTest
 
                 interface Foo;
 
-                implement A on Foo {
+                implement A for Foo {
                     fn a {
                         return 1
                     }
                 }
 
-                implement B on Foo {
+                implement B for Foo {
                     fn b {
                         return ""
                     }
