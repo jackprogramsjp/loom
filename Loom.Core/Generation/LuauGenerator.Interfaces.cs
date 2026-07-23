@@ -1,9 +1,16 @@
-using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Luau;
 using Loom.Luau.AST;
+using BinaryOperator = Loom.Luau.AST.BinaryOperator;
+using ExpressionStatement = Loom.Luau.AST.ExpressionStatement;
+using FunctionType = Loom.Luau.AST.FunctionType;
+using Identifier = Loom.Luau.AST.Identifier;
+using IntersectionType = Loom.Luau.AST.IntersectionType;
+using Parameter = Loom.Luau.AST.Parameter;
+using PropertyAccess = Loom.Luau.AST.PropertyAccess;
+using TypeAlias = Loom.Luau.AST.TypeAlias;
 using TypeName = Loom.Luau.AST.TypeName;
 using TypeParameters = Loom.Luau.AST.TypeParameters;
 
@@ -15,16 +22,16 @@ public sealed partial class LuauGenerator
     {
         var interfaceName = Visit(implement.InterfaceName);
         var metaName = GetImplementationMetaName(implement);
-        var identifier = new Luau.AST.Identifier(metaName);
+        var identifier = new Identifier(metaName);
         var variable = new LocalVariable(metaName, null, Table.Empty);
-        _state.Postreq(new Luau.AST.ExpressionStatement(new Luau.AST.BinaryOperator(new Luau.AST.PropertyAccess(identifier, ["__index"]), "=", identifier)));
-        _state.Postreq(new Luau.AST.ExpressionStatement(new Luau.AST.BinaryOperator(identifier, "=", new TypeCast(identifier, interfaceName))));
+        _state.Postreq(new ExpressionStatement(new BinaryOperator(new PropertyAccess(identifier, ["__index"]), "=", identifier)));
+        _state.Postreq(new ExpressionStatement(new BinaryOperator(identifier, "=", new TypeCast(identifier, interfaceName))));
 
         foreach (var declaration in implement.Body.Implementations)
         {
             var typeParameters = MaybeVisit<TypeParameters>(declaration.TypeParameters);
-            var parameters = declaration.Parameters?.ParameterList.ConvertAll(Visit<Luau.AST.Parameter>) ?? [];
-            parameters.Insert(0, new Luau.AST.Parameter("self", interfaceName));
+            var parameters = declaration.Parameters?.ParameterList.ConvertAll(Visit<Parameter>) ?? [];
+            parameters.Insert(0, new Parameter("self", interfaceName));
 
             var returnType = MaybeVisit<LuauType>(declaration.ReturnType);
             var body = GenerateFunctionBody(declaration);
@@ -57,7 +64,7 @@ public sealed partial class LuauGenerator
                 return new TableTypeProperty(
                     null,
                     signature.Name.Text,
-                    new Luau.AST.FunctionType(
+                    new FunctionType(
                         GenerateTypeParameters(signature.TypeParameters),
                         parameterTypes,
                         Visit(signature.ReturnType)
@@ -68,7 +75,7 @@ public sealed partial class LuauGenerator
 
         var tableType = new TableType(null, properties);
         var typeParameters = GenerateTypeParameters(traitDeclaration.TypeParameters);
-        return new Luau.AST.TypeAlias(traitDeclaration.Name.Text, typeParameters, tableType);
+        return new TypeAlias(traitDeclaration.Name.Text, typeParameters, tableType);
     }
 
     public override LuauNode VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
@@ -89,11 +96,11 @@ public sealed partial class LuauGenerator
             .ToList();
 
         var tableType = new TableType(tableIndexer, properties);
-        return new Luau.AST.TypeAlias(
+        return new TypeAlias(
             interfaceDeclaration.Name.Text,
             typeParameters,
             interfaceDeclaration.ColonTypeListClause != null || interfaceSymbol.Implementations.Count > 0
-                ? new Luau.AST.IntersectionType(
+                ? new IntersectionType(
                     [
                         ..interfaceDeclaration.ColonTypeListClause?.Types.ConvertAll(Visit) ?? [],
                         tableType,
@@ -112,14 +119,12 @@ public sealed partial class LuauGenerator
         var tableProperty = new TableTypeProperty(visibility, name, type);
         if (property.TryGetIntrinsicAttribute(_semanticModel, "luau_name", out var luauNameAttribute)
             && ValidateLuauNameAttribute(luauNameAttribute, out var nameLiteral))
-        {
             tableProperty = new TableTypeProperty(visibility, nameLiteral.Value, type);
-        }
 
         if (!property.TryGetIntrinsicAttribute(_semanticModel, "luau_method", out var luauMethodAttribute))
             return tableProperty;
 
-        if (type is not Luau.AST.FunctionType functionType)
+        if (type is not FunctionType functionType)
         {
             _diagnostics.Error(
                 luauMethodAttribute.Attribute,
@@ -140,25 +145,6 @@ public sealed partial class LuauGenerator
         return tableProperty;
     }
 
-    private bool ValidateLuauNameAttribute(AttributeSymbol luauNameAttribute, [MaybeNullWhen(false)] out StringLiteral nameLiteral)
-    {
-        var luauName = Visit(luauNameAttribute.Attribute.Arguments.ArgumentList[0]);
-        if (luauName is not StringLiteral stringLiteral)
-        {
-            _diagnostics.Error(
-                luauNameAttribute.Attribute,
-                InternalCodes.InvalidLuauNameAttribute,
-                "May only use string literals for name parameter on 'luau_name' attribute"
-            );
-
-            nameLiteral = null;
-            return false;
-        }
-
-        nameLiteral = stringLiteral;
-        return true;
-    }
-
     public override LuauNode VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
         var symbol = _semanticModel.GetSymbol(interfaceInvocation.Name, SymbolKind.Interface);
@@ -170,7 +156,7 @@ public sealed partial class LuauGenerator
             return table;
 
         _semanticModel.RuntimeReferences += 1; // merge_meta;
-        var metaNames = interfaceSymbol.Implementations.ConvertAll(LuauExpression (i) => new Luau.AST.Identifier(GetImplementationMetaName(i)));
+        var metaNames = interfaceSymbol.Implementations.ConvertAll(LuauExpression (i) => new Identifier(GetImplementationMetaName(i)));
         var call = LuauFactory.SetMetatableCall(table, LuauFactory.RuntimeLibraryCall(["merge_meta"], metaNames));
         return new TypeCast(call, new TypeName(interfaceInvocation.Name.Token.Text));
     }

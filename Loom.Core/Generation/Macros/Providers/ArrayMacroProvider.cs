@@ -1,7 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using Loom.Core.Parsing.AST;
 using Loom.Luau;
 using Loom.Luau.AST;
 using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
+using BinaryOperator = Loom.Luau.AST.BinaryOperator;
 using Type = Loom.Core.TypeChecking.Types.Type;
 using UnaryOperator = Loom.Luau.AST.UnaryOperator;
 
@@ -10,7 +12,7 @@ namespace Loom.Core.Generation.Macros.Providers;
 internal sealed class ArrayMacroProvider : IMacroProvider
 {
     public bool Supports(MacroContext _, Type type) => type is ArrayType;
-    public bool Supports(MacroContext _, Parsing.AST.Expression __) => false;
+    public bool Supports(MacroContext _, Expression __) => false;
 
     public bool IsInvocationOnlyMember(string memberName) => memberName is "join" or "push" or "pop" or "insert" or "remove" or "index_of" or "has";
 
@@ -32,7 +34,7 @@ internal sealed class ArrayMacroProvider : IMacroProvider
     public bool TryInvocation(
         MacroContext context,
         string name,
-        Parsing.AST.TypeArguments? typeArguments,
+        TypeArguments? typeArguments,
         Call call,
         [MaybeNullWhen(false)] out LuauExpression expression)
     {

@@ -1,8 +1,10 @@
+using Loom.Luau.AST;
+
 namespace Loom.Core.Generation;
 
 internal static class MapLuau
 {
-    public static Luau.AST.PrimitiveTypeKind PrimitiveTypeKind(TypeChecking.Types.PrimitiveTypeKind kind) =>
+    public static PrimitiveTypeKind PrimitiveTypeKind(TypeChecking.Types.PrimitiveTypeKind kind) =>
         kind switch
         {
             TypeChecking.Types.PrimitiveTypeKind.Number => Luau.AST.PrimitiveTypeKind.Number,
