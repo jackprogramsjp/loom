@@ -97,6 +97,41 @@ public class LuauGeneratorTest
     }
 
     [Fact]
+    public void Generates_TypeOfInTypeAlias()
+    {
+        var luauTree = Utility.GetLuauAST("let x = 5; type X = typeof(x);");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
+        var typeOf = Assert.IsType<TypeOfType>(alias.Type);
+        var identifier = Assert.IsType<Identifier>(typeOf.Expression);
+        Assert.Equal("x", identifier.Name);
+    }
+
+    [Fact]
+    public void Generates_TypeOfOnPropertyAccess()
+    {
+        var luauTree = Utility.GetLuauAST("interface I { a: number } let i = new I { a: 1 }; type X = typeof(i.a);");
+        var alias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
+        var typeOf = Assert.IsType<TypeOfType>(alias.Type);
+        var access = Assert.IsType<PropertyAccess>(typeOf.Expression);
+        Assert.Equal("typeof(i.a)", typeOf.Render(new RenderState()));
+    }
+
+    [Fact]
+    public void Generates_TypeOfInVariableType()
+    {
+        var luauTree = Utility.GetLuauAST("let a = 5; let x: typeof(a) = a;");
+        Assert.Equal(2, luauTree.Statements.Count);
+
+        var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
+        Assert.NotNull(variable.DeclaredType);
+        var typeOf = Assert.IsType<TypeOfType>(variable.DeclaredType);
+        var identifier = Assert.IsType<Identifier>(typeOf.Expression);
+        Assert.Equal("a", identifier.Name);
+    }
+
+    [Fact]
     public void Generates_KeyOfWithIndexedAccess()
     {
         var luauTree = Utility.GetLuauAST("type I = number; type Keys = keyof(I['prop']);");

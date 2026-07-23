@@ -745,6 +745,8 @@ public sealed partial class TypeChecker
         return BindType(keyOf, type);
     }
 
+    public override Type VisitTypeOf(TypeOf typeOf) => BindType(typeOf, Visit(typeOf.Expression));
+    
     public override Type VisitIndexedType(IndexedType indexedType)
     {
         var targetType = Visit(indexedType.TargetType);
