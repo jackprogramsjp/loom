@@ -135,6 +135,13 @@ public class ResolverTest
     }
 
     [Fact]
+    public void ThrowsFor_UndefinedVariable_InTypeOf()
+    {
+        var diagnostics = Utility.GetSemanticModel("type X = typeof(x);").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find name 'x'.");
+    }
+
+    [Fact]
     public void ThrowsFor_UndefinedType()
     {
         var diagnostics = Utility.GetSemanticModel("let x: Abc = 1").Diagnostics;

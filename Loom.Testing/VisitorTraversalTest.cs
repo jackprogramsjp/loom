@@ -89,6 +89,17 @@ public class VisitorTraversalTest
         );
     
     [Fact]
+    public void TypeOf_VisitsExpression() =>
+        AssertVisitOrder(
+            "type X = typeof(a.b);",
+            "TypeAlias",
+            "EqualsTypeClause",
+            "TypeOf",
+            "QualifiedName",
+            "Identifier"
+        );
+
+    [Fact]
     public void Ternary_VisitsExpressions() =>
         AssertVisitOrder(
             "1 ? a : b()",

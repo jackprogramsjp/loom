@@ -2915,6 +2915,70 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Checks_TypeOf_OnNumberLiteral()
+    {
+        var type = Utility.GetLastStatementType("type X = typeof(69)");
+        Assert.Equal(new LiteralType(69L), type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnStringLiteral()
+    {
+        var type = Utility.GetLastStatementType("type X = typeof(\"hi\")");
+        Assert.Equal(new LiteralType("hi"), type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnMutVariable_Widens()
+    {
+        var type = Utility.GetLastStatementType("mut x = 69; type X = typeof(x)");
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnBinaryExpression()
+    {
+        var type = Utility.GetLastStatementType("mut x = 1; type X = typeof(x + 1)");
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnInterfaceInstance()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            interface Foo {
+                foo: number,
+                bar: string
+            }
+
+            let foo = new Foo { foo: 69, bar: "hi" };
+            type X = typeof(foo);
+            """
+        );
+
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("Foo", interfaceType.Name);
+    }
+
+    [Fact]
+    public void Checks_KeyOf_OnTypeOf()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            interface I { a: number, b: string }
+            let i = new I { a: 1, b: "x" };
+            type K = keyof(typeof(i));
+            """
+        );
+
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "a" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "b" });
+    }
+
+    [Fact]
     public void Checks_TernaryOperator_Basic()
     {
         var type = Utility.GetLastStatementType("true ? 1 : 2");

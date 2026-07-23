@@ -104,6 +104,7 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitOptionalType(OptionalType optionalType) => new Luau.AST.OptionalType(Visit(optionalType.NonNullableType));
     public override LuauNode VisitParenthesizedType(ParenthesizedType parenthesized) => new Luau.AST.ParenthesizedType(Visit(parenthesized.Type));
     public override LuauNode VisitKeyOf(KeyOf keyOf) => new Luau.AST.TypeName("keyof", [Visit(keyOf.Type)]);
+    public override LuauNode VisitTypeOf(TypeOf typeOf) => new Luau.AST.TypeOfType((LuauExpression)Visit(typeOf.Expression));
 
     public override LuauNode VisitIndexedType(IndexedType indexedType) =>
         new Luau.AST.TypeName("index", [Visit(indexedType.TargetType), Visit(indexedType.IndexType)]);
