@@ -28,7 +28,7 @@ internal sealed class MacroExpander(SemanticModel semanticModel, LuauState state
         new ResultStaticMacroProvider(),
         new IntrinsicGlobalInvocationMacroProvider()
     ];
-    
+
     private readonly MacroContext _context = new(semanticModel, state, diagnostics);
 
     public bool TryGetInvocationMacro(Invocation invocation, Call luauCall, [MaybeNullWhen(false)] out LuauExpression expression)

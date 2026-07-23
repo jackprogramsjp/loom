@@ -17,13 +17,9 @@ internal static class InvocationMacroReference
             return false;
 
         for (Node? node = expression; node is not null; node = node.Parent)
-        {
             if (node.Parent is AssignmentOperator assignmentOperator && semanticModel.GetSymbol(assignmentOperator.Left) is { Kind: SymbolKind.Event }
                 || node.Parent is Arguments && node.Parent.Parent is Invocation)
-            {
                 return true;
-            }
-        }
 
         return false;
     }

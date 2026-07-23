@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Luau;
 using Loom.Luau.AST;
