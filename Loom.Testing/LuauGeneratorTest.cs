@@ -1,3 +1,4 @@
+using Loom.Core.Diagnostics;
 using Loom.Luau;
 using Loom.Luau.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;
@@ -2510,5 +2511,104 @@ public class LuauGeneratorTest
 
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
         Assert.IsType<NilLiteral>(variable.Initializer);
+    }
+
+    [Fact]
+    public void Generates_EventDisconnect_UsingUserNamedConnection()
+    {
+        const string source = """
+            event abc;
+            fn handler(): void { }
+            let my_conn = abc += handler;
+            abc -= handler;
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+        Assert.Equal(4, luauTree.Statements.Count);
+
+        var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
+        Assert.Equal("my_conn", connVariable.Name);
+
+        var disconnectStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[3]);
+        var disconnectCall = Assert.IsType<Call>(disconnectStatement.Expression);
+        Assert.True(disconnectCall.IsMethod);
+        Assert.Empty(disconnectCall.Arguments);
+
+        var access = Assert.IsType<PropertyAccess>(disconnectCall.Callee);
+        Assert.Equal("Disconnect", Assert.Single(access.Names));
+        Assert.Equal("my_conn", Assert.IsType<Identifier>(access.Target).Name);
+    }
+
+    [Fact]
+    public void Generates_EventConnect_AutoBindsBareConnection_ForLaterDisconnect()
+    {
+        const string source = """
+            event abc;
+            fn handler(): void { }
+            abc += handler;
+            abc -= handler;
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+        Assert.Equal(4, luauTree.Statements.Count);
+
+        var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
+        Assert.Equal("handler_conn", connVariable.Name);
+
+        var connectCall = Assert.IsType<Call>(connVariable.Initializer);
+        Assert.True(connectCall.IsMethod);
+        var connectAccess = Assert.IsType<PropertyAccess>(connectCall.Callee);
+        Assert.Equal("Connect", Assert.Single(connectAccess.Names));
+
+        var disconnectStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[3]);
+        var disconnectCall = Assert.IsType<Call>(disconnectStatement.Expression);
+        var disconnectAccess = Assert.IsType<PropertyAccess>(disconnectCall.Callee);
+        Assert.Equal("Disconnect", Assert.Single(disconnectAccess.Names));
+        Assert.Equal("handler_conn", Assert.IsType<Identifier>(disconnectAccess.Target).Name);
+    }
+
+    [Fact]
+    public void ThrowsFor_EventDisconnect_WhenFunctionRequiresAnonymousWrapper()
+    {
+        const string source = """
+            trait Execute {
+                fn execute(p: number): void;
+            }
+
+            interface Foo;
+
+            implement Execute for Foo {
+                fn execute(p) -> print(p);
+            }
+
+            event my_event(param: number);
+            let foo = new Foo {};
+            my_event -= foo.execute;
+            """;
+
+        var diagnostics = Utility.GetGeneratorDiagnostics(source, typeCheck: true);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.AnonymousEventDisconnect,
+            "Cannot disconnect a function reference that gets wrapped into a new Luau closure on every connection.",
+            "store the connection returned from '+=' and disconnect that instead."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_EventDisconnect_WhenNoConnectionWasTracked()
+    {
+        const string source = """
+            event abc;
+            fn handler(): void { }
+            abc -= handler;
+            """;
+
+        var diagnostics = Utility.GetGeneratorDiagnostics(source, typeCheck: true);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.UnresolvedEventDisconnect,
+            "No event connection exists for this function, connect it with '+=' before disconnecting it."
+        );
     }
 }
