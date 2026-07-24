@@ -3,7 +3,7 @@ namespace Loom.Config;
 public sealed class RojoResolver
 {
     public const string ProjectFileName = "default.project.json";
-    public const string RuntimeFileName = "loom_runtime.json";
+    public const string RuntimeFileName = "loom_runtime.luau";
     private static readonly string[] LuauSuffixes = [".server.luau", ".client.luau", ".luau"];
 
     private readonly string _projectDirectory;
