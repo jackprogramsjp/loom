@@ -450,6 +450,27 @@ public class LuauRenderingTest
     }
 
     [Fact]
+    public void Renders_PropertyAccess_KeywordName_AsBracketAccess()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["end"]);
+        Assert.Equal("obj[\"end\"]", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_KeywordName_InMiddleOfChain()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["a", "repeat", "c"]);
+        Assert.Equal("obj.a[\"repeat\"].c", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_NonKeywordName_Unaffected()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["endpoint"]);
+        Assert.Equal("obj.endpoint", access.Render());
+    }
+
+    [Fact]
     public void Renders_PropertyAccess_ParenthesizesTarget_WhenNeeded()
     {
         var target = new BinaryOperator(

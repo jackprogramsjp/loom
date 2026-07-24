@@ -158,7 +158,7 @@ public class AstInspectorTest
     [Fact]
     public void InspectTree_RendersStatements()
     {
-        var lexerResult = new LexerResult(SourceFile.Empty, [], [], new DiagnosticBag());
+        var lexerResult = new LexerResult([], [], new DiagnosticBag());
         var tree = new Tree(lexerResult, [new InspectorTestStatement { Name = "first" }, new InspectorTestStatement { Name = "second" }]);
 
         var inspectionResult = InspectTree(tree);

@@ -155,7 +155,7 @@ public class SyntaxNodeTest
     {
         var lit = new Literal(T("42", 0, 2, SyntaxKind.NumberLiteral), 42L);
         var exprStmt = new ExpressionStatement(lit);
-        var tree = new Tree(new LexerResult(SourceFile.Empty, [], [], new DiagnosticBag()), [exprStmt]);
+        var tree = new Tree(new LexerResult([], [], new DiagnosticBag()), [exprStmt]);
         Assert.Null(tree.FirstAncestorOfType<Tree>());
         Assert.Same(tree, lit.FirstAncestorOfType<Tree>());
     }

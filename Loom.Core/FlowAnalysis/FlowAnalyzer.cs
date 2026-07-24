@@ -12,7 +12,11 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     private readonly Dictionary<Node, FlowState> _states = [];
 
     public FlowState GetState(Node node) => _states.TryGetValue(node, out var existingState) ? existingState : FlowState.Empty;
-    public FlowAnalyzerResult Analyze() => new(BindState(semanticModel.Tree, AnalyzeStatements(semanticModel.Tree.Statements, new FlowState())), _diagnostics);
+    public FlowAnalyzerResult Analyze()
+    {
+        BindState(semanticModel.Tree, AnalyzeStatements(semanticModel.Tree.Statements, new FlowState()));
+        return new FlowAnalyzerResult(_diagnostics);
+    }
 
     private FlowState AnalyzeStatements(IReadOnlyList<Statement> statements, FlowState state) =>
         statements.Aggregate(state, (current, statement) => AnalyzeStatement(statement, current));
@@ -26,6 +30,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             FunctionDeclaration functionDeclaration => AnalyzeFunctionDeclaration(functionDeclaration, state),
             EventDeclaration eventDeclaration => AnalyzeEventDeclaration(eventDeclaration, state),
             InterfaceDeclaration interfaceDeclaration => AnalyzeInterfaceDeclaration(interfaceDeclaration, state),
+            EnumDeclaration enumDeclaration => AnalyzeEnumDeclaration(enumDeclaration, state),
             Implement implement => AnalyzeImplement(implement, state),
             Return @return => AnalyzeReturn(@return, state),
             Break @break => AnalyzeBreak(@break, state),
@@ -97,6 +102,14 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         BindState(
             interfaceDeclaration,
             semanticModel.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Variable) is { } symbol
+                ? state.WithInitialized(symbol)
+                : state
+        );
+
+    private FlowState AnalyzeEnumDeclaration(EnumDeclaration enumDeclaration, FlowState state) =>
+        BindState(
+            enumDeclaration,
+            semanticModel.GetDeclarationSymbol(enumDeclaration, SymbolKind.Variable) is { } symbol
                 ? state.WithInitialized(symbol)
                 : state
         );

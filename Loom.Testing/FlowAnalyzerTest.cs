@@ -149,5 +149,6 @@ public class FlowAnalyzerTest
         x;
         """
     )]
+    [InlineData("enum Colors { Red, Green, Blue }; Colors.Red;")]
     public void Allows(string source) => Utility.AssertNoErrors(Utility.FlowAnalyze(source).AnalyzerResult);
 }

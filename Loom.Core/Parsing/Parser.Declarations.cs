@@ -305,7 +305,7 @@ public sealed partial class Parser
 
     private EnumMember? ParseEnumMember() => Match(out var name, SyntaxKind.Identifier) ? new EnumMember(name, ParseEqualsValueClause()) : null;
 
-    private Statement ParseEventDeclaration(Token keyword, Attributes? attributes = null)
+    private Statement ParseEventDeclaration(Token keyword, Attributes? attributes)
     {
         var name = ExpectIdentifier();
         var typeParameters = ParseTypeParameters();

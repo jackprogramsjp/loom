@@ -11,16 +11,6 @@ namespace Loom.Core.Resolving;
 public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolTable Declarations, SymbolTable References)
     : DiagnosedResult(Diagnostics)
 {
-    internal int RuntimeReferences = 0;
-
-    /// <summary>
-    /// Node IDs of reference-site nodes that originate from a non-intrinsic source file.
-    /// Populated by the resolver as references are recorded, so
-    /// <see cref="MustImportRuntimeLibrary"/> can filter references by the file of the
-    /// referencing node without holding on to the node instances themselves.
-    /// </summary>
-    internal HashSet<NodeId> NonIntrinsicReferenceNodes { get; } = [];
-
     public bool DisableRuntimeLibraryImport { get; set; }
     public bool MustImportRuntimeLibrary =>
         !DisableRuntimeLibraryImport
@@ -32,7 +22,16 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
             )
         );
 
+    /// <summary>
+    /// Node IDs of reference-site nodes that originate from a non-intrinsic source file.
+    /// Populated by the resolver as references are recorded, so
+    /// <see cref="MustImportRuntimeLibrary"/> can filter references by the file of the
+    /// referencing node without holding on to the node instances themselves.
+    /// </summary>
+    internal HashSet<NodeId> NonIntrinsicReferenceNodes { get; } = [];
+    internal int RuntimeReferences = 0;
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
+    private SymbolLookup DeclarationsByName => field ??= Declarations.Values.SelectMany(s => s).GroupBy(s => s.Name).ToDictionary(g => g.Key, g => g.ToList());
 
     public bool IsCompileTimeConstant(Expression expression) =>
         expression is Literal or NameOf
@@ -43,7 +42,7 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
     public object? GetConstantValue(Expression expression) =>
         expression switch
         {
-            QualifiedName qn when GetType(qn.Identifier) is TypeChecking.Types.ObjectType objectType
+            QualifiedName qn when GetType(qn.Identifier) is ObjectType objectType
                 && objectType.GetProperty(qn.Names.First().Name.Text) is { ValueType: TypeChecking.Types.LiteralType literalType } =>
                 literalType.Value,
             _ when GetType(expression) is TypeChecking.Types.LiteralType literalType => literalType.Value,
@@ -113,10 +112,11 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
     public Type? GetDeclarationType(Node node) => GetSymbol(node) is { } symbol ? TypeSolver.GetType(symbol.Declaration) : null;
-    public T? FindIntrinsicDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(s => s.IsIntrinsic && s.Name == name);
+    public T? FindIntrinsicDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(name, s => s.IsIntrinsic);
+    private T? FindDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(name, static _ => true);
 
-    private T? FindDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(s => s.Name == name);
-    private T? FindDeclarationSymbol<T>(Func<T, bool> predicate) where T : Symbol => Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(predicate);
+    private T? FindDeclarationSymbol<T>(string name, Func<T, bool> predicate) where T : Symbol =>
+        DeclarationsByName.TryGetValue(name, out var symbols) ? symbols.OfType<T>().FirstOrDefault(predicate) : null;
 
     private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
     {

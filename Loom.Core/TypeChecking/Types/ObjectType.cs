@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Loom.Core.TypeChecking.Types;
 
 public abstract record ObjectBodyType(bool IsMutable, Type ValueType);
@@ -14,6 +16,42 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
 
     public override ObjectIndexer? Indexer { get; internal set; } = indexer;
     public override List<ObjectProperty> Properties { get; } = properties;
+
+    /// <summary>
+    /// Bumped whenever <see cref="Properties"/> is mutated via <see cref="AddProperties"/>, since
+    /// <see cref="Properties"/> is populated incrementally during interface/trait resolution rather
+    /// than fully at construction time. Cached derived structures (property map, hash) are keyed on
+    /// this so they never observe a stale, partially-populated property list.
+    /// </summary>
+    public int Version { get; private set; } = properties.Count;
+
+    private int _propertyMapVersion = -1;
+    private int _hashVersion = -1;
+    private int _cachedHash;
+
+    private Dictionary<string, ObjectProperty> PropertyMap
+    {
+        get
+        {
+            if (field != null && _propertyMapVersion == Version)
+                return field;
+
+            field = new Dictionary<string, ObjectProperty>(Properties.Count);
+            foreach (var property in Properties)
+                field[property.Name] = property;
+
+            _propertyMapVersion = Version;
+            return field;
+        }
+    }
+
+    public void AddProperties(IEnumerable<ObjectProperty> newProperties)
+    {
+        Properties.AddRange(newProperties);
+        Version = Properties.Count;
+    }
+
+    protected override ObjectProperty? FindProperty(string name) => PropertyMap.GetValueOrDefault(name);
 
     public Type KeyUnion()
     {
@@ -48,8 +86,12 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public override Type PropertyKeyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(Type (p) => new LiteralType(p.Name))));
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
+    [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
     public override int GetHashCode()
     {
+        if (_hashVersion == Version)
+            return _cachedHash;
+
         var hash = new HashCode();
         hash.Add(Properties.Count);
         foreach (var property in Properties.OrderBy(p => p.Name, StringComparer.Ordinal))
@@ -58,7 +100,9 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             hash.Add(property.IsMutable);
         }
 
-        return hash.ToHashCode();
+        _cachedHash = hash.ToHashCode();
+        _hashVersion = Version;
+        return _cachedHash;
     }
 
     public override bool Equals(Type? other) =>
@@ -73,7 +117,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
                 if (Properties.Count != objectType.Properties.Count)
                     return false;
 
-                var otherProps = objectType.Properties.ToDictionary(p => p.Name, p => p);
+                var otherProps = objectType.PropertyMap;
                 foreach (var prop in Properties)
                 {
                     if (!otherProps.TryGetValue(prop.Name, out var otherProp))
@@ -113,7 +157,7 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
                 if (Properties.Count < objectType.Properties.Count)
                     return false;
 
-                var sourcePropertyMap = Properties.ToDictionary(p => p.Name, p => p);
+                var sourcePropertyMap = PropertyMap;
                 foreach (var targetProperty in objectType.Properties)
                 {
                     if (!sourcePropertyMap.TryGetValue(targetProperty.Name, out var sourceProperty))

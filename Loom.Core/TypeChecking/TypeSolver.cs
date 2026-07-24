@@ -43,41 +43,10 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         switch (type)
         {
             case UnionType unionType:
-            {
-                var members = unionType.Types.ToList();
-                var circular = false;
-                for (var i = 0; i < members.Count; i++)
-                {
-                    var member = members[i];
-                    if (!CheckCircular(ref member, name)) continue;
+                return CheckCircularMembers(ref type, unionType.Types.ToList(), name, members => new UnionType(members));
 
-                    members[i] = member;
-                    circular = true;
-                }
-
-                if (circular)
-                    type = new UnionType(members);
-
-                return circular;
-            }
             case IntersectionType intersectionType:
-            {
-                var members = intersectionType.Types.ToList();
-                var circular = false;
-                for (var i = 0; i < members.Count; i++)
-                {
-                    var member = members[i];
-                    if (!CheckCircular(ref member, name)) continue;
-
-                    members[i] = member;
-                    circular = true;
-                }
-
-                if (circular)
-                    type = new IntersectionType(members);
-
-                return circular;
-            }
+                return CheckCircularMembers(ref type, intersectionType.Types.ToList(), name, members => new IntersectionType(members));
 
             case TypeVariable:
                 type = PrimitiveType.Never;
@@ -86,6 +55,24 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         }
 
         return false;
+    }
+
+    private bool CheckCircularMembers(ref Type type, List<Type> members, Token name, Func<List<Type>, Type> wrap)
+    {
+        var circular = false;
+        for (var i = 0; i < members.Count; i++)
+        {
+            var member = members[i];
+            if (!CheckCircular(ref member, name)) continue;
+
+            members[i] = member;
+            circular = true;
+        }
+
+        if (circular)
+            type = wrap(members);
+
+        return circular;
     }
 
     public static Type Transform(Type type, Converter<Type, Type> fn, Type? defaultValue = null, bool simplify = true)
@@ -243,12 +230,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
 
         var success = true;
         for (var i = 0; i < a.Arguments.Count; i++)
-        {
-            if (!TryUnify(a.Arguments[i], b.Arguments[i], span, out var argUpdated))
-                success = false;
-            else if (argUpdated)
-                updated = true;
-        }
+            CombineUnify(a.Arguments[i], b.Arguments[i], span, ref success, ref updated);
 
         return success;
     }
@@ -260,15 +242,8 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
 
         if (a.Indexer != null && b.Indexer != null)
         {
-            if (!TryUnify(a.Indexer.KeyType, b.Indexer.KeyType, span, out var keyUpdated))
-                success = false;
-            else if (keyUpdated)
-                updated = true;
-
-            if (!TryUnify(a.Indexer.ValueType, b.Indexer.ValueType, span, out var valueUpdated))
-                success = false;
-            else if (valueUpdated)
-                updated = true;
+            CombineUnify(a.Indexer.KeyType, b.Indexer.KeyType, span, ref success, ref updated);
+            CombineUnify(a.Indexer.ValueType, b.Indexer.ValueType, span, ref success, ref updated);
 
             if (a.Indexer.IsMutable != b.Indexer.IsMutable)
             {
@@ -291,10 +266,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         {
             if (!aProps.TryGetValue(name, out var propA) || !bProps.TryGetValue(name, out var propB)) continue;
 
-            if (!TryUnify(propA.ValueType, propB.ValueType, span, out var propUpdated))
-                success = false;
-            else if (propUpdated)
-                updated = true;
+            CombineUnify(propA.ValueType, propB.ValueType, span, ref success, ref updated);
 
             if (propA.IsMutable == propB.IsMutable) continue;
             if (!ReportTypeMismatch(a, b, span, $"Property types match, but mutability of property '{name}' does not match that of type '{b}'."))
@@ -302,6 +274,14 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         }
 
         return success;
+    }
+
+    private void CombineUnify(Type a, Type b, LocationSpan span, ref bool success, ref bool updated)
+    {
+        if (!TryUnify(a, b, span, out var stepUpdated))
+            success = false;
+        else if (stepUpdated)
+            updated = true;
     }
 
     private bool UnifyObjectWithInterface(ObjectType objectType, InterfaceType interfaceType, LocationSpan span, out bool updated)
@@ -324,12 +304,7 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
 
         var success = true;
         for (var i = 0; i < a.TypeParameters.Count; i++)
-        {
-            if (!TryUnify(a.TypeParameters[i], b.TypeParameters[i], span, out var constraintUpdated))
-                success = false;
-            else if (constraintUpdated)
-                updated = true;
-        }
+            CombineUnify(a.TypeParameters[i], b.TypeParameters[i], span, ref success, ref updated);
 
         var freshVars = a.TypeParameters.Select(_ => CreateTypeVariable()).ToList();
         var aMapping = a.TypeParameters.Zip(freshVars).ToDictionary(p => p.First, p => p.Second);
@@ -339,17 +314,9 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         var aReturnType = SubstituteTypeParameters(aMapping, a.ReturnType);
         var bReturnType = SubstituteTypeParameters(bMapping, b.ReturnType);
         for (var i = 0; i < aParamTypes.Count; i++)
-        {
-            if (!TryUnify(aParamTypes[i], bParamTypes[i], span, out var paramUpdated))
-                success = false;
-            else if (paramUpdated)
-                updated = true;
-        }
+            CombineUnify(aParamTypes[i], bParamTypes[i], span, ref success, ref updated);
 
-        if (!TryUnify(aReturnType, bReturnType, span, out var returnUpdated))
-            success = false;
-        else if (returnUpdated)
-            updated = true;
+        CombineUnify(aReturnType, bReturnType, span, ref success, ref updated);
 
         return success;
     }
