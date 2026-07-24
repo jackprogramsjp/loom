@@ -30,9 +30,8 @@
 
 - `x in collection`
 - `defer` statements
-- Event declarations
 - Full module system (imports/exports)
-- Roblox type generator + Luau typings
+- Standard libraries (math, string, buffer, etc.)
 
 ---
 
