@@ -19,8 +19,8 @@ public abstract class Node
     {
         Id = new NodeId(Interlocked.Increment(ref _nextId));
 
-        Children = children.OfType<Node>().ToArray();
-        Tokens = theseTokens.OfType<Token>().ToArray();
+        Children = children.OfType<Node>().OrderBy(n => n.Span.Position).ToArray();
+        Tokens = theseTokens.OfType<Token>().OrderBy(t => t.Span.Position).ToArray();
         Span = DeriveSpan();
         foreach (var child in Children)
             child.Parent = this;
