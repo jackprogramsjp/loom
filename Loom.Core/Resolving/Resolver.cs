@@ -265,7 +265,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         var isSealed = interfaceDeclaration.SealedKeyword != null;
         if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable)
-            || !DeclareInterface(interfaceDeclaration, isSealed, out var symbol)
+            || DeclareInterface(interfaceDeclaration, isSealed) is not { } symbol
             || !ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
         {
             return false;
@@ -287,7 +287,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (declare.Signature is InterfaceDeclaration interfaceDeclaration)
         {
             var isSealed = interfaceDeclaration.SealedKeyword != null;
-            result = DeclareInterface(interfaceDeclaration, isSealed, out var interfaceSymbol)
+            var interfaceSymbol = DeclareInterface(interfaceDeclaration, isSealed);
+            result = interfaceSymbol is not null
                 && ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, interfaceSymbol);
 
             if (result)
@@ -566,7 +567,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                     break;
                 case InterfaceDeclaration interfaceDeclaration:
                     if (DeclareVariable(interfaceDeclaration, SymbolKind.Variable))
-                        DeclareInterface(interfaceDeclaration, interfaceDeclaration.SealedKeyword != null, out _);
+                        DeclareInterface(interfaceDeclaration, interfaceDeclaration.SealedKeyword != null);
 
                     break;
                 case EnumDeclaration enumDeclaration:
@@ -578,7 +579,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                     DeclareVariable(enumDeclaration, SymbolKind.Event);
                     break;
                 case Declare { Signature: InterfaceDeclaration nested }:
-                    DeclareInterface(nested, nested.SealedKeyword != null, out _);
+                    DeclareInterface(nested, nested.SealedKeyword != null);
                     break;
             }
         }
@@ -614,19 +615,18 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    private bool DeclareInterface(InterfaceDeclaration interfaceDeclaration, bool isSealed, [MaybeNullWhen(false)] out InterfaceSymbol interfaceSymbol)
+    private InterfaceSymbol? DeclareInterface(InterfaceDeclaration interfaceDeclaration, bool isSealed)
     {
-        interfaceSymbol = null;
         var scope = CurrentScope();
         var name = interfaceDeclaration.Name.Text;
         if (scope.TypeLookup.TryGetValue(name, out var symbols))
         {
-            if (IsAlreadyHoisted(interfaceDeclaration, symbols, out interfaceSymbol))
-                return true;
+            if (IsAlreadyHoisted<InterfaceSymbol>(interfaceDeclaration, symbols, out var interfaceSymbol))
+                return interfaceSymbol;
 
             var kindName = symbols is [.., InterfaceSymbol] ? "Interface" : "Type";
             _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
-            return false;
+            return null;
         }
 
         var constraints = interfaceDeclaration.ColonTypeListClause?.Types
@@ -636,8 +636,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
         var finalSymbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed, constraints);
         DeclareSymbol(finalSymbol);
-        interfaceSymbol = finalSymbol;
-        return true;
+        return finalSymbol;
     }
 
     private AttributeSymbol DeclareAttribute(Attribute attribute)
@@ -690,12 +689,14 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         AddToLookup(symbol);
         AddDeclaration(symbol);
-        _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
+        if (TypeChecker.EmitDebugDiagnostics)
+            _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
 
         if (IsDeclarationFile())
         {
             symbol.IsGlobal = true;
-            _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
+            if (TypeChecker.EmitDebugDiagnostics)
+                _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
         }
 
         if (_context == ResolverContext.Ambient)
@@ -704,7 +705,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (!parserResult.Tree.File.IsIntrinsic) return;
 
         symbol.IsIntrinsic = true;
-        _diagnostics.Debug(symbol.Declaration, $"{symbol} is intrinsic");
+        if (TypeChecker.EmitDebugDiagnostics)
+            _diagnostics.Debug(symbol.Declaration, $"{symbol} is intrinsic");
     }
 
     private void AddToLookup(Symbol symbol)

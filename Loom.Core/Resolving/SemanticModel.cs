@@ -113,10 +113,17 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
     public Type? GetDeclarationType(Node node) => GetSymbol(node) is { } symbol ? TypeSolver.GetType(symbol.Declaration) : null;
-    public T? FindIntrinsicDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(s => s.IsIntrinsic && s.Name == name);
+    public T? FindIntrinsicDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(name, s => s.IsIntrinsic);
 
-    private T? FindDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(s => s.Name == name);
-    private T? FindDeclarationSymbol<T>(Func<T, bool> predicate) where T : Symbol => Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(predicate);
+    private Dictionary<string, List<Symbol>>? _declarationsByName;
+
+    private Dictionary<string, List<Symbol>> DeclarationsByName =>
+        _declarationsByName ??= Declarations.Values.SelectMany(s => s).GroupBy(s => s.Name).ToDictionary(g => g.Key, g => g.ToList());
+
+    private T? FindDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(name, static _ => true);
+
+    private T? FindDeclarationSymbol<T>(string name, Func<T, bool> predicate) where T : Symbol =>
+        DeclarationsByName.TryGetValue(name, out var symbols) ? symbols.OfType<T>().FirstOrDefault(predicate) : null;
 
     private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
     {
