@@ -7,14 +7,26 @@ public sealed class RenderState
     public static string Indent { get; set; } = "  ";
     public static char StringDelimiter { get; set; } = '"';
 
-    private string _indent = "";
+    private readonly List<string> _indentCache = [""];
+    private int _depth;
 
     public List<string> RenderList<T>(List<T> nodes)
         where T : LuauNode =>
         nodes.ConvertAll(a => a.Render(this));
 
     public string IndentedLine(string text) => Indented(text) + '\n';
-    public string Indented(string text) => _indent + text;
+    public string Indented(string text) => CurrentIndent + text;
+
+    private string CurrentIndent
+    {
+        get
+        {
+            while (_indentCache.Count <= _depth)
+                _indentCache.Add(_indentCache[^1] + Indent);
+
+            return _indentCache[_depth];
+        }
+    }
 
     public string ParenthesizeIfNeeded(LuauNode node) => RequiresParentheses(node) ? $"({node.Render(this)})" : node.Render(this);
 
@@ -50,6 +62,6 @@ public sealed class RenderState
         return result;
     }
 
-    private void PushIndent() => _indent += Indent;
-    private void PopIndent() => _indent = _indent[..^Indent.Length];
+    private void PushIndent() => _depth++;
+    private void PopIndent() => _depth--;
 }
