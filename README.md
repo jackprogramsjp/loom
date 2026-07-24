@@ -20,6 +20,7 @@
 - **Flow-sensitive typing** - Loom supports discriminated unions and narrowing to the correct union member based on a common property
 - **Generic functions and types** – Full support for type parameters including constraints and defaults
 - **Result pattern for errors** – Error handling uses the result pattern from Rust, no more `pcall`s. See [example](#result-pattern).
+- **Events** – Built-in user events with shorthand syntax. See [example](#events).
 - **Traits** – Define reusable behavior that interfaces can implement, enabling shared APIs and generic constraints that reflect behavior
 - **Indices starting at one** – Same as Luau for familiarity
 - **Zero-cost abstractions** – Transpiles to idiomatic Luau with minimal overhead
@@ -27,7 +28,6 @@
 
 ## Upcoming Features
 
-- `typeof`
 - `x in collection`
 - `defer` statements
 - Event declarations
@@ -894,6 +894,46 @@ function Serialize_string_for_User.serialize(self: User)
 end
 const user = setmetatable({ name = "Runic", age = 21 }, Loom.merge_meta(Serialize_string_for_User)) :: User
 print(user:serialize())
+```
+
+## typeof
+Inspect types of dynamic expressions.
+```ts
+mut my_number = 69;
+type NumberType = typeof(my_number);
+let x: NumberType = 420;
+```
+
+```luau
+local my_number = 69
+type NumberType = typeof(my_number)
+const x: NumberType = 420
+```
+
+## Events
+Built-in syntaxes for creating, connecting, and disconnecting.
+
+```cs
+event my_event(data: string);
+
+fn handler(data: string): void -> print(data);
+
+my_event += handler;
+my_event("hello!");
+my_event -= handler;
+```
+
+```luau
+const Loom = require("@game/ReplicatedStorage/include/loom_runtime")
+const my_event: Loom.Event<string> = Loom.Event.new()
+
+const function handler(data: string): ()
+    return print(data)
+end
+
+const handler_conn = my_event:Connect(handler);
+my_event:Fire("hello!");
+handler_conn:Disconnect();
 ```
 
 ---
