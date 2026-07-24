@@ -74,6 +74,7 @@ public static class InternalCodes
     public const string InvalidLuauNameAttribute = "L350";
     public const string AnonymousEventDisconnect = "L351";
     public const string UnresolvedEventDisconnect = "L352";
+    public const string RuntimeLibraryNotFound = "L353";
     
     public const string SimplifiableCode = "L400";
 }

@@ -39,7 +39,16 @@ public sealed partial class LuauGenerator
     {
         var luauTree = VisitTree(_semanticModel.Tree);
         if (_semanticModel.MustImportRuntimeLibrary)
-            luauTree.Statements.Insert(0, LuauFactory.RuntimeLibraryImport("@game/ReplicatedStorage/include/loom_runtime")); // TODO: rojo resolver; issue #21
+        {
+            if (_runtimeImport.Status == RuntimeImportStatus.NotFoundInRojo)
+                _diagnostics.Warn(
+                    _semanticModel.Tree,
+                    InternalCodes.RuntimeLibraryNotFound,
+                    "Could not locate the Loom runtime library through the Rojo project; falling back to the default require path.",
+                    $"add a $path mapping to your default.project.json that includes the runtime, otherwise requires resolve to '{RuntimeImport.DefaultPath}'.");
+
+            luauTree.Statements.Insert(0, LuauFactory.RuntimeLibraryImport(_runtimeImport.Path));
+        }
 
         return new LuauGeneratorResult(luauTree, _diagnostics);
     }
