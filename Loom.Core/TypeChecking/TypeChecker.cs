@@ -95,17 +95,14 @@ public sealed partial class TypeChecker
 
     public override Type VisitEventDeclaration(EventDeclaration eventDeclaration)
     {
-        var symbol = _semanticModel.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event);
-        if (symbol == null)
+        if (_semanticModel.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event) is not { } symbol)
         {
             _diagnostics.Error(eventDeclaration, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of event '{eventDeclaration.Name.Text}'.");
             return BindType(eventDeclaration, Types.PrimitiveType.Never);
         }
 
         var parameterTypes = eventDeclaration.Parameters?.ParameterList.ConvertAll(VisitParameter) ?? [];
-        var genericType = GetIntrinsicType<GenericType>(eventDeclaration, symbol.IsAmbient ? "Event" : "UserEvent");
-        var fullArguments = FillGenericArguments(genericType.Parameters, parameterTypes);
-        var type = new InstantiatedType(genericType, fullArguments);
+        var type = InstantiateEventType(eventDeclaration, symbol.IsAmbient, parameterTypes);
         return BindType(eventDeclaration, type);
     }
 
@@ -350,67 +347,83 @@ public sealed partial class TypeChecker
     public override Type VisitInvocation(Invocation invocation)
     {
         var type = Visit(invocation.Expression);
-        if (type is not Types.FunctionType functionType)
+        if (IsEventType(invocation, type, strictlyConsumer: true, out _))
         {
-            _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, $"Cannot call value of type '{type}'.");
+            _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, "Consumer events may only be observed, not fired.");
             return BindType(invocation, Types.PrimitiveType.Never);
         }
 
-        var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
-        var args = invocation.Arguments.ArgumentList;
-        if (functionType.TypeParameters.Count == 0)
+        var argumentList = invocation.Arguments.ArgumentList;
+        if (type is Types.FunctionType functionType)
         {
-            var parameterTypes = functionType.ParameterTypes;
-            var argTypes = new List<Type>(args.Count);
-            argTypes.AddRange(
-                args.Select((t, i) => i < parameterTypes.Count
-                    ? Check(t, parameterTypes[i])
-                    : Visit(t)
-                )
-            );
-
-            return BindNonGenericInvocation(invocation, argTypes, functionType, declaration);
-        }
-
-        var expectedReturnType = GetContextualType(invocation);
-        if (invocation.TypeArguments != null)
-        {
-            var substitution = ResolveTypeArguments(invocation, functionType, [], expectedReturnType);
-            if (substitution == null)
-                return BindType(invocation, Types.PrimitiveType.Never);
-
-            var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
-            var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
-            var argumentTypes = new List<Type>(args.Count);
-            argumentTypes.AddRange(
-                args.Select((t, i) => i < substitutedParameterTypes.Count
-                    ? Check(t, substitutedParameterTypes[i])
-                    : Visit(t)
-                )
-            );
-
-            CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
-            return BindType(invocation, substitutedReturnType);
-        }
-
-        {
-            var argumentTypes = args.ConvertAll(Visit);
-            var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
-            if (substitution == null)
-                return BindType(invocation, Types.PrimitiveType.Never);
-
-            var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
-            var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
-            CheckArity(invocation.Arguments, argumentTypes, substitutedParameterTypes, declaration);
-
-            for (var i = 0; i < args.Count; i++)
+            var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
+            if (functionType.TypeParameters.Count == 0)
             {
-                if (i < substitutedParameterTypes.Count)
-                    Check(args[i], substitutedParameterTypes[i]);
+                var parameterTypes = functionType.ParameterTypes;
+                var argumentTypes = new List<Type>(argumentList.Count);
+                argumentTypes.AddRange(
+                    argumentList.Select((t, i) => i < parameterTypes.Count
+                        ? Check(t, parameterTypes[i])
+                        : Visit(t)
+                    )
+                );
+
+                return BindNonGenericInvocation(invocation, argumentTypes, functionType, declaration);
             }
 
-            return BindType(invocation, substitutedReturnType);
+            var expectedReturnType = GetContextualType(invocation);
+            if (invocation.TypeArguments != null)
+            {
+                var substitution = ResolveTypeArguments(invocation, functionType, [], expectedReturnType);
+                if (substitution == null)
+                    return BindType(invocation, Types.PrimitiveType.Never);
+
+                var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
+                var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
+                var argumentTypes = new List<Type>(argumentList.Count);
+                argumentTypes.AddRange(
+                    argumentList.Select((t, i) => i < substitutedParameterTypes.Count
+                        ? Check(t, substitutedParameterTypes[i])
+                        : Visit(t)
+                    )
+                );
+
+                CheckArity(invocation.Arguments, declaration?.Parameters, argumentTypes, substitutedParameterTypes);
+                return BindType(invocation, substitutedReturnType);
+            }
+            else
+            {
+                var argumentTypes = argumentList.ConvertAll(Visit);
+                var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
+                if (substitution == null)
+                    return BindType(invocation, Types.PrimitiveType.Never);
+
+                var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
+                var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
+                CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, substitutedParameterTypes, argumentList);
+
+                return BindType(invocation, substitutedReturnType);
+            }
         }
+
+        if (IsEventType(invocation, type, strictlyConsumer: false, out var eventType))
+        {
+            var argumentTypes = argumentList.ConvertAll(Visit);
+            var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as EventDeclaration;
+            CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, eventType.Arguments, argumentList);
+            return BindType(invocation, Types.PrimitiveType.Void);
+        }
+
+        _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, $"Cannot call value of type '{type}'.");
+        return BindType(invocation, Types.PrimitiveType.Never);
+    }
+
+    private void CheckArguments(Arguments arguments, Parameters? parameters, List<Type> argumentTypes, List<Type> parameterTypes, List<Expression> args)
+    {
+        CheckArity(arguments, parameters, argumentTypes, parameterTypes);
+        for (var i = 0; i < args.Count; i++)
+            if (i < parameterTypes.Count)
+                Check(args[i], parameterTypes[i]);
     }
 
     public override Type VisitQualifiedName(QualifiedName qualifiedName) => GetTypeOfNamedAccess(qualifiedName, qualifiedName.Identifier, qualifiedName.Names);
@@ -512,12 +525,8 @@ public sealed partial class TypeChecker
             _ => null!
         };
 
-        NativelyIndexableType? indexableType = expressionType switch
-        {
-            ObjectType o => o,
-            InterfaceType i => i,
-            _ => null
-        };
+        if (expressionType is not NativelyIndexableType indexableType)
+            return BindType(assignmentOperator, valueType);
 
         var names = (assignmentOperator.Left switch
         {
@@ -525,9 +534,6 @@ public sealed partial class TypeChecker
             QualifiedName name => name.Names,
             _ => []
         }).ToList();
-
-        if (indexableType == null)
-            return BindType(assignmentOperator, valueType);
 
         if (names.Count > 1)
         {
@@ -600,26 +606,28 @@ public sealed partial class TypeChecker
             return BindType(binaryOperator, rule.ReturnType);
         }
 
-        if (binaryOperator.Operator.Kind is SyntaxKind.QuestionQuestion or SyntaxKind.QuestionQuestionEquals)
+        switch (binaryOperator.Operator.Kind)
         {
-            if (!Type.IsOptional(leftType))
+            case SyntaxKind.QuestionQuestion or SyntaxKind.QuestionQuestionEquals:
             {
-                _diagnostics.Warn(
-                    binaryOperator,
-                    InternalCodes.RedundantCode,
-                    $"Null coalescing has no effect since '{leftType}' is not optional."
-                );
+                if (!Type.IsOptional(leftType))
+                {
+                    _diagnostics.Warn(
+                        binaryOperator,
+                        InternalCodes.RedundantCode,
+                        $"Null coalescing has no effect since '{leftType}' is not optional."
+                    );
+                }
+
+                return BindType(binaryOperator, TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]).NonNullable()));
             }
-
-            return BindType(binaryOperator, TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]).NonNullable()));
-        }
-
-        if (binaryOperator.Operator.Kind is SyntaxKind.PlusEquals or SyntaxKind.MinusEquals
-            && TryGetEventParameterTypes(binaryOperator, leftType, out var eventParameters))
-        {
-            var assignableFunction = new Types.FunctionType([], eventParameters, Types.PrimitiveType.Void);
-            _semanticModel.TypeSolver.AddConstraint(rightType, assignableFunction, binaryOperator.Right);
-            return BindType(binaryOperator, GetIntrinsicType(binaryOperator, "EventConnection"));
+            case SyntaxKind.PlusEquals or SyntaxKind.MinusEquals
+                when TryGetEventParameterTypes(binaryOperator, leftType, out var eventParameters):
+            {
+                var assignableFunction = new Types.FunctionType([], eventParameters, Types.PrimitiveType.Void);
+                _semanticModel.TypeSolver.AddConstraint(rightType, assignableFunction, binaryOperator.Right);
+                return BindType(binaryOperator, GetIntrinsicType(binaryOperator, "EventConnection"));
+            }
         }
 
         var suggestion = BinaryOperatorBinder.GetSuggestion(binaryOperator, leftType, rightType);
@@ -746,7 +754,7 @@ public sealed partial class TypeChecker
     }
 
     public override Type VisitTypeOf(TypeOf typeOf) => BindType(typeOf, Visit(typeOf.Expression));
-    
+
     public override Type VisitIndexedType(IndexedType indexedType)
     {
         var targetType = Visit(indexedType.TargetType);
@@ -960,31 +968,27 @@ public sealed partial class TypeChecker
         );
     }
 
-    private void CheckArity(Arguments arguments, List<Type> argumentTypes, List<Type> parameterTypes, DeclareFunctionSignature? declaration)
+    private void CheckArity(Arguments arguments, Parameters? parameters, List<Type> argumentTypes, List<Type> parameterTypes)
     {
         var requiredParameterTypes = new List<Type>();
-        if (declaration == null)
+        if (parameters == null)
         {
             requiredParameterTypes = parameterTypes.FindAll(Type.IsNotOptional);
         }
         else
         {
-            if (declaration.Parameters != null)
+            for (var i = 0; i < parameters.ParameterList.Count; i++)
             {
-                for (var i = 0; i < declaration.Parameters.ParameterList.Count; i++)
-                {
-                    var parameterType = parameterTypes[i];
-                    var parameter = declaration.Parameters.ParameterList[i];
-                    if (parameter.EqualsValueClause != null || !Type.IsNotOptional(parameterType)) continue;
+                var parameterType = parameterTypes[i];
+                var parameter = parameters.ParameterList[i];
+                if (parameter.EqualsValueClause != null || !Type.IsNotOptional(parameterType)) continue;
 
-                    requiredParameterTypes.Add(parameterType);
-                }
+                requiredParameterTypes.Add(parameterType);
             }
         }
 
         var minimum = requiredParameterTypes.Count;
         var maximum = parameterTypes.Count;
-
         var arityDisplay = minimum == maximum
             ? maximum.ToString()
             : $"{minimum}-{maximum}";
@@ -997,7 +1001,7 @@ public sealed partial class TypeChecker
 
     private Type BindNonGenericInvocation(Invocation invocation, List<Type> argumentTypes, Types.FunctionType functionType, DeclareFunctionSignature? declaration)
     {
-        CheckArity(invocation.Arguments, argumentTypes, functionType.ParameterTypes, declaration);
+        CheckArity(invocation.Arguments, declaration?.Parameters, argumentTypes, functionType.ParameterTypes);
 
         // COMMENT THIS OUT BECAUSE THE CHECK ALREADY DID IT SO NO NEED TO ADD CONSTRAINTS HERE
         // AddArgumentConstraints(invocation.Arguments, argumentTypes, functionType.ParameterTypes);
@@ -1086,7 +1090,7 @@ public sealed partial class TypeChecker
 
     private bool TryGetEventParameterTypes(Node failNode, Type type, [MaybeNullWhen(false)] out List<Type> typeArguments)
     {
-        if (!IsEventType(failNode, type, out var instantiated))
+        if (!IsEventType(failNode, type, strictlyConsumer: false, out var instantiated))
         {
             typeArguments = null;
             return false;
@@ -1096,16 +1100,28 @@ public sealed partial class TypeChecker
         return true;
     }
 
-    private bool IsEventType(Node failNode, Type type, [MaybeNullWhen(false)] out InstantiatedType instantiatedType)
+    private bool IsEventType(Node failNode, Type type, bool strictlyConsumer, [MaybeNullWhen(false)] out InstantiatedType instantiatedType)
     {
         instantiatedType = null;
         if (type is not InstantiatedType instantiated)
             return false;
 
         instantiatedType = instantiated;
-        return instantiated.GenericType.Equals(GetIntrinsicType<GenericType>(failNode, "UserEvent"));
+        var isConsumerEvent = instantiated.GenericType.Equals(GetGenericEventType(failNode, true));
+        if (strictlyConsumer)
+            return isConsumerEvent;
+
+        return isConsumerEvent || instantiated.GenericType.Equals(GetGenericEventType(failNode, false));
+    }
+    
+    private InstantiatedType InstantiateEventType(Node failNode, bool isConsumer, List<Type> parameterTypes)
+    {
+        var genericType = GetGenericEventType(failNode, isConsumer);
+        var fullArguments = FillGenericArguments(genericType.Parameters, parameterTypes);
+        return new InstantiatedType(genericType, fullArguments);
     }
 
+    private GenericType GetGenericEventType(Node failNode, bool isConsumer) => GetIntrinsicType<GenericType>(failNode, isConsumer ? "ConsumerEvent" : "Event");
     private Type GetIntrinsicType(Node failNode, string name) => GetIntrinsicType<Type>(failNode, name);
 
     private T GetIntrinsicType<T>(Node failNode, string name) where T : Type

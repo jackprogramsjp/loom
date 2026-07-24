@@ -71,6 +71,12 @@ public sealed partial class TypeChecker
     public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
         var name = interfaceDeclaration.Name.Text;
+        if (_semanticModel.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Interface) is not InterfaceSymbol symbol)
+        {
+            _diagnostics.Error(interfaceDeclaration, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of interface '{name}'.");
+            return BindType(interfaceDeclaration, PrimitiveType.Never);
+        }
+
         var typeParameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
         var constraints = interfaceDeclaration.ColonTypeListClause?.Types
                 .Select(Visit)
@@ -90,8 +96,12 @@ public sealed partial class TypeChecker
         var indexerDeclaration = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
         var indexer = ResolveInterfaceIndexer(constraints, indexerDeclaration);
         objectType.Indexer = indexer;
+
+        var eventDeclarations = interfaceDeclaration.Body?.Members.OfType<EventDeclaration>().ToList() ?? [];
         var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>().ToList() ?? [];
+        var events = ResolveInterfaceEvents(symbol, eventDeclarations);
         var properties = ResolveInterfaceProperties(constraints, propertyDeclarations);
+        objectType.Properties.AddRange(events);
         objectType.Properties.AddRange(properties);
 
         return BindType(interfaceDeclaration, publishedType);
@@ -163,12 +173,10 @@ public sealed partial class TypeChecker
     }
 
     private List<ObjectProperty> ResolveTraitProperties(List<DeclareFunctionSignature> signatures) =>
-    (
-        from signature in signatures
-        let name = signature.Name.Text
-        let fnType = Visit(signature)
-        select new ObjectProperty(false, name, fnType)
-    ).ToList();
+        signatures.ConvertAll(s => new ObjectProperty(false, s.Name.Text, Visit(s)));
+
+    private List<ObjectProperty> ResolveInterfaceEvents(InterfaceSymbol symbol, List<EventDeclaration> eventDeclarations) =>
+        eventDeclarations.ConvertAll(e => new ObjectProperty(false, e.Name.Text, Visit(e)));
 
     private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
     {
