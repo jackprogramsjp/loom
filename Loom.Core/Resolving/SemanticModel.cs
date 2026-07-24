@@ -97,7 +97,14 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
             _ => (expression, [])
         };
 
-        if (names.Length == 0 || GetType(objectExpression) is not InterfaceType interfaceType)
+        if (names.Length == 0)
+            return null;
+
+        var objectType = GetType(objectExpression);
+        if (objectType is InstantiatedType instantiated)
+            objectType = instantiated.Expand();
+
+        if (objectType is not InterfaceType interfaceType)
             return null;
 
         var interfaceSymbol = FindDeclarationSymbol<InterfaceSymbol>(interfaceType.Name);
