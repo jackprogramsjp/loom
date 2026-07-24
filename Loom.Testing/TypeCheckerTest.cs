@@ -778,6 +778,85 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Infers_GenericFunctionArgument_FromExpectedParameterType()
+    {
+        const string source = """
+            let numbers = [1, 2, 3, 4];
+            fn map<T, U>(array: T[], converter: fn(e: T): U): U[] {
+              let new_array: U[mut] = mut [];
+              for v : array
+                new_array.push(converter(v));
+
+              return new_array;
+            }
+
+            fn id<T>(n: T) -> n;
+            map(numbers, id);
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void Infers_GenericFunctionArgument_ResultTypeIsPrecise()
+    {
+        const string source = """
+            let numbers = [1, 2, 3, 4];
+            fn map<T, U>(array: T[], converter: fn(e: T): U): U[] {
+              let new_array: U[mut] = mut [];
+              for v : array
+                new_array.push(converter(v));
+
+              return new_array;
+            }
+
+            fn id<T>(n: T) -> n;
+            let result: number[] = map(numbers, id);
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericFunctionArgument_InferredTypeViolatesConstraint()
+    {
+        const string source = """
+            fn map<T, U>(array: T[], converter: fn(e: T): U): U[] {
+              let new_array: U[mut] = mut [];
+              for v : array
+                new_array.push(converter(v));
+
+              return new_array;
+            }
+
+            fn identity<T: string>(x: T) -> x;
+            let numbers = [1, 2, 3];
+            map(numbers, identity);
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type 'fn<T: string>(T: string): T: string' is not assignable to type 'fn(number): number'."
+        );
+    }
+
+    [Fact]
+    public void Allows_GenericFunction_UsedAsPlainValue_NotAsArgument()
+    {
+        const string source = """
+            fn id<T>(n: T) -> n;
+            print(id::<number>(5));
+            print(id(5));
+            let f = id;
+            print(f::<string>("hi"));
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
     public void ThrowsFor_Indexer_Override()
     {
         const string source = """
