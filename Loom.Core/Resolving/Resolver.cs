@@ -4,6 +4,7 @@ using Loom.Core.Parsing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
 using Loom.Core.TypeChecking;
+using Loom.Luau;
 using Attribute = Loom.Core.Parsing.AST.Attribute;
 
 namespace Loom.Core.Resolving;
@@ -689,6 +690,15 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         AddToLookup(symbol);
         AddDeclaration(symbol);
+        if (LuauFactory.Keywords.Contains(symbol.Name))
+        {
+            _diagnostics.Error(
+                symbol.Declaration,
+                InternalCodes.ReservedLuauKeyword,
+                $"'{symbol.Name}' is a reserved Luau keyword and cannot be used as a declaration name."
+            );
+        }
+
         if (TypeChecker.EmitDebugDiagnostics)
             _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
 

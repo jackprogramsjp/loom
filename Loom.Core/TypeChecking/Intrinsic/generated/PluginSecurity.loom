@@ -8294,7 +8294,7 @@ declare interface PluginGui: LayerCollector {
 	[luau_name("Title")]
 	mut title: string;
 	[luau_name("BindToClose"), luau_method]
-	bind_to_close: fn(function: fn: void?): void;
+	bind_to_close: fn(callback: fn: void?): void;
 	[luau_name("GetRelativeMousePosition"), luau_method]
 	get_relative_mouse_position: fn: Vector2;
 	[luau_name("PluginDragDropped")]

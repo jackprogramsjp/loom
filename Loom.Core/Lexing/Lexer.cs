@@ -24,7 +24,7 @@ public sealed class Lexer(SourceFile file)
             significantTokens.Add(token);
         }
 
-        return new LexerResult(file, significantTokens, allTokens, _diagnostics);
+        return new LexerResult(significantTokens, allTokens, _diagnostics);
     }
 
     private IEnumerable<Token> GetTokens()

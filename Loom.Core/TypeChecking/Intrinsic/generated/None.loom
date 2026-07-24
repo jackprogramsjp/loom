@@ -9448,15 +9448,15 @@ declare interface DragDetector: ClickDetector {
 	[luau_name("WorldSecondaryAxis")]
 	mut world_secondary_axis: Vector3;
 	[luau_name("AddConstraintFunction"), luau_method]
-	add_constraint_function: fn(priority: number, function: fn: void): ScriptConnection;
+	add_constraint_function: fn(priority: number, callback: fn: void): ScriptConnection;
 	[luau_name("GetReferenceFrame"), luau_method]
 	get_reference_frame: fn: CFrame;
 	[luau_name("RestartDrag"), luau_method]
 	restart_drag: fn: void;
 	[luau_name("SetDragStyleFunction"), luau_method]
-	set_drag_style_function: fn(function: fn: void): void;
+	set_drag_style_function: fn(callback: fn: void): void;
 	[luau_name("SetPermissionPolicyFunction"), luau_method]
-	set_permission_policy_function: fn(function: fn: void): void;
+	set_permission_policy_function: fn(callback: fn: void): void;
 	[luau_name("DragContinue")]
 	event drag_continue(playerWhoDragged: Player, cursorRay: Ray, viewFrame: CFrame, vrInputFrame: CFrame?, isModeSwitchKeyDown: bool);
 	[luau_name("DragEnd")]
@@ -14077,9 +14077,9 @@ declare interface Model: PVInstance {
 #: A logical grouping of datamodel nodes which can enable scripts to run in parallel. :#
 declare interface Actor: Model {
 	[luau_name("BindToMessage"), luau_method]
-	bind_to_message: fn(topic: string, function: fn: void): ScriptConnection;
+	bind_to_message: fn(topic: string, callback: fn: void): ScriptConnection;
 	[luau_name("BindToMessageParallel"), luau_method]
-	bind_to_message_parallel: fn(topic: string, function: fn: void): ScriptConnection;
+	bind_to_message_parallel: fn(topic: string, callback: fn: void): ScriptConnection;
 	[luau_name("SendMessage"), luau_method]
 	send_message: fn(topic: string, message: unknown): void;
 }
@@ -15199,9 +15199,9 @@ declare interface RunService: Instance {
 	[luau_name("FrameNumber")]
 	frame_number: number;
 	[luau_name("BindToRenderStep"), luau_method]
-	bind_to_render_step: fn(name: string, priority: number, function: fn: void): void;
+	bind_to_render_step: fn(name: string, priority: number, callback: fn: void): void;
 	[luau_name("BindToSimulation"), luau_method]
-	bind_to_simulation: fn(function: fn: void, frequency: Enum["StepFrequency"]?, priority: number?): ScriptConnection;
+	bind_to_simulation: fn(callback: fn: void, frequency: Enum["StepFrequency"]?, priority: number?): ScriptConnection;
 	[luau_name("GetPredictionStatus"), luau_method]
 	get_prediction_status: fn(context: Instance): Enum["PredictionStatus"];
 	[luau_name("IsClient"), luau_method]
@@ -15466,7 +15466,7 @@ declare interface DataModel: ServiceProvider {
 	[luau_name("RunService")]
 	run_service: RunService?;
 	[luau_name("BindToClose"), luau_method]
-	bind_to_close: fn(function: fn: void): void;
+	bind_to_close: fn(callback: fn: void): void;
 	[luau_name("GetMessage"), luau_method]
 	get_message: fn: string;
 	[luau_name("GetRemoteBuildMode"), luau_method]
@@ -16866,13 +16866,13 @@ declare interface UIDragDetector: UIComponent {
 	[luau_name("UIDragSpeedAxisMapping")]
 	mut ui_drag_speed_axis_mapping: Enum["UIDragSpeedAxisMapping"];
 	[luau_name("AddConstraintFunction"), luau_method]
-	add_constraint_function: fn(priority: number, function: fn: void): ScriptConnection;
+	add_constraint_function: fn(priority: number, callback: fn: void): ScriptConnection;
 	[luau_name("GetReferencePosition"), luau_method]
 	get_reference_position: fn: UDim2;
 	[luau_name("GetReferenceRotation"), luau_method]
 	get_reference_rotation: fn: number;
 	[luau_name("SetDragStyleFunction"), luau_method]
-	set_drag_style_function: fn(function: fn: void): void;
+	set_drag_style_function: fn(callback: fn: void): void;
 	[luau_name("DragContinue")]
 	event drag_continue(inputPosition: Vector2);
 	[luau_name("DragEnd")]
@@ -16928,7 +16928,7 @@ declare interface UIGridStyleLayout: UILayout {
 	[luau_name("ApplyLayout"), luau_method]
 	apply_layout: fn: void;
 	[luau_name("SetCustomSortFunction"), luau_method]
-	set_custom_sort_function: fn(function: fn: void?): void;
+	set_custom_sort_function: fn(callback: fn: void?): void;
 }
 
 declare interface UIGridLayout: UIGridStyleLayout {

@@ -439,6 +439,20 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Allows_ReservedLuauKeywordAsEnumMemberName()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Test { until, A }");
+        Assert.Null(diagnostics.Find(d => d.Code == InternalCodes.ReservedLuauKeyword));
+    }
+
+    [Fact]
+    public void Allows_ReservedLuauKeywordAsStringEnumMemberName()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Test: string { until = \"until\" }");
+        Assert.Null(diagnostics.Find(d => d.Code == InternalCodes.ReservedLuauKeyword));
+    }
+
+    [Fact]
     public void ThrowsFor_IfStatement_NonBooleanCondition()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("if 42 { 1 }");

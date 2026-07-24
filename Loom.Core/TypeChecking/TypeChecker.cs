@@ -1089,15 +1089,30 @@ public sealed partial class TypeChecker
 
         var possibleReturnTypes = functionDeclaration.Body is ExpressionBody body
             ? [Visit(body)]
-            : functionDeclaration.Body
-                .GetDescendants<Return>()
-                .Where(returnStatement => returnStatement.FirstAncestorOfType<FunctionDeclaration>() == functionDeclaration)
-                .Select(Visit)
-                .ToList();
+            : GetOwnReturnStatements(functionDeclaration.Body).Select(Visit).ToList();
 
         return possibleReturnTypes.Count == 0
             ? Types.PrimitiveType.Void
             : TypeSimplifier.Simplify(new Types.UnionType(possibleReturnTypes));
+    }
+
+    private static List<Return> GetOwnReturnStatements(Node node)
+    {
+        var result = new List<Return>();
+        CollectOwnReturnStatements(node, result);
+        return result;
+    }
+
+    private static void CollectOwnReturnStatements(Node node, List<Return> result)
+    {
+        foreach (var child in node.Children)
+        {
+            if (child is Return returnStatement)
+                result.Add(returnStatement);
+
+            if (child is not FunctionDeclaration)
+                CollectOwnReturnStatements(child, result);
+        }
     }
 
     private Type ResolveHoistedType(Symbol symbol)

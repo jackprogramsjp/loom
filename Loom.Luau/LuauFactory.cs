@@ -8,6 +8,13 @@ public static class LuauFactory
 
     public static readonly Identifier Self = new("self");
 
+    public static readonly HashSet<string> Keywords =
+    [
+        "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
+        "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
+        "true", "until", "while", "continue"
+    ];
+
     public static QualifiedTypeName QualifyRuntimeType(TypeName typeName) => new([RuntimeImportName], typeName);
 
     public static Call Bit32Call(string name, List<LuauExpression> arguments) => LibraryCall("bit32", [name], arguments);

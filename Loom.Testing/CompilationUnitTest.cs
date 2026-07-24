@@ -24,8 +24,9 @@ public class CompilationUnitTest
         var path = config.Files.OutputDirectory;
         Directory.Delete(path, true);
         Directory.CreateDirectory(path);
+        File.Create(Path.Combine(path, ".gitkeep"));
         
-        var luauFiles = Directory.EnumerateFiles(path);
+        var luauFiles = Directory.EnumerateFiles(path, "*.luau", SearchOption.TopDirectoryOnly);
         Assert.Empty(luauFiles);
     }
     
