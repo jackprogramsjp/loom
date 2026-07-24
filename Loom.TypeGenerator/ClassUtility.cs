@@ -70,32 +70,37 @@ internal static class ClassUtility
             ? value
             : SafeName(name);
 
+    private static readonly Dictionary<MemberBase, Security> _propertySecurityCache = [];
+
     public static Security GetSecurity(string className, MemberBase member)
     {
-        if (!Constants.SecurityOverrides.TryGetValue(className, out var classSecurity))
-            return member.MemberType switch
-            {
-                "Callback" => new Security { Read = "NotAccessibleSecurity", Write = member.Security?.ToString()! },
-                "Function" => new Security { Read = member.Security?.ToString()!, Write = "NotAccessibleSecurity" },
-                "Event" => new Security { Read = member.Security?.ToString()!, Write = "NotAccessibleSecurity" },
-                "Property" => JsonSerializer.Deserialize<Security>(member.Security?.ToString()!)!,
-                _ => throw new NotSupportedException($"Member type not supported: {member.MemberType}")
-            };
-
-        if (member.Name != null && classSecurity!.TryGetValue(member.Name, out var securityOverride)) return securityOverride;
+        if (Constants.SecurityOverrides.TryGetValue(className, out var classSecurity)
+            && member.Name != null
+            && classSecurity!.TryGetValue(member.Name, out var securityOverride))
+            return securityOverride;
 
         return member.MemberType switch
         {
             "Callback" => new Security { Read = "NotAccessibleSecurity", Write = member.Security?.ToString()! },
             "Function" => new Security { Read = member.Security?.ToString()!, Write = "NotAccessibleSecurity" },
             "Event" => new Security { Read = member.Security?.ToString()!, Write = "NotAccessibleSecurity" },
-            "Property" => JsonSerializer.Deserialize<Security>(member.Security?.ToString()!)!,
+            "Property" => GetPropertySecurity(member),
             _ => throw new NotSupportedException($"Member type not supported: {member.MemberType}")
         };
     }
 
-    public static bool HasTag(MemberBase container, string tag) => container.Tags != null && container.Tags.Select(t => t.ToString()).Contains(tag);
-    public static bool HasTag(Class container, string tag) => container.Tags != null && container.Tags.Select(t => t.ToString()).Contains(tag);
+    private static Security GetPropertySecurity(MemberBase member)
+    {
+        if (_propertySecurityCache.TryGetValue(member, out var cached))
+            return cached;
+
+        var security = JsonSerializer.Deserialize<Security>(member.Security?.ToString()!)!;
+        _propertySecurityCache[member] = security;
+        return security;
+    }
+
+    public static bool HasTag(MemberBase container, string tag) => container.Tags != null && container.Tags.Any(t => t.ToString() == tag);
+    public static bool HasTag(Class container, string tag) => container.Tags != null && container.Tags.Any(t => t.ToString() == tag);
     public static string FormatComment(string s) => "#:\n" + string.Join('\n', s.Trim().Split('\n')) + "\n:#";
 
     public static string SafeName(string? name) =>
