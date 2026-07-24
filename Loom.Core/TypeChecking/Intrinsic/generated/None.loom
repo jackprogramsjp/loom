@@ -8962,9 +8962,7 @@ declare interface RemoteEvent: BaseRemoteEvent {
 	event on_server_event(player: Player, arguments: unknown);
 }
 
-#:
-<string name="summary">Same as RemoteEvents but events are sent unreliably (neither reliably nor ordered).</string>
-:#
+#: Same as RemoteEvents but events are sent unreliably (neither reliably nor ordered). :#
 declare interface UnreliableRemoteEvent: BaseRemoteEvent {
 	_is_creatable: true;
 	[luau_name("FireAllClients"), luau_method]
@@ -9625,9 +9623,7 @@ declare interface AlignPosition: Constraint {
 	_is_creatable: true;
 	[luau_name("ApplyAtCenterOfMass")]
 	mut apply_at_center_of_mass: bool;
-	#:
-<string name="summary">Selects the mode for force limit. Options Uniform or Per-component</string>
-:#
+	#: Selects the mode for force limit. Options Uniform or Per-component :#
 	[luau_name("ForceLimitMode")]
 	mut force_limit_mode: Enum["ForceLimitMode"];
 	[luau_name("ForceRelativeTo")]
@@ -9756,37 +9752,27 @@ declare interface LinearVelocity: Constraint {
 	mut force_limit_mode: Enum["ForceLimitMode"];
 	[luau_name("ForceLimitsEnabled")]
 	mut force_limits_enabled: bool;
-	#:
-<string name="summary">Direction of the line used to contraint the velocity to a line.</string>
-:#
+	#: Direction of the line used to contraint the velocity to a line. :#
 	[luau_name("LineDirection")]
 	mut line_direction: Vector3;
-	#:
-<string name="summary">The value of the constraint velocity along a line.</string>
-:#
+	#: The value of the constraint velocity along a line. :#
 	[luau_name("LineVelocity")]
 	mut line_velocity: number;
 	[luau_name("MaxAxesForce")]
 	mut max_axes_force: Vector3;
-	#:
-<string name="summary">Maximum force magnitude that is applied to satisfy the constraint. </string>
-:#
+	#: Maximum force magnitude that is applied to satisfy the constraint.  :#
 	[luau_name("MaxForce")]
 	mut max_force: number;
 	[luau_name("MaxPlanarAxesForce")]
 	mut max_planar_axes_force: Vector2;
-	#:
-<string name="summary">Velocity coefficients in the constraint plane.</string>
-:#
+	#: Velocity coefficients in the constraint plane. :#
 	[luau_name("PlaneVelocity")]
 	mut plane_velocity: Vector2;
 	[luau_name("PrimaryTangentAxis")]
 	mut primary_tangent_axis: Vector3;
 	[luau_name("ReactionForceEnabled")]
 	mut reaction_force_enabled: bool;
-	#:
-<string name="summary">Selects whether the velocity orientation is relative to attachment0, attachment1 or the world. </string>
-:#
+	#: Selects whether the velocity orientation is relative to attachment0, attachment1 or the world.  :#
 	[luau_name("RelativeTo")]
 	mut relative_to: Enum["ActuatorRelativeTo"];
 	[luau_name("SecondaryTangentAxis")]
@@ -14088,9 +14074,7 @@ declare interface Model: PVInstance {
 	move: fn(location: Vector3): void;
 }
 
-#:
-<string name="summary">A logical grouping of datamodel nodes which can enable scripts to run in parallel.</string>
-:#
+#: A logical grouping of datamodel nodes which can enable scripts to run in parallel. :#
 declare interface Actor: Model {
 	[luau_name("BindToMessage"), luau_method]
 	bind_to_message: fn(topic: string, function: fn: void): ScriptConnection;

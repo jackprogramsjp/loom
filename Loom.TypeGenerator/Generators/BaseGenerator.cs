@@ -32,6 +32,7 @@ internal abstract class BaseGenerator(string filePath, ReflectionMetadataReader 
         Write();
     }
 
+    protected void WriteList(IEnumerable<string> enumerable) => WriteList(enumerable, s => s);
     protected void WriteList<T>(IEnumerable<T> enumerable, Func<T, string> renderElement)
     {
         foreach (var item in enumerable)

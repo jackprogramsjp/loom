@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Loom.Core.TypeChecking.Types;
 
 public abstract record ObjectBodyType(bool IsMutable, Type ValueType);
@@ -24,7 +26,6 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public int Version { get; private set; } = properties.Count;
 
     private int _propertyMapVersion = -1;
-    private Dictionary<string, ObjectProperty>? _propertyMap;
     private int _hashVersion = -1;
     private int _cachedHash;
 
@@ -32,16 +33,15 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     {
         get
         {
-            if (_propertyMap == null || _propertyMapVersion != Version)
-            {
-                _propertyMap = new Dictionary<string, ObjectProperty>(Properties.Count);
-                foreach (var property in Properties)
-                    _propertyMap[property.Name] = property;
+            if (field != null && _propertyMapVersion == Version)
+                return field;
 
-                _propertyMapVersion = Version;
-            }
+            field = new Dictionary<string, ObjectProperty>(Properties.Count);
+            foreach (var property in Properties)
+                field[property.Name] = property;
 
-            return _propertyMap;
+            _propertyMapVersion = Version;
+            return field;
         }
     }
 
@@ -86,22 +86,22 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
     public override Type PropertyKeyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(Type (p) => new LiteralType(p.Name))));
     public Type PropertyUnion() => TypeSimplifier.Simplify(new UnionType(Properties.ConvertAll(p => p.ValueType)));
 
+    [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
     public override int GetHashCode()
     {
-        if (_hashVersion != Version)
-        {
-            var hash = new HashCode();
-            hash.Add(Properties.Count);
-            foreach (var property in Properties.OrderBy(p => p.Name, StringComparer.Ordinal))
-            {
-                hash.Add(property.Name);
-                hash.Add(property.IsMutable);
-            }
+        if (_hashVersion == Version)
+            return _cachedHash;
 
-            _cachedHash = hash.ToHashCode();
-            _hashVersion = Version;
+        var hash = new HashCode();
+        hash.Add(Properties.Count);
+        foreach (var property in Properties.OrderBy(p => p.Name, StringComparer.Ordinal))
+        {
+            hash.Add(property.Name);
+            hash.Add(property.IsMutable);
         }
 
+        _cachedHash = hash.ToHashCode();
+        _hashVersion = Version;
         return _cachedHash;
     }
 

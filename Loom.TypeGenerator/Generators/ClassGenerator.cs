@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Loom.TypeGenerator.ApiTypes;
 
@@ -35,7 +34,7 @@ internal sealed class ClassGenerator(
         var classesToGenerate = rbxClasses
             .Where(rbxClass => !Constants.DirectClassBlacklist.Contains(rbxClass.Name) && ShouldGenerateClass(rbxClass))
             .ToArray();
-        
+
         GenerateClasses(classesToGenerate);
         WriteContentsOfFile("roblox_ext.loom");
     }
@@ -60,9 +59,12 @@ internal sealed class ClassGenerator(
         {
             case true:
             {
-                var description = !string.IsNullOrEmpty(rbxClass.Description)
-                    ? rbxClass.Description
-                    : Metadata.ReadClassDescription(rbxClass.Name);
+                var description = (
+                        !string.IsNullOrEmpty(rbxClass.Description)
+                            ? rbxClass.Description
+                            : Metadata.ReadClassDescription(rbxClass.Name)
+                    )
+                    .Split('\n');
 
                 WriteDescription(description);
                 break;
@@ -172,18 +174,26 @@ internal sealed class ClassGenerator(
         WriteMetadata(description, attributes);
         Write($"mut {snakeName}: fn{parameterList}: {returnType};");
     }
-    
-    private void WriteMetadata(string description, string? attributes)
+
+    private void WriteMetadata(string[] descriptionLines, string? attributes)
     {
-        WriteDescription(description);
+        WriteDescription(descriptionLines);
         if (attributes != null)
             Write(attributes);
     }
 
-    private void WriteDescription(string description)
+    private void WriteDescription(string[] descriptionLines)
     {
-        if (!string.IsNullOrEmpty(description))
-            Write(ClassUtility.FormatComment(description));
+        if (descriptionLines is [""]) return;
+        if (descriptionLines.Length == 1)
+        {
+            Write($"#: {descriptionLines[0]} :#");
+            return;
+        }
+
+        Write("#:");
+        WriteList(descriptionLines);
+        Write(":#");
     }
 
     private string GenerateParameterList(Parameter[] parameters)
@@ -193,7 +203,7 @@ internal sealed class ClassGenerator(
         {
             var index = parameters.IndexOf(parameter);
             var name = parameterNames.ElementAtOrDefault(index) ?? $"arg{index}";
-            parameter.Name = ClassUtility.SafeRename(name) ?? name;
+            parameter.Name = ClassUtility.SafeRename(name);
         }
 
         return parameters.Length > 0
@@ -248,7 +258,7 @@ internal sealed class ClassGenerator(
         return parameterNames;
     }
 
-    private (string Name, string Description) GetMemberNameAndDescription(MemberBase member, Class rbxClass)
+    private (string Name, string[] DescriptionLines) GetMemberNameAndDescription(MemberBase member, Class rbxClass)
     {
         var name = ClassUtility.SafeName(member.Name);
         Func<string, string, string>? readDescription = member switch
@@ -264,7 +274,7 @@ internal sealed class ClassGenerator(
             ? member.Description
             : readDescription(rbxClass.Name, name);
 
-        return (name, description);
+        return (name, description.Split('\n'));
     }
 
     private Class? GetSuperclass(Class rbxClass) =>
@@ -348,23 +358,19 @@ internal sealed class ClassGenerator(
         var builder = new StringBuilder();
         for (var i = 0; i < name.Length; i++)
         {
-            var c = name[i];
-
-            if (char.IsUpper(c))
+            var ch = name[i];
+            if (char.IsUpper(ch))
             {
-                var hasPrev = i > 0;
+                var hasPrevious = i > 0;
                 var hasNext = i + 1 < name.Length;
-
-                if (hasPrev && (char.IsLower(name[i - 1]) || char.IsDigit(name[i - 1]) || (hasNext && char.IsLower(name[i + 1]))))
-                {
+                if (hasPrevious && (char.IsLower(name[i - 1]) || char.IsDigit(name[i - 1]) || hasNext && char.IsLower(name[i + 1])))
                     builder.Append('_');
-                }
 
-                builder.Append(char.ToLowerInvariant(c));
+                builder.Append(char.ToLowerInvariant(ch));
             }
             else
             {
-                builder.Append(c);
+                builder.Append(ch);
             }
         }
 
