@@ -126,8 +126,8 @@ public sealed partial class LuauGenerator
             : new Luau.AST.PropertyAccess(target, names);
 
     /// <summary>
-    ///     Determines whether the given expression refers to a trait method that must be called
-    ///     with Luau's ':' method-call syntax, as opposed to a plain function value.
+    /// Determines whether the given expression refers to a trait method that must be called
+    /// with Luau's ':' method-call syntax, as opposed to a plain function value.
     /// </summary>
     private bool IsMethodReference(Expression expression) =>
         _semanticModel.TryGetIntrinsicAttribute(expression, "luau_method", out _)

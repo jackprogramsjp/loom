@@ -28,7 +28,7 @@ public class LuauGeneratorTest
     [InlineData("declare mut x: number;")]
     [InlineData("declare fn x(): number;")]
     public void Generates_Nothing(string source) => Assert.Empty(Utility.GetLuauAST(source).Statements);
-
+    
     [Theory]
     [InlineData("##hello!")]
     [InlineData("#:hello!:#")]
@@ -172,7 +172,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray()
     {
-        var luauTree = Utility.GetLuauAST("for x : [1, 2, 3] { }", true);
+        var luauTree = Utility.GetLuauAST("for x : [1, 2, 3] { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
         Assert.Equal(2, forStmt.Names.Count);
@@ -185,7 +185,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray_WithBlockBody()
     {
-        var luauTree = Utility.GetLuauAST("for x : [1] { let y = x; }", true);
+        var luauTree = Utility.GetLuauAST("for x : [1] { let y = x; }", typeCheck: true);
         Assert.Single(luauTree.Statements);
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
         Assert.Single(forStmt.Body.Statements);
@@ -196,7 +196,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray_WithBreak()
     {
-        var luauTree = Utility.GetLuauAST("for x : [1] { break }", true);
+        var luauTree = Utility.GetLuauAST("for x : [1] { break }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
@@ -207,7 +207,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverArray_WithContinue()
     {
-        var luauTree = Utility.GetLuauAST("for x : [1] { continue }", true);
+        var luauTree = Utility.GetLuauAST("for x : [1] { continue }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var forStmt = Assert.IsType<ForStatement>(luauTree.Statements.First());
@@ -218,7 +218,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeLiteral()
     {
-        var luauTree = Utility.GetLuauAST("for i : 0..5 { }", true);
+        var luauTree = Utility.GetLuauAST("for i : 0..5 { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
@@ -235,7 +235,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeLiteral_Descending()
     {
-        var luauTree = Utility.GetLuauAST("for i : 5..0 { }", true);
+        var luauTree = Utility.GetLuauAST("for i : 5..0 { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.First());
@@ -255,7 +255,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeLiteral_ComplexStep()
     {
-        var luauTree = Utility.GetLuauAST("let a = 1; let b = 10; for i : a..b { }", true);
+        var luauTree = Utility.GetLuauAST("let a = 1; let b = 10; for i : a..b { }", typeCheck: true);
         Assert.Equal(3, luauTree.Statements.Count);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.Last());
@@ -274,7 +274,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ForLoop_OverRangeVariable()
     {
-        var luauTree = Utility.GetLuauAST("let r = 1..10; for i : r { }", true);
+        var luauTree = Utility.GetLuauAST("let r = 1..10; for i : r { }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         var numericFor = Assert.IsType<NumericForStatement>(luauTree.Statements.Last());
@@ -310,7 +310,7 @@ public class LuauGeneratorTest
                     }
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         var outerFor = Assert.IsType<ForStatement>(luauTree.Statements.Last());
@@ -423,7 +423,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_AfterStatement_WithVariableReferenceInBody()
     {
-        var luauTree = Utility.GetLuauAST("let x = 42; after 1s { let y = x + 69; print(y) }", true);
+        var luauTree = Utility.GetLuauAST("let x = 42; after 1s { let y = x + 69; print(y) }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         var varDecl = Assert.IsType<ConstVariable>(luauTree.Statements.First());
@@ -447,7 +447,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_AfterStatement_WithReturnInside()
     {
-        var luauTree = Utility.GetLuauAST("fn test() { after 1s { return 42 } }", true);
+        var luauTree = Utility.GetLuauAST("fn test() { after 1s { return 42 } }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var fn = Assert.IsType<Function>(luauTree.Statements.First());
@@ -538,12 +538,11 @@ public class LuauGeneratorTest
         var outerContinue = Assert.IsType<Continue>(outerBody.Statements[1]);
         Assert.Equal("continue", outerContinue.Render());
     }
-
+    
     [Fact]
     public void Generates_Interface_With_Constraint_And_Implementation()
     {
-        var luauTree = Utility.GetLuauAST(
-            """
+        var luauTree = Utility.GetLuauAST("""
             trait Display { fn display(): void; }
 
             interface Base {
@@ -555,12 +554,10 @@ public class LuauGeneratorTest
             implement Display for Container {
                 fn display() -> print(value);
             }
-            """,
-            true
-        );
+            """, typeCheck: true);
 
         Assert.Equal(7, luauTree.Statements.Count);
-
+        
         var alias = Assert.IsType<TypeAlias>(luauTree.Statements[2]);
         var intersection = Assert.IsType<IntersectionType>(alias.Type);
         Assert.Equal(3, intersection.Types.Count);
@@ -590,7 +587,7 @@ public class LuauGeneratorTest
 
             let container = new Container { value: 69 };
             """,
-            true
+            typeCheck: true
         );
 
         Assert.Equal(12, luauTree.Statements.Count);
@@ -626,7 +623,7 @@ public class LuauGeneratorTest
             let container = new Container { value: 69 };
             container.display(420);
             """,
-            true
+            typeCheck: true
         );
 
         Assert.Equal(8, luauTree.Statements.Count);
@@ -732,7 +729,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_TraitDeclaration()
     {
-        var luauTree = Utility.GetLuauAST("trait T { fn method(): number }", true);
+        var luauTree = Utility.GetLuauAST("trait T { fn method(): number }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -756,7 +753,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_TraitDeclaration_WithParameters()
     {
-        var luauTree = Utility.GetLuauAST("trait T { fn method(x: number, y: string): bool }", true);
+        var luauTree = Utility.GetLuauAST("trait T { fn method(x: number, y: string): bool }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         var prop = tableType.Properties.Single();
@@ -771,7 +768,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_TraitDeclaration_Generic()
     {
-        var luauTree = Utility.GetLuauAST("trait Trait<T> { fn method(value: T): T }", true);
+        var luauTree = Utility.GetLuauAST("trait Trait<T> { fn method(value: T): T }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         Assert.Single(typeAlias.TypeParameters.Parameters);
 
@@ -801,7 +798,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_TraitDeclaration_MultipleMethods()
     {
-        var luauTree = Utility.GetLuauAST("trait T { fn a(): number; fn b(): string }", true);
+        var luauTree = Utility.GetLuauAST("trait T { fn a(): number; fn b(): string }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         Assert.Equal(2, tableType.Properties.Count);
@@ -813,7 +810,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceInvocation_EmptyBody()
     {
-        var luauTree = Utility.GetLuauAST("interface I { } new I {}", true);
+        var luauTree = Utility.GetLuauAST("interface I { } new I {}", typeCheck: true);
         Assert.True(luauTree.Statements.Count >= 2);
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         var table = Assert.IsType<Table>(variable.Initializer);
@@ -823,35 +820,35 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceInvocation_PropertyInitializer()
     {
-        var luauTree = Utility.GetLuauAST("interface I { x: number } new I { x: 1 }", true);
+        var luauTree = Utility.GetLuauAST("interface I { x: number } new I { x: 1 }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
-
+        
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         var table = Assert.IsType<Table>(variable.Initializer);
         Assert.Single(table.Initializers);
-
+        
         var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
         Assert.Equal("x", propInit.PropertyName);
-
+        
         var value = Assert.IsType<NumberLiteral>(propInit.Value);
         Assert.Equal(1, value.Value);
     }
-
+    
     [Fact]
     public void Generates_InterfaceInvocation_ShorthandPropertyInitializer()
     {
-        var luauTree = Utility.GetLuauAST("interface I { x: number } let x = 69; new I { x }", true);
+        var luauTree = Utility.GetLuauAST("interface I { x: number } let x = 69; new I { x }", typeCheck: true);
         Assert.Equal(3, luauTree.Statements.Count);
-
+        
         var propVariable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         Assert.Equal("x", propVariable.Name);
         Assert.Null(propVariable.DeclaredType);
         Assert.IsType<NumberLiteral>(propVariable.Initializer);
-
+        
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
         var table = Assert.IsType<Table>(variable.Initializer);
         Assert.Single(table.Initializers);
-
+        
         var propInit = Assert.IsType<PropertyTableInitializer>(table.Initializers[0]);
         Assert.Equal("x", propInit.PropertyName);
         Assert.Equal("x", Assert.IsType<Identifier>(propInit.Value).Name);
@@ -860,7 +857,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceInvocation_IndexInitializer()
     {
-        var luauTree = Utility.GetLuauAST("interface I { [number]: string } new I { [0]: 'hello' }", true);
+        var luauTree = Utility.GetLuauAST("interface I { [number]: string } new I { [0]: 'hello' }", typeCheck: true);
         Assert.True(luauTree.Statements.Count >= 2);
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         var table = Assert.IsType<Table>(variable.Initializer);
@@ -875,7 +872,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceInvocation_MixedInitializers()
     {
-        var luauTree = Utility.GetLuauAST("interface I { x: number, [string]: bool } new I { x: 1, ['key']: true }", true);
+        var luauTree = Utility.GetLuauAST("interface I { x: number, [string]: bool } new I { x: 1, ['key']: true }", typeCheck: true);
         Assert.True(luauTree.Statements.Count >= 2);
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
         var table = Assert.IsType<Table>(variable.Initializer);
@@ -892,7 +889,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceInvocation_ChainedProperty()
     {
-        var luauTree = Utility.GetLuauAST("interface I { x: number } let _ = new I { x: 1 }.x", true);
+        var luauTree = Utility.GetLuauAST("interface I { x: number } let _ = new I { x: 1 }.x", typeCheck: true);
         Assert.True(luauTree.Statements.Count >= 2);
 
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements[1]);
@@ -931,7 +928,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_Declared_InterfaceDeclaration()
     {
-        var luauTree = Utility.GetLuauAST("declare interface I;", true);
+        var luauTree = Utility.GetLuauAST("declare interface I;", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -946,7 +943,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_NoBody()
     {
-        var luauTree = Utility.GetLuauAST("interface I;", true);
+        var luauTree = Utility.GetLuauAST("interface I;", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -1048,7 +1045,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_ElementAccess_StringIndex()
     {
-        var luauTree = Utility.GetLuauAST("interface I { [string]: number } let x = none as never as I; x['key']", true);
+        var luauTree = Utility.GetLuauAST("interface I { [string]: number } let x = none as never as I; x['key']", typeCheck: true);
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.Last());
         var propertyAccess = Assert.IsType<PropertyAccess>(variable.Initializer);
         var target = Assert.IsType<Identifier>(propertyAccess.Target);
@@ -1059,7 +1056,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_PropertyAccessAssignment()
     {
-        var luauTree = Utility.GetLuauAST("interface I { mut prop: number } let obj = none as never as I; obj.prop = 42", true);
+        var luauTree = Utility.GetLuauAST("interface I { mut prop: number } let obj = none as never as I; obj.prop = 42", typeCheck: true);
         Assert.True(luauTree.Statements.Count >= 3);
         var exprStmt = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
         var assignment = Assert.IsType<BinaryOperator>(exprStmt.Expression);
@@ -1073,7 +1070,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_QualifiedNameAssignment()
     {
-        var luauTree = Utility.GetLuauAST("interface Mod { mut value: number } let mod = none as never as Mod; mod.value = 99", true);
+        var luauTree = Utility.GetLuauAST("interface Mod { mut value: number } let mod = none as never as Mod; mod.value = 99", typeCheck: true);
         Assert.True(luauTree.Statements.Count >= 3);
         var exprStmt = Assert.IsType<ExpressionStatement>(luauTree.Statements.Last());
         var assignment = Assert.IsType<BinaryOperator>(exprStmt.Expression);
@@ -1162,7 +1159,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_Empty()
     {
-        var luauTree = Utility.GetLuauAST("interface I { }", true);
+        var luauTree = Utility.GetLuauAST("interface I { }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -1177,7 +1174,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_WithProperties()
     {
-        var luauTree = Utility.GetLuauAST("interface I { x: number, y: string }", true);
+        var luauTree = Utility.GetLuauAST("interface I { x: number, y: string }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -1200,7 +1197,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_WithMutableProperty()
     {
-        var luauTree = Utility.GetLuauAST("interface I { mut count: number }", true);
+        var luauTree = Utility.GetLuauAST("interface I { mut count: number }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -1214,7 +1211,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_WithIndexer()
     {
-        var luauTree = Utility.GetLuauAST("interface I { [number]: string }", true);
+        var luauTree = Utility.GetLuauAST("interface I { [number]: string }", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -1231,7 +1228,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_WithStringIndexer()
     {
-        var luauTree = Utility.GetLuauAST("interface I { [string]: bool }", true);
+        var luauTree = Utility.GetLuauAST("interface I { [string]: bool }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         Assert.NotNull(tableType.Indexer);
@@ -1242,7 +1239,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_WithIndexerAndProperties()
     {
-        var luauTree = Utility.GetLuauAST("interface I { [number]: string, name: string, mut counter: number }", true);
+        var luauTree = Utility.GetLuauAST("interface I { [number]: string, name: string, mut counter: number }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
         Assert.NotNull(tableType.Indexer);
@@ -1254,7 +1251,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_WithSingleConstraint()
     {
-        var luauTree = Utility.GetLuauAST("interface Base {}; interface I : Base { }", true);
+        var luauTree = Utility.GetLuauAST("interface Base {}; interface I : Base { }", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
@@ -1272,7 +1269,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_WithMultipleConstraints()
     {
-        var luauTree = Utility.GetLuauAST("interface A {} interface B {} interface I : A, B { }", true);
+        var luauTree = Utility.GetLuauAST("interface A {} interface B {} interface I : A, B { }", typeCheck: true);
         Assert.Equal(3, luauTree.Statements.Count);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
@@ -1286,7 +1283,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_Generic()
     {
-        var luauTree = Utility.GetLuauAST("interface Container<T> { value: T }", true);
+        var luauTree = Utility.GetLuauAST("interface Container<T> { value: T }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         Assert.Single(typeAlias.TypeParameters.Parameters);
         Assert.Equal("T", typeAlias.TypeParameters.Parameters[0].Name);
@@ -1302,7 +1299,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_InterfaceDeclaration_GenericWithConstraintAndDefault()
     {
-        var luauTree = Utility.GetLuauAST("interface Repo<T: number = 42> { item: T }", true);
+        var luauTree = Utility.GetLuauAST("interface Repo<T: number = 42> { item: T }", typeCheck: true);
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements.Single());
         Assert.Single(typeAlias.TypeParameters.Parameters);
 
@@ -2430,7 +2427,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_StringConcatenation()
     {
-        var luauTree = Utility.GetLuauAST("'abc' + 'def'", true);
+        var luauTree = Utility.GetLuauAST("'abc' + 'def'", typeCheck: true);
         Assert.Single(luauTree.Statements);
 
         var variable = Assert.IsType<ConstVariable>(luauTree.Statements.First());
@@ -2478,11 +2475,11 @@ public class LuauGeneratorTest
         Assert.IsType<BooleanLiteral>(unary.Operand);
         Assert.Equal("not ", unary.Operator);
     }
-
+    
     [Fact]
     public void Generates_NameOf_ForType()
     {
-        var luauTree = Utility.GetLuauAST("type T = 69; nameof::<T>()", true);
+        var luauTree = Utility.GetLuauAST("type T = 69; nameof::<T>()", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         Assert.IsType<TypeAlias>(luauTree.Statements.First());
@@ -2494,7 +2491,7 @@ public class LuauGeneratorTest
     [Fact]
     public void Generates_NameOf()
     {
-        var luauTree = Utility.GetLuauAST("let x = 1; nameof(x)", true);
+        var luauTree = Utility.GetLuauAST("let x = 1; nameof(x)", typeCheck: true);
         Assert.Equal(2, luauTree.Statements.Count);
 
         Assert.IsType<ConstVariable>(luauTree.Statements.First());
@@ -2561,7 +2558,7 @@ public class LuauGeneratorTest
             abc -= handler;
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
         Assert.Equal(4, luauTree.Statements.Count);
 
         var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
@@ -2587,7 +2584,7 @@ public class LuauGeneratorTest
             abc -= handler;
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
         Assert.Equal(4, luauTree.Statements.Count);
 
         var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[2]);
@@ -2624,7 +2621,7 @@ public class LuauGeneratorTest
             my_event -= foo.execute;
             """;
 
-        var diagnostics = Utility.GetGeneratorDiagnostics(source, true);
+        var diagnostics = Utility.GetGeneratorDiagnostics(source, typeCheck: true);
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.AnonymousEventDisconnect,
@@ -2642,7 +2639,7 @@ public class LuauGeneratorTest
             abc -= handler;
             """;
 
-        var diagnostics = Utility.GetGeneratorDiagnostics(source, true);
+        var diagnostics = Utility.GetGeneratorDiagnostics(source, typeCheck: true);
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.UnresolvedEventDisconnect,
@@ -2663,7 +2660,7 @@ public class LuauGeneratorTest
             eo.abc -= handler;
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
         Assert.Equal(5, luauTree.Statements.Count);
 
         var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[3]);
@@ -2692,7 +2689,7 @@ public class LuauGeneratorTest
             eo.abc -= handler;
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
         Assert.Equal(5, luauTree.Statements.Count);
 
         var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[3]);
@@ -2725,7 +2722,7 @@ public class LuauGeneratorTest
             eo1.abc -= handler;
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
 
         Assert.Equal(7, luauTree.Statements.Count);
         var conn1Variable = Assert.IsType<ConstVariable>(luauTree.Statements[4]);
@@ -2756,7 +2753,7 @@ public class LuauGeneratorTest
             eo.consumer -= on_consumer;
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
 
         var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements[0]);
         var tableType = Assert.IsType<TableType>(typeAlias.Type);
@@ -2793,7 +2790,7 @@ public class LuauGeneratorTest
             event my_event(param: string);
             """;
 
-        var luauTree = Utility.GetLuauAST(source, true);
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
         var variable = Assert.IsType<ConstVariable>(Assert.Single(luauTree.Statements));
         Assert.Equal("my_event", variable.Name);
     }

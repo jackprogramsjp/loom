@@ -141,7 +141,9 @@ public class ParserTest
     public void Expect_MissingParen_AtEof_InsertsZeroWidthToken()
     {
         var result = Utility.Parse("let x = foo(");
-        var expectDiagnostic = result.Diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof && d.Message == "Expected ')', got EOF.");
+        var expectDiagnostic = result.Diagnostics.Find(d =>
+            d.Code == InternalCodes.UnexpectedEof && d.Message == "Expected ')', got EOF."
+        );
         Assert.NotNull(expectDiagnostic);
 
         var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(result.Tree.Statements));

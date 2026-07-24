@@ -4,7 +4,6 @@ using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.TypeChecking;
 using Loom.Core.TypeChecking.Types;
-using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
 using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core.Resolving;
@@ -15,10 +14,10 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
     internal int RuntimeReferences = 0;
 
     /// <summary>
-    ///     Node IDs of reference-site nodes that originate from a non-intrinsic source file.
-    ///     Populated by the resolver as references are recorded, so
-    ///     <see cref="MustImportRuntimeLibrary" /> can filter references by the file of the
-    ///     referencing node without holding on to the node instances themselves.
+    /// Node IDs of reference-site nodes that originate from a non-intrinsic source file.
+    /// Populated by the resolver as references are recorded, so
+    /// <see cref="MustImportRuntimeLibrary"/> can filter references by the file of the
+    /// referencing node without holding on to the node instances themselves.
     /// </summary>
     internal HashSet<NodeId> NonIntrinsicReferenceNodes { get; } = [];
 
@@ -44,10 +43,10 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
     public object? GetConstantValue(Expression expression) =>
         expression switch
         {
-            QualifiedName qn when GetType(qn.Identifier) is ObjectType objectType
-                && objectType.GetProperty(qn.Names.First().Name.Text) is { ValueType: LiteralType literalType } =>
+            QualifiedName qn when GetType(qn.Identifier) is TypeChecking.Types.ObjectType objectType
+                && objectType.GetProperty(qn.Names.First().Name.Text) is { ValueType: TypeChecking.Types.LiteralType literalType } =>
                 literalType.Value,
-            _ when GetType(expression) is LiteralType literalType => literalType.Value,
+            _ when GetType(expression) is TypeChecking.Types.LiteralType literalType => literalType.Value,
             _ => null
         };
 

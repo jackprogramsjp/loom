@@ -1,4 +1,5 @@
 using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
 using Loom.Core.Text;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using Type = Loom.Core.TypeChecking.Types.Type;
@@ -54,38 +55,35 @@ internal static class BinaryOperatorBinder
     ];
 
     public static BinaryOperatorRule? GetRule(BinaryOperator binaryOperator, Type leftType, Type rightType) =>
-        _rules.FirstOrDefault(rule => rule.OperatorKind == binaryOperator.Operator.Kind
-            && Type.IsNotNever(leftType)
-            && leftType.IsAssignableTo(rule.LeftType)
-            && Type.IsNotNever(rightType)
-            && rightType.IsAssignableTo(rule.RightType)
+        _rules.FirstOrDefault(
+            rule => rule.OperatorKind == binaryOperator.Operator.Kind
+                && Type.IsNotNever(leftType) && leftType.IsAssignableTo(rule.LeftType)
+                && Type.IsNotNever(rightType) && rightType.IsAssignableTo(rule.RightType)
         );
 
     public static BinaryOperatorRule? GetSuggestion(BinaryOperator binaryOperator, Type leftType, Type rightType)
     {
-        var sameOp = _rules.FirstOrDefault(r => r.OperatorKind == binaryOperator.Operator.Kind
-            && !(Type.IsNotNever(leftType) && leftType.IsAssignableTo(r.LeftType) && Type.IsNotNever(rightType) && rightType.IsAssignableTo(r.RightType))
+        var sameOp = _rules.FirstOrDefault(
+            r => r.OperatorKind == binaryOperator.Operator.Kind
+                && !(Type.IsNotNever(leftType) && leftType.IsAssignableTo(r.LeftType) && Type.IsNotNever(rightType) && rightType.IsAssignableTo(r.RightType))
         );
 
-        var differentOp = _rules.FirstOrDefault(r => r.OperatorKind != binaryOperator.Operator.Kind
-            && Type.IsNotNever(leftType)
-            && leftType.IsAssignableTo(r.LeftType)
-            && Type.IsNotNever(rightType)
-            && rightType.IsAssignableTo(r.RightType)
+        var differentOp = _rules.FirstOrDefault(
+            r => r.OperatorKind != binaryOperator.Operator.Kind
+                && Type.IsNotNever(leftType) && leftType.IsAssignableTo(r.LeftType)
+                && Type.IsNotNever(rightType) && rightType.IsAssignableTo(r.RightType)
         );
 
-        var fixRight = _rules.FirstOrDefault(r => r.OperatorKind == binaryOperator.Operator.Kind
-            && Type.IsNotNever(leftType)
-            && leftType.IsAssignableTo(r.LeftType)
-            && Type.IsNotNever(rightType)
-            && !rightType.IsAssignableTo(r.RightType)
+        var fixRight = _rules.FirstOrDefault(
+            r => r.OperatorKind == binaryOperator.Operator.Kind
+                && Type.IsNotNever(leftType) && leftType.IsAssignableTo(r.LeftType)
+                && Type.IsNotNever(rightType) && !rightType.IsAssignableTo(r.RightType)
         );
 
-        var fixLeft = _rules.FirstOrDefault(r => r.OperatorKind == binaryOperator.Operator.Kind
-            && Type.IsNotNever(leftType)
-            && !leftType.IsAssignableTo(r.LeftType)
-            && Type.IsNotNever(rightType)
-            && rightType.IsAssignableTo(r.RightType)
+        var fixLeft = _rules.FirstOrDefault(
+            r => r.OperatorKind == binaryOperator.Operator.Kind
+                && Type.IsNotNever(leftType) && !leftType.IsAssignableTo(r.LeftType)
+                && Type.IsNotNever(rightType) && rightType.IsAssignableTo(r.RightType)
         );
 
         return fixRight

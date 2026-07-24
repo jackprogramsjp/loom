@@ -2,11 +2,11 @@ using System.Diagnostics.CodeAnalysis;
 using Loom.Core.Diagnostics;
 using Loom.Core.FlowAnalysis;
 using Loom.Core.Generation;
-using Loom.Core.Generation.Macros;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.Text;
 using Loom.Core.TypeChecking.Types;
+using Loom.Core.Generation.Macros;
 using ArrayType = Loom.Core.Parsing.AST.ArrayType;
 using Attribute = Loom.Core.Parsing.AST.Attribute;
 using FunctionType = Loom.Core.Parsing.AST.FunctionType;
@@ -26,15 +26,19 @@ using Type = Types.Type;
 public sealed partial class TypeChecker
     : Visitor<Type>
 {
+    public static bool EmitDebugDiagnostics { get; set; }
+
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<Node, FlowState> _exitStates = [];
+    private readonly Stack<List<FlowState>> _loopExitScopes = [];
+    private readonly SemanticModel _semanticModel;
     private readonly FlowAnalyzer _flowAnalyzer;
     private readonly TypeInferrer _inferrer;
-    private readonly Stack<List<FlowState>> _loopExitScopes = [];
     private readonly TypeNarrower _narrower;
-    private readonly SemanticModel _semanticModel;
     private FlowState _flowState;
     private Symbol? _resolvingHoisted;
+
+    private MacroContext EmptyMacroContext => field ??= new MacroContext(_semanticModel, new LuauState(), _diagnostics);
 
     public TypeChecker(SemanticModel semanticModel, FlowAnalyzer flowAnalyzer)
         : base(_ => Types.PrimitiveType.Never)
@@ -45,10 +49,6 @@ public sealed partial class TypeChecker
         _narrower = new TypeNarrower(semanticModel);
         _flowState = null!;
     }
-
-    public static bool EmitDebugDiagnostics { get; set; }
-
-    private MacroContext EmptyMacroContext => field ??= new MacroContext(_semanticModel, new LuauState(), _diagnostics);
 
     public TypeCheckerResult Check()
     {
@@ -283,11 +283,17 @@ public sealed partial class TypeChecker
 
         Type finalType;
         if (declaredType != null)
+        {
             finalType = declaredType;
+        }
         else if (initializerType != null)
+        {
             finalType = initializerType;
+        }
         else
+        {
             finalType = Types.PrimitiveType.Unknown;
+        }
 
         if (variableDeclaration.Keyword.Kind == SyntaxKind.MutKeyword)
             finalType = finalType.Widen();
@@ -342,7 +348,7 @@ public sealed partial class TypeChecker
     public override Type VisitInvocation(Invocation invocation)
     {
         var type = Visit(invocation.Expression);
-        if (IsEventType(invocation, type, true, out _))
+        if (IsEventType(invocation, type, strictlyConsumer: true, out _))
         {
             _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, "Consumer events may only be observed, not fired.");
             return BindType(invocation, Types.PrimitiveType.Never);
@@ -401,12 +407,11 @@ public sealed partial class TypeChecker
             }
         }
 
-        if (IsEventType(invocation, type, false, out var eventType))
+        if (IsEventType(invocation, type, strictlyConsumer: false, out var eventType))
         {
             var argumentTypes = argumentList.ConvertAll(Visit);
             var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as EventDeclaration
                 ?? _semanticModel.GetPropertySymbol(invocation.Expression)?.Declaration as EventDeclaration;
-
             CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, eventType.Arguments, argumentList);
             return BindType(invocation, Types.PrimitiveType.Void);
         }
@@ -608,11 +613,13 @@ public sealed partial class TypeChecker
             case SyntaxKind.QuestionQuestion or SyntaxKind.QuestionQuestionEquals:
             {
                 if (!Type.IsOptional(leftType))
+                {
                     _diagnostics.Warn(
                         binaryOperator,
                         InternalCodes.RedundantCode,
                         $"Null coalescing has no effect since '{leftType}' is not optional."
                     );
+                }
 
                 return BindType(binaryOperator, TypeSimplifier.Simplify(new Types.UnionType([leftType, rightType]).NonNullable()));
             }
@@ -691,7 +698,9 @@ public sealed partial class TypeChecker
             if (isMacroReference
                 && InvocationMacroReference.IsValidReferenceContext(identifier, _semanticModel)
                 && GetContextualType(identifier) is Types.FunctionType contextualType)
+            {
                 return BindType(identifier, contextualType);
+            }
 
             if (symbol is InjectedPropertyVariableSymbol propertyVariableSymbol)
             {
@@ -869,7 +878,9 @@ public sealed partial class TypeChecker
         if (isMacroReference
             && InvocationMacroReference.IsValidReferenceContext(accessExpression, _semanticModel)
             && GetContextualType(accessExpression) is Types.FunctionType contextualType)
+        {
             return BindType(accessExpression, contextualType);
+        }
 
         return BindType(accessExpression, type);
     }
@@ -928,9 +939,9 @@ public sealed partial class TypeChecker
         };
 
     /// <summary>
-    ///     Reports an invalid macro-reference diagnostic if needed and returns whether
-    ///     <paramref name="expression" /> classifies as an invocation macro reference, so
-    ///     callers can avoid re-running the classification.
+    /// Reports an invalid macro-reference diagnostic if needed and returns whether
+    /// <paramref name="expression"/> classifies as an invocation macro reference, so
+    /// callers can avoid re-running the classification.
     /// </summary>
     private bool CheckInvocationMacroReference(Expression expression)
     {
@@ -963,8 +974,11 @@ public sealed partial class TypeChecker
     {
         var requiredParameterTypes = new List<Type>();
         if (parameters == null)
+        {
             requiredParameterTypes = parameterTypes.FindAll(Type.IsNotOptional);
+        }
         else
+        {
             for (var i = 0; i < parameters.ParameterList.Count; i++)
             {
                 var parameterType = parameterTypes[i];
@@ -973,6 +987,7 @@ public sealed partial class TypeChecker
 
                 requiredParameterTypes.Add(parameterType);
             }
+        }
 
         var minimum = requiredParameterTypes.Count;
         var maximum = parameterTypes.Count;
@@ -1077,7 +1092,7 @@ public sealed partial class TypeChecker
 
     private bool TryGetEventParameterTypes(Node failNode, Type type, [MaybeNullWhen(false)] out List<Type> typeArguments)
     {
-        if (!IsEventType(failNode, type, false, out var instantiated))
+        if (!IsEventType(failNode, type, strictlyConsumer: false, out var instantiated))
         {
             typeArguments = null;
             return false;
@@ -1100,7 +1115,7 @@ public sealed partial class TypeChecker
 
         return isConsumerEvent || instantiated.GenericType.Equals(GetGenericEventType(failNode, false));
     }
-
+    
     private InstantiatedType InstantiateEventType(Node failNode, bool isConsumer, List<Type> parameterTypes)
     {
         var genericType = GetGenericEventType(failNode, isConsumer);

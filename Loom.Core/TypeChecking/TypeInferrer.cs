@@ -18,6 +18,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         var objectType = underlying.ObjectType;
         var pairs = new List<(Type parameterType, Type argumentType)>();
         foreach (var initializer in node.Body.Initializers)
+        {
             switch (initializer)
             {
                 case InterfaceInvocationPropertyInitializer propInit:
@@ -46,6 +47,7 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
                     break;
                 }
             }
+        }
 
         var inferred = new TypeParameterSubstitution();
         var visited = new HashSet<(Type, Type)>();
@@ -54,9 +56,11 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
 
         var substitution = new TypeParameterSubstitution();
         foreach (var typeParameter in generic.Parameters)
+        {
             substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
                 ? inferredType
                 : typeParameter.DefaultType ?? PrimitiveType.Unknown;
+        }
 
         return substitution;
     }
@@ -76,9 +80,11 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
 
         var substitution = new TypeParameterSubstitution();
         foreach (var typeParameter in functionType.TypeParameters)
+        {
             substitution[typeParameter] = inferred.TryGetValue(typeParameter, out var inferredType)
                 ? inferredType
                 : typeParameter.DefaultType ?? PrimitiveType.Unknown;
+        }
 
         return substitution;
     }
@@ -192,8 +198,10 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         }
 
         if (parameterObject.Indexer != null && argumentObject.Indexer != null)
+        {
             return TryInferTypes(parameterObject.Indexer.KeyType, argumentObject.Indexer.KeyType, inferredTypes, visitedPairs)
                 && TryInferTypes(parameterObject.Indexer.ValueType, argumentObject.Indexer.ValueType, inferredTypes, visitedPairs);
+        }
 
         return parameterObject.Indexer == null;
     }
@@ -246,24 +254,30 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
             case > 0 when argumentGenericInfo.Arguments.Count > 0:
             {
                 for (var index = 0; index < Math.Min(parameterGenericInfo.Arguments.Count, argumentGenericInfo.Arguments.Count); index++)
+                {
                     if (!TryInferTypes(parameterGenericInfo.Arguments[index], argumentGenericInfo.Arguments[index], inferredTypes, visitedPairs))
                         return false;
+                }
 
                 break;
             }
             case > 0 when argumentGenericInfo.Arguments.Count == 0:
             {
                 for (var index = 0; index < Math.Min(parameterGenericInfo.Arguments.Count, argumentGenericInfo.Generic.Parameters.Count); index++)
+                {
                     if (!TryInferTypes(argumentGenericInfo.Generic.Parameters[index], parameterGenericInfo.Arguments[index], inferredTypes, visitedPairs))
                         return false;
+                }
 
                 break;
             }
             case 0 when argumentGenericInfo.Arguments.Count > 0:
             {
                 for (var index = 0; index < Math.Min(parameterGenericInfo.Generic.Parameters.Count, argumentGenericInfo.Arguments.Count); index++)
+                {
                     if (!TryInferTypes(parameterGenericInfo.Generic.Parameters[index], argumentGenericInfo.Arguments[index], inferredTypes, visitedPairs))
                         return false;
+                }
 
                 break;
             }

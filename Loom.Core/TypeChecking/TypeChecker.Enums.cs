@@ -1,8 +1,6 @@
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.TypeChecking.Types;
-using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
-using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core.TypeChecking;
@@ -11,10 +9,10 @@ public sealed partial class TypeChecker
 {
     public override Type VisitEnumDeclaration(EnumDeclaration enumDeclaration)
     {
-        var baseType = MaybeVisit(enumDeclaration.ColonTypeClause) ?? PrimitiveType.Number;
+        var baseType = MaybeVisit(enumDeclaration.ColonTypeClause) ?? Types.PrimitiveType.Number;
         if (enumDeclaration.ColonTypeClause != null
-            && !baseType.IsAssignableTo(PrimitiveType.String)
-            && !baseType.IsAssignableTo(PrimitiveType.Number))
+            && !baseType.IsAssignableTo(Types.PrimitiveType.String)
+            && !baseType.IsAssignableTo(Types.PrimitiveType.Number))
         {
             _diagnostics.Error(
                 enumDeclaration.ColonTypeClause,
@@ -23,16 +21,16 @@ public sealed partial class TypeChecker
                 "valid types are 'string' and 'number'"
             );
 
-            return BindType(enumDeclaration, PrimitiveType.Never);
+            return BindType(enumDeclaration, Types.PrimitiveType.Never);
         }
 
-        var properties = baseType.IsAssignableTo(PrimitiveType.String)
+        var properties = baseType.IsAssignableTo(Types.PrimitiveType.String)
             ? BuildStringEnumProperties(enumDeclaration, baseType)
             : BuildNumericEnumProperties(enumDeclaration, baseType);
 
         return properties != null
             ? BindType(enumDeclaration, new ObjectType(null, properties))
-            : BindType(enumDeclaration, PrimitiveType.Never);
+            : BindType(enumDeclaration, Types.PrimitiveType.Never);
     }
 
     private List<ObjectProperty> BuildNumericEnumProperties(EnumDeclaration enumDeclaration, Type baseType)
@@ -49,7 +47,7 @@ public sealed partial class TypeChecker
                 _semanticModel.TypeSolver.AddConstraint(explicitType, baseType, member.EqualsValueClause.Value);
             }
 
-            properties.Add(new ObjectProperty(false, member.Name.Text, new LiteralType(memberValue)));
+            properties.Add(new ObjectProperty(false, member.Name.Text, new Types.LiteralType(memberValue)));
             nextValue = Math.Floor(memberValue + 1);
         }
 
@@ -85,9 +83,9 @@ public sealed partial class TypeChecker
     private static double ExtractNumericLiteralValue(Type type, double fallback) =>
         type switch
         {
-            LiteralType { Value: long l } => l,
-            LiteralType { Value: int i } => i,
-            LiteralType { Value: double d } => d,
+            Types.LiteralType { Value: long l } => l,
+            Types.LiteralType { Value: int i } => i,
+            Types.LiteralType { Value: double d } => d,
             _ => fallback
         };
 

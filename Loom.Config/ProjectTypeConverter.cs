@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
-using Tomlyn.Serialization;
 
 namespace Loom.Config;
+
+using Tomlyn.Serialization;
 
 public sealed class ProjectTypeConverter : TomlConverter<ProjectType>
 {
@@ -31,7 +32,7 @@ public sealed class ProjectTypeConverter : TomlConverter<ProjectType>
             case ProjectType.Plugin:
                 writer.WriteStringValue("plugin");
                 break;
-
+            
             default:
                 throw new ArgumentOutOfRangeException(nameof(value));
         }

@@ -47,8 +47,10 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     private FlowState AnalyzeUnhandledStatement(Statement statement, FlowState state, out FlowState exitState)
     {
         foreach (var child in statement.Children)
+        {
             if (child is Statement childStatement)
                 state = AnalyzeStatement(childStatement, state);
+        }
 
         exitState = state;
         return state;
@@ -90,7 +92,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
                 ? state.WithInitialized(symbol)
                 : state
         );
-
+    
     private FlowState AnalyzeInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration, FlowState state) =>
         BindState(
             interfaceDeclaration,
@@ -210,7 +212,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     {
         if (symbol.IsMutable) return;
         if (symbol.Kind == SymbolKind.Event && assignment.Operator.Kind is SyntaxKind.PlusEquals or SyntaxKind.MinusEquals) return;
-
+        
         _diagnostics.Error(
             assignment,
             InternalCodes.AssignToImmutable,
@@ -227,7 +229,9 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             || symbol.Declaration.FirstAncestorOfType<Declare>() is not null
             || symbol is { IsValueSymbol: false }
             || state.DefinitelyInitialized.Contains(symbol))
+        {
             return BindState(identifier, state);
+        }
 
         if (state.MaybeInitialized.Contains(symbol))
             _diagnostics.Error(identifier, InternalCodes.UseOfMaybeUninitialized, $"Variable '{symbol.Name}' might not be initialized on this path.");

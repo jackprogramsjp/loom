@@ -11,7 +11,7 @@ public sealed class CompilationUnit(LoomConfig config)
     public LoomConfig Config { get; } = config;
     public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(config.Files.SourceDirectory);
     public Dictionary<Symbol, Type> Globals { get; } = [];
-
+    
     public CompilationResult Compile()
     {
         Globals.Clear();

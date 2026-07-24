@@ -3,11 +3,9 @@ using Loom.Core.TypeChecking.Types;
 using Loom.Luau;
 using Loom.Luau.AST;
 using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
-using OptionalType = Loom.Luau.AST.OptionalType;
 using Parameter = Loom.Core.Parsing.AST.Parameter;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using TypeAlias = Loom.Core.Parsing.AST.TypeAlias;
-using TypeParameters = Loom.Luau.AST.TypeParameters;
 using UnionType = Loom.Core.TypeChecking.Types.UnionType;
 
 namespace Loom.Core.Generation;
@@ -16,7 +14,7 @@ public sealed partial class LuauGenerator
 {
     public override LuauNode VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
     {
-        var typeParameters = MaybeVisit<TypeParameters>(functionDeclaration.TypeParameters);
+        var typeParameters = MaybeVisit<Luau.AST.TypeParameters>(functionDeclaration.TypeParameters);
         if (typeParameters != null)
             foreach (var typeParameter in typeParameters.Parameters)
                 typeParameter.OfFunction = true;
@@ -30,8 +28,8 @@ public sealed partial class LuauGenerator
     public override Luau.AST.Parameter VisitParameter(Parameter parameter)
     {
         var type = MaybeVisit<LuauType>(parameter.ColonTypeClause?.Type);
-        if (type != null && parameter.EqualsValueClause != null && type is not OptionalType)
-            type = new OptionalType(type);
+        if (type != null && parameter.EqualsValueClause != null && type is not Luau.AST.OptionalType)
+            type = new Luau.AST.OptionalType(type);
 
         return new Luau.AST.Parameter(parameter.Name.Text, type);
     }
@@ -39,8 +37,8 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitTypeAlias(TypeAlias typeAlias)
     {
         var typeParameters = typeAlias.TypeParameters != null
-            ? Visit<TypeParameters>(typeAlias.TypeParameters)
-            : new TypeParameters();
+            ? Visit<Luau.AST.TypeParameters>(typeAlias.TypeParameters)
+            : new Luau.AST.TypeParameters();
 
         var type = Visit(typeAlias.EqualsTypeClause.Type);
         return new Luau.AST.TypeAlias(typeAlias.Name.Text, typeParameters, type);
@@ -54,7 +52,7 @@ public sealed partial class LuauGenerator
         var propertyUnion = objectType.PropertyUnion();
         return new Luau.AST.TypeAlias(
             enumDeclaration.Name.Text,
-            new TypeParameters(),
+            new Luau.AST.TypeParameters(),
             propertyUnion switch
             {
                 UnionType union =>

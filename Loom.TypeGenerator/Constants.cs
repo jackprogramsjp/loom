@@ -1,5 +1,3 @@
-using Loom.TypeGenerator.ApiTypes;
-
 namespace Loom.TypeGenerator;
 
 internal static class Constants
@@ -19,7 +17,7 @@ internal static class Constants
         { "Model", ["FilteringEnabled"] },
         { "DataModel", ["FilteringEnabled", "Workspace", "lighting"] }
     };
-
+    
     public static readonly HashSet<string> CreatableBlacklist =
     [
         "UserSettings",
@@ -34,7 +32,7 @@ internal static class Constants
         "Tween",
         "UserGameSettings"
     ];
-
+    
     public static readonly HashSet<string> PluginOnlyClasses =
     [
         "ABTestService",
@@ -183,11 +181,11 @@ internal static class Constants
         "RbxAnalyticsService"
     ];
 
-    public static readonly Dictionary<string, Dictionary<string, Security>?> SecurityOverrides = new()
+    public static readonly Dictionary<string, Dictionary<string, ApiTypes.Security>?> SecurityOverrides = new()
     {
-        ["StarterGui"] = new Dictionary<string, Security> { ["ShowDevelopmentGui"] = new() { Read = "PluginSecurity", Write = "PluginSecurity" } }
+        ["StarterGui"] = new Dictionary<string, ApiTypes.Security> { ["ShowDevelopmentGui"] = new() { Read = "PluginSecurity", Write = "PluginSecurity" } }
     };
-
+    
     public static readonly Dictionary<string, List<string>> ExpectedExtraMembers = new()
     {
         { "Player", ["Name"] },
@@ -195,14 +193,14 @@ internal static class Constants
         { "DataStore", ["GetAsync", "IncrementAsync", "SetAsync", "UpdateAsync", "RemoveAsync"] },
         { "OrderedDataStore", ["GetAsync", "IncrementAsync", "SetAsync", "UpdateAsync", "RemoveAsync"] }
     };
-
+    
     public static readonly Dictionary<string, string> RenamableAutoTypes = new()
     {
         { "Part", "BasePart" }, { "Script", "LuaSourceContainer" }, { "Character", "Model" }, { "Input", "InputObject" }
     };
-
+    
     // public static readonly Dictionary<string, string> PropertyTypeMap = new();
-
+    
     public static readonly Dictionary<string, string> ValueTypeMap = new()
     {
         { "Array", "unknown[]" },
@@ -234,11 +232,14 @@ internal static class Constants
         { "any", "unknown" },
         { "Array<any>", "unknown[]" }
     };
-
+    
     public static readonly Dictionary<string, string> ReturnTypeMap = new() { { "null", "void" } };
 
     public static readonly Dictionary<string, string> RenameMap = new()
     {
-        { "type", "_type" }, { "interface", "_interface" }, { "old", "oldValue" }, { "new", "newValue" }
+        { "type", "_type" },
+        { "interface", "_interface" },
+        { "old", "oldValue" },
+        { "new", "newValue" }
     };
 }

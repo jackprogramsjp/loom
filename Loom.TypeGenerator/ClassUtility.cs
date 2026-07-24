@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Loom.TypeGenerator.ApiTypes;
-using ValueType = Loom.TypeGenerator.ApiTypes.ValueType;
 
 namespace Loom.TypeGenerator;
+
+using System.Text.Json;
 
 internal static class ClassUtility
 {
@@ -20,7 +20,7 @@ internal static class ClassUtility
     {
         if (rbxClass.Superclass == Constants.RootClassName)
             return false;
-
+        
         var superclass = classRefs[AssertClassName(rbxClass.Superclass, classRefs)];
         return predicate(superclass) || HasMatchingSuperclass(superclass, classRefs, predicate);
     }
@@ -29,13 +29,13 @@ internal static class ClassUtility
         HasTag(rbxClass, "Service")
         && !HasTag(rbxClass, "Hidden")
         && !Constants.ClassBlacklist.Contains(rbxClass.Name);
-
+    
     public static bool IsCreatable(Class rbxClass) =>
         !Constants.CreatableBlacklist.Contains(rbxClass.Name)
         && !HasTag(rbxClass, "NotCreatable")
         && !HasTag(rbxClass, "Service");
 
-    public static string SafeValueType(ValueType valueType)
+    public static string SafeValueType(ApiTypes.ValueType valueType)
     {
         if (valueType.Category == "Enum")
             return $"Enum[\"{valueType.Name}\"]";
@@ -48,7 +48,7 @@ internal static class ClassUtility
         return $"{Constants.ValueTypeMap.GetValueOrDefault(nonOptionalType, nonOptionalType)}?";
     }
 
-    public static string? SafeReturnType(ValueType[]? valueTypes)
+    public static string? SafeReturnType(ApiTypes.ValueType[]? valueTypes)
     {
         var typeNames = valueTypes?
             .Select(SafeValueType)
@@ -104,8 +104,8 @@ internal static class ClassUtility
             : ContainsBadCharacter(name)
                 ? name.Replace("\"", "\\\"")
                 : name;
-
-    /// <summary>Returns the given <see cref="className" /> if it's in <see cref="classRefs" />, throws if not</summary>
+    
+    /// <summary>Returns the given <see cref="className"/> if it's in <see cref="classRefs"/>, throws if not</summary>
     public static string AssertClassName(string className, Dictionary<string, Class> classRefs)
     {
         if (classRefs.ContainsKey(className))

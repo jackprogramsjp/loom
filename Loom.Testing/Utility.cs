@@ -6,7 +6,6 @@ using Loom.Core.Generation;
 using Loom.Core.Lexing;
 using Loom.Core.Parsing;
 using Loom.Core.Parsing.AST;
-using Loom.Core.Resolving;
 using Loom.Core.Text;
 using Loom.Core.TypeChecking;
 using Loom.Luau.AST;
@@ -44,7 +43,7 @@ internal static class Utility
     public static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
 
-    public static SemanticModel GetSemanticModel(string source, bool isDeclaration = false, bool disableRuntimeLib = true)
+    public static Core.Resolving.SemanticModel GetSemanticModel(string source, bool isDeclaration = false, bool disableRuntimeLib = true)
     {
         var parserResult = Parse(source);
         if (isDeclaration)
@@ -57,7 +56,7 @@ internal static class Utility
         return semanticModel;
     }
 
-    public static (FlowAnalyzerResult AnalyzerResult, SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(
+    public static (FlowAnalyzerResult AnalyzerResult, Core.Resolving.SemanticModel SemanticModel, FlowAnalyzer Analyzer) FlowAnalyze(
         string source,
         bool disableRuntimeLib = true)
     {

@@ -3,8 +3,7 @@ using Loom.Core.TypeChecking.Types;
 
 namespace Loom.Core.Parsing.AST;
 
-public class PrimitiveType(Token name)
-    : TypeExpression([name], [])
+public class PrimitiveType(Token name) : TypeExpression([name], [])
 {
     public PrimitiveTypeKind Kind { get; } = name.Text switch
     {

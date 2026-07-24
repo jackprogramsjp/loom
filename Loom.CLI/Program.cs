@@ -1,9 +1,7 @@
-﻿using System.Text;
-using Loom.Config;
+﻿using Loom.Config;
 using Loom.Core;
 
-Console.OutputEncoding = Encoding.UTF8;
-
+Console.OutputEncoding = System.Text.Encoding.UTF8;
 // DiagnosticBag.FailFast = false;
 
 var directory = args.ElementAtOrDefault(0) ?? ".";
@@ -15,6 +13,6 @@ var compilationUnit = new CompilationUnit(loomConfig);
 var result = compilationUnit.Compile();
 var debugInfo = result.Files
     .Where(f => !f.SourceFile.IsDeclaration)
-    .Select(f => f.GetDebugInfo(false, debugDiagnostics: false));
+    .Select(f => f.GetDebugInfo(rebuilt: false, debugDiagnostics: false));
 
 Console.WriteLine(string.Join(Environment.NewLine, debugInfo));

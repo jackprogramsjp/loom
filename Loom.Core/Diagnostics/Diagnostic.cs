@@ -7,6 +7,16 @@ namespace Loom.Core.Diagnostics;
 
 public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, string? Code, string Message, string? Hint)
 {
+    private int StartLine => Span.Start.Line;
+    private int EndLine => Span.End.Line;
+    private int StartCharacter => Span.Start.Character;
+    private int EndCharacter => Span.End.Character;
+    private int LineDigits => EndLine.ToString().Length;
+    private string[]? _sourceLines;
+    private string[] SourceLines => _sourceLines ??= Span.File.SourceText.Replace(Environment.NewLine, "\n").Split('\n');
+    private string GutterIndent => new(' ', LineDigits);
+    private string Gutter => $"{Colors.Dim}{GutterIndent} │{Colors.Reset}";
+
     private readonly DiagnosticSeverityStyle _severityStyle = Severity switch
     {
         DiagnosticSeverity.Error => new DiagnosticSeverityStyle(Colors.Red, Colors.Magenta, "error"),
@@ -15,15 +25,6 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
         DiagnosticSeverity.Debug => new DiagnosticSeverityStyle(Colors.Magenta, Colors.Magenta, "debug"),
         _ => new DiagnosticSeverityStyle(Colors.White, Colors.Gray, "unknown")
     };
-    private string[]? _sourceLines;
-    private int StartLine => Span.Start.Line;
-    private int EndLine => Span.End.Line;
-    private int StartCharacter => Span.Start.Character;
-    private int EndCharacter => Span.End.Character;
-    private int LineDigits => EndLine.ToString().Length;
-    private string[] SourceLines => _sourceLines ??= Span.File.SourceText.Replace(Environment.NewLine, "\n").Split('\n');
-    private string GutterIndent => new(' ', LineDigits);
-    private string Gutter => $"{Colors.Dim}{GutterIndent} │{Colors.Reset}";
 
     internal static string? FormatBinaryHint(BinaryOperator op, Type left, Type right, BinaryOperatorRule? suggestion)
     {
@@ -83,7 +84,6 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
         lines.Add(
             $"{Gutter}{pad} {_severityStyle.UnderlineColor}╰─{Colors.Reset}  {_severityStyle.PrimaryColor}{Colors.Bold}Hint:{Colors.Reset} {Colors.Gray}{Hint}{Colors.Reset}"
         );
-
         AppendNextSourceLine(lines);
     }
 

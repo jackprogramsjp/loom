@@ -4,9 +4,10 @@ namespace Loom.Luau;
 
 public sealed class RenderState
 {
-    private string _indent = "";
     public static string Indent { get; set; } = "  ";
     public static char StringDelimiter { get; set; } = '"';
+
+    private string _indent = "";
 
     public List<string> RenderList<T>(List<T> nodes)
         where T : LuauNode =>

@@ -32,7 +32,7 @@ public class LuauRenderingTest
             statement.Render()
         );
     }
-
+    
     [Fact]
     public void Renders_Simple_IfStatement_Continue()
     {
@@ -390,7 +390,7 @@ public class LuauRenderingTest
 
         Assert.Equal("(a + b).foo.bar", access.Render());
     }
-
+    
     [Fact]
     public void Renders_PropertyAccess_SingleName_DefaultDot()
     {
@@ -731,10 +731,12 @@ public class LuauRenderingTest
     public void Renders_StringLiteral() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteral("abc").Render());
 
     [Fact]
-    public void Renders_StringLiteral_EscapesBackslash() => Assert.Equal("\"a\\\\b\"", new StringLiteral("a\\b").Render());
+    public void Renders_StringLiteral_EscapesBackslash() =>
+        Assert.Equal("\"a\\\\b\"", new StringLiteral("a\\b").Render());
 
     [Fact]
-    public void Renders_StringLiteral_EscapesDelimiter() => Assert.Equal("\"say \\\"hi\\\"\"", new StringLiteral("say \"hi\"").Render());
+    public void Renders_StringLiteral_EscapesDelimiter() =>
+        Assert.Equal("\"say \\\"hi\\\"\"", new StringLiteral("say \"hi\"").Render());
 
     [Fact]
     public void Renders_MultilineString_LeadingNewlineIsPreserved()

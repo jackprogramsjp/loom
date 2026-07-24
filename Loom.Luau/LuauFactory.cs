@@ -21,13 +21,13 @@ public static class LuauFactory
 
     public static Call RuntimeLibraryCall(List<string> path, List<LuauExpression> arguments) =>
         new(new PropertyAccess(new Identifier(RuntimeImportName), path), arguments);
-
+    
     public static Call LibraryCall(string libraryName, List<string> path, List<LuauExpression> arguments, bool isMethod = false) =>
         new(new PropertyAccess(new Identifier(libraryName), path), arguments, isMethod);
 
     public static ConstVariable RuntimeLibraryImport(string runtimeLibPath) => new(RuntimeImportName, null, RequireCall(runtimeLibPath));
     public static LuauNode EmptyVariable() => new ConstVariable("_", null, new NilLiteral());
-
+    
     public static LuauExpression UnwrapParentheses(LuauExpression expression)
     {
         while (true)

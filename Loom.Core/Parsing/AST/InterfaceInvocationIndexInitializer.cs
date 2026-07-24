@@ -9,6 +9,6 @@ public class InterfaceInvocationIndexInitializer(Token leftBracket, Token rightB
     public Token LeftBracket { get; } = leftBracket;
     public Token Colon { get; } = colon;
     public Expression IndexExpression { get; } = indexExpression;
-
+    
     public override T Accept<T>(Visitor<T> visitor) => visitor.VisitInterfaceInvocationIndexInitializer(this);
 }

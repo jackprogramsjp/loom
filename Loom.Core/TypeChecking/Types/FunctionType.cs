@@ -6,7 +6,7 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
     public List<Type> ParameterTypes { get; } = parameterTypes;
     public List<Type> RequiredParameterTypes { get; } = GetRequiredParameterTypes(parameterTypes);
     public Type ReturnType { get; } = returnType;
-
+    
     private static List<Type> GetRequiredParameterTypes(List<Type> parameterTypes)
     {
         var cutoffIndex = parameterTypes.Count;
@@ -17,7 +17,7 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
             cutoffIndex = i + 1;
             break;
         }
-
+        
         return parameterTypes.Take(cutoffIndex).ToList();
     }
 
@@ -46,14 +46,18 @@ public sealed class FunctionType(List<TypeParameter> typeParameters, List<Type> 
         if (other is not FunctionType functionType
             || ParameterTypes.Count != functionType.ParameterTypes.Count
             || TypeParameters.Count != functionType.TypeParameters.Count)
+        {
             return false;
+        }
 
         if (TypeParameters
             .Where((t, i) => functionType.TypeParameters[i].Constraint is { } constraint
                 && !(t.Constraint ?? PrimitiveType.Never).IsAssignableTo(constraint)
             )
             .Any())
+        {
             return false;
+        }
 
         return !ParameterTypes.Where((t, i) => !functionType.ParameterTypes[i].IsAssignableTo(t)).Any()
             && ReturnType.IsAssignableTo(functionType.ReturnType);

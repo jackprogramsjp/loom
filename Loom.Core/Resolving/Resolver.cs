@@ -11,12 +11,12 @@ namespace Loom.Core.Resolving;
 public sealed class Resolver(ParserResult parserResult, CompilationUnit compilationUnit)
     : Visitor<bool>(_ => true)
 {
+    private readonly DiagnosticBag _diagnostics = new();
     private readonly SymbolTable _allDeclarations = [];
     private readonly SymbolTable _allReferences = [];
-    private readonly DiagnosticBag _diagnostics = new();
     private readonly Stack<ResolverScope> _scopes = [];
-    private ResolverContext _context = ResolverContext.None;
     private SemanticModel _semanticModel = null!;
+    private ResolverContext _context = ResolverContext.None;
 
     [MemberNotNull(nameof(_semanticModel))]
     public SemanticModel Resolve()
@@ -114,7 +114,9 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         traitSymbol.ImplementedBy.Add(interfaceSymbol);
         if (interfaceSymbol.Properties
             .Any(property => !DeclareVariable(implement, new InjectedPropertyVariableSymbol(implement, property.Name, interfaceSymbol, property.IsMutable))))
+        {
             return false;
+        }
 
         Visit(implement.Body);
         PopScope();
@@ -265,7 +267,9 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable)
             || !DeclareInterface(interfaceDeclaration, isSealed, out var symbol)
             || !ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
+        {
             return false;
+        }
 
         PushScope();
         base.VisitInterfaceDeclaration(interfaceDeclaration);
@@ -542,6 +546,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     private void HoistDeclarations(List<Statement> statements)
     {
         foreach (var statement in statements)
+        {
             switch (statement)
             {
                 case TypeAlias typeAlias:
@@ -567,6 +572,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                     DeclareInterface(nested, nested.SealedKeyword != null, out _);
                     break;
             }
+        }
     }
 
     private bool ResolveStatement(Statement statement)

@@ -17,7 +17,7 @@ public sealed partial class Parser
             [SyntaxKind.MutKeyword] = ParseVariableDeclaration,
             [SyntaxKind.TypeKeyword] = ParseTypeAlias,
             [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
-            [SyntaxKind.EventKeyword] = keyword => ParseEventDeclaration(keyword),
+            [SyntaxKind.EventKeyword] = keyword => ParseEventDeclaration(keyword, null),
             [SyntaxKind.DeclareKeyword] = ParseDeclare,
             [SyntaxKind.ImplementKeyword] = ParseImplement,
             [SyntaxKind.TraitKeyword] = ParseTraitDeclaration,
@@ -107,7 +107,7 @@ public sealed partial class Parser
 
         return new Block(leftBrace, MissingToken(SyntaxKind.RBrace), statements);
     }
-
+    
     private Implement ParseImplement(Token keyword)
     {
         var traitNameIdentifier = ExpectIdentifier("trait name");
@@ -125,10 +125,10 @@ public sealed partial class Parser
         var leftBrace = Expect(SyntaxKind.LBrace);
         var implementations = ParseImplementMethods();
         var rightBrace = Expect(SyntaxKind.RBrace);
-
+        
         return new ImplementBody(leftBrace, rightBrace, implementations);
     }
-
+    
     private List<FunctionDeclaration> ParseImplementMethods()
     {
         var members = new List<Statement>();

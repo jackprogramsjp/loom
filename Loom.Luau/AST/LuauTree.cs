@@ -1,4 +1,3 @@
 namespace Loom.Luau.AST;
 
-public class LuauTree(List<LuauStatement> statements)
-    : Chunk(statements);
+public class LuauTree(List<LuauStatement> statements) : Chunk(statements);

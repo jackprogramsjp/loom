@@ -91,9 +91,9 @@ public sealed partial class LuauGenerator
     }
 
     /// <summary>
-    ///     Detects a placeholder '_' binding whose value is nothing more than the identifier
-    ///     a prereq statement in the same scope just declared. Emitting both would be redundant, so the
-    ///     placeholder is elided in favor of the prereq statement that already exists.
+    /// Detects a placeholder '_' binding whose value is nothing more than the identifier
+    /// a prereq statement in the same scope just declared. Emitting both would be redundant, so the
+    /// placeholder is elided in favor of the prereq statement that already exists.
     /// </summary>
     private static bool IsRedundantOrphanBinding(LuauStatement statement, LuauScope scope) =>
         statement is ConstVariable { Name: "_", Initializer: Identifier identifier }

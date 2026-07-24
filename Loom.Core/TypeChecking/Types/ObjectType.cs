@@ -133,13 +133,17 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             if (!Indexer.IsMutable && objectType.Indexer.IsMutable
                 || !Indexer.KeyType.Equals(objectType.Indexer.KeyType)
                 || !Indexer.ValueType.Equals(objectType.Indexer.ValueType))
+            {
                 return false;
+            }
         }
         else
         {
             if (!Indexer.KeyType.IsAssignableTo(objectType.Indexer.KeyType)
                 || !Indexer.ValueType.IsAssignableTo(objectType.Indexer.ValueType))
+            {
                 return false;
+            }
         }
 
         return true;

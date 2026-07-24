@@ -1,7 +1,6 @@
-﻿using System.Text;
-using Loom.Tools;
+﻿using Loom.Tools;
 
-Console.OutputEncoding = Encoding.UTF8;
+Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 var arguments = args;
 var toolName = arguments.ElementAtOrDefault(0);
@@ -16,7 +15,7 @@ var tools = new Dictionary<string, Action>
             Console.WriteLine("Usage: loomtools ast <file>");
             return;
         }
-
+        
         Console.WriteLine(AstTools.GetAstString(filePath));
     }
 };

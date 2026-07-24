@@ -15,12 +15,28 @@ namespace Loom.Core.TypeChecking;
 
 public sealed class TypeSolver(DiagnosticBag diagnostics)
 {
+    private sealed record TypeConstraint
+    {
+        public Type Actual { get; }
+        public Type Expected { get; }
+        public LocationSpan Span { get; }
+
+        public TypeConstraint(Type actual, Type expected, LocationSpan span)
+        {
+            ArgumentNullException.ThrowIfNull(actual);
+            ArgumentNullException.ThrowIfNull(expected);
+            Actual = actual;
+            Expected = expected;
+            Span = span;
+        }
+    }
+
+    public DiagnosticBag Diagnostics { get; } = diagnostics;
+
     private readonly List<TypeConstraint> _constraints = [];
     private readonly Dictionary<NodeId, Type> _nodeTypes = [];
     private readonly Dictionary<int, Type> _substitutions = [];
     private int _nextVariableId;
-
-    public DiagnosticBag Diagnostics { get; } = diagnostics;
 
     public bool CheckCircular(ref Type type, Token name)
     {
@@ -214,10 +230,12 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
 
         var success = true;
         for (var i = 0; i < a.Arguments.Count; i++)
+        {
             if (!TryUnify(a.Arguments[i], b.Arguments[i], span, out var argUpdated))
                 success = false;
             else if (argUpdated)
                 updated = true;
+        }
 
         return success;
     }
@@ -240,8 +258,10 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
                 updated = true;
 
             if (a.Indexer.IsMutable != b.Indexer.IsMutable)
+            {
                 if (!ReportTypeMismatch(a, b, span, $"Indexer types match, but indexer mutability of type '{a}' does not match that of type '{b}'."))
                     success = false;
+            }
         }
         else if (a.Indexer == null && b.Indexer != null)
         {
@@ -291,10 +311,12 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
 
         var success = true;
         for (var i = 0; i < a.TypeParameters.Count; i++)
+        {
             if (!TryUnify(a.TypeParameters[i], b.TypeParameters[i], span, out var constraintUpdated))
                 success = false;
             else if (constraintUpdated)
                 updated = true;
+        }
 
         var freshVars = a.TypeParameters.Select(_ => CreateTypeVariable()).ToList();
         var aMapping = a.TypeParameters.Zip(freshVars).ToDictionary(p => p.First, p => p.Second);
@@ -304,10 +326,12 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         var aReturnType = SubstituteTypeParameters(aMapping, a.ReturnType);
         var bReturnType = SubstituteTypeParameters(bMapping, b.ReturnType);
         for (var i = 0; i < aParamTypes.Count; i++)
+        {
             if (!TryUnify(aParamTypes[i], bParamTypes[i], span, out var paramUpdated))
                 success = false;
             else if (paramUpdated)
                 updated = true;
+        }
 
         if (!TryUnify(aReturnType, bReturnType, span, out var returnUpdated))
             success = false;
@@ -394,20 +418,4 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
     }
 
     private TypeVariable CreateTypeVariable() => new(Interlocked.Increment(ref _nextVariableId));
-
-    private sealed record TypeConstraint
-    {
-        public TypeConstraint(Type actual, Type expected, LocationSpan span)
-        {
-            ArgumentNullException.ThrowIfNull(actual);
-            ArgumentNullException.ThrowIfNull(expected);
-            Actual = actual;
-            Expected = expected;
-            Span = span;
-        }
-
-        public Type Actual { get; }
-        public Type Expected { get; }
-        public LocationSpan Span { get; }
-    }
 }

@@ -3,8 +3,6 @@ using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.TypeChecking.Types;
-using FunctionType = Loom.Core.TypeChecking.Types.FunctionType;
-using IntersectionType = Loom.Core.TypeChecking.Types.IntersectionType;
 using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using Type = Loom.Core.TypeChecking.Types.Type;
@@ -19,7 +17,7 @@ public sealed partial class TypeChecker
         var interfaceType = Visit(implement.InterfaceName);
         foreach (var declaration in implement.Body.Implementations)
         {
-            var declarationType = (FunctionType)GetTypeAtIndex(declaration, traitType, new LiteralType(declaration.Name.Text));
+            var declarationType = (Types.FunctionType)GetTypeAtIndex(declaration, traitType, new LiteralType(declaration.Name.Text));
             BindType(declaration, declarationType);
             MaybeVisit(declaration.TypeParameters);
 
@@ -49,7 +47,7 @@ public sealed partial class TypeChecker
             Visit(declaration.Body);
         }
 
-        return TypeSimplifier.Simplify(new IntersectionType([traitType, interfaceType]));
+        return TypeSimplifier.Simplify(new Types.IntersectionType([traitType, interfaceType]));
     }
 
     public override Type VisitTraitDeclaration(TraitDeclaration traitDeclaration)
@@ -179,11 +177,10 @@ public sealed partial class TypeChecker
 
     private List<ObjectProperty> ResolveInterfaceEvents(InterfaceSymbol symbol, List<EventDeclaration> eventDeclarations) =>
         eventDeclarations.ConvertAll(e =>
-            {
-                MaybeVisit(e.Attributes);
-                return new ObjectProperty(false, e.Name.Text, Visit(e));
-            }
-        );
+        {
+            MaybeVisit(e.Attributes);
+            return new ObjectProperty(false, e.Name.Text, Visit(e));
+        });
 
     private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
     {

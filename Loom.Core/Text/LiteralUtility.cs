@@ -22,7 +22,7 @@ public static class LiteralUtility
         const double epsilon = 2.220446049250313e-16;
         if (Math.Abs(Math.Floor(value) - value) < epsilon)
             return (long)value;
-
+        
         return value;
     }
 
