@@ -4215,6 +4215,28 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Checks_GenericPropertyMethodCall_ExplicitTypeArgument()
+    {
+        const string source = """
+            interface Thing {}
+            interface Widget : Thing {}
+
+            interface World<X> {
+                [luau_name("FindFirstChildOfClass"), luau_method]
+                find_first_child_of_class: fn<T: Thing>: T;
+            }
+
+            let world = none as never as World<number>;
+            world.find_first_child_of_class::<Widget>()
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.False(type is TypeVariable, $"Expected 'Widget', got a type variable ('{type}')");
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("Widget", interfaceType.Name);
+    }
+
+    [Fact]
     public void Checks_GenericFunctionCall_ExplicitTypeArgument_WithOptional()
     {
         const string source = """

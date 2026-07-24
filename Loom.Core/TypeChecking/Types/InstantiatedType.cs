@@ -43,7 +43,7 @@ public sealed class InstantiatedType(GenericType genericType, List<Type> argumen
             : type switch
             {
                 FunctionType functionType => new FunctionType(
-                    [],
+                    functionType.TypeParameters.FindAll(tp2 => !substitution.ContainsKey(tp2)),
                     functionType.ParameterTypes.ConvertAll(p => SubstituteTypeParameters(p, substitution)),
                     SubstituteTypeParameters(functionType.ReturnType, substitution)
                 ),
