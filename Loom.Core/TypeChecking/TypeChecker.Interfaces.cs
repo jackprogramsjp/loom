@@ -99,7 +99,7 @@ public sealed partial class TypeChecker
 
         var eventDeclarations = interfaceDeclaration.Body?.Members.OfType<EventDeclaration>().ToList() ?? [];
         var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>().ToList() ?? [];
-        var events = ResolveInterfaceEvents(symbol, eventDeclarations);
+        var events = ResolveInterfaceEvents(eventDeclarations);
         var properties = ResolveInterfaceProperties(constraints, propertyDeclarations);
         objectType.AddProperties(events);
         objectType.AddProperties(properties);
@@ -175,7 +175,7 @@ public sealed partial class TypeChecker
     private List<ObjectProperty> ResolveTraitProperties(List<DeclareFunctionSignature> signatures) =>
         signatures.ConvertAll(s => new ObjectProperty(false, s.Name.Text, Visit(s)));
 
-    private List<ObjectProperty> ResolveInterfaceEvents(InterfaceSymbol symbol, List<EventDeclaration> eventDeclarations) =>
+    private List<ObjectProperty> ResolveInterfaceEvents(List<EventDeclaration> eventDeclarations) =>
         eventDeclarations.ConvertAll(e =>
         {
             MaybeVisit(e.Attributes);

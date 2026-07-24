@@ -415,7 +415,7 @@ public sealed partial class TypeChecker
         return BindType(invocation, substitutedReturnType);
     }
 
-    private Type CheckEventInvocation(Invocation invocation, InstantiatedType eventType)
+    private Types.PrimitiveType CheckEventInvocation(Invocation invocation, InstantiatedType eventType)
     {
         var argumentList = invocation.Arguments.ArgumentList;
         var argumentTypes = argumentList.ConvertAll(Visit);
@@ -1193,7 +1193,7 @@ public sealed partial class TypeChecker
         return type;
     }
 
-    private Type ReportCannotUseToIndex(Node node, Type objectType, Type indexType, string? cannotFindReason = "")
+    private Types.PrimitiveType ReportCannotUseToIndex(Node node, Type objectType, Type indexType, string? cannotFindReason = "")
     {
         _diagnostics.Error(node, InternalCodes.InvalidAccess, $"Expression of type '{indexType}' cannot be used to index type '{objectType}'.{cannotFindReason}");
         return BindType(node, Types.PrimitiveType.Never);
