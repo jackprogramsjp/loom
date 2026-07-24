@@ -12,7 +12,11 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
     private readonly Dictionary<Node, FlowState> _states = [];
 
     public FlowState GetState(Node node) => _states.TryGetValue(node, out var existingState) ? existingState : FlowState.Empty;
-    public FlowAnalyzerResult Analyze() => new(_diagnostics);
+    public FlowAnalyzerResult Analyze()
+    {
+        BindState(semanticModel.Tree, AnalyzeStatements(semanticModel.Tree.Statements, new FlowState()));
+        return new FlowAnalyzerResult(_diagnostics);
+    }
 
     private FlowState AnalyzeStatements(IReadOnlyList<Statement> statements, FlowState state) =>
         statements.Aggregate(state, (current, statement) => AnalyzeStatement(statement, current));
