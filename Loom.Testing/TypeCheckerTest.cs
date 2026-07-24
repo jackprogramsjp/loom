@@ -5133,6 +5133,7 @@ public class TypeCheckerTest
             match value {
                 text when string -> text,
                 n when number -> n,
+                _ -> 0,
             }
             """
         );
@@ -5148,6 +5149,7 @@ public class TypeCheckerTest
             match xs {
                 [a, b, c] -> a,
                 [head, ..rest] -> head,
+                _ -> 0,
             }
             """
         );
@@ -5164,6 +5166,7 @@ public class TypeCheckerTest
             match box {
                 { value } -> value,
                 { value: v } -> v,
+                _ -> 0,
             }
             """
         );
@@ -5311,6 +5314,37 @@ public class TypeCheckerTest
             InternalCodes.TypeMismatch,
             "Range pattern can only match values of type 'number', not '\"hi\"'."
         );
+    }
+
+    [Fact]
+    public void ThrowsFor_Match_NonExhaustive_NoIrrefutableArm()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""match 1 { 0 -> "zero", 1 -> "one" }""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.NonExhaustiveMatch,
+            "Match expression is not exhaustive.",
+            "add a wildcard arm ('_ -> ...') or a binding arm to cover the remaining cases."
+        );
+    }
+
+    [Fact]
+    public void ThrowsFor_Match_NonExhaustive_IrrefutablePatternGuarded()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""match 1 { x when x > 0 -> x }""");
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.NonExhaustiveMatch,
+            "Match expression is not exhaustive.",
+            "add a wildcard arm ('_ -> ...') or a binding arm to cover the remaining cases."
+        );
+    }
+
+    [Fact]
+    public void Allows_Match_Exhaustive_ViaOrPatternWildcard()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("""match 1 { 0 -> "zero", 1 | _ -> "other" }""");
+        Utility.AssertNoErrors(diagnostics);
     }
     #endregion Match
 }

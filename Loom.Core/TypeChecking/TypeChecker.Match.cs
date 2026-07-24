@@ -17,8 +17,39 @@ public sealed partial class TypeChecker
         foreach (var arm in matchExpression.Arms)
             armTypes.Add(CheckMatchArm(arm, scrutineeType, expected: null));
 
+        CheckExhaustiveness(matchExpression);
+
         return BindType(matchExpression, TypeSimplifier.Simplify(new Types.UnionType(armTypes)));
     }
+
+    /// <summary>
+    /// Tier 0 exhaustiveness: a match must contain at least one irrefutable arm (a bare identifier,
+    /// <c>let</c>, or wildcard pattern with no guard), otherwise the compiled match can fall through
+    /// and leave its result nil at runtime.
+    /// </summary>
+    private void CheckExhaustiveness(MatchExpression matchExpression)
+    {
+        if (matchExpression.Arms.Exists(IsIrrefutableArm))
+            return;
+
+        _diagnostics.Error(
+            matchExpression,
+            InternalCodes.NonExhaustiveMatch,
+            "Match expression is not exhaustive.",
+            "add a wildcard arm ('_ -> ...') or a binding arm to cover the remaining cases."
+        );
+    }
+
+    private static bool IsIrrefutableArm(MatchArm arm) =>
+        arm.Guard == null && IsIrrefutablePattern(arm.Pattern);
+
+    private static bool IsIrrefutablePattern(Pattern pattern) =>
+        pattern switch
+        {
+            WildcardPattern or IdentifierPattern or LetPattern => true,
+            OrPattern orPattern => orPattern.Patterns.Exists(IsIrrefutablePattern),
+            _ => false
+        };
 
     private Type CheckMatchArm(MatchArm matchArm, Type scrutineeType, Type? expected)
     {
