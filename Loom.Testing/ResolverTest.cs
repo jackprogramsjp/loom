@@ -1122,7 +1122,7 @@ public class ResolverTest
     [InlineData("Record<string, bool>")]
     [InlineData("MutRecord<string, bool>")]
     [InlineData("Event<number, string>")]
-    [InlineData("UserEvent<number, string>")]
+    [InlineData("ConsumerEvent<number, string>")]
     public void Declares_IntrinsicType_Symbols(string name) => Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
 
     [Fact]

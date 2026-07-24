@@ -1,21 +1,12 @@
-event my_event(param: number);
-
-fn on_event(p: number): void {
-    print("param: " + string(p))
+interface EventObject {
+    event consumer(param: string);
 }
 
-trait Execute {
-    fn execute(p: number): void;
+fn on_consumer(p: string): void {
+    print("param: " + p)
 }
 
-interface Foo;
-
-implement Execute for Foo {
-    fn execute(p) -> print(p);
-}
-
-let foo = new Foo {};
-my_event += foo.execute;
-my_event += (mut []).push;
-let conn = my_event += on_event;
-conn.disconnect();
+let eo = none as never as EventObject;
+eo.consumer += on_consumer;
+eo.consumer("abc");
+eo.consumer -= on_consumer;
