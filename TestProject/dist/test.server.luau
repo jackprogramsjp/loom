@@ -1,6 +1,5 @@
 const world = game:GetService("Workspace")
 const part = world:FindFirstChildOfClass("Part")
-local x: Loom.Event<number>
 const function on_touch(hit: BasePart)
   return print(hit)
 end

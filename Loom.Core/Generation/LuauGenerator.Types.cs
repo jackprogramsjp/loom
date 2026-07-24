@@ -33,15 +33,27 @@ public sealed partial class LuauGenerator
 
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
         var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
-        if (symbol is { IsIntrinsic: true } && IsLoomRuntimeType(symbol))
+        if (IsLoomRuntimeType(symbol))
             return LuauFactory.QualifyRuntimeType(luauTypeName);
 
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
-    
-    private static readonly HashSet<string> _loomRuntimeTypeNames = ["Event", "ConsumerEvent", "CreatableInstance", "ServiceInstance"];
-    private static bool IsLoomRuntimeType(Symbol symbol) => _loomRuntimeTypeNames.Contains(symbol.Name);
+
+    private static readonly HashSet<string> _loomRuntimeTypeNames =
+    [
+        "ResultOk",
+        "ResultError",
+        "Result",
+        "Range",
+        "Event",
+        "ConsumerEvent",
+        "CreatableInstance",
+        "ServiceInstance"
+    ];
+
+    private static bool IsLoomRuntimeType(Symbol symbol) =>
+        symbol is { IsIntrinsic: true, File.Name: "runtime.loom" or "None.loom" or "PluginSecurity.loom" } && _loomRuntimeTypeNames.Contains(symbol.Name);
 
     public override LuauNode VisitFunctionType(FunctionType functionType) =>
         new Luau.AST.FunctionType(
