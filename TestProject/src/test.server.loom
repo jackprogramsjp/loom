@@ -1,12 +1,7 @@
-interface EventObject {
-    event e(param: string);
-}
+let world = get_service::<Workspace>();
+let part = world.find_first_child_of_class::<Part>();
 
-fn on_e(p: string): void {
-    print("param: " + p)
-}
+fn on_touch(hit: BasePart) -> print(hit);
 
-let eo = none as never as EventObject;
-eo.e += on_consumer;
-eo.e("abc");
-eo.e -= on_consumer;
+if part != none
+    part.touched += on_touch;

@@ -98,56 +98,61 @@ public class ObjectType(ObjectIndexer? indexer, List<ObjectProperty> properties)
             }
         );
 
-    public override bool IsAssignableTo(Type other)
-    {
-        if (base.IsAssignableTo(other))
-            return true;
-
-        if (other is not ObjectType objectType)
-            return false;
-
-        if (Properties.Count < objectType.Properties.Count)
-            return false;
-
-        var sourcePropertyMap = Properties.ToDictionary(p => p.Name, p => p);
-        foreach (var targetProperty in objectType.Properties)
-        {
-            if (!sourcePropertyMap.TryGetValue(targetProperty.Name, out var sourceProperty))
-                return false;
-
-            if (sourceProperty.IsMutable && !targetProperty.IsMutable)
-                return false;
-
-            if (!sourceProperty.ValueType.IsAssignableTo(targetProperty.ValueType))
-                return false;
-        }
-
-        if (objectType.Indexer == null)
-            return true;
-
-        if (Indexer == null)
-            return false;
-
-        if (Indexer.IsMutable || objectType.Indexer.IsMutable)
-        {
-            if (!Indexer.IsMutable && objectType.Indexer.IsMutable
-                || !Indexer.KeyType.Equals(objectType.Indexer.KeyType)
-                || !Indexer.ValueType.Equals(objectType.Indexer.ValueType))
+    public override bool IsAssignableTo(Type other) =>
+        GuardedAssignableTo(
+            this,
+            other,
+            () =>
             {
-                return false;
-            }
-        }
-        else
-        {
-            if (!Indexer.KeyType.IsAssignableTo(objectType.Indexer.KeyType)
-                || !Indexer.ValueType.IsAssignableTo(objectType.Indexer.ValueType))
-            {
-                return false;
-            }
-        }
+                if (base.IsAssignableTo(other))
+                    return true;
 
-        return true;
-    }
+                if (other is not ObjectType objectType)
+                    return false;
+
+                if (Properties.Count < objectType.Properties.Count)
+                    return false;
+
+                var sourcePropertyMap = Properties.ToDictionary(p => p.Name, p => p);
+                foreach (var targetProperty in objectType.Properties)
+                {
+                    if (!sourcePropertyMap.TryGetValue(targetProperty.Name, out var sourceProperty))
+                        return false;
+
+                    if (sourceProperty.IsMutable && !targetProperty.IsMutable)
+                        return false;
+
+                    if (!sourceProperty.ValueType.IsAssignableTo(targetProperty.ValueType))
+                        return false;
+                }
+
+                if (objectType.Indexer == null)
+                    return true;
+
+                if (Indexer == null)
+                    return false;
+
+                if (Indexer.IsMutable || objectType.Indexer.IsMutable)
+                {
+                    if (!Indexer.IsMutable && objectType.Indexer.IsMutable
+                        || !Indexer.KeyType.Equals(objectType.Indexer.KeyType)
+                        || !Indexer.ValueType.Equals(objectType.Indexer.ValueType))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!Indexer.KeyType.IsAssignableTo(objectType.Indexer.KeyType)
+                        || !Indexer.ValueType.IsAssignableTo(objectType.Indexer.ValueType))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        );
 
     public override string ToString()
     {

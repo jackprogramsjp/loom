@@ -1,8 +1,8 @@
-type EventObject = {}
-const function on_consumer(p: string): ()
-  print("param: " .. p)
+const world = game:GetService("Workspace")
+const part = world:FindFirstChildOfClass("Part")
+const function on_touch(hit: Loom.BasePart)
+  return print(hit)
 end
-const eo = (nil :: never) :: EventObject
-eo.consumer += on_consumer
-eo.consumer("abc")
-eo.consumer -= on_consumer
+if part ~= nil then
+  part.touched += on_touch
+end

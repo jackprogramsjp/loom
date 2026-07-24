@@ -237,6 +237,7 @@ internal static class Constants
 
     public static readonly Dictionary<string, string> RenameMap = new()
     {
+        { "event", "_event" },
         { "type", "_type" },
         { "interface", "_interface" },
         { "old", "oldValue" },

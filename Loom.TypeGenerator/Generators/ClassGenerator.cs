@@ -96,19 +96,19 @@ internal sealed class ClassGenerator(
                     GenerateProperty(property, rbxClass);
                     continue;
 
-                // case Event @event:
-                //     GenerateEvent(@event, rbxClass);
-                //     break;
+                case Event @event:
+                    GenerateEvent(@event, rbxClass);
+                    break;
                 case Function function:
                     GenerateFunction(function, rbxClass);
                     break;
-                case not Event and not Function and Callback callback:
+                case Callback callback:
                     GenerateCallback(callback, rbxClass);
                     continue;
 
-                // default:
-                //     Log.Fatal($"received unsupported member type: {member.MemberType}");
-                //     break;
+                default:
+                    Log.Fatal($"received unsupported member type: {member.MemberType}");
+                    break;
             }
         }
 
@@ -126,20 +126,18 @@ internal sealed class ClassGenerator(
         var extraPropertyData = CanWrite(rbxClass.Name, property) && !ClassUtility.HasTag(property, "ReadOnly") ? "mut " : "";
         var (snakeName, attributes) = GetMemberAttributes(name);
 
-        WriteDescription(description);
-        if (attributes != null)
-            Write(attributes);
-
+        WriteMetadata(description, attributes);
         Write($"{extraPropertyData}{snakeName}: {valueType}{(definitelyDefined || valueType.EndsWith('?') ? "" : "?")};");
     }
 
-    // private void GenerateEvent(Event @event, Class rbxClass)
-    // {
-    //     var paramTypeList = GenerateParameterList(@event.Parameters);
-    //     var (name, description) = GetMemberNameAndDescription(@event, rbxClass);
-    //     WriteDescription(description);
-    //     Write($"event {name}{paramTypeList};");
-    // }
+    private void GenerateEvent(Event @event, Class rbxClass)
+    {
+        var parameterList = GenerateParameterList(@event.Parameters);
+        var (name, description) = GetMemberNameAndDescription(@event, rbxClass);
+        var (snakeName, attributes) = GetMemberAttributes(name);
+        WriteMetadata(description, attributes);
+        Write($"event {snakeName}{parameterList};");
+    }
 
     private void GenerateFunction(Function function, Class rbxClass)
     {
@@ -154,8 +152,7 @@ internal sealed class ClassGenerator(
         attributeList.Add("luau_method");
         var (snakeName, attributes) = GetMemberAttributes(name, attributeList);
 
-        WriteDescription(description);
-        Write(attributes!);
+        WriteMetadata(description, attributes);
         Write($"{snakeName}: fn{parameterList}: {returnType};");
     }
 
@@ -169,11 +166,15 @@ internal sealed class ClassGenerator(
         var returnType = ClassUtility.SafeReturnType(callback.ReturnType);
         var (snakeName, attributes) = GetMemberAttributes(name);
 
+        WriteMetadata(description, attributes);
+        Write($"mut {snakeName}: fn{parameterList}: {returnType};");
+    }
+    
+    private void WriteMetadata(string description, string? attributes)
+    {
         WriteDescription(description);
         if (attributes != null)
             Write(attributes);
-
-        Write($"mut {snakeName}: fn{parameterList}: {returnType};");
     }
 
     private void WriteDescription(string description)

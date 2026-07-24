@@ -4537,6 +4537,39 @@ public class TypeCheckerTest
     }
     #endregion Checks
 
+    #region SelfReferentialTypes
+    [Fact]
+    public void Unifies_FunctionTypes_WithSelfReferentialParameterType_WithoutStackOverflow()
+    {
+        const string source = """
+            declare interface Node {
+                next: Node;
+            }
+
+            declare fn a(n: Node): void;
+            let b: fn(n: Node): void = a;
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void ThrowsFor_FunctionTypes_WithSelfReferentialParameterType_AndMismatchedReturnType()
+    {
+        const string source = """
+            declare interface Node {
+                next: Node;
+            }
+
+            declare fn a(n: Node): void;
+            let b: fn(n: Node): number = a;
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.TypeMismatch);
+    }
+    #endregion SelfReferentialTypes
+
     #region Bidirectional
     [Fact]
     public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionArgument()

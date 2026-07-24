@@ -378,8 +378,17 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         && DeclareType(enumDeclaration, SymbolKind.EnumType)
         && base.VisitEnumDeclaration(enumDeclaration);
 
-    public override bool VisitEventDeclaration(EventDeclaration eventDeclaration) =>
-        DeclareVariable(eventDeclaration, SymbolKind.Event) && base.VisitEventDeclaration(eventDeclaration);
+    public override bool VisitEventDeclaration(EventDeclaration eventDeclaration)
+    {
+        if (!DeclareVariable(eventDeclaration, SymbolKind.Event))
+            return false;
+                
+        PushScope();
+        base.VisitEventDeclaration(eventDeclaration);
+        PopScope();
+
+        return true;
+    }
 
     public override bool VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {

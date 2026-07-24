@@ -164,26 +164,39 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
         ApplySubstitutions();
         return true;
     }
+    
+    private readonly HashSet<(Type, Type)> _unifyVisiting = new(ReferencePairComparer.Instance);
 
     private bool TryUnify(Type a, Type b, LocationSpan span, out bool updated)
     {
         updated = false;
-        return (a, b) switch
-        {
-            (TypeVariable va, TypeVariable vb) => UnifyBothVariables(va, vb, out updated),
-            (TypeVariable v, _) => BindVariable(v, b, span, out updated),
-            (_, TypeVariable v) => BindVariable(v, a, span, out updated),
-            (InstantiatedType i1, InstantiatedType i2) => UnifyInstantiatedPair(i1, i2, span, out updated),
-            (FunctionType f1, FunctionType f2) => UnifyFunctionTypes(f1, f2, span, out updated),
-            (ObjectType o1, ObjectType o2) => UnifyObjectTypes(o1, o2, span, out updated),
-            (ObjectType o, InterfaceType i) => UnifyObjectWithInterface(o, i, span, out updated),
-            (InterfaceType i, ObjectType o) => UnifyObjectWithInterface(o, i, span, out updated),
-            (InterfaceType i1, InterfaceType i2) => UnifyInterfaceTypes(i1, i2, span, out updated),
-            (TypeParameter p1, TypeParameter p2) => UnifyTypeParameters(p1, p2, span, out updated),
+        var pair = (a, b);
+        if (!_unifyVisiting.Add(pair))
+            return true;
 
-            _ when a.IsAssignableTo(b) => true,
-            _ => ReportTypeMismatch(a, b, span)
-        };
+        try
+        {
+            return (a, b) switch
+            {
+                (TypeVariable va, TypeVariable vb) => UnifyBothVariables(va, vb, out updated),
+                (TypeVariable v, _) => BindVariable(v, b, span, out updated),
+                (_, TypeVariable v) => BindVariable(v, a, span, out updated),
+                (InstantiatedType i1, InstantiatedType i2) => UnifyInstantiatedPair(i1, i2, span, out updated),
+                (FunctionType f1, FunctionType f2) => UnifyFunctionTypes(f1, f2, span, out updated),
+                (ObjectType o1, ObjectType o2) => UnifyObjectTypes(o1, o2, span, out updated),
+                (ObjectType o, InterfaceType i) => UnifyObjectWithInterface(o, i, span, out updated),
+                (InterfaceType i, ObjectType o) => UnifyObjectWithInterface(o, i, span, out updated),
+                (InterfaceType i1, InterfaceType i2) => UnifyInterfaceTypes(i1, i2, span, out updated),
+                (TypeParameter p1, TypeParameter p2) => UnifyTypeParameters(p1, p2, span, out updated),
+
+                _ when a.IsAssignableTo(b) => true,
+                _ => ReportTypeMismatch(a, b, span)
+            };
+        }
+        finally
+        {
+            _unifyVisiting.Remove(pair);
+        }
     }
 
     private bool UnifyTypeParameters(TypeParameter p1, TypeParameter p2, LocationSpan span, out bool updated)
@@ -342,21 +355,24 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
     }
 
     private static bool OccursIn(TypeVariable variable, Type type) =>
-        type switch
+        OccursIn(variable, type, new HashSet<Type>(ReferenceEqualityComparer.Instance));
+
+    private static bool OccursIn(TypeVariable variable, Type type, HashSet<Type> visited) =>
+        visited.Add(type) && type switch
         {
             TypeVariable tv => tv.Id == variable.Id,
-            IndexedType indexedType => OccursIn(variable, indexedType.Target) || OccursIn(variable, indexedType.Index),
-            InterfaceType i => i.Constraints.Any(t => OccursIn(variable, t)) || OccursIn(variable, i.ObjectType),
-            ObjectType obj => obj.Indexer != null && (OccursIn(variable, obj.Indexer.KeyType) || OccursIn(variable, obj.Indexer.ValueType))
-                || obj.Properties.Any(p => OccursIn(variable, p.ValueType)),
-            GenericType generic => OccursIn(variable, generic.UnderlyingType),
-            InstantiatedType inst => inst.Arguments.Any(a => OccursIn(variable, a)),
-            IntersectionType inter => inter.Types.Any(t => OccursIn(variable, t)),
-            UnionType union => union.Types.Any(t => OccursIn(variable, t)),
-            FunctionType fn => fn.TypeParameters.Any(p => OccursIn(variable, p))
-                || fn.ParameterTypes.Any(t => OccursIn(variable, t))
-                || OccursIn(variable, fn.ReturnType),
-            TypeParameter tp => tp.Constraint != null && OccursIn(variable, tp.Constraint) || tp.DefaultType != null && OccursIn(variable, tp.DefaultType),
+            IndexedType indexedType => OccursIn(variable, indexedType.Target, visited) || OccursIn(variable, indexedType.Index, visited),
+            InterfaceType i => i.Constraints.Any(t => OccursIn(variable, t, visited)) || OccursIn(variable, i.ObjectType, visited),
+            ObjectType obj => obj.Indexer != null && (OccursIn(variable, obj.Indexer.KeyType, visited) || OccursIn(variable, obj.Indexer.ValueType, visited))
+                || obj.Properties.Any(p => OccursIn(variable, p.ValueType, visited)),
+            GenericType generic => OccursIn(variable, generic.UnderlyingType, visited),
+            InstantiatedType inst => inst.Arguments.Any(a => OccursIn(variable, a, visited)),
+            IntersectionType inter => inter.Types.Any(t => OccursIn(variable, t, visited)),
+            UnionType union => union.Types.Any(t => OccursIn(variable, t, visited)),
+            FunctionType fn => fn.TypeParameters.Any(p => OccursIn(variable, p, visited))
+                || fn.ParameterTypes.Any(t => OccursIn(variable, t, visited))
+                || OccursIn(variable, fn.ReturnType, visited),
+            TypeParameter tp => tp.Constraint != null && OccursIn(variable, tp.Constraint, visited) || tp.DefaultType != null && OccursIn(variable, tp.DefaultType, visited),
             _ => false
         };
 
@@ -369,13 +385,23 @@ public sealed class TypeSolver(DiagnosticBag diagnostics)
     }
 
     private static Type SubstituteTypeParameters(Dictionary<TypeParameter, TypeVariable> mapping, Type type) =>
-        type switch
-        {
-            TypeParameter typeParameter => mapping.TryGetValue(typeParameter, out var tv) ? tv : type,
-            _ => Transform(type, t => SubstituteTypeParameters(mapping, t))
-        };
+        SubstituteTypeParameters(mapping, type, new Dictionary<Type, Type>(ReferenceEqualityComparer.Instance));
+    
+    private static Type SubstituteTypeParameters(Dictionary<TypeParameter, TypeVariable> mapping, Type type, Dictionary<Type, Type> visited)
+    {
+        if (type is TypeParameter typeParameter)
+            return mapping.TryGetValue(typeParameter, out var tv) ? tv : type;
 
-    private Type Substitute(Type type) => Substitute(type, new Dictionary<Type, Type>());
+        if (visited.TryGetValue(type, out var existing))
+            return existing;
+
+        visited[type] = type;
+        var transformed = Transform(type, t => SubstituteTypeParameters(mapping, t, visited));
+        visited[type] = transformed;
+        return transformed;
+    }
+
+    private Type Substitute(Type type) => Substitute(type, new Dictionary<Type, Type>(ReferenceEqualityComparer.Instance));
 
     private Type Substitute(Type type, Dictionary<Type, Type> visitedSubstitutions)
     {

@@ -628,7 +628,7 @@ public sealed partial class TypeChecker
             {
                 var assignableFunction = new Types.FunctionType([], eventParameters, Types.PrimitiveType.Void);
                 _semanticModel.TypeSolver.AddConstraint(rightType, assignableFunction, binaryOperator.Right);
-                return BindType(binaryOperator, GetIntrinsicType(binaryOperator, "EventConnection"));
+                return BindType(binaryOperator, GetIntrinsicType(binaryOperator, "ScriptConnection"));
             }
         }
 
@@ -1132,7 +1132,7 @@ public sealed partial class TypeChecker
         if (symbol != null && GetTypeFromSymbol(symbol) is T type)
             return type;
 
-        _diagnostics.CompilerError(failNode, $"Failed to find  intrinsic type for name '{name}'");
+        _diagnostics.CompilerError(failNode, $"Failed to find intrinsic type for name '{name}'");
         return null!;
     }
 
