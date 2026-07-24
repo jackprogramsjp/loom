@@ -628,7 +628,7 @@ public class ResolverTest
         var property = symbol.GetPropertyAtPath(["address", "city", "name"]);
 
         Assert.NotNull(property);
-        Assert.Equal("name", property!.Name);
+        Assert.Equal("name", property.Name);
     }
     
     [Fact]

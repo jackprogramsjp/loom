@@ -114,7 +114,7 @@ public class LuauGeneratorTest
         var luauTree = Utility.GetLuauAST("interface I { a: number } let i = new I { a: 1 }; type X = typeof(i.a);");
         var alias = Assert.IsType<TypeAlias>(luauTree.Statements.Last());
         var typeOf = Assert.IsType<TypeOfType>(alias.Type);
-        var access = Assert.IsType<PropertyAccess>(typeOf.Expression);
+        Assert.IsType<PropertyAccess>(typeOf.Expression);
         Assert.Equal("typeof(i.a)", typeOf.Render(new RenderState()));
     }
 

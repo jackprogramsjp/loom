@@ -4,7 +4,6 @@ using Loom.Core.Parsing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.Text;
-using Loom.Core.TypeChecking.Types;
 using LiteralType = Loom.Core.TypeChecking.Types.LiteralType;
 using PrimitiveType = Loom.Core.TypeChecking.Types.PrimitiveType;
 using Type = Loom.Core.TypeChecking.Types.Type;

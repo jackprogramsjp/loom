@@ -4,7 +4,6 @@ using Loom.Core.Generation.Macros.Providers;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Resolving;
 using Loom.Core.TypeChecking;
-using Loom.Core.TypeChecking.Types;
 using Loom.Luau.AST;
 using ElementAccess = Loom.Core.Parsing.AST.ElementAccess;
 using Identifier = Loom.Core.Parsing.AST.Identifier;
