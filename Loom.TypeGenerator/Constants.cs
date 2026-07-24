@@ -241,6 +241,7 @@ internal static class Constants
         { "type", "_type" },
         { "interface", "_interface" },
         { "old", "oldValue" },
-        { "new", "newValue" }
+        { "new", "newValue" },
+        { "function", "callback" }
     };
 }
