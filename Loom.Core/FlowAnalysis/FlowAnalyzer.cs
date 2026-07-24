@@ -30,6 +30,7 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
             FunctionDeclaration functionDeclaration => AnalyzeFunctionDeclaration(functionDeclaration, state),
             EventDeclaration eventDeclaration => AnalyzeEventDeclaration(eventDeclaration, state),
             InterfaceDeclaration interfaceDeclaration => AnalyzeInterfaceDeclaration(interfaceDeclaration, state),
+            EnumDeclaration enumDeclaration => AnalyzeEnumDeclaration(enumDeclaration, state),
             Implement implement => AnalyzeImplement(implement, state),
             Return @return => AnalyzeReturn(@return, state),
             Break @break => AnalyzeBreak(@break, state),
@@ -101,6 +102,14 @@ public sealed class FlowAnalyzer(SemanticModel semanticModel)
         BindState(
             interfaceDeclaration,
             semanticModel.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Variable) is { } symbol
+                ? state.WithInitialized(symbol)
+                : state
+        );
+
+    private FlowState AnalyzeEnumDeclaration(EnumDeclaration enumDeclaration, FlowState state) =>
+        BindState(
+            enumDeclaration,
+            semanticModel.GetDeclarationSymbol(enumDeclaration, SymbolKind.Variable) is { } symbol
                 ? state.WithInitialized(symbol)
                 : state
         );
