@@ -63,7 +63,7 @@ public sealed partial class TypeChecker
         BindType(traitDeclaration, publishedType);
 
         var properties = ResolveTraitProperties(traitDeclaration.Body.Members);
-        objectType.Properties.AddRange(properties);
+        objectType.AddProperties(properties);
 
         return publishedType;
     }
@@ -101,8 +101,8 @@ public sealed partial class TypeChecker
         var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>().ToList() ?? [];
         var events = ResolveInterfaceEvents(symbol, eventDeclarations);
         var properties = ResolveInterfaceProperties(constraints, propertyDeclarations);
-        objectType.Properties.AddRange(events);
-        objectType.Properties.AddRange(properties);
+        objectType.AddProperties(events);
+        objectType.AddProperties(properties);
 
         return BindType(interfaceDeclaration, publishedType);
     }
@@ -140,7 +140,7 @@ public sealed partial class TypeChecker
     {
         var traitMethodNames = traitProperties.Select(p => p.Name).ToHashSet();
         CheckInterfaceInvocationInitializers(node, interfaceType);
-        interfaceType.ObjectType.Properties.AddRange(traitProperties);
+        interfaceType.ObjectType.AddProperties(traitProperties);
         interfaceType.TraitMethodNames = traitMethodNames;
 
         return BindType(node, interfaceType);

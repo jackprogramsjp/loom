@@ -7,7 +7,9 @@ public abstract class NativelyIndexableType : Type
 
     public abstract Type PropertyKeyUnion();
 
-    public ObjectProperty? GetProperty(string name) => Properties.Find(p => p.Name == name);
+    public ObjectProperty? GetProperty(string name) => FindProperty(name);
+
+    protected virtual ObjectProperty? FindProperty(string name) => Properties.Find(p => p.Name == name);
 
     public (ObjectBodyType? BodyType, string CannotFindReason) GetTypeAtIndex(Type indexType)
     {
