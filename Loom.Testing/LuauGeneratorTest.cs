@@ -2776,7 +2776,8 @@ public class LuauGeneratorTest
         var invocationStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[4]);
         var invocationCall = Assert.IsType<Call>(invocationStatement.Expression);
         var invocationAccess = Assert.IsType<PropertyAccess>(invocationCall.Callee);
-        Assert.Equal("OnConsume", Assert.Single(invocationAccess.Names));
+        Assert.IsType<PropertyAccess>(invocationAccess.Target);
+        Assert.Equal("Fire", Assert.Single(invocationAccess.Names));
 
         var disconnectStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[5]);
         var disconnectCall = Assert.IsType<Call>(disconnectStatement.Expression);

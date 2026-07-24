@@ -17,5 +17,6 @@ implement Execute for Foo {
 let foo = new Foo {};
 my_event += foo.execute;
 my_event += (mut []).push;
+my_event(69420);
 let conn = my_event += on_event;
 conn.disconnect();

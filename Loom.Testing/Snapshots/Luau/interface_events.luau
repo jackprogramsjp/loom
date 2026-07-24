@@ -7,5 +7,5 @@ const function on_consumer(p: string): ()
 end
 const eo = (nil :: never) :: EventObject
 const on_consumer_conn = eo.consumer:Connect(on_consumer)
-eo.consumer("abc")
+eo.consumer:Fire("abc")
 on_consumer_conn:Disconnect()

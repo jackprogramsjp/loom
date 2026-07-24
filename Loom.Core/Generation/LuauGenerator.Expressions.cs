@@ -22,7 +22,11 @@ public sealed partial class LuauGenerator
     public override LuauNode VisitInvocation(Invocation invocation)
     {
         var callee = Visit(invocation.Expression);
-        var call = new Call(callee, invocation.Arguments.ArgumentList.ConvertAll(Visit), IsMethodReference(invocation.Expression));
+        var arguments = invocation.Arguments.ArgumentList.ConvertAll(Visit);
+        if (_semanticModel.GetType(invocation.Expression) is InstantiatedType { GenericType.UnderlyingType: InterfaceType { Name: "Event" } })
+            return new Call(new Luau.AST.PropertyAccess(callee, ["Fire"]), arguments, true);
+
+        var call = new Call(callee, arguments, IsMethodReference(invocation.Expression));
         return _macroExpander.TryGetInvocationMacro(invocation, call, out var replacement) ? replacement : call;
     }
 
@@ -130,9 +134,8 @@ public sealed partial class LuauGenerator
     /// </summary>
     private bool IsMethodReference(Expression expression) =>
         _semanticModel.TryGetIntrinsicAttribute(expression, "luau_method", out _)
-        || expression.Children.FirstOrDefault() is { } child
+        || expression is { Children: [{ } child, ..], Tokens: [.., { Kind: SyntaxKind.Identifier } name] }
         && _semanticModel.GetType(child) is InterfaceType interfaceType
-        && expression.Tokens.LastOrDefault() is { Kind: SyntaxKind.Identifier } name
         && interfaceType.TraitMethodNames.Contains(name.Text);
 
     private LuauExpression WrapAnonymousFunction(Expression expression, LuauExpression luauExpression, LuauType? returnType = null)

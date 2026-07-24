@@ -1,5 +1,5 @@
 interface EventObject {
-    [luau_name("OnConsume")]
+    [luau_name("ConsumerEvent")]
     event consumer(param: string);
 }
 
