@@ -412,6 +412,7 @@ public sealed partial class TypeChecker
             var argumentTypes = argumentList.ConvertAll(Visit);
             var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as EventDeclaration
                 ?? _semanticModel.GetPropertySymbol(invocation.Expression)?.Declaration as EventDeclaration;
+
             CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, eventType.Arguments, argumentList);
             return BindType(invocation, Types.PrimitiveType.Void);
         }
@@ -863,10 +864,10 @@ public sealed partial class TypeChecker
 
     private Type GetTypeOfNamedAccess(Expression accessExpression, Expression targetExpression, List<DotName> names)
     {
+        var type = Visit(targetExpression);
         if (TryGetNarrowedType(accessExpression, out var narrowedType))
             return BindType(accessExpression, narrowedType);
 
-        var type = Visit(targetExpression);
         foreach (var indexType in names.Select(name => new Types.LiteralType(name.Name.Text)))
         {
             type = IndexType(accessExpression, type, indexType, $"Cannot access property '{indexType.Value}' on type '{type}'.");
@@ -1115,7 +1116,7 @@ public sealed partial class TypeChecker
 
         return isConsumerEvent || instantiated.GenericType.Equals(GetGenericEventType(failNode, false));
     }
-    
+
     private InstantiatedType InstantiateEventType(Node failNode, bool isConsumer, List<Type> parameterTypes)
     {
         var genericType = GetGenericEventType(failNode, isConsumer);

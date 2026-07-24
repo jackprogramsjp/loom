@@ -2737,6 +2737,30 @@ public class LuauGeneratorTest
     }
 
     [Fact]
+    public void Generates_EventConnect_ForInterfaceMemberEvent_AccessedInsideNarrowedIf()
+    {
+        const string source = """
+            interface Foo {
+                event abc;
+            }
+            fn handler(): void { }
+            let eo: Foo? = none as never as Foo;
+            if eo != none {
+                eo.abc += handler;
+            }
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+        var ifStatement = Assert.IsType<IfStatement>(luauTree.Statements.OfType<IfStatement>().Single());
+        var connVariable = Assert.IsType<ConstVariable>(ifStatement.ThenBranch.Statements.Single());
+
+        var connectCall = Assert.IsType<Call>(connVariable.Initializer);
+        Assert.True(connectCall.IsMethod);
+        var connectAccess = Assert.IsType<PropertyAccess>(connectCall.Callee);
+        Assert.Equal("Connect", Assert.Single(connectAccess.Names));
+    }
+
+    [Fact]
     public void Generates_InterfaceEvent_WithLuauNameAttribute_RenamesFieldAndAccessSites()
     {
         const string source = """
