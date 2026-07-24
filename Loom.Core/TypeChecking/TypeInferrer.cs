@@ -215,9 +215,42 @@ public sealed class TypeInferrer(Func<Node, Type> getType)
         if (parameterFunction.ParameterTypes.Count != argumentFunction.ParameterTypes.Count)
             return false;
 
+        // The argument is itself generic with its own type parameters (distinct from
+        // parameterFunction's, e.g. passing `id<T>(n: T): T` where a plain `fn(e): U` is
+        // expected) - matching its raw, uninstantiated shape positionally would pollute
+        // inferredTypes with bindings to the argument's own free type parameters instead of
+        // real information. Specialize it first using whatever's already been inferred for
+        // parameterFunction's own type parameters so far, then match against that instead.
+        if (argumentFunction.TypeParameters.Count > 0 && argumentFunction.TypeParameters.Count != parameterFunction.TypeParameters.Count)
+        {
+            var resolvedParameterTypes = parameterFunction.ParameterTypes.ConvertAll(t => Substitute(t, inferredTypes));
+            var argumentSubstitution = InferFunctionTypeArguments(argumentFunction, resolvedParameterTypes);
+            argumentFunction = new FunctionType(
+                [],
+                argumentFunction.ParameterTypes.ConvertAll(t => Substitute(t, argumentSubstitution)),
+                Substitute(argumentFunction.ReturnType, argumentSubstitution)
+            );
+        }
+
         return !parameterFunction.ParameterTypes.Where((t, index) => !TryInferTypes(t, argumentFunction.ParameterTypes[index], inferredTypes, visitedPairs)).Any()
             && TryInferTypes(parameterFunction.ReturnType, argumentFunction.ReturnType, inferredTypes, visitedPairs);
     }
+
+    private static Type Substitute(Type type, TypeParameterSubstitution substitution) =>
+        type switch
+        {
+            TypeParameter typeParameter => substitution.TryGetValue(typeParameter, out var substituted) ? substituted : type,
+            ArrayType arrayType => new ArrayType(Substitute(arrayType.ElementType, substitution), arrayType.IsMutable),
+            OptionalType optionalType => new OptionalType(Substitute(optionalType.NonNullableType, substitution)),
+            UnionType unionType => new UnionType(unionType.Types.ConvertAll(t => Substitute(t, substitution))),
+            IntersectionType intersectionType => new IntersectionType(intersectionType.Types.ConvertAll(t => Substitute(t, substitution))),
+            FunctionType functionType => new FunctionType(
+                functionType.TypeParameters,
+                functionType.ParameterTypes.ConvertAll(t => Substitute(t, substitution)),
+                Substitute(functionType.ReturnType, substitution)
+            ),
+            _ => type
+        };
 
     private static bool MatchUnionTypes(
         UnionType parameterUnion,

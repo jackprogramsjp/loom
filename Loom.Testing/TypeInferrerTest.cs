@@ -573,6 +573,27 @@ public class TypeInferrerTest
     }
 
     [Fact]
+    public void InferFunctionTypeArguments_GenericFunctionArgument_InstantiatesFromKnownParameterType()
+    {
+        var arrayElement = TypeParameter("T");
+        var outputParameter = TypeParameter("U");
+        var converterType = FunctionType([], [arrayElement], outputParameter);
+        var mapFunction = FunctionType(
+            [arrayElement, outputParameter],
+            [new ArrayType(arrayElement, false), converterType],
+            new ArrayType(outputParameter, false)
+        );
+
+        var idOwnParameter = TypeParameter("T2");
+        var idFunction = FunctionType([idOwnParameter], [idOwnParameter], idOwnParameter);
+
+        var result = TypeInferrer.InferFunctionTypeArguments(mapFunction, [new ArrayType(PrimitiveType.Number, false), idFunction]);
+
+        Assert.Equal(PrimitiveType.Number, result[arrayElement]);
+        Assert.Equal(PrimitiveType.Number, result[outputParameter]);
+    }
+
+    [Fact]
     public void InferFunctionTypeArguments_GenericTypeArgument_InferTypeArgument()
     {
         var elementParameter = TypeParameter("T");

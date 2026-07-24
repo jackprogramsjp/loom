@@ -22,7 +22,10 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     [MemberNotNull(nameof(_semanticModel))]
     public SemanticModel Resolve()
     {
-        _semanticModel = new SemanticModel(parserResult.Tree, _diagnostics, _allDeclarations, _allReferences);
+        _semanticModel = new SemanticModel(parserResult.Tree, _diagnostics, _allDeclarations, _allReferences)
+        {
+            EmitDebugDiagnostics = compilationUnit.Config.Debug
+        };
         PushScope();
         DeclareIntrinsicSymbols();
         DeclareGlobalSymbols();
@@ -699,24 +702,28 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             );
         }
 
-        if (TypeChecker.EmitDebugDiagnostics)
-            _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
-
         if (IsDeclarationFile())
-        {
             symbol.IsGlobal = true;
-            if (TypeChecker.EmitDebugDiagnostics)
-                _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
-        }
 
         if (_context == ResolverContext.Ambient)
             symbol.IsAmbient = true;
 
-        if (!parserResult.Tree.File.IsIntrinsic) return;
+        if (parserResult.Tree.File.IsIntrinsic)
+            symbol.IsIntrinsic = true;
 
-        symbol.IsIntrinsic = true;
-        if (TypeChecker.EmitDebugDiagnostics)
-            _diagnostics.Debug(symbol.Declaration, $"{symbol} is intrinsic");
+        if (_semanticModel.EmitDebugDiagnostics)
+            _diagnostics.Debug(symbol.Declaration, DescribeDeclaration(symbol));
+    }
+
+    private static string DescribeDeclaration(Symbol symbol)
+    {
+        var flags = new List<string>();
+        if (symbol.IsGlobal) flags.Add("global");
+        if (symbol.IsAmbient) flags.Add("ambient");
+        if (symbol.IsIntrinsic) flags.Add("intrinsic");
+
+        var suffix = flags.Count > 0 ? $" [{string.Join(", ", flags)}]" : "";
+        return $"Declared '{symbol.Name}' ({symbol.Kind}){suffix}";
     }
 
     private void AddToLookup(Symbol symbol)

@@ -85,5 +85,19 @@ public class ConfigReaderTest
     {
         var ex = Assert.Throws<TomlException>(() => TomlSerializer.Deserialize<LoomConfig>("project_type = \"nonsense\""));
         Assert.Contains("unknown project type 'nonsense'", ex.Message);
+    [Fact]
+    public void Debug_DefaultsToFalse()
+    {
+        var config = TomlSerializer.Deserialize<LoomConfig>("project_type = \"game\"");
+        Assert.NotNull(config);
+        Assert.False(config.Debug);
+    }
+
+    [Fact]
+    public void Debug_ParsesTrue()
+    {
+        var config = TomlSerializer.Deserialize<LoomConfig>("project_type = \"game\"\ndebug = true");
+        Assert.NotNull(config);
+        Assert.True(config.Debug);
     }
 }
