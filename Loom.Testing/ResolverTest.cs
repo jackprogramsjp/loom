@@ -135,6 +135,13 @@ public class ResolverTest
     }
 
     [Fact]
+    public void ThrowsFor_UndefinedVariable_InTypeOf()
+    {
+        var diagnostics = Utility.GetSemanticModel("type X = typeof(x);").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.CannotFindName, "Cannot find name 'x'.");
+    }
+
+    [Fact]
     public void ThrowsFor_UndefinedType()
     {
         var diagnostics = Utility.GetSemanticModel("let x: Abc = 1").Diagnostics;
@@ -265,7 +272,7 @@ public class ResolverTest
     public void ThrowsFor_DeclaredInterface_Invocation()
     {
         var diagnostics = Utility.GetSemanticModel("declare interface A; let a = new A {}").Diagnostics;
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvokeDeclaredInterface, "Cannot invoke interface 'A' because it was declared as type.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.InvokeDeclaredInterface, "Cannot invoke interface 'A' because it was declared as a type.");
     }
 
     [Fact]
@@ -663,7 +670,7 @@ public class ResolverTest
         var property = symbol.GetPropertyAtPath(["address", "city", "name"]);
 
         Assert.NotNull(property);
-        Assert.Equal("name", property!.Name);
+        Assert.Equal("name", property.Name);
     }
     
     [Fact]
@@ -1260,7 +1267,95 @@ public class ResolverTest
     [Theory]
     [InlineData("Range")]
     [InlineData("Record<string, bool>")]
+    [InlineData("MutRecord<string, bool>")]
+    [InlineData("Event<number, string>")]
+    [InlineData("ConsumerEvent<number, string>")]
     public void Declares_IntrinsicType_Symbols(string name) => Utility.AssertNoErrors(Utility.GetSemanticModel($"mut x: {name}"));
+
+    [Fact]
+    public void Declares_EventPropertySymbol()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("interface Foo { event abc; }"));
+        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.Single());
+        Assert.NotNull(interfaceDeclaration.Body);
+        
+        var eventDeclaration = Assert.IsType<EventDeclaration>(Assert.Single(interfaceDeclaration.Body.Members));
+        var symbol = model.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Interface);
+        Assert.NotNull(symbol);
+        
+        var interfaceSymbol = Assert.IsType<InterfaceSymbol>(symbol);
+        Assert.Equal("Foo", interfaceSymbol.Name);
+        Assert.Single(interfaceSymbol.Properties);
+
+        var property = interfaceSymbol.GetPropertyAtPath(["abc"]);
+        Assert.NotNull(property);
+        Assert.Equal(SymbolKind.Event, property.Kind);
+        Assert.Equal(eventDeclaration, property.Declaration);
+        Assert.False(property.IsIntrinsic);
+        Assert.False(property.IsMutable);
+    }
+    
+    [Fact]
+    public void Declares_EventSymbol()
+    {
+        var model = Utility.AssertNoErrors(Utility.GetSemanticModel("event abc;"));
+        var eventDeclaration = Assert.IsType<EventDeclaration>(model.Tree.Statements.Single());
+
+        var symbol = model.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event);
+        Assert.NotNull(symbol);
+        Assert.Equal("abc", symbol.Name);
+        Assert.Equal(SymbolKind.Event, symbol.Kind);
+        Assert.Equal(eventDeclaration, symbol.Declaration);
+        Assert.False(symbol.IsAmbient);
+        Assert.False(symbol.IsIntrinsic);
+        Assert.False(symbol.IsMutable);
+    }
+
+    [Fact]
+    public void Declares_EventPropertySymbol_WithAttribute()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                interface Foo {
+                    [luau_name("OnConsume")]
+                    event abc(x: number);
+                }
+                """
+            )
+        );
+
+        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.Last());
+        Assert.NotNull(interfaceDeclaration.Body);
+
+        var symbol = model.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Interface);
+        var interfaceSymbol = Assert.IsType<InterfaceSymbol>(symbol);
+
+        var property = Assert.Single(interfaceSymbol.Properties);
+        Assert.Equal(SymbolKind.Event, property.Kind);
+        var attribute = Assert.Single(property.Attributes);
+        Assert.Equal("luau_name", attribute.Name);
+    }
+
+    [Fact]
+    public void Declares_EventSymbol_WithAttribute_HasNoEffect()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                [luau_name("OnConsume")]
+                event abc(x: number);
+                """
+            )
+        );
+
+        var eventDeclaration = Assert.IsType<EventDeclaration>(model.Tree.Statements.Last());
+        var symbol = model.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event);
+        Assert.NotNull(symbol);
+        Assert.Equal(SymbolKind.Event, symbol.Kind);
+        Assert.IsNotType<PropertySymbol>(symbol);
+    }
+
 
     [Fact]
     public void Declares_TraitSymbol()
@@ -1371,10 +1466,10 @@ public class ResolverTest
     [Theory]
     [InlineData("sealed interface Foo { foo: number }", true)]
     [InlineData("interface Foo { foo: number }")]
-    [InlineData("interface Nutz; interface Ballz; sealed interface Foo: Nutz, Ballz { foo: number }", true, null, 2)]
-    [InlineData("declare sealed interface Foo { foo: number }", true, typeof(Declare))]
-    [InlineData("declare interface Foo { foo: number }", false, typeof(Declare))]
-    public void Declares_InterfaceSymbol(string source, bool isSealed = false, Type? declarationType = null, int constraintCount = 0)
+    [InlineData("interface Nutz; interface Ballz; sealed interface Foo: Nutz, Ballz { foo: number }", true, false, null, 2)]
+    [InlineData("declare sealed interface Foo { foo: number }", true, true, typeof(Declare))]
+    [InlineData("declare interface Foo { foo: number }", false, true, typeof(Declare))]
+    public void Declares_InterfaceSymbol(string source, bool isSealed = false, bool isAmbient = false, Type? declarationType = null, int constraintCount = 0)
     {
         var model = Utility.AssertNoErrors(Utility.GetSemanticModel(source));
         var statement = model.Tree.Statements.Last();
@@ -1391,6 +1486,25 @@ public class ResolverTest
         Assert.Equal(SymbolKind.Interface, interfaceSymbol.Kind);
         Assert.Equal(statement, interfaceSymbol.Declaration);
         Assert.Equal(isSealed, interfaceSymbol.IsSealed);
+        Assert.Equal(isAmbient, interfaceSymbol.IsAmbient);
+        Assert.Empty(interfaceSymbol.Implementations);
+        Assert.Empty(interfaceSymbol.Implements);
+        
+        var property = Assert.Single(interfaceSymbol.Properties);
+        Assert.Equal("foo", property.Name);
+        Assert.False(property.HasIntrinsicAttribute("hello"));
+        Assert.True(property.IsValueSymbol);
+        Assert.False(property.IsTypeSymbol);
+        Assert.False(property.IsMutable);
+        Assert.Null(property.PointsTo);
+        Assert.Empty(property.Attributes);
+        
+        if (constraintCount > 0)
+        {
+            Assert.NotNull(interfaceSymbol.Constraints);
+            Assert.Equal(constraintCount, interfaceSymbol.Constraints.Count);
+        }
+        
         Assert.False(interfaceSymbol.IsIntrinsic);
         Assert.False(interfaceSymbol.IsMutable);
     }
@@ -1472,4 +1586,84 @@ public class ResolverTest
         Utility.AssertNoErrors(model);
     }
     #endregion Declares
+
+    #region ReservedLuauKeywords
+    [Theory]
+    [InlineData("let repeat = 1;", "repeat")]
+    [InlineData("fn until() {}", "until")]
+    [InlineData("interface local;", "local")]
+    public void ThrowsFor_ReservedLuauKeywordDeclaration(string source, string keyword)
+    {
+        var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ReservedLuauKeyword, $"'{keyword}' is a reserved Luau keyword and cannot be used as a declaration name.");
+    }
+
+    [Fact]
+    public void ThrowsFor_ReservedLuauKeywordParameter()
+    {
+        var diagnostics = Utility.GetSemanticModel("fn foo(local: number): void {}").Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ReservedLuauKeyword, "'local' is a reserved Luau keyword and cannot be used as a declaration name.");
+    }
+
+    [Theory]
+    [InlineData("declare let local: number;", "local")]
+    [InlineData("declare fn end(): void;", "end")]
+    [InlineData("declare fn f(function: number): void;", "function")]
+    [InlineData("declare interface repeat;", "repeat")]
+    public void ThrowsFor_ReservedLuauKeywordName_InAmbientDeclaration(string source, string keyword)
+    {
+        var diagnostics = Utility.GetSemanticModel(source).Diagnostics;
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.ReservedLuauKeyword, $"'{keyword}' is a reserved Luau keyword and cannot be used as a declaration name.");
+    }
+
+    [Fact]
+    public void Allows_SelfAsDeclarationName()
+    {
+        var model = Utility.GetSemanticModel("fn foo(self: number): void {}");
+        Assert.Null(model.Diagnostics.Find(d => d.Code == InternalCodes.ReservedLuauKeyword));
+    }
+    #endregion ReservedLuauKeywords
+
+    #region DebugDiagnostics
+    [Fact]
+    public void Debug_False_ProducesNoDebugDiagnostics()
+    {
+        var model = Utility.GetSemanticModel("let x = 1;", debug: false);
+        Assert.Null(model.Diagnostics.Find(d => d.Severity == DiagnosticSeverity.Debug));
+    }
+
+    [Fact]
+    public void Debug_True_ProducesConsolidatedDeclarationDiagnostic()
+    {
+        var model = Utility.GetSemanticModel("let x = 1;", debug: true);
+        var diag = model.Diagnostics.Find(d => d.Severity == DiagnosticSeverity.Debug && d.Message.Contains("'x'"));
+
+        Assert.NotNull(diag);
+        Assert.Equal("Declared 'x' (Variable)", diag.Message);
+    }
+
+    [Fact]
+    public void Debug_True_AppliesGlobalFlag_InDeclarationFile()
+    {
+        var model = Utility.GetSemanticModel("interface Foo;", isDeclaration: true, debug: true);
+        var diag = model.Diagnostics.Find(d => d.Severity == DiagnosticSeverity.Debug && d.Message.Contains("'Foo'") && d.Message.Contains("Interface"));
+
+        Assert.NotNull(diag);
+        Assert.Equal("Declared 'Foo' (Interface) [global]", diag.Message);
+    }
+
+    [Fact]
+    public void Debug_True_SetsEmitDebugDiagnosticsOnSemanticModel()
+    {
+        var model = Utility.GetSemanticModel("let x = 1;", debug: true);
+        Assert.True(model.EmitDebugDiagnostics);
+    }
+
+    [Fact]
+    public void Debug_False_ClearsEmitDebugDiagnosticsOnSemanticModel()
+    {
+        var model = Utility.GetSemanticModel("let x = 1;", debug: false);
+        Assert.False(model.EmitDebugDiagnostics);
+    }
+    #endregion DebugDiagnostics
 }

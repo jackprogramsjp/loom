@@ -140,8 +140,13 @@ public sealed partial class Parser
         if (Match(out var leftParen, SyntaxKind.LParen))
             return ParseParenthesized(leftParen);
 
-        if (Match(out var mutKeyword, SyntaxKind.MutKeyword) && ParseArrayLiteral(mutKeyword) is { } mutableArrayLiteral)
-            return mutableArrayLiteral;
+        if (Match(out var mutKeyword, SyntaxKind.MutKeyword))
+        {
+            if (ParseArrayLiteral(mutKeyword) is { } mutableArrayLiteral)
+                return mutableArrayLiteral;
+
+            _diagnostics.Error(mutKeyword, InternalCodes.UnexpectedToken, "Expected array literal after 'mut'.");
+        }
 
         if (ParseArrayLiteral() is { } arrayLiteral)
             return arrayLiteral;
@@ -203,7 +208,7 @@ public sealed partial class Parser
         var expression = ParseExpression();
         var rightParen = Expect(
             SyntaxKind.RParen,
-            got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.Span.Start.Character}, got {SafeTokenText(got)}."
+            got => $"Expected ')' here to close '{leftParen.Text}' at character {leftParen.GetLocation().Start.Character}, got {SafeTokenText(got)}."
         );
 
         return new Parenthesized(leftParen, rightParen, expression);
@@ -228,7 +233,7 @@ public sealed partial class Parser
         }
 
         _diagnostics.Error(
-            typeArguments?.Span ?? expression!.Span,
+            typeArguments?.LocationSpan ?? expression!.LocationSpan,
             InternalCodes.InvalidNameOf,
             $"'{typeArguments?.ArgumentsList.FirstOrDefault()?.ToString() ?? expression!.ToString()}' is not a valid name."
         );
@@ -256,8 +261,11 @@ public sealed partial class Parser
         var arms = new List<MatchArm>();
         while (!IsEof() && Current() is not { Kind: SyntaxKind.RBrace })
         {
+            var positionBefore = _position;
             arms.Add(ParseMatchArm());
             Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
+            if (_position == positionBefore)
+                Advance();
         }
 
         var rightBrace = Expect(SyntaxKind.RBrace);
@@ -440,8 +448,12 @@ public sealed partial class Parser
         {
             while (!IsEof() && Current() is not { Kind: SyntaxKind.RBrace })
             {
+                var positionBefore = _position;
                 fields.Add(ParseObjectPatternField());
                 Match(SyntaxKind.Comma, SyntaxKind.Semicolon);
+                // ExpectIdentifier does not consume a bad token; advance so we cannot spin forever.
+                if (_position == positionBefore)
+                    Advance();
             }
 
             rightBrace = Expect(SyntaxKind.RBrace);

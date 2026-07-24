@@ -192,7 +192,6 @@ Declare(
       Members: [
         PropertyDeclaration(
           MutKeyword: null
-          Name: Token(Identifier, "balls")
           ColonTypeClause(
             ColonToken: Token(Colon, ":")
             Type: PrimitiveType(
@@ -200,6 +199,7 @@ Declare(
             )
           )
           Attributes: null
+          Name: Token(Identifier, "balls")
         )
       ]
     )

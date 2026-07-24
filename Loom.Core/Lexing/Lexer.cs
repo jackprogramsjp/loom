@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Loom.Core.Diagnostics;
 using Loom.Core.Text;
 
@@ -6,12 +5,11 @@ namespace Loom.Core.Lexing;
 
 public sealed class Lexer(SourceFile file)
 {
-    private static readonly IReadOnlyList<(LexerRule Rule, Regex CompiledRegex)> _compiledRegexRules =
-        LexerRules.RegExRules
-            .Select(r => (r, new Regex($@"\G(?:{r.Pattern})", RegexOptions.Compiled)))
-            .ToArray();
+    private static readonly Dictionary<string, SyntaxKind>.AlternateLookup<ReadOnlySpan<char>> _keywordLookup =
+        SyntaxFacts.KeywordMap.GetAlternateLookup<ReadOnlySpan<char>>();
 
     private readonly DiagnosticBag _diagnostics = new();
+    private readonly int _sourceLength = file.SourceText.Length;
     private int _position;
 
     public LexerResult Tokenize()
@@ -21,65 +19,305 @@ public sealed class Lexer(SourceFile file)
         foreach (var token in GetTokens())
         {
             allTokens.Add(token);
-            
+
             if (SyntaxFacts.IsTrivia(token.Kind)) continue;
             significantTokens.Add(token);
         }
 
-        return new LexerResult(file, significantTokens, allTokens, _diagnostics);
+        return new LexerResult(significantTokens, allTokens, _diagnostics);
     }
 
     private IEnumerable<Token> GetTokens()
     {
         while (!IsEof())
         {
-            var start = GetLocation();
+            var start = _position;
             var current = Current();
             if (char.IsLetter(current) || current == '_')
             {
-                _position++;
-                while (!IsEof() && (char.IsLetterOrDigit(Current()) || Current() == '_'))
-                    _position++;
-
-                var span = GetSpan(start);
-                var kind = SyntaxFacts.KeywordMap.GetValueOrDefault(span.GetText().ToString(), SyntaxKind.Identifier);
-                yield return new Token(kind, span);
+                yield return LexIdentifier(start);
                 continue;
             }
-            
+
             if (char.IsWhiteSpace(current))
             {
-                while (!IsEof() && char.IsWhiteSpace(Current()))
-                    _position++;
-                
-                yield return new Token(SyntaxKind.Whitespace, GetSpan(start));
+                yield return LexWhitespace(start);
                 continue;
             }
             
-            if (TryDiagnosticRule(start, LexerRules.PriorityDiagnostic)) continue;
-            if (LexWithRule() is not { } rule)
+            if (current is '"' or '\'')
             {
-                if (!TryDiagnosticRule(start, LexerRules.Diagnostic))
-                {
-                    var character = Current();
-                    var display = char.IsControl(character) ? $"U+{(int)character:X4}" : $"'{character}'";
-                    _diagnostics.Error(
-                        new LocationSpan(start, start + 1),
-                        InternalCodes.UnexpectedCharacter,
-                        $"Unexpected character {display}."
-                    );
-                }
-
-                break;
+                yield return LexString(start, current);
+                continue;
             }
 
-            yield return new Token(rule.Syntax, GetSpan(start));
+            if (AtNumber())
+            {
+                yield return LexNumber(start);
+                continue;
+            }
+            
+            if (OperatorTrie.TryMatch(file.SourceText, _position, out var operatorKind, out var operatorLength))
+            {
+                Advance(operatorLength);
+                yield return CreateToken(operatorKind, start);
+                continue;
+            }
+
+            if (TryLexRegexRule(start, out var regexToken))
+            {
+                yield return regexToken;
+                continue;
+            }
+
+            RecoverUnexpectedCharacterDiagnostic(start);
+            break;
         }
 
-        yield return new Token(SyntaxKind.Eof, GetSpan(GetLocation()));
+        yield return CreateToken(SyntaxKind.Eof, _position);
     }
 
-    private bool TryDiagnosticRule(Location start, IReadOnlyList<LexerDiagnosticRule> rules)
+    private Token LexString(int start, char terminator)
+    {
+        Advance();
+        while (!IsEof() && Current() != terminator && Current() != '\n')
+        {
+            if (Current() == '\\' && !IsEof(1))
+                Advance();
+            Advance();
+        }
+
+        if (IsEof() || Current() == '\n')
+        {
+            var quotedQuote = terminator == '"' ? "'\"'" : "\"'\"";
+            _diagnostics.Error(GetSpan(start), InternalCodes.UnterminatedString, $"Unterminated string literal: expected closing {quotedQuote}.");
+        }
+        else
+        {
+            Advance();
+        }
+
+        return CreateToken(SyntaxKind.StringLiteral, start);
+    }
+
+    private bool TryLexRegexRule(int start, out Token token)
+    {
+        if (LexerRules.RegexRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
+        {
+            foreach (var (rule, regex) in candidates)
+            {
+                var match = regex.Match(file.SourceText, _position);
+                if (!match.Success || match.Index != _position || match.Length == 0) continue;
+
+                Advance(match.Length);
+                token = CreateToken(rule.Syntax, start);
+                return true;
+            }
+        }
+
+        token = null!;
+        return false;
+    }
+
+    private Token LexWhitespace(int start)
+    {
+        AdvanceWhile(char.IsWhiteSpace);
+        return CreateToken(SyntaxKind.Whitespace, start);
+    }
+
+    private Token LexIdentifier(int start)
+    {
+        Advance();
+        AdvanceWhile(ch => char.IsLetterOrDigit(ch) || ch == '_');
+        var identifierText = file.SourceText.AsSpan(start, _position - start);
+        var kind = _keywordLookup.TryGetValue(identifierText, out var keywordKind) ? keywordKind : SyntaxKind.Identifier;
+        return CreateToken(kind, start);
+    }
+
+    private Token LexNumber(int start)
+    {
+        if (AtRadixLiteral())
+            return LexRadixNumber(start);
+
+        if (LexDecimal(start) is { } decimalError)
+            return decimalError;
+
+        if (TryLexExponent(start) is { } exponentError)
+            return exponentError;
+
+        LexUnitSuffix();
+        return CreateToken(SyntaxKind.NumberLiteral, start);
+    }
+
+    private Token LexRadixNumber(int start)
+    {
+        Advance();
+        switch (char.ToLowerInvariant(Current()))
+        {
+            case 'x':
+                Advance();
+                if (!ReadHexDigits())
+                    return ReportMalformedHex(start);
+
+                break;
+
+            case 'b':
+                Advance();
+                if (!ReadBinaryDigits())
+                    return ReportMalformedBinary(start);
+
+                break;
+
+            case 'o':
+                Advance();
+                if (!ReadOctalDigits())
+                    return ReportMalformedOctal(start);
+
+                break;
+        }
+
+        LexUnitSuffix();
+        return CreateToken(SyntaxKind.NumberLiteral, start);
+    }
+
+    private void LexUnitSuffix()
+    {
+        if (IsEof()) return;
+        switch (char.ToLowerInvariant(Current()))
+        {
+            case 'h':
+                Advance();
+                Match('z');
+                break;
+
+            case 'm':
+                Advance();
+                Match('s');
+                break;
+
+            case 's':
+                Advance();
+                break;
+        }
+    }
+
+    private Token? LexDecimal(int start)
+    {
+        if (Current() == '.')
+        {
+            Advance();
+            ReadDigits();
+            return null;
+        }
+
+        ReadDigits();
+        return LexFraction(start);
+    }
+
+    private Token? LexFraction(int start)
+    {
+        if (IsEof() || Current() != '.')
+            return null;
+        
+        if (!IsEof(1) && Peek(1) == '.')
+            return null;
+
+        Advance();
+        if (!IsEof() && char.IsDigit(Current()))
+        {
+            ReadDigits();
+            return null;
+        }
+
+        var span = GetSpan(start);
+        _diagnostics.Error(
+            span,
+            InternalCodes.MalformedNumber,
+            $"Malformed float literal '{span.GetText()}': expected one or more digits after the decimal point."
+        );
+
+        return CreateToken(SyntaxKind.NumberLiteral, start);
+    }
+
+    private Token? TryLexExponent(int start)
+    {
+        if (IsEof() || Current() is not ('e' or 'E'))
+            return null;
+
+        Advance();
+
+        if (!IsEof() && Current() == '-')
+            Advance();
+
+        if (!IsEof() && char.IsDigit(Current()))
+        {
+            ReadDigits();
+            return null;
+        }
+
+        var span = GetSpan(start);
+        _diagnostics.Error(
+            span,
+            InternalCodes.MalformedNumber,
+            $"Malformed scientific notation '{span.GetText()}': expected one or more digits after the exponent."
+        );
+
+        return CreateToken(SyntaxKind.NumberLiteral, start);
+    }
+
+    private bool ReadHexDigits() => AdvanceWhile(static c => char.IsDigit(c) || (uint)(char.ToLowerInvariant(c) - 'a') <= 5 || c == '_');
+    private bool ReadBinaryDigits() => AdvanceWhile(static c => c is '0' or '1' or '_');
+    private bool ReadOctalDigits() => AdvanceWhile(static c => (uint)(c - '0') <= 7 || c == '_');
+    private void ReadDigits() => AdvanceWhile(static c => char.IsDigit(c) || c == '_');
+    private bool AtNumber() => char.IsDigit(Current()) || Current() == '.' && !IsEof(1) && char.IsDigit(Peek(1));
+    private bool AtRadixLiteral() => Current() == '0' && !IsEof(1) && char.ToLowerInvariant(Peek(1)) is 'x' or 'b' or 'o';
+
+    private Token ReportMalformedHex(int start)
+    {
+        var span = GetSpan(start);
+        _diagnostics.Error(
+            span,
+            InternalCodes.MalformedNumber,
+            $"Malformed hexadecimal literal '{span.GetText()}': expected at least one hex digit after '0x'."
+        );
+
+        return CreateToken(SyntaxKind.NumberLiteral, start);
+    }
+
+    private Token ReportMalformedBinary(int start)
+    {
+        var span = GetSpan(start);
+        _diagnostics.Error(
+            span,
+            InternalCodes.MalformedNumber,
+            $"Malformed binary literal '{span.GetText()}': expected at least one binary digit after '0b'."
+        );
+
+        return CreateToken(SyntaxKind.NumberLiteral, start);
+    }
+
+    private Token ReportMalformedOctal(int start)
+    {
+        var span = GetSpan(start);
+        _diagnostics.Error(
+            span,
+            InternalCodes.MalformedNumber,
+            $"Malformed octal literal '{span.GetText()}': expected at least one octal digit after '0o'."
+        );
+
+        return CreateToken(SyntaxKind.NumberLiteral, start);
+    }
+
+    private void RecoverUnexpectedCharacterDiagnostic(int start)
+    {
+        if (TryDiagnosticRule(start, LexerRules.Diagnostic)) return;
+
+        var character = Current();
+        var display = char.IsControl(character) ? $"U+{(int)character:X4}" : $"'{character}'";
+        _diagnostics.Error(GetSpan(start), InternalCodes.UnexpectedCharacter, $"Unexpected character {display}.");
+    }
+
+    private bool TryDiagnosticRule(int start, IReadOnlyList<LexerDiagnosticRule> rules)
     {
         foreach (var rule in rules)
         {
@@ -101,63 +339,28 @@ public sealed class Lexer(SourceFile file)
         return false;
     }
 
-    private LexerRule? LexWithRule()
+    private void Match(char c)
     {
-        LexerRule? bestRule = null;
-        var advanceLength = 0;
-        var bestScore = -1;
-
-        if (LexerRules.LiteralRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
-        {
-            foreach (var rule in candidates)
-            {
-                if (GetLiteralMatch(rule) is not { } content) continue;
-
-                var score = content.Length * (int)rule.Kind;
-                if (score <= bestScore) continue;
-
-                bestScore = score;
-                bestRule = rule;
-                advanceLength = content.Length;
-            }
-        }
-
-        foreach (var (rule, compiledRegex) in _compiledRegexRules)
-        {
-            var match = compiledRegex.Match(file.SourceText, _position);
-            if (!match.Success || match.Index != _position || match.Length == 0) continue;
-
-            var score = match.Length * (int)rule.Kind;
-            if (score <= bestScore) continue;
-
-            bestScore = score;
-            bestRule = rule;
-            advanceLength = match.Length;
-        }
-
-        if (bestRule == null)
-            return null;
-
-        Advance(advanceLength);
-        return bestRule;
+        if (IsEof() || char.ToLowerInvariant(Current()) != c) return;
+        Advance();
     }
 
-    private string? GetLiteralMatch(LexerRule rule) =>
-        rule.Kind switch
+    private bool AdvanceWhile(Func<char, bool> predicate)
+    {
+        var any = false;
+        while (!IsEof() && predicate(Current()))
         {
-            LexerRuleKind.SingleCharacter when rule.Pattern.Length == 1 && Current() == rule.Pattern[0] =>
-                rule.Pattern,
+            any = true;
+            Advance();
+        }
 
-            LexerRuleKind.MultiCharacter when !IsEof(rule.Pattern.Length - 1) && MatchesPatternAt(rule.Pattern) =>
-                rule.Pattern,
+        return any;
+    }
 
-            _ => null
-        };
-    
-    private void Advance(int offset) => _position += offset;
-    private bool MatchesPatternAt(string pattern) => file.SourceText.AsSpan(_position, pattern.Length).SequenceEqual(pattern);
-    private char Current() => file.SourceText[_position];
-    private bool IsEof(int offset = 0) => _position + offset >= file.SourceText.Length;
-    private LocationSpan GetSpan(Location start) => new(start, GetLocation());
-    private Location GetLocation() => new(file, _position);
+    private Token CreateToken(SyntaxKind kind, int start) => new(kind, file, new TextSpan(start, _position - start));
+    private void Advance(int offset = 1) => _position += offset;
+    private char Current() => Peek(0);
+    private char Peek(int offset) => file.SourceText[_position + offset];
+    private bool IsEof(int offset = 0) => _position + offset >= _sourceLength;
+    private LocationSpan GetSpan(int start) => new(new Location(file, start), _position - start);
 }

@@ -12,7 +12,7 @@ if (loomConfig == null)
 var compilationUnit = new CompilationUnit(loomConfig);
 var result = compilationUnit.Compile();
 var debugInfo = result.Files
-    .FindAll(f => !f.SourceFile.IsDeclaration)
-    .ConvertAll(f => f.GetDebugInfo(rebuilt: false, debugDiagnostics: false));
+    .Where(f => !f.SourceFile.IsDeclaration)
+    .Select(f => f.GetDebugInfo(rebuilt: false, debugDiagnostics: loomConfig.Debug));
 
 Console.WriteLine(string.Join(Environment.NewLine, debugInfo));

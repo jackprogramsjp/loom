@@ -17,6 +17,7 @@ public sealed partial class Parser
             [SyntaxKind.MutKeyword] = ParseVariableDeclaration,
             [SyntaxKind.TypeKeyword] = ParseTypeAlias,
             [SyntaxKind.EnumKeyword] = ParseEnumDeclaration,
+            [SyntaxKind.EventKeyword] = keyword => ParseEventDeclaration(keyword, null),
             [SyntaxKind.DeclareKeyword] = ParseDeclare,
             [SyntaxKind.ImplementKeyword] = ParseImplement,
             [SyntaxKind.TraitKeyword] = ParseTraitDeclaration,
@@ -42,6 +43,14 @@ public sealed partial class Parser
         if (IsEof())
             return new ExpressionStatement(ParseExpression());
 
+        if (Current().Kind == SyntaxKind.LBracket && LooksLikeAttributesBeforeEvent())
+        {
+            var leftBracket = Advance();
+            var attributes = ParseAttributes(leftBracket);
+            var eventKeyword = Expect(SyntaxKind.EventKeyword);
+            return ParseEventDeclaration(eventKeyword, attributes);
+        }
+
         var token = Advance();
         var statementParser = StatementParsers.GetValueOrDefault(token.Kind);
         if (statementParser != null)
@@ -51,14 +60,52 @@ public sealed partial class Parser
         return new ExpressionStatement(ParseExpression());
     }
 
+    private bool LooksLikeAttributesBeforeEvent()
+    {
+        var i = 0;
+        if (PeekKind(i) != SyntaxKind.LBracket)
+            return false;
+
+        var depth = 1;
+        i++;
+        while (depth > 0)
+        {
+            switch (PeekKind(i))
+            {
+                case SyntaxKind.LBracket:
+                    depth++;
+                    break;
+                case SyntaxKind.RBracket:
+                    depth--;
+                    break;
+            }
+
+            i++;
+        }
+
+        return PeekKind(i) == SyntaxKind.EventKeyword;
+    }
+
     private Block ParseBlock(Token leftBrace)
     {
         var statements = new List<Statement>();
-        Token? rightBrace;
-        while (!Match(out rightBrace, SyntaxKind.RBrace))
+
+        while (!IsEof())
+        {
+            if (Match(out var rightBrace, SyntaxKind.RBrace))
+                return new Block(leftBrace, rightBrace, statements);
+
+            var previousPosition = _position;
             statements.Add(ParseStatement());
 
-        return new Block(leftBrace, rightBrace, statements);
+            if (_position != previousPosition) continue;
+
+            Synchronize();
+            if (_position == previousPosition)
+                Advance();
+        }
+
+        return new Block(leftBrace, MissingToken(SyntaxKind.RBrace), statements);
     }
     
     private Implement ParseImplement(Token keyword)
@@ -109,6 +156,10 @@ public sealed partial class Parser
     {
         var names = ParseDelimited(() => new Identifier(ExpectIdentifier()));
         var colon = Expect(SyntaxKind.Colon);
+
+        if (PeekKind(0) == SyntaxKind.MutKeyword && PeekKind(1) != SyntaxKind.LBracket)
+            Advance();
+
         var expression = ParseExpression();
         var body = ParseStatement();
         return new For(keyword, names, colon, expression, body);

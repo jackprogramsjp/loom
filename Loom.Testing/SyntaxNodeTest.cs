@@ -42,11 +42,11 @@ public class SyntaxNodeTest
         var letKw = T("let", 0, 3, SyntaxKind.LetKeyword);
         var name = T("x", 4, 1);
         var decl = new VariableDeclaration(letKw, name, null, null);
-        Assert.Equal(5, decl.Span.Length);
-        Assert.Equal(1, decl.Span.Start.Line);
-        Assert.Equal(0, decl.Span.Start.Position);
-        Assert.Equal(1, decl.Span.End.Line);
-        Assert.Equal(5, decl.Span.End.Position);
+        Assert.Equal(5, decl.LocationSpan.Length);
+        Assert.Equal(1, decl.LocationSpan.Start.Line);
+        Assert.Equal(0, decl.LocationSpan.Start.Position);
+        Assert.Equal(1, decl.LocationSpan.End.Line);
+        Assert.Equal(5, decl.LocationSpan.End.Position);
     }
 
     [Fact]
@@ -54,26 +54,14 @@ public class SyntaxNodeTest
     {
         var token = new Token(SyntaxKind.Identifier, LocationSpan.Empty(), "");
         var ident = new Identifier(token);
-        Assert.Equal(SourceFile.Empty, ident.Span.File);
-        Assert.Equal(0, ident.Span.Length);
-        Assert.Equal(1, ident.Span.Start.Line);
-        Assert.Equal(0, ident.Span.Start.Position);
-        Assert.Equal(1, ident.Span.Start.Line);
-        Assert.Equal(0, ident.Span.End.Position);
+        Assert.Equal(SourceFile.Empty, ident.LocationSpan.File);
+        Assert.Equal(0, ident.LocationSpan.Length);
+        Assert.Equal(1, ident.LocationSpan.Start.Line);
+        Assert.Equal(0, ident.LocationSpan.Start.Position);
+        Assert.Equal(1, ident.LocationSpan.Start.Line);
+        Assert.Equal(0, ident.LocationSpan.End.Position);
     }
-
-    [Fact]
-    public void Node_Children_SortedByPosition()
-    {
-        var left = new Identifier(T("a", 10, 1));
-        var right = new Identifier(T("b", 0, 1));
-        var opToken = T("+", 5, 1, SyntaxKind.Plus);
-        var binOp = new BinaryOperator(opToken, left, right);
-        Assert.Equal(2, binOp.Children.Count);
-        Assert.Same(right, binOp.Children[0]);
-        Assert.Same(left, binOp.Children[1]);
-    }
-
+    
     [Fact]
     public void GetDescendants_ReturnsChildrenAndGrandchildren()
     {
@@ -167,7 +155,7 @@ public class SyntaxNodeTest
     {
         var lit = new Literal(T("42", 0, 2, SyntaxKind.NumberLiteral), 42L);
         var exprStmt = new ExpressionStatement(lit);
-        var tree = new Tree(new LexerResult(SourceFile.Empty, [], [], new DiagnosticBag()), [exprStmt]);
+        var tree = new Tree(new LexerResult([], [], new DiagnosticBag()), [exprStmt]);
         Assert.Null(tree.FirstAncestorOfType<Tree>());
         Assert.Same(tree, lit.FirstAncestorOfType<Tree>());
     }

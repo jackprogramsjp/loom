@@ -346,11 +346,7 @@ public class LuauRenderingTest
     }
 
     [Fact]
-    public void Renders_Empty_Table()
-    {
-        var table = new Table([]);
-        Assert.Equal("{}", table.Render());
-    }
+    public void Renders_Empty_Table() => Assert.Equal("{}", Table.Empty.Render());
 
     [Fact]
     public void Renders_Call_MultipleArguments()
@@ -451,6 +447,27 @@ public class LuauRenderingTest
         ) { Operator = ':' };
 
         Assert.Equal("abc.foo.bar:baz", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_KeywordName_AsBracketAccess()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["end"]);
+        Assert.Equal("obj[\"end\"]", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_KeywordName_InMiddleOfChain()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["a", "repeat", "c"]);
+        Assert.Equal("obj.a[\"repeat\"].c", access.Render());
+    }
+
+    [Fact]
+    public void Renders_PropertyAccess_NonKeywordName_Unaffected()
+    {
+        var access = new PropertyAccess(new Identifier("obj"), ["endpoint"]);
+        Assert.Equal("obj.endpoint", access.Render());
     }
 
     [Fact]
@@ -642,7 +659,7 @@ public class LuauRenderingTest
         Assert.Equal("{ [string]: number }", new TableType(new TableTypeIndexer(null, PrimitiveType.String, PrimitiveType.Number), []).Render());
 
     [Fact]
-    public void Renders_Array_TableType() => Assert.Equal("{ number }", new TableType(new TableTypeIndexer(null, null, PrimitiveType.Number), []).Render());
+    public void Renders_Array_TableType() => Assert.Equal("{ number }", TableType.Array(PrimitiveType.Number).Render());
 
     [Theory]
     [InlineData(true, "true")]
@@ -733,6 +750,21 @@ public class LuauRenderingTest
 
     [Fact]
     public void Renders_StringLiteral() => Assert.Equal($"{RenderState.StringDelimiter}abc{RenderState.StringDelimiter}", new StringLiteral("abc").Render());
+
+    [Fact]
+    public void Renders_StringLiteral_EscapesBackslash() =>
+        Assert.Equal("\"a\\\\b\"", new StringLiteral("a\\b").Render());
+
+    [Fact]
+    public void Renders_StringLiteral_EscapesDelimiter() =>
+        Assert.Equal("\"say \\\"hi\\\"\"", new StringLiteral("say \"hi\"").Render());
+
+    [Fact]
+    public void Renders_MultilineString_LeadingNewlineIsPreserved()
+    {
+        var literal = new StringLiteral("\nabc");
+        Assert.Equal("[[\n\nabc]]", literal.Render());
+    }
 
     [Theory]
     [InlineData(12, "12")]

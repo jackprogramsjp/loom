@@ -9,7 +9,11 @@ public class StringLiteral(string value) : LuauLiteral<string>(value)
             return RenderState.StringDelimiter + RenderState.Escape(Value) + RenderState.StringDelimiter;
 
         var equals = GetSafeBracketEquals();
-        return $"[{equals}[{Value}]{equals}]";
+        // Luau long-bracket strings swallow a single newline immediately after the
+        // opening bracket, so a value starting with '\n' would lose it. Emit an extra
+        // leading newline to preserve it.
+        var leadingNewline = Value.StartsWith('\n') ? "\n" : "";
+        return $"[{equals}[{leadingNewline}{Value}]{equals}]";
     }
 
     private string GetSafeBracketEquals()

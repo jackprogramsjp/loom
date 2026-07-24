@@ -24,8 +24,9 @@ public class CompilationUnitTest
         var path = config.Files.OutputDirectory;
         Directory.Delete(path, true);
         Directory.CreateDirectory(path);
+        File.Create(Path.Combine(path, ".gitkeep"));
         
-        var luauFiles = Directory.EnumerateFiles(path);
+        var luauFiles = Directory.EnumerateFiles(path, "*.luau", SearchOption.TopDirectoryOnly);
         Assert.Empty(luauFiles);
     }
     
@@ -52,6 +53,38 @@ public class CompilationUnitTest
         Assert.Equal("_", variable.Name);
         Assert.IsType<NumberLiteral>(binary.Left);
         Assert.IsType<NumberLiteral>(binary.Right);
+    }
+
+    [Fact]
+    public void Compiles_Project_WithDeclarationFile_PopulatesGlobals()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "loom-test-" + Guid.NewGuid());
+        var srcDir = Path.Combine(dir, "src");
+        Directory.CreateDirectory(srcDir);
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(dir, "loom-config.toml"),
+                "project_type = \"game\"\n[files]\nsource_directory = \"src\"\noutput_directory = \"dist\"\n"
+            );
+            File.WriteAllText(Path.Combine(srcDir, "types.d.loom"), "declare let global_number: number;");
+            File.WriteAllText(Path.Combine(srcDir, "main.loom"), "let x = 1;");
+
+            var config = ConfigReader.LocateFromDirectory(dir);
+            Assert.NotNull(config);
+            config.NoEmit = true;
+
+            var compilationUnit = new CompilationUnit(config);
+            var result = compilationUnit.Compile();
+
+            Utility.AssertNoErrors(result);
+            Assert.Equal(2, result.Files.Count);
+            Assert.Contains(compilationUnit.Globals.Keys, symbol => symbol.Name == "global_number");
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
     }
 
     private static LoomConfig GetConfig()

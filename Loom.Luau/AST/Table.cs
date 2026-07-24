@@ -2,6 +2,8 @@ namespace Loom.Luau.AST;
 
 public class Table(List<TableInitializer> initializers) : LuauExpression
 {
+    public static readonly Table Empty = new([]);
+    
     public List<TableInitializer> Initializers { get; } = initializers;
 
     public override string Render(RenderState state)

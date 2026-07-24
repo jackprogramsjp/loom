@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
 using Loom.Luau;
 using Loom.Luau.AST;
@@ -27,13 +26,13 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
         switch (name)
         {
             case "get_service":
-                var serviceName = GetStringFromOnlyTypeArgument(context, typeArguments, name);
-                expression = LuauFactory.LibraryCall("game", ["GetService"], [serviceName], true);
+                var serviceName = context.GetTextOfOnlyTypeArgument(typeArguments, name);
+                expression = LuauFactory.LibraryCall("game", ["GetService"], [new StringLiteral(serviceName)], true);
 
                 return true;
             case "new_instance":
-                var instanceName = GetStringFromOnlyTypeArgument(context, typeArguments, name);
-                expression = LuauFactory.LibraryCall("Instance", ["new"], [instanceName]);
+                var instanceName = context.GetTextOfOnlyTypeArgument(typeArguments, name);
+                expression = LuauFactory.LibraryCall("Instance", ["new"], [new StringLiteral(instanceName)]);
 
                 return true;
             case "string":
@@ -46,19 +45,5 @@ internal sealed class IntrinsicGlobalInvocationMacroProvider : IMacroProvider
 
         expression = null;
         return false;
-    }
-
-    private static StringLiteral GetStringFromOnlyTypeArgument(MacroContext context, TypeArguments? typeArguments, string fnName)
-    {
-        var typeName = typeArguments!.ArgumentsList[0];
-        var instanceType = context.SemanticModel.GetType(typeName);
-        if (instanceType is TypeChecking.Types.TypeParameter)
-            context.Diagnostics.Error(
-                typeName,
-                InternalCodes.AbstractTypeParameterInMacro,
-                $"Cannot use type parameter '{typeName}' with '{fnName}::<T>()' macro."
-            );
-
-        return new StringLiteral(typeName.ToString());
     }
 }

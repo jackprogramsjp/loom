@@ -4,6 +4,7 @@ using Loom.Core.Parsing;
 using Loom.Core.Parsing.AST;
 using Loom.Core.Text;
 using Loom.Core.TypeChecking;
+using Loom.Luau;
 using Attribute = Loom.Core.Parsing.AST.Attribute;
 
 namespace Loom.Core.Resolving;
@@ -21,7 +22,10 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     [MemberNotNull(nameof(_semanticModel))]
     public SemanticModel Resolve()
     {
-        _semanticModel = new SemanticModel(parserResult.Tree, _diagnostics, _allDeclarations, _allReferences);
+        _semanticModel = new SemanticModel(parserResult.Tree, _diagnostics, _allDeclarations, _allReferences)
+        {
+            EmitDebugDiagnostics = compilationUnit.Config.Debug
+        };
         PushScope();
         DeclareIntrinsicSymbols();
         DeclareGlobalSymbols();
@@ -347,7 +351,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         var isSealed = interfaceDeclaration.SealedKeyword != null;
         if (!DeclareVariable(interfaceDeclaration, SymbolKind.Variable)
-            || !DeclareInterface(interfaceDeclaration, isSealed, out var symbol)
+            || DeclareInterface(interfaceDeclaration, isSealed) is not { } symbol
             || !ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, symbol))
         {
             return false;
@@ -363,21 +367,23 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     public override bool VisitDeclare(Declare declare)
     {
         var lastContext = _context;
-        _context = ResolverContext.Declaration;
+        _context = ResolverContext.Ambient;
 
         bool result;
         if (declare.Signature is InterfaceDeclaration interfaceDeclaration)
         {
             var isSealed = interfaceDeclaration.SealedKeyword != null;
-            result = DeclareInterface(interfaceDeclaration, isSealed, out var interfaceSymbol)
+            var interfaceSymbol = DeclareInterface(interfaceDeclaration, isSealed);
+            result = interfaceSymbol is not null
                 && ResolveInterfaceConstraints(interfaceDeclaration.ColonTypeListClause, interfaceSymbol);
 
             if (result)
             {
+                interfaceSymbol!.IsAmbient = true;
                 PushScope();
                 result &= base.VisitInterfaceDeclaration(interfaceDeclaration);
                 PopScope();
-                result &= ResolveInterfaceBody(interfaceDeclaration.Body, interfaceSymbol!);
+                result &= ResolveInterfaceBody(interfaceDeclaration.Body, interfaceSymbol);
             }
         }
         else
@@ -455,7 +461,21 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     }
 
     public override bool VisitEnumDeclaration(EnumDeclaration enumDeclaration) =>
-        DeclareVariable(enumDeclaration, SymbolKind.Variable) && DeclareType(enumDeclaration, SymbolKind.EnumType);
+        DeclareVariable(enumDeclaration, SymbolKind.Variable)
+        && DeclareType(enumDeclaration, SymbolKind.EnumType)
+        && base.VisitEnumDeclaration(enumDeclaration);
+
+    public override bool VisitEventDeclaration(EventDeclaration eventDeclaration)
+    {
+        if (!DeclareVariable(eventDeclaration, SymbolKind.Event))
+            return false;
+                
+        PushScope();
+        base.VisitEventDeclaration(eventDeclaration);
+        PopScope();
+
+        return true;
+    }
 
     public override bool VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
@@ -471,7 +491,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                 _diagnostics.Error(
                     interfaceInvocation,
                     InternalCodes.InvokeDeclaredInterface,
-                    $"Cannot invoke interface '{name}' because it was declared as type."
+                    $"Cannot invoke interface '{name}' because it was declared as a type."
                 );
 
                 return false;
@@ -531,7 +551,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         foreach (var duplicate in duplicates)
         {
             var property = body.Members.FindLast(m => m.Name.Text == duplicate)!;
-            _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Method '{duplicate}' already exists on trait '{name}'");
+            _diagnostics.Error(property, InternalCodes.DuplicateName, $"Method '{duplicate}' already exists on trait '{name}'");
         }
 
         return false;
@@ -562,6 +582,16 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             AddDeclaration(symbol);
         }
 
+        var events = body.Members.OfType<EventDeclaration>().ToList();
+        foreach (var symbol in
+                 from eventDeclaration in events
+                 let attributeSymbols = eventDeclaration.Attributes?.AttributeList.Select(DeclareAttribute).ToList() ?? []
+                 select new PropertySymbol(eventDeclaration, null, attributeSymbols, SymbolKind.Event) { IsIntrinsic = interfaceSymbol.IsIntrinsic })
+        {
+            interfaceSymbol.Properties.Add(symbol);
+            AddDeclaration(symbol);
+        }
+
         var propertyNames = properties.Select(p => p.Name.Text);
         var duplicates = propertyNames.GroupBy(x => x).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (duplicates.Count <= 0)
@@ -570,7 +600,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         foreach (var duplicate in duplicates)
         {
             var property = properties.FindLast(p => p.Name.Text == duplicate)!;
-            _diagnostics.Error(property.Span, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{interfaceSymbol.Name}'");
+            _diagnostics.Error(property, InternalCodes.DuplicateName, $"Property '{duplicate}' already exists on type '{interfaceSymbol.Name}'");
         }
 
         return false;
@@ -623,7 +653,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                     break;
                 case InterfaceDeclaration interfaceDeclaration:
                     if (DeclareVariable(interfaceDeclaration, SymbolKind.Variable))
-                        DeclareInterface(interfaceDeclaration, interfaceDeclaration.SealedKeyword != null, out _);
+                        DeclareInterface(interfaceDeclaration, interfaceDeclaration.SealedKeyword != null);
 
                     break;
                 case EnumDeclaration enumDeclaration:
@@ -631,8 +661,11 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
                         DeclareType(enumDeclaration, SymbolKind.EnumType);
 
                     break;
+                case EventDeclaration enumDeclaration:
+                    DeclareVariable(enumDeclaration, SymbolKind.Event);
+                    break;
                 case Declare { Signature: InterfaceDeclaration nested }:
-                    DeclareInterface(nested, nested.SealedKeyword != null, out _);
+                    DeclareInterface(nested, nested.SealedKeyword != null);
                     break;
             }
         }
@@ -640,7 +673,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
     private bool ResolveStatement(Statement statement)
     {
-        if (!parserResult.Tree.File.IsDeclaration || statement is Declare or TypeAlias or TraitDeclaration)
+        if (!IsDeclarationFile() || statement is Declare or TypeAlias or TraitDeclaration)
         {
             Visit(statement);
             return true;
@@ -668,19 +701,18 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         return true;
     }
 
-    private bool DeclareInterface(InterfaceDeclaration interfaceDeclaration, bool isSealed, [MaybeNullWhen(false)] out InterfaceSymbol interfaceSymbol)
+    private InterfaceSymbol? DeclareInterface(InterfaceDeclaration interfaceDeclaration, bool isSealed)
     {
-        interfaceSymbol = null;
         var scope = CurrentScope();
         var name = interfaceDeclaration.Name.Text;
         if (scope.TypeLookup.TryGetValue(name, out var symbols))
         {
-            if (IsAlreadyHoisted(interfaceDeclaration, symbols, out interfaceSymbol))
-                return true;
+            if (IsAlreadyHoisted<InterfaceSymbol>(interfaceDeclaration, symbols, out var interfaceSymbol))
+                return interfaceSymbol;
 
             var kindName = symbols is [.., InterfaceSymbol] ? "Interface" : "Type";
             _diagnostics.Error(interfaceDeclaration.Name, InternalCodes.DuplicateName, $"{kindName} '{name}' is already declared in this scope.");
-            return false;
+            return null;
         }
 
         var constraints = interfaceDeclaration.ColonTypeListClause?.Types
@@ -690,8 +722,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
 
         var finalSymbol = new InterfaceSymbol(interfaceDeclaration, name, isSealed, constraints);
         DeclareSymbol(finalSymbol);
-        interfaceSymbol = finalSymbol;
-        return true;
+        return finalSymbol;
     }
 
     private AttributeSymbol DeclareAttribute(Attribute attribute)
@@ -744,18 +775,37 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
     {
         AddToLookup(symbol);
         AddDeclaration(symbol);
-        _diagnostics.Debug(symbol.Declaration, $"Declared symbol: {symbol}");
-
-        if (parserResult.Tree.File.IsDeclaration)
+        if (LuauFactory.Keywords.Contains(symbol.Name))
         {
-            symbol.IsGlobal = true;
-            _diagnostics.Debug(symbol.Declaration, $"{symbol} is global");
+            _diagnostics.Error(
+                symbol.Declaration,
+                InternalCodes.ReservedLuauKeyword,
+                $"'{symbol.Name}' is a reserved Luau keyword and cannot be used as a declaration name."
+            );
         }
 
-        if (!parserResult.Tree.File.IsIntrinsic) return;
+        if (IsDeclarationFile())
+            symbol.IsGlobal = true;
 
-        symbol.IsIntrinsic = true;
-        _diagnostics.Debug(symbol.Declaration, $"{symbol} is intrinsic");
+        if (_context == ResolverContext.Ambient)
+            symbol.IsAmbient = true;
+
+        if (parserResult.Tree.File.IsIntrinsic)
+            symbol.IsIntrinsic = true;
+
+        if (_semanticModel.EmitDebugDiagnostics)
+            _diagnostics.Debug(symbol.Declaration, DescribeDeclaration(symbol));
+    }
+
+    private static string DescribeDeclaration(Symbol symbol)
+    {
+        var flags = new List<string>();
+        if (symbol.IsGlobal) flags.Add("global");
+        if (symbol.IsAmbient) flags.Add("ambient");
+        if (symbol.IsIntrinsic) flags.Add("intrinsic");
+
+        var suffix = flags.Count > 0 ? $" [{string.Join(", ", flags)}]" : "";
+        return $"Declared '{symbol.Name}' ({symbol.Kind}){suffix}";
     }
 
     private void AddToLookup(Symbol symbol)
@@ -783,6 +833,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             _allReferences[node.Id] = [];
 
         _allReferences[node.Id].Add(symbol);
+        if (!node.File.IsIntrinsic)
+            _semanticModel.NonIntrinsicReferenceNodes.Add(node.Id);
     }
 
     private Symbol? LookupTypeSymbol(string name) =>
@@ -847,6 +899,7 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
             DeclareSymbol(symbol);
     }
 
+    private bool IsDeclarationFile() => parserResult.Tree.File.IsDeclaration;
     private ResolverScope CurrentScope() => _scopes.Peek();
     private void PopScope() => _scopes.Pop();
     private void PushScope() => _scopes.Push(new ResolverScope());

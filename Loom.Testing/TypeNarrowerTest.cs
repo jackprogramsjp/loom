@@ -17,10 +17,10 @@ public class TypeNarrowerTest
         new TypeChecker(semanticModel, flowAnalyzer).Check();
         
         var tree = semanticModel.Tree;
-        var ifNode = tree.GetDescendants<If>().FirstOrDefault() ?? tree.GetDescendants<While>().FirstOrDefault() as Statement;
+        var conditionalNode = tree.GetDescendants<If>().FirstOrDefault() ?? tree.GetDescendants<While>().FirstOrDefault() as Statement;
 
-        Assert.NotNull(ifNode);
-        var condition = ifNode is If ifStmt ? ifStmt.Condition : ((While)ifNode).Condition;
+        Assert.NotNull(conditionalNode);
+        var condition = conditionalNode is If ifStmt ? ifStmt.Condition : ((While)conditionalNode).Condition;
         return (semanticModel, condition);
     }
 
@@ -472,5 +472,70 @@ public class TypeNarrowerTest
         Assert.True(narrowed);
         narrowed = narrower.TryGetNarrowedType(condition, falseState, out _);
         Assert.True(narrowed);
+    }
+
+    [Fact]
+    public void ComputeBranchStates_ElementAccessOnUnionBase_NarrowsBaseType()
+    {
+        const string source = """
+            let arr: number[] | string[] = [1, 2, 3];
+            if arr[0] == 1 { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new FlowState();
+
+        var binaryOp = Assert.IsType<BinaryOperator>(condition);
+        var elementAccess = Assert.IsType<ElementAccess>(binaryOp.Left);
+        var baseExpression = elementAccess.Expression;
+
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+
+        var narrowedTrue = narrower.TryGetNarrowedType(baseExpression, trueState, out var trueType);
+        var narrowedFalse = narrower.TryGetNarrowedType(baseExpression, falseState, out var falseType);
+
+        Assert.True(narrowedTrue);
+        Assert.True(narrowedFalse);
+        Assert.NotNull(trueType);
+        Assert.NotNull(falseType);
+    }
+
+    [Fact]
+    public void ComputeBranchStates_LogicalAnd_BothOperandsUnnarrowable_MergesEmptyStates()
+    {
+        const string source = """
+            fn foo(): bool -> true;
+            fn bar(): bool -> true;
+            if foo() && bar() { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new FlowState();
+
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+
+        Assert.True(trueState.NarrowedTypes.IsEmpty);
+        Assert.True(falseState.NarrowedTypes.IsEmpty);
+    }
+
+    [Fact]
+    public void ComputeBranchStates_LogicalOr_BothOperandsUnnarrowable_MergesEmptyStates()
+    {
+        const string source = """
+            fn foo(): bool -> true;
+            fn bar(): bool -> true;
+            if foo() || bar() { }
+            """;
+
+        var (model, condition) = GetCondition(source);
+        var narrower = new TypeNarrower(model);
+        var current = new FlowState();
+
+        var (trueState, falseState) = narrower.ComputeBranchStates(condition, current);
+
+        Assert.True(trueState.NarrowedTypes.IsEmpty);
+        Assert.True(falseState.NarrowedTypes.IsEmpty);
     }
 }

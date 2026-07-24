@@ -1,6 +1,7 @@
 using Loom.Core.Debug;
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
+using Loom.Core.Text;
 using PrimitiveTypeKind = Loom.Core.TypeChecking.Types.PrimitiveTypeKind;
 
 namespace Loom.Testing;
@@ -62,6 +63,9 @@ public class ParserTest
         new("let x: number &", InternalCodes.UnexpectedEof, "Expected type, got EOF.", null),
         new("let x: (number", InternalCodes.UnexpectedEof, "Expected ')' here to close '(' at character 7, got EOF.", null),
         new("let x: keyof(T | number)", InternalCodes.UnexpectedToken, "Expected ')', got '|'.", null),
+        new("let x: typeof", InternalCodes.UnexpectedEof, "Expected '(', got EOF.", null),
+        new("let x: typeof(a", InternalCodes.UnexpectedEof, "Expected ')', got EOF.", null),
+        new("let x: typeof()", InternalCodes.UnexpectedToken, "Expected expression, got ')'.", null),
         new("trait { }", InternalCodes.UnexpectedToken, "Expected trait name, got '{'.", null),
         new("trait Foo { fn bar() }", InternalCodes.MissingDeclareFnReturnType, "Declared function signatures must have a return type.", null),
         new("trait Foo { fn bar(x): void }", InternalCodes.MissingDeclareFnParameterType, "Parameters must have types in declared function signatures.", null),
@@ -96,7 +100,8 @@ public class ParserTest
         new("match x { let -> 1 }", InternalCodes.UnexpectedToken, "Expected binding name, got '->'.", null),
         new("match x { name when -> 1 }", InternalCodes.UnexpectedToken, "Expected type, got '->'.", null),
         new("match x { _ when -> 1 }", InternalCodes.UnexpectedToken, "Expected expression, got '->'.", null),
-        new("match x { [a, ..rest, b] -> 1 }", InternalCodes.UnexpectedToken, "Rest pattern must be the last element in an array pattern.", null)
+        new("match x { [a, ..rest, b] -> 1 }", InternalCodes.UnexpectedToken, "Rest pattern must be the last element in an array pattern.", null),
+        new("let x = mut 5", InternalCodes.UnexpectedToken, "Expected array literal after 'mut'.", null)
     ];
 
     public static readonly IEnumerable<TheoryDataRow<string, string>> SnapshotFiles = Utility.GetSnapshotFiles("AST", ".ast");
@@ -360,6 +365,151 @@ public class ParserTest
     }
 
     [Fact]
+    public void Expect_MissingParen_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            let x = foo(1, 2
+            let y = 3;
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected ')', got 'let'.");
+
+        Assert.Equal(2, result.Tree.Statements.Count);
+        var first = Assert.IsType<VariableDeclaration>(result.Tree.Statements[0]);
+        var second = Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]);
+        Assert.Equal("x", first.Name.Text);
+        Assert.Equal("y", second.Name.Text);
+
+        var invocation = Assert.IsType<Invocation>(first.EqualsValueClause!.Value);
+        var rightParen = invocation.Arguments.RightParen;
+        Assert.Equal(SyntaxKind.RParen, rightParen.Kind);
+        Assert.Equal(0, rightParen.Span.Length);
+        Assert.Equal(")", rightParen.Text);
+    }
+
+    [Fact]
+    public void Expect_MissingParen_AtEof_InsertsZeroWidthToken()
+    {
+        var result = Utility.Parse("let x = foo(");
+        var expectDiagnostic = result.Diagnostics.Find(d =>
+            d.Code == InternalCodes.UnexpectedEof && d.Message == "Expected ')', got EOF."
+        );
+        Assert.NotNull(expectDiagnostic);
+
+        var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(result.Tree.Statements));
+        var invocation = Assert.IsType<Invocation>(declaration.EqualsValueClause!.Value);
+        var rightParen = invocation.Arguments.RightParen;
+        Assert.Equal(SyntaxKind.RParen, rightParen.Kind);
+        Assert.Equal(0, rightParen.Span.Length);
+        Assert.Equal(")", rightParen.Text);
+    }
+
+    [Fact]
+    public void Expect_MissingBracket_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            let x = arr[0
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected ']', got 'let'.");
+
+        Assert.Equal(2, result.Tree.Statements.Count);
+        Assert.Equal("x", Assert.IsType<VariableDeclaration>(result.Tree.Statements[0]).Name.Text);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]).Name.Text);
+    }
+
+    [Fact]
+    public void ParseBlock_UnterminatedAtEof_Terminates()
+    {
+        var result = Utility.Parse("fn foo() {");
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(SyntaxKind.RBrace, block.RightBrace.Kind);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+        Assert.Equal("}", block.RightBrace.Text);
+    }
+
+    [Fact]
+    public void ParseBlock_Unterminated_KeepsInnerStatements()
+    {
+        const string source = """
+            fn foo() {
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(block.Statements));
+        Assert.Equal("y", declaration.Name.Text);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void ParseBlock_UnterminatedIf_Terminates()
+    {
+        var result = Utility.Parse("if true {");
+        var @if = Assert.IsType<If>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(@if.ThenBranch);
+        Assert.Equal(0, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void Synchronize_JunkInsideBlock_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            fn f() {
+            +
+            let y = 1;
+            }
+            """;
+
+        var result = Utility.Parse(source);
+        Utility.AssertDiagnostic(result.Diagnostics, InternalCodes.UnexpectedToken, "Expected expression, got '+'.");
+
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(2, block.Statements.Count);
+        Assert.IsType<NullExpression>(Assert.IsType<ExpressionStatement>(block.Statements[0]).Expression);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(block.Statements[1]).Name.Text);
+        Assert.Equal(1, block.RightBrace.Span.Length);
+    }
+
+    [Fact]
+    public void Synchronize_JunkBeforeClosingBrace_DoesNotConsumeBrace()
+    {
+        const string source = """
+            fn f() {
+            +
+            }
+            """;
+
+        var result = Utility.Parse(source);
+        var fn = Assert.IsType<FunctionDeclaration>(Assert.Single(result.Tree.Statements));
+        var block = Assert.IsType<Block>(fn.Body);
+        Assert.Equal(SyntaxKind.RBrace, block.RightBrace.Kind);
+        Assert.Equal(1, block.RightBrace.Span.Length);
+        Assert.Equal("}", block.RightBrace.Text);
+    }
+
+    [Fact]
+    public void Synchronize_TopLevelJunk_PreservesFollowingDeclaration()
+    {
+        const string source = """
+            +
+            let y = 1;
+            """;
+
+        var result = Utility.Parse(source);
+        Assert.Equal(2, result.Tree.Statements.Count);
+        Assert.IsType<NullExpression>(Assert.IsType<ExpressionStatement>(result.Tree.Statements[0]).Expression);
+        Assert.Equal("y", Assert.IsType<VariableDeclaration>(result.Tree.Statements[1]).Name.Text);
+    }
+
+    [Fact]
     public void Unfinished_ProducesNull()
     {
         var tree = Utility.GetAST("let");
@@ -440,4 +590,75 @@ public class ParserTest
         else
             Assert.Null(literal.Value);
     }
+
+    #region Event Attributes
+    [Fact]
+    public void Parses_InterfaceEvent_WithAttribute()
+    {
+        const string source = """
+            interface X {
+                [luau_name("Foo")]
+                event abc(x: number);
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.Parse(source));
+        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(result.Tree.Statements.Single());
+        Assert.NotNull(interfaceDeclaration.Body);
+
+        var eventDeclaration = Assert.IsType<EventDeclaration>(Assert.Single(interfaceDeclaration.Body.Members));
+        Assert.NotNull(eventDeclaration.Attributes);
+
+        var attribute = Assert.Single(eventDeclaration.Attributes.AttributeList);
+        var identifier = Assert.IsType<Identifier>(attribute.Expression);
+        Assert.Equal("luau_name", identifier.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TopLevelEvent_WithAttribute()
+    {
+        const string source = """
+            [luau_name("Foo")]
+            event abc(x: number);
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.Parse(source));
+        var eventDeclaration = Assert.IsType<EventDeclaration>(result.Tree.Statements.Single());
+        Assert.NotNull(eventDeclaration.Attributes);
+
+        var attribute = Assert.Single(eventDeclaration.Attributes.AttributeList);
+        var identifier = Assert.IsType<Identifier>(attribute.Expression);
+        Assert.Equal("luau_name", identifier.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TopLevelArrayLiteralStatement_NotMistakenForAttributes()
+    {
+        var tree = Utility.GetAST("[1, 2, 3];");
+        var statement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var arrayLiteral = Assert.IsType<ArrayLiteral>(statement.Expression);
+        Assert.Equal(3, arrayLiteral.Expressions.Count);
+    }
+
+    [Fact]
+    public void Parses_MutEvent_StillProducesMutEventError()
+    {
+        const string plainSource = """
+            interface X {
+                mut event abc;
+            }
+            """;
+
+        const string attributedSource = """
+            interface X {
+                [luau_name("Foo")]
+                mut event abc;
+            }
+            """;
+
+        var plainDiagnostics = Utility.GetParserDiagnostics(plainSource);
+        var attributedDiagnostics = Utility.GetParserDiagnostics(attributedSource);
+        Assert.Equal(plainDiagnostics.Set.Count, attributedDiagnostics.Set.Count);
+    }
+    #endregion Event Attributes
 }

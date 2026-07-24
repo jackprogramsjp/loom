@@ -9,7 +9,10 @@ public sealed class LoomConfig
 
     [TomlPropertyName("no_emit")]
     public bool NoEmit { get; set; }
-    
+
+    [TomlPropertyName("debug")]
+    public bool Debug { get; set; }
+
     [TomlPropertyName("project_type")]
     [TomlConverter(typeof(ProjectTypeConverter))]
     public ProjectType ProjectType { get; init; }

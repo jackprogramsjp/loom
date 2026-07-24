@@ -5,27 +5,22 @@ public readonly struct LocationSpan
 {
     public LocationSpan(Location start, Location end)
     {
-        File = start.File;
         Start = start;
         End = end;
-        Length = end.Position - start.Position;
     }
     
     public LocationSpan(Location start, int length)
     {
-        File = start.File;
         Start = start;
         End = start + length;
-        Length = length;
     }
 
-    public SourceFile File { get; }
+    public SourceFile File => Start.File;
+    public int Length => End.Position - Start.Position;
     public Location Start { get; }
     public Location End { get; }
-    public int Length { get; }
 
     public static LocationSpan Empty(SourceFile? file = null) => new(Location.Empty(file ?? SourceFile.Empty), Location.Empty(file ?? SourceFile.Empty));
-    public static LocationSpan operator+(LocationSpan span, int n) => new(span.Start + n, span.End + n);
     public static bool operator ==(LocationSpan left, LocationSpan right) => left.Equals(right);
     public static bool operator !=(LocationSpan left, LocationSpan right) => !(left == right);
 

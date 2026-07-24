@@ -25,6 +25,7 @@ public static class SyntaxFacts
             new("for", SyntaxKind.ForKeyword),
             new("in", SyntaxKind.InKeyword),
             new("nameof", SyntaxKind.NameOfKeyword),
+            new("typeof", SyntaxKind.TypeOfKeyword),
             new("keyof", SyntaxKind.KeyOfKeyword),
             new("declare", SyntaxKind.DeclareKeyword),
             new("as", SyntaxKind.AsKeyword),

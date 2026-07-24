@@ -1,6 +1,6 @@
 namespace Loom.Luau.AST;
 
-public class TableTypeIndexer(LuauVisibility? visibility, LuauType? keyType, LuauType valueType) : LuauType
+public sealed class TableTypeIndexer(LuauVisibility? visibility, LuauType? keyType, LuauType valueType) : LuauType
 {
     public LuauVisibility? Visibility { get; } = visibility;
     public LuauType? KeyType { get; } = keyType;

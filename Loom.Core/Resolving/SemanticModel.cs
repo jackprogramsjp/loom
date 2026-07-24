@@ -11,19 +11,28 @@ namespace Loom.Core.Resolving;
 public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolTable Declarations, SymbolTable References)
     : DiagnosedResult(Diagnostics)
 {
-    internal int RuntimeReferences = 0;
     public bool DisableRuntimeLibraryImport { get; set; }
+    public bool EmitDebugDiagnostics { get; set; }
     public bool MustImportRuntimeLibrary =>
         !DisableRuntimeLibraryImport
         && !Tree.File.IsIntrinsic
         && (
             RuntimeReferences > 0
-            || References.Any(pair => !NodeId.Map[pair.Key].File.IsIntrinsic
+            || References.Any(pair => NonIntrinsicReferenceNodes.Contains(pair.Key)
                 && pair.Value.Any(s => s is { File.Name: "runtime.loom", IsIntrinsic: true, IsTypeSymbol: true })
             )
         );
 
+    /// <summary>
+    /// Node IDs of reference-site nodes that originate from a non-intrinsic source file.
+    /// Populated by the resolver as references are recorded, so
+    /// <see cref="MustImportRuntimeLibrary"/> can filter references by the file of the
+    /// referencing node without holding on to the node instances themselves.
+    /// </summary>
+    internal HashSet<NodeId> NonIntrinsicReferenceNodes { get; } = [];
+    internal int RuntimeReferences = 0;
     internal TypeSolver TypeSolver { get; } = new(new DiagnosticBag());
+    private SymbolLookup DeclarationsByName => field ??= Declarations.Values.SelectMany(s => s).GroupBy(s => s.Name).ToDictionary(g => g.Key, g => g.ToList());
 
     public bool IsCompileTimeConstant(Expression expression) =>
         expression is Literal or NameOf
@@ -34,7 +43,7 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
     public object? GetConstantValue(Expression expression) =>
         expression switch
         {
-            QualifiedName qn when GetType(qn.Identifier) is TypeChecking.Types.ObjectType objectType
+            QualifiedName qn when GetType(qn.Identifier) is ObjectType objectType
                 && objectType.GetProperty(qn.Names.First().Name.Text) is { ValueType: TypeChecking.Types.LiteralType literalType } =>
                 literalType.Value,
             _ when GetType(expression) is TypeChecking.Types.LiteralType literalType => literalType.Value,
@@ -70,35 +79,45 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
         var referenceSymbol = GetSymbol(node, kind);
         return referenceSymbol == null ? null : GetDeclarationSymbol(referenceSymbol.Declaration, kind);
     }
-    
+
     public bool TryGetIntrinsicAttribute(Expression expression, string name, [MaybeNullWhen(false)] out AttributeSymbol attribute)
     {
         attribute = null;
+        var property = GetPropertySymbol(expression);
+        return property != null && property.TryGetIntrinsicAttribute(name, out attribute);
+    }
+
+    public PropertySymbol? GetPropertySymbol(Expression expression)
+    {
         var (objectExpression, names) = expression switch
         {
-            QualifiedName qualified => (qualified.Identifier, qualified.Names.Select(d => d.Name.Text).ToList()),
-            PropertyAccess propertyAccess => (propertyAccess.Expression, propertyAccess.Names.Select(d => d.Name.Text).ToList()),
+            QualifiedName qualified => (qualified.Identifier as Expression, qualified.Names.Select(d => d.Name.Text).ToArray()),
+            PropertyAccess propertyAccess => (propertyAccess.Expression, propertyAccess.Names.Select(d => d.Name.Text).ToArray()),
             ElementAccess { IndexExpression: Literal { Value: string propertyName } } elementAccess => (elementAccess.Expression, [propertyName]),
             _ => (expression, [])
         };
 
-        if (names.Count == 0 || GetType(objectExpression) is not InterfaceType interfaceType)
-            return false;
+        if (names.Length == 0)
+            return null;
+
+        var objectType = GetType(objectExpression);
+        if (objectType is InstantiatedType instantiated)
+            objectType = instantiated.Expand();
+
+        if (objectType is not InterfaceType interfaceType)
+            return null;
 
         var interfaceSymbol = FindDeclarationSymbol<InterfaceSymbol>(interfaceType.Name);
-        if (interfaceSymbol == null)
-            return false;
-
-        var property = interfaceSymbol.GetPropertyAtPath(names);
-        return property != null && property.TryGetIntrinsicAttribute(name, out attribute);
+        return interfaceSymbol?.GetPropertyAtPath(names);
     }
-    
 
     public Type GetType(Node node) => TypeSolver.GetType(node);
     public Type? GetDeclarationType(Node node) => GetSymbol(node) is { } symbol ? TypeSolver.GetType(symbol.Declaration) : null;
-    
-    private T? FindDeclarationSymbol<T>(string name) where T : Symbol =>
-        Declarations.Values.SelectMany(s => s).OfType<T>().FirstOrDefault(s => s.Name == name);
+    public T? FindIntrinsicDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(name, s => s.IsIntrinsic);
+    private T? FindDeclarationSymbol<T>(string name) where T : Symbol => FindDeclarationSymbol<T>(name, static _ => true);
+
+    private T? FindDeclarationSymbol<T>(string name, Func<T, bool> predicate) where T : Symbol =>
+        DeclarationsByName.TryGetValue(name, out var symbols) ? symbols.OfType<T>().FirstOrDefault(predicate) : null;
 
     private static Symbol? FindSymbol(Node node, SymbolKind? kind, SymbolTable table)
     {

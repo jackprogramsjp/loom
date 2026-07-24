@@ -69,13 +69,13 @@ public sealed partial class Parser
         return new InterfaceBody(leftBrace, rightBrace, members);
     }
 
-    private List<InterfaceMember>? ParseInterfaceMembers()
+    private List<Statement>? ParseInterfaceMembers()
     {
-        var members = new List<InterfaceMember>();
+        var members = new List<Statement>();
         while (!IsEof() && Current() is not { Kind: SyntaxKind.RBrace })
         {
             var token = Current();
-            InterfaceMember? member;
+            Statement? member;
             if (token.Kind != SyntaxKind.LBracket)
             {
                 var mutKeyword = Match(out var kw, SyntaxKind.MutKeyword) ? kw : null;
@@ -89,8 +89,9 @@ public sealed partial class Parser
             {
                 Advance();
                 var attributes = ParseAttributes(token);
-                var mutKeyword = Match(out var kw, SyntaxKind.MutKeyword) ? kw : null;
-                member = ParsePropertyDeclaration(mutKeyword, attributes);
+                member = Match(out var eventKeyword, SyntaxKind.EventKeyword)
+                    ? ParseEventDeclaration(eventKeyword, attributes)
+                    : ParsePropertyDeclaration(Match(out var mutKeyword, SyntaxKind.MutKeyword) ? mutKeyword : null, attributes);
             }
 
             if (member == null) return null;
@@ -101,11 +102,17 @@ public sealed partial class Parser
         return members;
     }
 
-    private InterfaceMember? ParseInterfaceMember(Token? mutKeyword) =>
-        Match(out var leftBracket, SyntaxKind.LBracket)
-            ? ParseIndexerDeclaration(mutKeyword, leftBracket)
-            : ParsePropertyDeclaration(mutKeyword, null);
+    private Statement? ParseInterfaceMember(Token? mutKeyword)
+    {
+        if (Match(out var leftBracket, SyntaxKind.LBracket))
+            return ParseIndexerDeclaration(mutKeyword, leftBracket);
 
+        if (mutKeyword == null && Match(out var keyword, SyntaxKind.EventKeyword))
+            return ParseEventDeclaration(keyword, null);
+        
+        return ParsePropertyDeclaration(mutKeyword, null);
+    }
+    
     private IndexerDeclaration? ParseIndexerDeclaration(Token? mutKeyword, Token leftBracket)
     {
         var indexType = ParseType();
@@ -216,7 +223,12 @@ public sealed partial class Parser
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         var returnType = ParseColonTypeClause();
-        if (!ValidateFunctionSignature("declared function signatures", parameters?.Span ?? typeParameters?.Span ?? name.Span, returnType, parameters))
+        if (!ValidateFunctionSignature(
+                "declared function signatures",
+                parameters?.LocationSpan ?? typeParameters?.LocationSpan ?? name.GetLocation(),
+                returnType,
+                parameters
+            ))
             return new NullStatement(fnKeyword);
 
         return new DeclareFunctionSignature(fnKeyword, name, typeParameters, parameters, returnType);
@@ -293,19 +305,30 @@ public sealed partial class Parser
 
     private EnumMember? ParseEnumMember() => Match(out var name, SyntaxKind.Identifier) ? new EnumMember(name, ParseEqualsValueClause()) : null;
 
+    private Statement ParseEventDeclaration(Token keyword, Attributes? attributes)
+    {
+        var name = ExpectIdentifier();
+        var typeParameters = ParseTypeParameters();
+        var parameters = ParseParameters();
+        if (!ValidateSignatureParameters("event declarations", parameters))
+            return new NullStatement(keyword);
+
+        return new EventDeclaration(keyword, name, typeParameters, parameters, attributes);
+    }
+
     private Parameters? ParseParameters()
     {
         if (!Match(out var leftParen, SyntaxKind.LParen))
             return null;
 
-        List<Parameter> parameters = [];
-        if (!Match(out var rightParen, SyntaxKind.RParen))
-        {
-            parameters = ParseDelimited(ParseParameter);
-            rightParen = Expect(SyntaxKind.RParen);
-        }
+        if (Match(out var rightParen, SyntaxKind.RParen))
+            return new Parameters(leftParen, rightParen, []);
+
+        var parameters = ParseDelimited(ParseParameter);
+        rightParen = Expect(SyntaxKind.RParen);
 
         return new Parameters(leftParen, rightParen, parameters);
+
     }
 
     private Parameter ParseParameter()

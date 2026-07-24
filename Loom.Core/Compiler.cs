@@ -26,7 +26,7 @@ public sealed class Compiler(CompilationUnit unit, SourceFile file)
             trackDiagnostics(flowAnalyzer.Analyze());
             var typeChecker = new TypeChecker(semanticModel, flowAnalyzer);
             var typeCheckerResult = trackDiagnostics(typeChecker.Check());
-            var generator = new LuauGenerator(semanticModel);
+            var generator = new LuauGenerator(semanticModel, unit.RuntimeImport);
             var generatorResult = trackDiagnostics(generator.Generate());
             var renderedLuau = generatorResult.LuauTree.Render();
             var diagnostics = DiagnosticBag.Concat(pipelineDiagnostics);

@@ -8,59 +8,58 @@ public abstract class Node
     private static int _nextId;
 
     public NodeId Id { get; }
-    public List<Node> Children { get; }
-    public List<Token> Tokens { get; }
-    public LocationSpan Span { get; }
-    public SourceFile File { get; }
-    [MaybeNull] public Node Parent { get; private set; } = null!;
+    public IReadOnlyList<Node> Children { get; }
+    public IReadOnlyList<Token> Tokens { get; }
+    public TextSpan Span { get; }
+    public LocationSpan LocationSpan => new(new Location(File, Span.Position), new Location(File, Span.End));
+    public SourceFile File => field ??= Tokens.Count == 0 ? SourceFile.Empty : Tokens[0].File;
+    [MaybeNull] public Node Parent { get; private set; }
 
-    protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children, LocationSpan? span = null)
+    protected Node(IEnumerable<Token?> theseTokens, IEnumerable<Node?> children)
     {
         Id = new NodeId(Interlocked.Increment(ref _nextId));
-        NodeId.Map.Add(Id, this);
 
-        Children = SortChildren(children);
-        Tokens = SortTokens(theseTokens);
-        Span = span ?? DeriveSpan();
-        File = Span.File;
+        Children = children.OfType<Node>().OrderBy(n => n.Span.Position).ToArray();
+        Tokens = theseTokens.OfType<Token>().OrderBy(t => t.Span.Position).ToArray();
+        Span = DeriveSpan();
         foreach (var child in Children)
             child.Parent = this;
     }
 
     public abstract T Accept<T>(Visitor<T> visitor);
-    public override string ToString() => Span.GetText().ToString();
+    public override string ToString() => LocationSpan.GetText().ToString();
+    public IReadOnlyList<T> GetDescendants<T>() where T : Node => GetDescendants().OfType<T>().ToArray();
 
-    public List<T> GetDescendants<T>()
-        where T : Node =>
-        GetDescendants().OfType<T>().ToList();
+    public IReadOnlyList<Node> GetDescendants()
+    {
+        var result = new List<Node>();
+        var queue = new Queue<Node>(Children);
+        while (queue.Count > 0)
+        {
+            var node = queue.Dequeue();
+            result.Add(node);
+            foreach (var child in node.Children)
+                queue.Enqueue(child);
+        }
 
-    public List<Node> GetDescendants() => Children.SelectMany(c => c.GetDescendants()).Concat(Children).ToList();
-
-    public bool IsDescendantOf<T>()
-        where T : Node =>
-        FirstAncestorOfType<T>() != null;
+        return result;
+    }
+    public bool IsDescendantOf<T>() where T : Node => FirstAncestorOfType<T>() != null;
 
     public T? FirstAncestorOfType<T>()
         where T : Node
     {
-        if (this is Tree)
-            return null;
+        for (var node = Parent; node != null; node = node.Parent)
+        {
+            if (node is T typed)
+                return typed;
+        }
 
-        if (Parent is T node)
-            return node;
-
-        // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-        return Parent?.FirstAncestorOfType<T>();
+        return null;
     }
 
-    private static List<Node> SortChildren(IEnumerable<Node?> children) =>
-        children.Where(node => node != null).Cast<Node>().OrderBy(node => node.Span.Start.Position).ToList();
-
-    private static List<Token> SortTokens(IEnumerable<Token?> tokens) =>
-        tokens.Where(token => token != null).Cast<Token>().OrderBy(token => token.Span.Start.Position).ToList();
-
-    private LocationSpan DeriveSpan() =>
+    private TextSpan DeriveSpan() =>
         Tokens.Count == 0
-            ? LocationSpan.Empty(SourceFile.Empty)
-            : new LocationSpan(Tokens.First().Span.Start, Tokens.Last().Span.End);
+            ? TextSpan.Empty
+            : TextSpan.FromStartEnd(Tokens[0].Span.Position, Tokens[^1].Span.End);
 }

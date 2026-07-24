@@ -101,6 +101,10 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
 
     public virtual T VisitEnumDeclaration(EnumDeclaration enumDeclaration) => VisitList(enumDeclaration.Members);
     public virtual T VisitEnumMember(EnumMember enumMember) => VisitWithDefault(enumMember.EqualsValueClause);
+
+    public virtual T VisitEventDeclaration(EventDeclaration eventDeclaration) =>
+        CombineResults([VisitWithDefault(eventDeclaration.TypeParameters), VisitWithDefault(eventDeclaration.Parameters), VisitWithDefault(eventDeclaration.Attributes)]);
+
     public virtual T VisitParameters(Parameters parameters) => VisitList(parameters.ParameterList);
 
     public virtual T VisitParameter(Parameter parameter) =>
@@ -156,6 +160,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitParenthesizedType(ParenthesizedType parenthesized) => Visit(parenthesized.Type);
     public virtual T VisitIndexedType(IndexedType indexedType) => CombineResults([Visit(indexedType.TargetType), Visit(indexedType.IndexType)]);
     public virtual T VisitKeyOf(KeyOf keyOf) => Visit(keyOf.Type);
+    public virtual T VisitTypeOf(TypeOf typeOf) => Visit(typeOf.Expression);
 
     public virtual T VisitFunctionType(FunctionType functionType) =>
         CombineResults([VisitWithDefault(functionType.TypeParameters), VisitWithDefault(functionType.Parameters), Visit(functionType.ReturnType)]);

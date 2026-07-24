@@ -17,7 +17,8 @@ var tools = new Dictionary<string, Action>
         }
         
         Console.WriteLine(AstTools.GetAstString(filePath));
-    }
+    },
+    ["profile"] = () => ProfileTools.Profile(arguments)
 };
 
 if (!string.IsNullOrEmpty(toolName) && tools.TryGetValue(toolName, out var runTool))

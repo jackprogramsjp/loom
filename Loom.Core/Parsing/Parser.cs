@@ -116,12 +116,12 @@ public sealed partial class Parser(LexerResult lexerResult)
     private bool SplitAndAdvance(int splitIndex, SyntaxKind remainderKind, out Token closingArrow)
     {
         var token = Current();
-        var firstSpan = new LocationSpan(token.Span.Start, splitIndex);
-        closingArrow = new Token(SyntaxKind.RArrow, firstSpan, token.Text[..splitIndex]);
+        closingArrow = new Token(SyntaxKind.RArrow, token.File, new TextSpan(token.Span.Position, splitIndex), token.Text[..splitIndex]);
 
         var remainder = new Token(
             remainderKind,
-            new LocationSpan(token.Span.Start + splitIndex, token.Span.Length - splitIndex),
+            token.File,
+            new TextSpan(token.Span.Position + splitIndex, token.Span.Length - splitIndex),
             token.Text[splitIndex..]
         );
 
@@ -173,26 +173,30 @@ public sealed partial class Parser(LexerResult lexerResult)
 
     private Token Expect(SyntaxKind kind, Func<Token?, string>? message = null)
     {
+        if (Current().Kind == kind)
+            return Advance();
+        
+        var current = Current();
+        var expected = SyntaxFacts.GetText(kind) ?? kind.ToString();
+        
         if (IsEof())
         {
-            var last = lexerResult.Tokens[_position - 1];
-            var text = SyntaxFacts.GetText(kind) ?? kind.ToString();
-            _diagnostics.Error(last, InternalCodes.UnexpectedEof, message != null ? message(null) : $"Expected '{text}', got EOF.");
-            return last;
+            _diagnostics.Error(
+                current,
+                InternalCodes.UnexpectedEof,
+                message != null ? message(null) : $"Expected '{expected}', got EOF."
+            );
         }
-
-        var token = Advance();
-        if (token.Kind == kind)
-            return token;
-
-        var expected = SyntaxFacts.GetText(kind) ?? kind.ToString();
-        _diagnostics.Error(
-            token,
-            InternalCodes.UnexpectedToken,
-            message != null ? message(token) : $"Expected '{expected}', got {SafeTokenText(token)}."
-        );
-
-        return token;
+        else
+        {
+            _diagnostics.Error(
+                current,
+                InternalCodes.UnexpectedToken,
+                message != null ? message(current) : $"Expected '{expected}', got {SafeTokenText(current)}."
+            );
+        }
+        
+        return MissingToken(kind);
     }
 
     private Token Advance()
@@ -202,8 +206,50 @@ public sealed partial class Parser(LexerResult lexerResult)
         return current;
     }
 
+    /// <summary>
+    /// Skip tokens until a statement boundary so later syntax can still be parsed.
+    /// Consumes ';' ; leaves '}' and statement keywords for the caller.
+    /// </summary>
+    private void Synchronize()
+    {
+        while (!IsEof())
+        {
+            switch (Current().Kind)
+            {
+                case SyntaxKind.Semicolon:
+                    Advance();
+                    return;
+                case SyntaxKind.RBrace:
+                    return;
+                default:
+                    if (AtStatementKeyword())
+                        return;
+
+                    Advance();
+                    break;
+            }
+        }
+    }
+
+    private Token MissingToken(SyntaxKind kind)
+    {
+        var current = Current();
+        var text = SyntaxFacts.GetText(kind) ?? string.Empty;
+
+        return new Token(
+            kind,
+            current.File,
+            new TextSpan(current.Span.Position, 0),
+            text
+        );
+    }
+
     private Token Current() => lexerResult.Tokens[_position];
-    private SyntaxKind PeekKind(int offset) => lexerResult.Tokens[_position + offset].Kind;
+    private SyntaxKind PeekKind(int offset)
+    {
+        var index = _position + offset;
+        return index >= 0 && index < lexerResult.Tokens.Count ? lexerResult.Tokens[index].Kind : SyntaxKind.Eof;
+    }
     private bool IsEof() => Current().Kind == SyntaxKind.Eof;
     private static string SafeTokenText(Token? token) => token is { Kind: not SyntaxKind.Eof } ? $"'{token.Text}'" : "EOF";
 }

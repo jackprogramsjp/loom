@@ -27,7 +27,7 @@ public class DiagnosticBagTest
         Assert.Equal(DiagnosticSeverity.Debug, diag.Severity);
         Assert.Equal("my-code", diag.Code);
         Assert.Equal("hello", diag.Message);
-        Assert.Equal(node.Span, diag.Span);
+        Assert.Equal(node.LocationSpan, diag.Span);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class DiagnosticBagTest
         Assert.Equal(DiagnosticSeverity.Info, diag.Severity);
         Assert.Equal("my-code", diag.Code);
         Assert.Equal("hello", diag.Message);
-        Assert.Equal(node.Span, diag.Span);
+        Assert.Equal(node.LocationSpan, diag.Span);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class DiagnosticBagTest
         Assert.Equal("w1", diag.Code);
         Assert.Equal("watch out", diag.Message);
         Assert.Equal("use bar", diag.Hint);
-        Assert.Equal(token.Span, diag.Span);
+        Assert.Equal(token.GetLocation(), diag.Span);
     }
 
     [Fact]
@@ -232,11 +232,83 @@ public class DiagnosticBagTest
 
 
     [Fact]
-    public void FailFast_WhenTrue_ExitsOnError()
+    public void Report_WithFailFastDisabled_StillRecordsErrorWithoutExiting()
     {
-        DiagnosticBag.FailFast = false;
+        var originalFailFast = DiagnosticBag.FailFast;
+        try
+        {
+            DiagnosticBag.FailFast = false;
+            var bag = new DiagnosticBag();
+            bag.Error(_span, "e", "fail");
+            Assert.Single(bag.Set);
+        }
+        finally
+        {
+            DiagnosticBag.FailFast = originalFailFast;
+        }
+    }
+
+    [Fact]
+    public void Debug_Node_TwoArgOverload_RecordsDiagnosticWithNullCode()
+    {
         var bag = new DiagnosticBag();
-        bag.Error(_span, "e", "fail");
+        var node = NewIdentifier();
+        bag.Debug(node, "hello");
         Assert.Single(bag.Set);
+
+        var diag = bag.Set.Single();
+        Assert.Equal(DiagnosticSeverity.Debug, diag.Severity);
+        Assert.Null(diag.Code);
+        Assert.Equal("hello", diag.Message);
+        Assert.Equal(node.LocationSpan, diag.Span);
+    }
+
+    [Fact]
+    public void Info_Node_TwoArgOverload_RecordsDiagnosticWithNullCode()
+    {
+        var bag = new DiagnosticBag();
+        var node = NewIdentifier();
+        bag.Info(node, "hello");
+        Assert.Single(bag.Set);
+
+        var diag = bag.Set.Single();
+        Assert.Equal(DiagnosticSeverity.Info, diag.Severity);
+        Assert.Null(diag.Code);
+        Assert.Equal("hello", diag.Message);
+        Assert.Equal(node.LocationSpan, diag.Span);
+    }
+
+    [Fact]
+    public void NotImplemented_Token_RecordsErrorWithNotImplementedCode()
+    {
+        var bag = new DiagnosticBag();
+        var token = NewToken();
+        bag.NotImplemented(token, "custom feature");
+        Assert.Single(bag.Set);
+
+        var diag = bag.Set.Single();
+        Assert.Equal(DiagnosticSeverity.Error, diag.Severity);
+        Assert.Equal(InternalCodes.NotImplemented, diag.Code);
+        Assert.Equal("custom feature", diag.Message);
+        Assert.Equal(token.GetLocation(), diag.Span);
+    }
+
+    [Fact]
+    public void ToString_JoinsAllDiagnosticsWithNewline()
+    {
+        var bag = new DiagnosticBag();
+        bag.Error(_span, "e1", "first");
+        bag.Error(_span, "e2", "second");
+
+        var result = bag.ToString();
+        Assert.Contains("first", result);
+        Assert.Contains("second", result);
+    }
+
+    [Fact]
+    public void ToString_EmptyBag_ReturnsEmptyString()
+    {
+        var bag = new DiagnosticBag();
+        Assert.Equal("", bag.ToString());
     }
 }

@@ -40,7 +40,7 @@ public sealed partial class TypeChecker
             }
 
             var actualType = GetReturnType(declaration);
-            _semanticModel.TypeSolver.AddConstraint(actualType, declarationType.ReturnType, declaration.ReturnType?.Type.Span ?? declaration.Span);
+            _semanticModel.TypeSolver.AddConstraint(actualType, declarationType.ReturnType, declaration.ReturnType?.Type.LocationSpan ?? declaration.LocationSpan);
             if (declaration.ReturnType != null)
                 BindType(declaration.ReturnType, declarationType.ReturnType);
 
@@ -63,7 +63,7 @@ public sealed partial class TypeChecker
         BindType(traitDeclaration, publishedType);
 
         var properties = ResolveTraitProperties(traitDeclaration.Body.Members);
-        objectType.Properties.AddRange(properties);
+        objectType.AddProperties(properties);
 
         return publishedType;
     }
@@ -71,6 +71,12 @@ public sealed partial class TypeChecker
     public override Type VisitInterfaceDeclaration(InterfaceDeclaration interfaceDeclaration)
     {
         var name = interfaceDeclaration.Name.Text;
+        if (_semanticModel.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Interface) is not InterfaceSymbol symbol)
+        {
+            _diagnostics.Error(interfaceDeclaration, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of interface '{name}'.");
+            return BindType(interfaceDeclaration, PrimitiveType.Never);
+        }
+
         var typeParameters = interfaceDeclaration.TypeParameters?.ParameterList.ConvertAll(VisitTypeParameter);
         var constraints = interfaceDeclaration.ColonTypeListClause?.Types
                 .Select(Visit)
@@ -90,21 +96,25 @@ public sealed partial class TypeChecker
         var indexerDeclaration = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
         var indexer = ResolveInterfaceIndexer(constraints, indexerDeclaration);
         objectType.Indexer = indexer;
+
+        var eventDeclarations = interfaceDeclaration.Body?.Members.OfType<EventDeclaration>().ToList() ?? [];
         var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>().ToList() ?? [];
+        var events = ResolveInterfaceEvents(eventDeclarations);
         var properties = ResolveInterfaceProperties(constraints, propertyDeclarations);
-        objectType.Properties.AddRange(properties);
+        objectType.AddProperties(events);
+        objectType.AddProperties(properties);
 
         return BindType(interfaceDeclaration, publishedType);
     }
 
-    public override Type VisitInterfaceInvocation(InterfaceInvocation node)
+    public override Type VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
-        var type = Visit(node.Name);
+        var type = Visit(interfaceInvocation.Name);
         if (type.Equals(Intrinsics.Range))
-            _diagnostics.Warn(node, InternalCodes.SimplifiableCode, "Use range literal.");
+            _diagnostics.Warn(interfaceInvocation, InternalCodes.SimplifiableCode, "Use a range literal.");
 
         var traitProperties = new List<ObjectProperty>();
-        if (_semanticModel.GetSymbol(node.Name, SymbolKind.Interface) is InterfaceSymbol interfaceSymbol)
+        if (_semanticModel.GetSymbol(interfaceInvocation.Name, SymbolKind.Interface) is InterfaceSymbol interfaceSymbol)
             traitProperties.AddRange(
                 from declaration in interfaceSymbol.Implementations.SelectMany(i => i.Body.Implementations)
                 let methodType = _semanticModel.GetType(declaration)
@@ -112,25 +122,25 @@ public sealed partial class TypeChecker
             );
 
         if (type is InterfaceType nonGeneric)
-            return BindInterfaceInvocation(node, nonGeneric, traitProperties);
+            return BindInterfaceInvocation(interfaceInvocation, nonGeneric, traitProperties);
 
         if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
         {
-            _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
-            return BindType(node, PrimitiveType.Never);
+            _diagnostics.Error(interfaceInvocation, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
+            return BindType(interfaceInvocation, PrimitiveType.Never);
         }
 
-        if (!TrySubstituteGenericInterface(node, generic, underlying, out var interfaceType))
-            return BindType(node, PrimitiveType.Never);
+        if (!TrySubstituteGenericInterface(interfaceInvocation, generic, underlying, out var interfaceType))
+            return BindType(interfaceInvocation, PrimitiveType.Never);
 
-        return BindInterfaceInvocation(node, interfaceType, traitProperties);
+        return BindInterfaceInvocation(interfaceInvocation, interfaceType, traitProperties);
     }
 
     private InterfaceType BindInterfaceInvocation(InterfaceInvocation node, InterfaceType interfaceType, List<ObjectProperty> traitProperties)
     {
         var traitMethodNames = traitProperties.Select(p => p.Name).ToHashSet();
         CheckInterfaceInvocationInitializers(node, interfaceType);
-        interfaceType.ObjectType.Properties.AddRange(traitProperties);
+        interfaceType.ObjectType.AddProperties(traitProperties);
         interfaceType.TraitMethodNames = traitMethodNames;
 
         return BindType(node, interfaceType);
@@ -163,12 +173,14 @@ public sealed partial class TypeChecker
     }
 
     private List<ObjectProperty> ResolveTraitProperties(List<DeclareFunctionSignature> signatures) =>
-    (
-        from signature in signatures
-        let name = signature.Name.Text
-        let fnType = Visit(signature)
-        select new ObjectProperty(false, name, fnType)
-    ).ToList();
+        signatures.ConvertAll(s => new ObjectProperty(false, s.Name.Text, Visit(s)));
+
+    private List<ObjectProperty> ResolveInterfaceEvents(List<EventDeclaration> eventDeclarations) =>
+        eventDeclarations.ConvertAll(e =>
+        {
+            MaybeVisit(e.Attributes);
+            return new ObjectProperty(false, e.Name.Text, Visit(e));
+        });
 
     private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
     {

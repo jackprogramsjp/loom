@@ -108,6 +108,7 @@ public class LexerTest
     [Theory]
     [InlineData("'abc\"", true)]
     [InlineData("\"abc'")]
+    [InlineData("\"abc\n\n")]
     [InlineData("\"abc")]
     [InlineData("'abc", true)]
     [InlineData("\"")]
@@ -178,9 +179,9 @@ public class LexerTest
         Assert.Equal(SyntaxKind.TrueLiteral, tokens[2].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
 
-        Assert.Equal(1, tokens[0].Span.Start.Line);
-        Assert.Equal(1, tokens[0].Span.End.Line);
-        Assert.Equal(2, tokens[2].Span.Start.Line);
+        Assert.Equal(1, tokens[0].GetLocation().Start.Line);
+        Assert.Equal(1, tokens[0].GetLocation().End.Line);
+        Assert.Equal(2, tokens[2].GetLocation().Start.Line);
     }
 
     [Fact]
@@ -192,8 +193,8 @@ public class LexerTest
         Assert.Equal(SyntaxKind.Eof, tokens[1].Kind);
 
         var comment = tokens[0];
-        Assert.Equal(1, comment.Span.Start.Line);
-        Assert.Equal(3, comment.Span.End.Line);
+        Assert.Equal(1, comment.GetLocation().Start.Line);
+        Assert.Equal(3, comment.GetLocation().End.Line);
     }
 
     [Fact]
@@ -230,11 +231,11 @@ public class LexerTest
         Assert.Equal(SyntaxKind.TrueLiteral, tokens[2].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
 
-        Assert.Equal(2, tokens[1].Span.Start.Line);
+        Assert.Equal(2, tokens[1].GetLocation().Start.Line);
     }
     
     [Fact]
-    public void Tokenize_WithTriviaFalse_ExcludesWhitespaceAndComments()
+    public void Tokenizes_WithTriviaFalse_ExcludesWhitespaceAndComments()
     {
         var tokens = Utility.GetTokens("true  ## comment\nfalse", withTrivia: false);
         Assert.Equal(3, tokens.Count);
@@ -244,7 +245,7 @@ public class LexerTest
     }
 
     [Fact]
-    public void Tokenize_WithTriviaTrue_IncludesWhitespaceAndComments()
+    public void Tokenizes_WithTriviaTrue_IncludesWhitespaceAndComments()
     {
         var tokens = Utility.GetTokens("true  ## comment\nfalse", withTrivia: true);
         Assert.Equal(6, tokens.Count);
@@ -254,6 +255,17 @@ public class LexerTest
         Assert.Equal(SyntaxKind.Whitespace, tokens[3].Kind);
         Assert.Equal(SyntaxKind.FalseLiteral, tokens[4].Kind);
         Assert.Equal(SyntaxKind.Eof, tokens[5].Kind);
+    }
+    
+    [Fact]
+    public void Tokenizes_Range()
+    {
+        var tokens = Utility.GetTokens("1..5");
+        Assert.Equal(4, tokens.Count);
+        Assert.Equal(SyntaxKind.NumberLiteral, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.DotDot, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.NumberLiteral, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.Eof, tokens[3].Kind);
     }
 
     [Fact]
@@ -298,6 +310,7 @@ public class LexerTest
     [InlineData("69")]
     [InlineData("69_420")]
     [InlineData("123456")]
+    [InlineData("1234567890")]
     [InlineData("1e5")]
     [InlineData("420_69.69_420")]
     [InlineData("420.69")]
@@ -371,42 +384,47 @@ public class LexerTest
     }
     
     [Fact]
-    public void Tokenize_TracksLineAndColumnNumbers()
+    public void Tokenizes_TracksLineAndColumnNumbers()
     {
         var tokens = Utility.GetTokens("abc\n123\nxyz", withTrivia: true);
         Assert.Equal(6, tokens.Count);
 
         var first = tokens[0];
-        Assert.Equal(1, first.Span.Start.Line);
-        Assert.Equal(0, first.Span.Start.Character);
-        Assert.Equal(3, first.Span.End.Character);
+        Assert.Equal(1, first.GetLocation().Start.Line);
+        Assert.Equal(0, first.GetLocation().Start.Character);
+        Assert.Equal(3, first.GetLocation().End.Character);
 
         var firstWhitespace = tokens[1];
-        Assert.Equal(1, firstWhitespace.Span.Start.Line);
-        Assert.Equal(3, firstWhitespace.Span.Start.Character);
-        Assert.Equal(2, firstWhitespace.Span.End.Line);
-        Assert.Equal(0, firstWhitespace.Span.End.Character);
+        Assert.Equal(1, firstWhitespace.GetLocation().Start.Line);
+        Assert.Equal(3, firstWhitespace.GetLocation().Start.Character);
+        Assert.Equal(2, firstWhitespace.GetLocation().End.Line);
+        Assert.Equal(0, firstWhitespace.GetLocation().End.Character);
 
         var number = tokens[2];
-        Assert.Equal(2, number.Span.Start.Line);
-        Assert.Equal(0, number.Span.Start.Character);
-        Assert.Equal(3, number.Span.End.Character);
+        Assert.Equal(2, number.GetLocation().Start.Line);
+        Assert.Equal(0, number.GetLocation().Start.Character);
+        Assert.Equal(3, number.GetLocation().End.Character);
     }
     
-    [Fact]
-    public void Tokenize_VeryLongFile()
+    [Theory]
+    [InlineData("hello_world", SyntaxKind.Identifier)]
+    [InlineData("'abcdef'", SyntaxKind.StringLiteral)]
+    [InlineData("123456", SyntaxKind.NumberLiteral)]
+    [InlineData("+=", SyntaxKind.PlusEquals)]
+    [InlineData("## hello", SyntaxKind.Comment)]
+    public void Tokenizes_VeryLongFile(string lineText, SyntaxKind syntaxKind)
     {
-        const int identifierCount = 2000;
-        var source = string.Join('\n', Enumerable.Repeat("hello_world", identifierCount));
+        const int identifierCount = 60000;
+        var source = string.Join('\n', Enumerable.Repeat(lineText, identifierCount));
         var tokens = Utility.GetTokens(source, withTrivia: true);
         Assert.Equal(identifierCount * 2, tokens.Count);
 
         for (var i = 0; i < identifierCount; i += 2)
         {
-            var identifier = tokens[i];
+            var token = tokens[i];
             var whitespace = tokens[i + 1];
-            Assert.Equal("hello_world", identifier.Text);
-            Assert.Equal(SyntaxKind.Identifier, identifier.Kind);
+            Assert.Equal(lineText, token.Text);
+            Assert.Equal(syntaxKind, token.Kind);
             Assert.Equal("\n", whitespace.Text);
             Assert.Equal(SyntaxKind.Whitespace, whitespace.Kind);
         }
@@ -421,12 +439,12 @@ public class LexerTest
         var first = tokens[0];
         var second = tokens[^2];
         var eof = tokens[^1];
-        var firstStart = first.Span.Start;
-        var firstEnd = first.Span.End;
-        var secondStart = second.Span.Start;
-        var secondEnd = second.Span.End;
-        var eofStart = eof.Span.Start;
-        var eofEnd = eof.Span.End;
+        var firstStart = first.GetLocation().Start;
+        var firstEnd = first.GetLocation().End;
+        var secondStart = second.GetLocation().Start;
+        var secondEnd = second.GetLocation().End;
+        var eofStart = eof.GetLocation().Start;
+        var eofEnd = eof.GetLocation().End;
         Assert.Equal(firstStart.Line, firstEnd.Line);
         Assert.Equal(firstStart.Character, firstStart.Position);
         Assert.Equal(firstEnd.Character, firstEnd.Position);
@@ -453,8 +471,8 @@ public class LexerTest
         Assert.Equal(2, tokens.Count);
 
         var token = tokens[0];
-        var start = token.Span.Start;
-        var end = token.Span.End;
+        var start = token.GetLocation().Start;
+        var end = token.GetLocation().End;
         Assert.Equal(start.Line, end.Line);
         Assert.Equal(start.Character, start.Position);
         Assert.Equal(end.Character, end.Position);

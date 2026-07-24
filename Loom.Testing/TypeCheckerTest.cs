@@ -31,6 +31,26 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Allows_UseAfterIf_WhenElseBranchTerminates()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(
+            """
+            fn test(c: bool): number {
+                mut x: number;
+                if c {
+                    x = 1;
+                } else {
+                    return 0;
+                }
+                return x + 1;
+            }
+            """
+        );
+
+        Utility.AssertNoErrors(diagnostics);
+    }
+
+    [Fact]
     public void Allows_MacroReference_AsFunctionArgument()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
@@ -39,9 +59,10 @@ public class TypeCheckerTest
             consume(Result.ok);
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
-    
+
     #region ThrowsFor
     [Fact]
     public void ThrowsFor_Variable_DeclaredType_Mismatch()
@@ -418,6 +439,20 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Allows_ReservedLuauKeywordAsEnumMemberName()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Test { until, A }");
+        Assert.Null(diagnostics.Find(d => d.Code == InternalCodes.ReservedLuauKeyword));
+    }
+
+    [Fact]
+    public void Allows_ReservedLuauKeywordAsStringEnumMemberName()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("enum Test: string { until = \"until\" }");
+        Assert.Null(diagnostics.Find(d => d.Code == InternalCodes.ReservedLuauKeyword));
+    }
+
+    [Fact]
     public void ThrowsFor_IfStatement_NonBooleanCondition()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("if 42 { 1 }");
@@ -743,6 +778,85 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Infers_GenericFunctionArgument_FromExpectedParameterType()
+    {
+        const string source = """
+            let numbers = [1, 2, 3, 4];
+            fn map<T, U>(array: T[], converter: fn(e: T): U): U[] {
+              let new_array: U[mut] = mut [];
+              for v : array
+                new_array.push(converter(v));
+
+              return new_array;
+            }
+
+            fn id<T>(n: T) -> n;
+            map(numbers, id);
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void Infers_GenericFunctionArgument_ResultTypeIsPrecise()
+    {
+        const string source = """
+            let numbers = [1, 2, 3, 4];
+            fn map<T, U>(array: T[], converter: fn(e: T): U): U[] {
+              let new_array: U[mut] = mut [];
+              for v : array
+                new_array.push(converter(v));
+
+              return new_array;
+            }
+
+            fn id<T>(n: T) -> n;
+            let result: number[] = map(numbers, id);
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void ThrowsFor_GenericFunctionArgument_InferredTypeViolatesConstraint()
+    {
+        const string source = """
+            fn map<T, U>(array: T[], converter: fn(e: T): U): U[] {
+              let new_array: U[mut] = mut [];
+              for v : array
+                new_array.push(converter(v));
+
+              return new_array;
+            }
+
+            fn identity<T: string>(x: T) -> x;
+            let numbers = [1, 2, 3];
+            map(numbers, identity);
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.TypeMismatch,
+            "Type 'fn<T: string>(T: string): T: string' is not assignable to type 'fn(number): number'."
+        );
+    }
+
+    [Fact]
+    public void Allows_GenericFunction_UsedAsPlainValue_NotAsArgument()
+    {
+        const string source = """
+            fn id<T>(n: T) -> n;
+            print(id::<number>(5));
+            print(id(5));
+            let f = id;
+            print(f::<string>("hi"));
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
     public void ThrowsFor_Indexer_Override()
     {
         const string source = """
@@ -855,7 +969,7 @@ public class TypeCheckerTest
             "Type '\"\"' is not assignable to type 'number'."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_UnconstrainedTypeParameter_Index()
     {
@@ -880,9 +994,9 @@ public class TypeCheckerTest
     public void WarnsFor_UseRangeLiteral()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("new Range { minimum: 69, maximum: 420 }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.SimplifiableCode, "Use range literal.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.SimplifiableCode, "Use a range literal.");
     }
-
+    
     #region Checks
     [Theory]
     [InlineData("number", PrimitiveTypeKind.Number)]
@@ -897,11 +1011,11 @@ public class TypeCheckerTest
             get_type("{{typeName}}");
             """
         );
-        
+
         var primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(expectedKind, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_Generic_InterfaceIndex()
     {
@@ -909,15 +1023,15 @@ public class TypeCheckerTest
             """
             interface Foo { bar: number, baz: string }
             fn idx<T: Foo, K: keyof(T)>(foo: T, k: K) -> foo[k];
-            
+
             let foo = new Foo { bar: 69, baz: "abc" };
             idx(foo, "bar")
             """
         );
-        
+
         Assert.Equal(PrimitiveType.Number, type);
     }
-    
+
     [Fact]
     public void Checks_Generic_ArrayIndex()
     {
@@ -927,10 +1041,10 @@ public class TypeCheckerTest
             idx([1, 2, 3], 2);
             """
         );
-        
+
         Assert.Equal(PrimitiveType.Number, type);
     }
-    
+
     [Fact]
     public void Checks_TraitMethod_FromInterfaceInvocation()
     {
@@ -958,11 +1072,12 @@ public class TypeCheckerTest
         Assert.Empty(functionType.ParameterTypes);
         Assert.Equal(PrimitiveType.Number, functionType.ReturnType);
     }
-    
+
     [Fact]
     public void Allows_InterfaceProperty_AlongsideTraitMethods() =>
         Utility.AssertNoErrors(
-            Utility.GetTypeCheckerDiagnostics("""
+            Utility.GetTypeCheckerDiagnostics(
+                """
                 trait Iterator {
                     fn next(): number
                 }
@@ -971,7 +1086,7 @@ public class TypeCheckerTest
                     value: number
                 }
 
-                implement Iterator on Foo {
+                implement Iterator for Foo {
                     fn next() {
                         return 420 * value
                     }
@@ -980,12 +1095,15 @@ public class TypeCheckerTest
                 let foo = new Foo { value: 42 };
                 foo.value;
                 foo.next();
-                """));
+                """
+            )
+        );
 
     [Fact]
     public void Allows_Interface_WithMultipleTraits() =>
         Utility.AssertNoErrors(
-            Utility.GetTypeCheckerDiagnostics("""
+            Utility.GetTypeCheckerDiagnostics(
+                """
                 trait A {
                     fn a: number
                 }
@@ -996,13 +1114,13 @@ public class TypeCheckerTest
 
                 interface Foo;
 
-                implement A on Foo {
+                implement A for Foo {
                     fn a {
                         return 1
                     }
                 }
 
-                implement B on Foo {
+                implement B for Foo {
                     fn b {
                         return ""
                     }
@@ -1011,12 +1129,15 @@ public class TypeCheckerTest
                 let foo = new Foo {};
                 foo.a();
                 foo.b();
-                """));
+                """
+            )
+        );
 
     [Fact]
     public void Allows_GenericTraitImplementation() =>
         Utility.AssertNoErrors(
-            Utility.GetTypeCheckerDiagnostics("""
+            Utility.GetTypeCheckerDiagnostics(
+                """
                 trait Iterator<T> {
                     fn next(): T
                 }
@@ -1028,7 +1149,9 @@ public class TypeCheckerTest
                         return 1
                     }
                 }
-                """));
+                """
+            )
+        );
 
     [Fact]
     public void Allows_InterfaceInvocation_WithImplementedTraitMethod() =>
@@ -2893,6 +3016,70 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Checks_TypeOf_OnNumberLiteral()
+    {
+        var type = Utility.GetLastStatementType("type X = typeof(69)");
+        Assert.Equal(new LiteralType(69L), type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnStringLiteral()
+    {
+        var type = Utility.GetLastStatementType("type X = typeof(\"hi\")");
+        Assert.Equal(new LiteralType("hi"), type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnMutVariable_Widens()
+    {
+        var type = Utility.GetLastStatementType("mut x = 69; type X = typeof(x)");
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnBinaryExpression()
+    {
+        var type = Utility.GetLastStatementType("mut x = 1; type X = typeof(x + 1)");
+        Assert.Equal(PrimitiveType.Number, type);
+    }
+
+    [Fact]
+    public void Checks_TypeOf_OnInterfaceInstance()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            interface Foo {
+                foo: number,
+                bar: string
+            }
+
+            let foo = new Foo { foo: 69, bar: "hi" };
+            type X = typeof(foo);
+            """
+        );
+
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("Foo", interfaceType.Name);
+    }
+
+    [Fact]
+    public void Checks_KeyOf_OnTypeOf()
+    {
+        var type = Utility.GetLastStatementType(
+            """
+            interface I { a: number, b: string }
+            let i = new I { a: 1, b: "x" };
+            type K = keyof(typeof(i));
+            """
+        );
+
+        var union = Assert.IsType<UnionType>(type);
+        Assert.Equal(2, union.Types.Count);
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "a" });
+        Assert.Contains(union.Types, t => t is LiteralType { Value: "b" });
+    }
+
+    [Fact]
     public void Checks_TernaryOperator_Basic()
     {
         var type = Utility.GetLastStatementType("true ? 1 : 2");
@@ -3302,7 +3489,7 @@ public class TypeCheckerTest
         var iface = Assert.IsType<InterfaceType>(type);
         Assert.Equal("I", iface.Name);
     }
-    
+
     [Fact]
     public void Checks_InterfaceInvocation_NonGeneric_ShorthandPropertyInitializers()
     {
@@ -4121,6 +4308,28 @@ public class TypeCheckerTest
     }
 
     [Fact]
+    public void Checks_GenericPropertyMethodCall_ExplicitTypeArgument()
+    {
+        const string source = """
+            interface Thing {}
+            interface Widget : Thing {}
+
+            interface World<X> {
+                [luau_name("FindFirstChildOfClass"), luau_method]
+                find_first_child_of_class: fn<T: Thing>: T;
+            }
+
+            let world = none as never as World<number>;
+            world.find_first_child_of_class::<Widget>()
+            """;
+
+        var type = Utility.GetLastStatementType(source);
+        Assert.False(type is TypeVariable, $"Expected 'Widget', got a type variable ('{type}')");
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("Widget", interfaceType.Name);
+    }
+
+    [Fact]
     public void Checks_GenericFunctionCall_ExplicitTypeArgument_WithOptional()
     {
         const string source = """
@@ -4443,8 +4652,40 @@ public class TypeCheckerTest
     }
     #endregion Checks
 
-    #region Bidirectional
+    #region SelfReferentialTypes
+    [Fact]
+    public void Unifies_FunctionTypes_WithSelfReferentialParameterType_WithoutStackOverflow()
+    {
+        const string source = """
+            declare interface Node {
+                next: Node;
+            }
 
+            declare fn a(n: Node): void;
+            let b: fn(n: Node): void = a;
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+    }
+
+    [Fact]
+    public void ThrowsFor_FunctionTypes_WithSelfReferentialParameterType_AndMismatchedReturnType()
+    {
+        const string source = """
+            declare interface Node {
+                next: Node;
+            }
+
+            declare fn a(n: Node): void;
+            let b: fn(n: Node): number = a;
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.TypeMismatch);
+    }
+    #endregion SelfReferentialTypes
+
+    #region Bidirectional
     [Fact]
     public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionArgument()
     {
@@ -4454,6 +4695,7 @@ public class TypeCheckerTest
             take([]);
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -4467,6 +4709,7 @@ public class TypeCheckerTest
             }
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -4479,6 +4722,7 @@ public class TypeCheckerTest
             let xs: number[] = identity([1, 2]);
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -4491,6 +4735,7 @@ public class TypeCheckerTest
             let xs: number[] = id([1, "no"]);
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4507,6 +4752,7 @@ public class TypeCheckerTest
             id::<number[]>([1, "no"]);
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4523,6 +4769,7 @@ public class TypeCheckerTest
             let p: Point = new Point { x: 1, y: "no" }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4539,6 +4786,7 @@ public class TypeCheckerTest
             new Box { items: [1, "no"] }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4555,6 +4803,7 @@ public class TypeCheckerTest
             new Box { ["k"]: [1, "no"] }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4582,6 +4831,7 @@ public class TypeCheckerTest
             take([1, "no"]);
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4599,6 +4849,7 @@ public class TypeCheckerTest
             }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4626,6 +4877,7 @@ public class TypeCheckerTest
             xs = [1, "no"];
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4644,4 +4896,149 @@ public class TypeCheckerTest
         );
     }
     #endregion Bidirectional
+
+    #region Events
+    [Fact]
+    public void Checks_InterfaceEventMember_AccessedThroughVariable_TypesAsEvent()
+    {
+        const string source = """
+            interface EventObject {
+                event consumer(param: string);
+            }
+
+            let eo = none as never as EventObject;
+            eo.consumer
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+        var type = Utility.GetLastStatementType(source);
+        var instantiated = Assert.IsType<InstantiatedType>(type);
+        Assert.Equal("Event", instantiated.GenericType.Declaration.Name.Text);
+        Assert.True(
+            instantiated.Arguments.TakeWhile(Type.IsDefined).Single().Equals(PrimitiveType.String),
+            $"Expected first event argument to be 'string', got '{instantiated.Arguments.FirstOrDefault()}'"
+        );
+    }
+
+    [Fact]
+    public void Checks_InterfaceEventMember_Connect_TypesAsEventConnection()
+    {
+        const string source = """
+            interface EventObject {
+                event consumer(param: string);
+            }
+
+            fn on_consumer(p: string): void { }
+
+            let eo = none as never as EventObject;
+            eo.consumer += on_consumer
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+        var type = Utility.GetLastStatementType(source);
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("ScriptConnection", interfaceType.Name);
+    }
+
+    [Fact]
+    public void Checks_InterfaceEventMember_Invocation_TypesAsVoid()
+    {
+        const string source = """
+            interface EventObject {
+                event consumer(param: string);
+            }
+
+            let eo = none as never as EventObject;
+            eo.consumer("abc")
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Void), $"Expected 'void', got '{type}'");
+    }
+
+    [Fact]
+    public void ThrowsFor_FiringConsumerEvent_ThroughInterfaceMember_AccessedThroughVariable()
+    {
+        const string source = """
+            interface EventObject {
+                mut consumer: ConsumerEvent<string>;
+            }
+
+            let eo = none as never as EventObject;
+            eo.consumer("abc")
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidInvocation,
+            "Consumer events may only be observed, not fired."
+        );
+    }
+
+    [Fact]
+    public void Checks_InterfaceEvent_WithAttribute_NoErrors() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics(
+                """
+                interface EventObject {
+                    [luau_name("OnConsume")]
+                    event consumer(param: string);
+                }
+                """
+            )
+        );
+
+    [Fact]
+    public void Checks_GlobalEvent_WithAttribute_NoErrors() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics(
+                """
+                [luau_name("OnConsume")]
+                event consumer(param: string);
+                """
+            )
+        );
+
+    [Fact]
+    public void ThrowsFor_InterfaceEvent_WithNonFunctionAttribute()
+    {
+        const string source = """
+            let not_a_function = 1;
+            interface EventObject {
+                [not_a_function]
+                event consumer(param: string);
+            }
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.NonFunctionAttribute,
+            "Only functions may be used as attributes."
+        );
+
+        Assert.Single(diagnostics.Set, d => d.Code == InternalCodes.NonFunctionAttribute);
+    }
+
+    [Fact]
+    public void ThrowsFor_GlobalEvent_WithNonFunctionAttribute()
+    {
+        const string source = """
+            let not_a_function = 1;
+            [not_a_function]
+            event consumer(param: string);
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.NonFunctionAttribute,
+            "Only functions may be used as attributes."
+        );
+
+        Assert.Single(diagnostics.Set, d => d.Code == InternalCodes.NonFunctionAttribute);
+    }
+    #endregion Events
 }

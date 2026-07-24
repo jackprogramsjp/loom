@@ -1,7 +1,8 @@
-let collection = get_service::<CollectionService>();
-let instances = collection.get_tagged("Lava");
-for i : instances {
-    if !i.is_a("BasePart") continue;
-    print(i.name)
-    print(i.class_name)
+event score_changed(new_score: number);
+
+fn on_score(n: number): void {
+    print("score is now " + string(n))
 }
+
+score_changed += on_score;
+score_changed(100);

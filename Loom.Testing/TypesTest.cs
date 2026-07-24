@@ -1693,4 +1693,78 @@ public class TypesTest
 
         Assert.Equal("number[] | string? | { tag: string, value: number }", union.ToString());
     }
+
+    [Fact]
+    public void ObjectType_AddProperties_InvalidatesPropertyCache()
+    {
+        var obj = new ObjectType(null, []);
+        Assert.Null(obj.GetProperty("id"));
+
+        var property = new ObjectProperty(false, "id", Number);
+        obj.AddProperties([property]);
+
+        Assert.Same(property, obj.GetProperty("id"));
+    }
+
+    [Fact]
+    public void ObjectType_AddProperties_InvalidatesEqualsAndHashCode()
+    {
+        var a = new ObjectType(null, []);
+        var b = new ObjectType(null, []);
+        Assert.True(a.Equals(b));
+        var hashBefore = a.GetHashCode();
+
+        var property = new ObjectProperty(false, "id", Number);
+        a.AddProperties([property]);
+
+        Assert.False(a.Equals(b));
+        Assert.NotEqual(hashBefore, a.GetHashCode());
+
+        b.AddProperties([property]);
+        Assert.True(a.Equals(b));
+    }
+
+    [Fact]
+    public void ObjectType_AddProperties_InvalidatesIsAssignableTo()
+    {
+        var wide = new ObjectType(null, []);
+        var narrow = new ObjectType(null, [new ObjectProperty(false, "id", Number)]);
+
+        Assert.False(wide.IsAssignableTo(narrow));
+
+        wide.AddProperties([new ObjectProperty(false, "id", Number)]);
+
+        Assert.True(wide.IsAssignableTo(narrow));
+    }
+
+    [Fact]
+    public void InterfaceType_GetProperty_ReflectsOwnObjectTypeGrowthAfterCaching()
+    {
+        var objectType = new ObjectType(null, []);
+        var iface = new InterfaceType("I", [], objectType);
+
+        Assert.Null(iface.GetProperty("id"));
+
+        var property = new ObjectProperty(false, "id", Number);
+        objectType.AddProperties([property]);
+
+        Assert.Same(property, iface.GetProperty("id"));
+    }
+
+    [Fact]
+    public void InterfaceType_Properties_ReflectsConstraintGrowthAfterCaching()
+    {
+        var baseObjectType = new ObjectType(null, []);
+        var baseInterface = new InterfaceType("Base", [], baseObjectType);
+        var derived = new InterfaceType("Derived", [baseInterface], new ObjectType(null, []));
+
+        Assert.Empty(derived.Properties);
+        Assert.Null(derived.GetProperty("id"));
+
+        var property = new ObjectProperty(false, "id", Number);
+        baseObjectType.AddProperties([property]);
+
+        Assert.Contains(property, derived.Properties);
+        Assert.Same(property, derived.GetProperty("id"));
+    }
 }

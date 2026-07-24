@@ -79,6 +79,7 @@ internal static class Constants
         "VersionControlService"
     ];
 
+    public static readonly HashSet<string> DirectClassBlacklist = ["Object", "Instance"]; // handwritten
     public static readonly HashSet<string> ClassBlacklist =
     [
         // Classes which Roblox leverages internally/in the CoreScripts but serve no purpose to developers
@@ -236,9 +237,11 @@ internal static class Constants
 
     public static readonly Dictionary<string, string> RenameMap = new()
     {
+        { "event", "_event" },
         { "type", "_type" },
         { "interface", "_interface" },
         { "old", "oldValue" },
-        { "new", "newValue" }
+        { "new", "newValue" },
+        { "function", "callback" }
     };
 }

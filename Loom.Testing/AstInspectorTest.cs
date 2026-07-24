@@ -8,7 +8,7 @@ using Loom.Core.Text;
 namespace Loom.Testing;
 
 [Collection("Assembly")]
-public class ASTInspectorTest
+public class AstInspectorTest
 {
     private static string Inspect(object node)
     {
@@ -158,7 +158,7 @@ public class ASTInspectorTest
     [Fact]
     public void InspectTree_RendersStatements()
     {
-        var lexerResult = new LexerResult(SourceFile.Empty, [], [], new DiagnosticBag());
+        var lexerResult = new LexerResult([], [], new DiagnosticBag());
         var tree = new Tree(lexerResult, [new InspectorTestStatement { Name = "first" }, new InspectorTestStatement { Name = "second" }]);
 
         var inspectionResult = InspectTree(tree);
