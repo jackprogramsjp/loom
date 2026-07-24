@@ -153,6 +153,37 @@ public class TypeInferrerTest
     }
 
     [Fact]
+    public void InferFunctionTypeArguments_UnionParameterWithUnequalArity_ArgumentIsUnion_DoesNotBind()
+    {
+        var typeParameter = TypeParameter("T");
+        var parameterUnion = new UnionType([typeParameter, PrimitiveType.Number]);
+        var argumentUnion = new UnionType([PrimitiveType.String, PrimitiveType.Number, PrimitiveType.Bool]);
+        var function = FunctionType([typeParameter], [parameterUnion], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentUnion]);
+        Assert.Equal(PrimitiveType.Unknown, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_IntersectionParameterWithUnequalArity_ArgumentIsIntersection_DoesNotBind()
+    {
+        var typeParameter = TypeParameter("T");
+        var parameterIntersection = new IntersectionType([typeParameter, PrimitiveType.Number]);
+        var argumentIntersection = new IntersectionType([PrimitiveType.String, PrimitiveType.Number, PrimitiveType.Bool]);
+        var function = FunctionType([typeParameter], [parameterIntersection], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentIntersection]);
+        Assert.Equal(PrimitiveType.Never, result[typeParameter]);
+    }
+
+    [Fact]
+    public void InferFunctionTypeArguments_SameTypeParameterBoundTwiceWithIdenticalType_KeepsExistingBinding()
+    {
+        var typeParameter = TypeParameter("T");
+        var function = FunctionType([typeParameter], [typeParameter, typeParameter], typeParameter);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Number, PrimitiveType.Number]);
+        Assert.Equal(PrimitiveType.Number, result[typeParameter]);
+    }
+
+    [Fact]
     public void InferFunctionTypeArguments_IntersectionTypesWithEqualArity_MatchesElementwise()
     {
         var typeParameter = TypeParameter("T");

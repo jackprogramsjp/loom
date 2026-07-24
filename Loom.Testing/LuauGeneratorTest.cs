@@ -2648,6 +2648,26 @@ public class LuauGeneratorTest
     }
 
     [Fact]
+    public void ThrowsFor_LuauNameAttribute_WithNonStringLiteralArgument()
+    {
+        const string source = """
+            interface Foo {
+                [luau_name(42)]
+                bar: number;
+            }
+
+            let foo = new Foo { bar: 1 };
+            """;
+
+        var diagnostics = Utility.GetGeneratorDiagnostics(source, typeCheck: true);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidLuauNameAttribute,
+            "May only use string literals for name parameter on 'luau_name' attribute"
+        );
+    }
+
+    [Fact]
     public void Generates_EventDisconnect_UsingUserNamedConnection_ForInterfaceMemberEvent()
     {
         const string source = """
