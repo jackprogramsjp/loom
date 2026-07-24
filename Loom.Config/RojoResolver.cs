@@ -25,7 +25,7 @@ public sealed class RojoResolver
         return project == null ? null : new RojoResolver(projectDirectory, project);
     }
 
-    public IReadOnlyList<string>? ResolveRunTimePath() => FindFile(_project.Tree, [], RuntimeFileName);
+    public IReadOnlyList<string>? ResolveRuntimePath() => FindFile(_project.Tree, [], RuntimeFileName);
 
     private IReadOnlyList<string>? FindFile(RojoNode node, IReadOnlyList<string> segments, string fileName)
     {

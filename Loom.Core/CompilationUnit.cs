@@ -19,7 +19,7 @@ public sealed class CompilationUnit(LoomConfig config)
         if (resolver == null)
             return RuntimeImport.Default;
 
-        var segments = resolver.ResolveRunTimePath();
+        var segments = resolver.ResolveRuntimePath();
         return segments == null
             ? new RuntimeImport(RuntimeImportStatus.NotFoundInRojo, Core.RuntimeImport.DefaultPath)
             : new RuntimeImport(RuntimeImportStatus.Resolved, RuntimeImport.PathPrefix + string.Join('/', segments));

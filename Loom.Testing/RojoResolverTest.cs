@@ -28,7 +28,7 @@ public sealed class RojoResolverTest : IDisposable
 
         var resolver = RojoResolver.FromProjectDirectory(dir);
         Assert.NotNull(resolver);
-        Assert.Equal(["ReplicatedStorage", "include", "loom_runtime"], resolver.ResolveRunTimePath());
+        Assert.Equal(["ReplicatedStorage", "include", "loom_runtime"], resolver.ResolveRuntimePath());
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class RojoResolverTest : IDisposable
 
         var resolver = RojoResolver.FromProjectDirectory(dir);
         Assert.NotNull(resolver);
-        Assert.Equal(["ReplicatedStorage", "packages", "vendor", "loom_runtime"], resolver.ResolveRunTimePath());
+        Assert.Equal(["ReplicatedStorage", "packages", "vendor", "loom_runtime"], resolver.ResolveRuntimePath());
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class RojoResolverTest : IDisposable
 
         var resolver = RojoResolver.FromProjectDirectory(dir);
         Assert.NotNull(resolver);
-        Assert.Equal(["ReplicatedStorage", "LoomRuntime"], resolver.ResolveRunTimePath());
+        Assert.Equal(["ReplicatedStorage", "LoomRuntime"], resolver.ResolveRuntimePath());
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public sealed class RojoResolverTest : IDisposable
 
         var resolver = RojoResolver.FromProjectDirectory(dir);
         Assert.NotNull(resolver);
-        Assert.Null(resolver.ResolveRunTimePath());
+        Assert.Null(resolver.ResolveRuntimePath());
     }
 
     [Fact]
