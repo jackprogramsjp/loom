@@ -11,6 +11,22 @@ public sealed class CompilationUnit(LoomConfig config)
     public LoomConfig Config { get; } = config;
     public List<SourceFile> SourceFiles { get; } = FileManager.LoadDirectory(config.Files.SourceDirectory);
     public Dictionary<Symbol, Type> Globals { get; } = [];
+    public RuntimeImport RuntimeImport { get; } = ResolveRuntimeImport(config);
+
+    private const string RuntimeImportPrefix = "@game/";
+    private const string DefaultRuntimeImportPath = RuntimeImportPrefix + "ReplicatedStorage/include/loom_runtime";
+
+    public static RuntimeImport ResolveRuntimeImport(LoomConfig config)
+    {
+        var resolver = RojoResolver.FromProjectDirectory(config.ProjectDirectory);
+        if (resolver == null)
+            return new RuntimeImport(RuntimeImportStatus.RojoMissing, DefaultRuntimeImportPath);
+
+        var segments = resolver.ResolveRunTimePath();
+        return segments == null 
+            ? new RuntimeImport(RuntimeImportStatus.NotFoundInRojo, DefaultRuntimeImportPath)
+            : new RuntimeImport(RuntimeImportStatus.Resolved, RuntimeImportPrefix + string.Join('/', segments));
+    }
     
     public CompilationResult Compile()
     {
