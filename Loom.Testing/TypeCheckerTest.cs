@@ -4730,4 +4730,85 @@ public class TypeCheckerTest
         );
     }
     #endregion Bidirectional
+
+    #region Events
+    [Fact]
+    public void Checks_InterfaceEventMember_AccessedThroughVariable_TypesAsEvent()
+    {
+        const string source = """
+            interface EventObject {
+                event consumer(param: string);
+            }
+
+            let eo = none as never as EventObject;
+            eo.consumer
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+        var type = Utility.GetLastStatementType(source);
+        var instantiated = Assert.IsType<InstantiatedType>(type);
+        Assert.Equal("Event", instantiated.GenericType.Declaration.Name.Text);
+        Assert.True(
+            instantiated.Arguments.TakeWhile(Type.IsDefined).Single().Equals(PrimitiveType.String),
+            $"Expected first event argument to be 'string', got '{instantiated.Arguments.FirstOrDefault()}'"
+        );
+    }
+
+    [Fact]
+    public void Checks_InterfaceEventMember_Connect_TypesAsEventConnection()
+    {
+        const string source = """
+            interface EventObject {
+                event consumer(param: string);
+            }
+
+            fn on_consumer(p: string): void { }
+
+            let eo = none as never as EventObject;
+            eo.consumer += on_consumer
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+        var type = Utility.GetLastStatementType(source);
+        var interfaceType = Assert.IsType<InterfaceType>(type);
+        Assert.Equal("EventConnection", interfaceType.Name);
+    }
+
+    [Fact]
+    public void Checks_InterfaceEventMember_Invocation_TypesAsVoid()
+    {
+        const string source = """
+            interface EventObject {
+                event consumer(param: string);
+            }
+
+            let eo = none as never as EventObject;
+            eo.consumer("abc")
+            """;
+
+        Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
+        var type = Utility.GetLastStatementType(source);
+        Assert.True(type.Equals(PrimitiveType.Void), $"Expected 'void', got '{type}'");
+    }
+
+    [Fact]
+    public void ThrowsFor_FiringConsumerEvent_ThroughInterfaceMember_AccessedThroughVariable()
+    {
+        const string source = """
+            interface EventObject {
+                mut consumer: ConsumerEvent<string>;
+            }
+
+            let eo = none as never as EventObject;
+            eo.consumer("abc")
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.InvalidInvocation,
+            "Consumer events may only be observed, not fired."
+        );
+    }
+    #endregion Events
 }

@@ -2646,4 +2646,97 @@ public class LuauGeneratorTest
             "No event connection exists for this function, connect it with '+=' before disconnecting it."
         );
     }
+
+    [Fact]
+    public void Generates_EventDisconnect_UsingUserNamedConnection_ForInterfaceMemberEvent()
+    {
+        const string source = """
+            interface Foo {
+                event abc;
+            }
+            fn handler(): void { }
+            let eo = none as never as Foo;
+            let my_conn = eo.abc += handler;
+            eo.abc -= handler;
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+        Assert.Equal(5, luauTree.Statements.Count);
+
+        var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[3]);
+        Assert.Equal("my_conn", connVariable.Name);
+
+        var disconnectStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[4]);
+        var disconnectCall = Assert.IsType<Call>(disconnectStatement.Expression);
+        Assert.True(disconnectCall.IsMethod);
+        Assert.Empty(disconnectCall.Arguments);
+
+        var access = Assert.IsType<PropertyAccess>(disconnectCall.Callee);
+        Assert.Equal("Disconnect", Assert.Single(access.Names));
+        Assert.Equal("my_conn", Assert.IsType<Identifier>(access.Target).Name);
+    }
+
+    [Fact]
+    public void Generates_EventConnect_AutoBindsBareConnection_ForLaterDisconnect_ForInterfaceMemberEvent()
+    {
+        const string source = """
+            interface Foo {
+                event abc;
+            }
+            fn handler(): void { }
+            let eo = none as never as Foo;
+            eo.abc += handler;
+            eo.abc -= handler;
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+        Assert.Equal(5, luauTree.Statements.Count);
+
+        var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[3]);
+        Assert.Equal("handler_conn", connVariable.Name);
+
+        var connectCall = Assert.IsType<Call>(connVariable.Initializer);
+        Assert.True(connectCall.IsMethod);
+        var connectAccess = Assert.IsType<PropertyAccess>(connectCall.Callee);
+        Assert.Equal("Connect", Assert.Single(connectAccess.Names));
+
+        var disconnectStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[4]);
+        var disconnectCall = Assert.IsType<Call>(disconnectStatement.Expression);
+        var disconnectAccess = Assert.IsType<PropertyAccess>(disconnectCall.Callee);
+        Assert.Equal("Disconnect", Assert.Single(disconnectAccess.Names));
+        Assert.Equal("handler_conn", Assert.IsType<Identifier>(disconnectAccess.Target).Name);
+    }
+
+    [Fact]
+    public void Generates_DistinctEventConnections_ForDifferentVariablesOfSameInterfaceType()
+    {
+        const string source = """
+            interface Foo {
+                event abc;
+            }
+            fn handler(): void { }
+            let eo1 = none as never as Foo;
+            let eo2 = none as never as Foo;
+            eo1.abc += handler;
+            eo2.abc += handler;
+            eo1.abc -= handler;
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+
+        // interface type alias, fn decl, eo1, eo2, conn1, conn2, disconnect
+        Assert.Equal(7, luauTree.Statements.Count);
+
+        var conn1Variable = Assert.IsType<ConstVariable>(luauTree.Statements[4]);
+        var conn2Variable = Assert.IsType<ConstVariable>(luauTree.Statements[5]);
+        Assert.NotEqual(conn1Variable.Name, conn2Variable.Name);
+
+        var disconnectStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[6]);
+        var disconnectCall = Assert.IsType<Call>(disconnectStatement.Expression);
+        var disconnectAccess = Assert.IsType<PropertyAccess>(disconnectCall.Callee);
+        Assert.Equal("Disconnect", Assert.Single(disconnectAccess.Names));
+
+        // must resolve to eo1's connection variable, not eo2's
+        Assert.Equal(conn1Variable.Name, Assert.IsType<Identifier>(disconnectAccess.Target).Name);
+    }
 }
