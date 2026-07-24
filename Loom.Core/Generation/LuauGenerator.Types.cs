@@ -1,5 +1,7 @@
 using Loom.Core.Diagnostics;
 using Loom.Core.Parsing.AST;
+using Loom.Core.Resolving;
+using Loom.Core.TypeChecking.Types;
 using Loom.Luau;
 using Loom.Luau.AST;
 using ArrayType = Loom.Core.Parsing.AST.ArrayType;
@@ -31,13 +33,16 @@ public sealed partial class LuauGenerator
 
         var typeArguments = typeName.TypeArguments?.ArgumentsList.ConvertAll(Visit);
         var luauTypeName = new Luau.AST.TypeName(typeName.Name.Text, typeArguments);
-        if (symbol.IsIntrinsic)
+        if (symbol is { IsIntrinsic: true } && IsLoomRuntimeType(symbol))
             return LuauFactory.QualifyRuntimeType(luauTypeName);
 
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
     
+    private static readonly HashSet<string> _loomRuntimeTypeNames = ["Event", "ConsumerEvent", "CreatableInstance", "ServiceInstance"];
+    private static bool IsLoomRuntimeType(Symbol symbol) => _loomRuntimeTypeNames.Contains(symbol.Name);
+
     public override LuauNode VisitFunctionType(FunctionType functionType) =>
         new Luau.AST.FunctionType(
             MaybeVisit<Luau.AST.TypeParameters>(functionType.TypeParameters),

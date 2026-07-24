@@ -4,6 +4,8 @@
 const Event = require("./event")
 const Loom = {}
 
+export type CreatableInstance = Instance
+export type ServiceInstance = Instance
 export type Range = { minimum: number, maximum: number }
 export type ResultOk<T> = { ok: true, value: T }
 export type ResultError<Error> = { ok: false, error: Error }

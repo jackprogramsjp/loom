@@ -68,19 +68,19 @@ declare interface Instance: Object {
 	[luau_name("Destroy"), luau_method]
 	destroy: fn: void;
 	[luau_name("FindFirstAncestor"), luau_method]
-	find_first_ancestor: fn<T: Instance = Instance>(name: string): T;
+	find_first_ancestor: fn<T: Instance = Instance>(name: string): T?;
 	[luau_name("FindFirstAncestorOfClass"), luau_method]
-	find_first_ancestor_of_class: fn<T: Instance>: T;
+	find_first_ancestor_of_class: fn<T: Instance>: T?;
 	[luau_name("FindFirstAncestorWhichIsA"), luau_method]
-	find_first_ancestor_which_is_a: fn<T: Instance>: T;
+	find_first_ancestor_which_is_a: fn<T: Instance>: T?;
 	[luau_name("FindFirstChild"), luau_method]
-	find_first_child: fn<T: Instance = Instance>(name: string, recursive: bool?): T;
+	find_first_child: fn<T: Instance = Instance>(name: string, recursive: bool?): T?;
 	[luau_name("FindFirstChildOfClass"), luau_method]
-	find_first_child_of_class: fn<T: Instance>: T;
+	find_first_child_of_class: fn<T: Instance>: T?;
 	[luau_name("FindFirstChildWhichIsA"), luau_method]
-	find_first_child_which_is_a: fn<T: Instance>(recursive: bool?): T;
+	find_first_child_which_is_a: fn<T: Instance>(recursive: bool?): T?;
 	[luau_name("FindFirstDescendant"), luau_method]
-	find_first_descendant: fn<T: Instance = Instance>(name: string): T;
+	find_first_descendant: fn<T: Instance = Instance>(name: string): T?;
 	[luau_name("GetActor"), luau_method]
 	get_actor: fn: Actor;
 	[luau_name("GetAttribute"), luau_method]
