@@ -232,4 +232,32 @@ public static class TypeSimplifier
 
     private static List<Type> FlattenNestedIntersections(List<Type> types) =>
         types.SelectMany(t => t is IntersectionType intersection ? intersection.Types : [t]).ToList();
+
+    public static Type? GetMemberPropertyType(Type member, string propertyName) =>
+        GetMemberType(member, m => m is NativelyIndexableType indexableType ? indexableType.GetProperty(propertyName)?.ValueType : null);
+
+    public static Type? GetMemberElementType(Type member, Type indexType) =>
+        GetMemberType(member, m => m is NativelyIndexableType indexableType ? indexableType.GetTypeAtIndex(indexType).BodyType?.ValueType : null);
+
+    private static Type? GetMemberType(Type member, Func<Type, Type?> extractMember)
+    {
+        if (member is InstantiatedType instantiated)
+            member = instantiated.Expand();
+
+        if (member is not UnionType union)
+            return extractMember(member);
+
+        var members = union.Types
+            .Select(t => GetMemberType(t, extractMember))
+            .Where(t => t != null)
+            .Cast<Type>()
+            .ToList();
+
+        return members.Count switch
+        {
+            0 => null,
+            1 => members[0],
+            _ => Simplify(new UnionType(members))
+        };
+    }
 }
