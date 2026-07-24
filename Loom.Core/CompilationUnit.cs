@@ -13,19 +13,16 @@ public sealed class CompilationUnit(LoomConfig config)
     public Dictionary<Symbol, Type> Globals { get; } = [];
     public RuntimeImport RuntimeImport { get; } = ResolveRuntimeImport(config);
 
-    private const string RuntimeImportPrefix = "@game/";
-    private const string DefaultRuntimeImportPath = RuntimeImportPrefix + "ReplicatedStorage/include/loom_runtime";
-
-    public static RuntimeImport ResolveRuntimeImport(LoomConfig config)
+    private static RuntimeImport ResolveRuntimeImport(LoomConfig config)
     {
         var resolver = RojoResolver.FromProjectDirectory(config.ProjectDirectory);
         if (resolver == null)
-            return new RuntimeImport(RuntimeImportStatus.RojoMissing, DefaultRuntimeImportPath);
+            return RuntimeImport.Default;
 
         var segments = resolver.ResolveRunTimePath();
-        return segments == null 
-            ? new RuntimeImport(RuntimeImportStatus.NotFoundInRojo, DefaultRuntimeImportPath)
-            : new RuntimeImport(RuntimeImportStatus.Resolved, RuntimeImportPrefix + string.Join('/', segments));
+        return segments == null
+            ? new RuntimeImport(RuntimeImportStatus.NotFoundInRojo, Core.RuntimeImport.DefaultPath)
+            : new RuntimeImport(RuntimeImportStatus.Resolved, RuntimeImport.PathPrefix + string.Join('/', segments));
     }
     
     public CompilationResult Compile()

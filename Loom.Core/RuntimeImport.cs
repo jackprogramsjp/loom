@@ -7,4 +7,10 @@ public enum RuntimeImportStatus
     NotFoundInRojo,
 }
 
-public sealed record RuntimeImport(RuntimeImportStatus Status, string Path);
+public sealed record RuntimeImport(RuntimeImportStatus Status, string Path)
+{
+    public const string PathPrefix = "@game/";
+    public const string DefaultPath = PathPrefix + "ReplicatedStorage/include/loom_runtime";
+
+    public static RuntimeImport Default { get; } = new(RuntimeImportStatus.RojoMissing, DefaultPath);
+}

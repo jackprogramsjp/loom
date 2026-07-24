@@ -25,11 +25,13 @@ public sealed partial class LuauGenerator
     private readonly MacroExpander _macroExpander;
     private readonly SemanticModel _semanticModel;
     private readonly LuauState _state = new();
+    private readonly RuntimeImport _runtimeImport;
 
-    public LuauGenerator(SemanticModel semanticModel)
+    public LuauGenerator(SemanticModel semanticModel, RuntimeImport? runtimeImport = null)
         : base(_ => new NoOpStatement())
     {
         _semanticModel = semanticModel;
+        _runtimeImport = runtimeImport ?? RuntimeImport.Default;
         _macroExpander = new MacroExpander(semanticModel, _state, _diagnostics);
     }
 
