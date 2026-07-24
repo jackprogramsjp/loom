@@ -15,6 +15,7 @@ internal sealed class ClassGenerator(
 {
     private readonly Dictionary<string, Class> _classRefs = [];
     private readonly Dictionary<string, HashSet<string>> _definedMemberNames = [];
+    private string[] _instanceNameCandidates = [];
 
     public void Generate(Class[] rbxClasses)
     {
@@ -28,6 +29,8 @@ internal sealed class ClassGenerator(
             // var superclass = GetSuperclass(rbxClass);
             // superclass?.Subclasses.Add(className);
         }
+
+        _instanceNameCandidates = _classRefs.Keys.Concat(["Character", "Input"]).Where(k => k != "Instance").ToArray();
 
         var classesToGenerate = rbxClasses
             .Where(rbxClass => !Constants.DirectClassBlacklist.Contains(rbxClass.Name) && ShouldGenerateClass(rbxClass))
@@ -204,8 +207,8 @@ internal sealed class ClassGenerator(
         var isOptional = !string.IsNullOrEmpty(parameter.Default) || type == "any" || type.EndsWith('?');
         if (!string.IsNullOrEmpty(parameter.Name) && type == "Instance")
         {
-            var findings = _classRefs.Keys.Concat(["Character", "Input"])
-                .Where(k => k != "Instance" && parameter.Name.Contains(k, StringComparison.CurrentCultureIgnoreCase))
+            var findings = _instanceNameCandidates
+                .Where(k => parameter.Name.Contains(k, StringComparison.CurrentCultureIgnoreCase))
                 .ToList();
 
             if (findings.Count != 0)
