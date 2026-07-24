@@ -12,6 +12,7 @@ public sealed record SemanticModel(Tree Tree, DiagnosticBag Diagnostics, SymbolT
     : DiagnosedResult(Diagnostics)
 {
     public bool DisableRuntimeLibraryImport { get; set; }
+    public bool EmitDebugDiagnostics { get; set; }
     public bool MustImportRuntimeLibrary =>
         !DisableRuntimeLibraryImport
         && !Tree.File.IsIntrinsic

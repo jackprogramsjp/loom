@@ -26,8 +26,6 @@ using Type = Types.Type;
 public sealed partial class TypeChecker
     : Visitor<Type>
 {
-    public static bool EmitDebugDiagnostics { get; set; }
-
     private readonly DiagnosticBag _diagnostics = new();
     private readonly Dictionary<Node, FlowState> _exitStates = [];
     private readonly Stack<List<FlowState>> _loopExitScopes = [];
@@ -1184,7 +1182,7 @@ public sealed partial class TypeChecker
         where T : Type
     {
         _semanticModel.TypeSolver.SetType(node, type);
-        if (!EmitDebugDiagnostics || node is Tree or ExpressionStatement)
+        if (!_semanticModel.EmitDebugDiagnostics || node is Tree or ExpressionStatement)
             return type;
 
         var simplified = TypeSimplifier.Simplify(type);

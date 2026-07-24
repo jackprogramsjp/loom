@@ -43,13 +43,13 @@ internal static class Utility
     public static ParserResult Parse(string source) => new Parser(Tokenize(source)).Parse();
     public static DiagnosticBag GetParserDiagnostics(string source) => Parse(source).Diagnostics;
 
-    public static Core.Resolving.SemanticModel GetSemanticModel(string source, bool isDeclaration = false, bool disableRuntimeLib = true)
+    public static Core.Resolving.SemanticModel GetSemanticModel(string source, bool isDeclaration = false, bool disableRuntimeLib = true, bool debug = false)
     {
         var parserResult = Parse(source);
         if (isDeclaration)
             parserResult.Tree.File.IsDeclaration = true;
 
-        var compilationUnit = new CompilationUnit(new LoomConfig());
+        var compilationUnit = new CompilationUnit(new LoomConfig { Debug = debug });
         var semanticModel = new Resolver(parserResult, compilationUnit).Resolve();
         semanticModel.DisableRuntimeLibraryImport = disableRuntimeLib;
 
