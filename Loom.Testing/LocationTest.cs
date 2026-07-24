@@ -37,4 +37,59 @@ public class LocationTest
 
         Assert.NotEqual(firstLineStart.GetHashCode(), secondLineStart.GetHashCode());
     }
+
+    [Fact]
+    public void EqualityOperator_ComparesByFileAndPosition()
+    {
+        var a = new Location(_testFile, 19);
+        var b = new Location(_testFile, 19);
+        var c = new Location(_testFile, 0);
+
+        Assert.True(a == b);
+        Assert.False(a == c);
+    }
+
+    [Fact]
+    public void InequalityOperator_ComparesByFileAndPosition()
+    {
+        var a = new Location(_testFile, 19);
+        var b = new Location(_testFile, 0);
+
+        Assert.True(a != b);
+        Assert.False(a != new Location(_testFile, 19));
+    }
+
+    [Fact]
+    public void ObjectEquals_NonLocationObject_ReturnsFalse()
+    {
+        var location = new Location(_testFile, 0);
+        Assert.False(location.Equals((object)"not a location"));
+    }
+
+    [Fact]
+    public void ObjectEquals_BoxedLocation_ComparesCorrectly()
+    {
+        var a = new Location(_testFile, 19);
+        object b = new Location(_testFile, 19);
+
+        Assert.True(a.Equals(b));
+    }
+
+    [Fact]
+    public void AdditionOperator_AdvancesPositionWithinSameFile()
+    {
+        var start = new Location(_testFile, 0);
+        var advanced = start + 4;
+
+        Assert.Equal(4, advanced.Position);
+        Assert.Equal(start.File, advanced.File);
+    }
+
+    [Fact]
+    public void Empty_CreatesLocationAtPositionZero()
+    {
+        var empty = Location.Empty(_testFile);
+        Assert.Equal(0, empty.Position);
+        Assert.Equal(_testFile, empty.File);
+    }
 }
