@@ -5,10 +5,9 @@ using Loom.Core.Text;
 using Loom.Luau;
 using Loom.Luau.AST;
 using BinaryOperator = Loom.Luau.AST.BinaryOperator;
-using CorePropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
+using PropertyAccess = Loom.Core.Parsing.AST.PropertyAccess;
 using ExpressionStatement = Loom.Core.Parsing.AST.ExpressionStatement;
 using Identifier = Loom.Core.Parsing.AST.Identifier;
-using PropertyAccess = Loom.Luau.AST.PropertyAccess;
 using QualifiedName = Loom.Core.Parsing.AST.QualifiedName;
 using TypeName = Loom.Luau.AST.TypeName;
 
@@ -32,7 +31,9 @@ public sealed partial class LuauGenerator
     {
         if (assignmentOperator.Operator.Kind is SyntaxKind.PlusEquals or SyntaxKind.MinusEquals
             && ResolveEventTarget(assignmentOperator.Left) is { } eventTarget)
+        {
             return GenerateEventAssignment(assignmentOperator, eventTarget);
+        }
 
         if (assignmentOperator.Parent is ExpressionStatement)
             return VisitBinaryOperator(assignmentOperator);
@@ -76,7 +77,7 @@ public sealed partial class LuauGenerator
 
     private object? GetInstanceKey(Expression left) => left switch
     {
-        CorePropertyAccess { Expression: Identifier identifier } => _semanticModel.GetSymbol(identifier),
+        PropertyAccess { Expression: Identifier identifier } => _semanticModel.GetSymbol(identifier),
         QualifiedName { Identifier: var identifier } => _semanticModel.GetSymbol(identifier),
         _ => new object()
     };
@@ -93,7 +94,7 @@ public sealed partial class LuauGenerator
     {
         var function = assignmentOperator.Right;
         var luauFunction = WrapAnonymousFunction(function, Visit(function), new UnitType());
-        var connect = new Call(new PropertyAccess(connectionTarget, ["Connect"]), [luauFunction], true);
+        var connect = new Call(new Luau.AST.PropertyAccess(connectionTarget, ["Connect"]), [luauFunction], true);
         if (luauFunction is AnonymousFunction || function is not Identifier identifier || _semanticModel.GetSymbol(identifier) is not { } functionSymbol)
             return connect;
 
@@ -115,7 +116,9 @@ public sealed partial class LuauGenerator
         if (function is Identifier identifier
             && _semanticModel.GetSymbol(identifier) is { } functionSymbol
             && _eventConnections.TryGetConnection(eventTarget, functionSymbol, out var connection))
-            return new Call(new PropertyAccess(connection, ["Disconnect"]), [], true);
+        {
+            return new Call(new Luau.AST.PropertyAccess(connection, ["Disconnect"]), [], true);
+        }
 
         if (function is not Identifier && IsMethodReference(function))
         {

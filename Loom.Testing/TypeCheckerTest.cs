@@ -901,9 +901,9 @@ public class TypeCheckerTest
     public void WarnsFor_UseRangeLiteral()
     {
         var diagnostics = Utility.GetTypeCheckerDiagnostics("new Range { minimum: 69, maximum: 420 }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.SimplifiableCode, "Use range literal.");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.SimplifiableCode, "Use a range literal.");
     }
-
+    
     #region Checks
     [Theory]
     [InlineData("number", PrimitiveTypeKind.Number)]
@@ -4822,7 +4822,7 @@ public class TypeCheckerTest
         Utility.AssertNoErrors(Utility.GetTypeCheckerDiagnostics(source));
         var type = Utility.GetLastStatementType(source);
         var interfaceType = Assert.IsType<InterfaceType>(type);
-        Assert.Equal("EventConnection", interfaceType.Name);
+        Assert.Equal("ScriptConnection", interfaceType.Name);
     }
 
     [Fact]

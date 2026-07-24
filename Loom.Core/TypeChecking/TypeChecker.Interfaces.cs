@@ -107,14 +107,14 @@ public sealed partial class TypeChecker
         return BindType(interfaceDeclaration, publishedType);
     }
 
-    public override Type VisitInterfaceInvocation(InterfaceInvocation node)
+    public override Type VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)
     {
-        var type = Visit(node.Name);
+        var type = Visit(interfaceInvocation.Name);
         if (type.Equals(Intrinsics.Range))
-            _diagnostics.Warn(node, InternalCodes.SimplifiableCode, "Use range literal.");
+            _diagnostics.Warn(interfaceInvocation, InternalCodes.SimplifiableCode, "Use a range literal.");
 
         var traitProperties = new List<ObjectProperty>();
-        if (_semanticModel.GetSymbol(node.Name, SymbolKind.Interface) is InterfaceSymbol interfaceSymbol)
+        if (_semanticModel.GetSymbol(interfaceInvocation.Name, SymbolKind.Interface) is InterfaceSymbol interfaceSymbol)
             traitProperties.AddRange(
                 from declaration in interfaceSymbol.Implementations.SelectMany(i => i.Body.Implementations)
                 let methodType = _semanticModel.GetType(declaration)
@@ -122,18 +122,18 @@ public sealed partial class TypeChecker
             );
 
         if (type is InterfaceType nonGeneric)
-            return BindInterfaceInvocation(node, nonGeneric, traitProperties);
+            return BindInterfaceInvocation(interfaceInvocation, nonGeneric, traitProperties);
 
         if (type is not GenericType { UnderlyingType: InterfaceType underlying } generic)
         {
-            _diagnostics.Error(node, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
-            return BindType(node, PrimitiveType.Never);
+            _diagnostics.Error(interfaceInvocation, InternalCodes.InvalidInvocation, $"Type '{type}' is not an interface.");
+            return BindType(interfaceInvocation, PrimitiveType.Never);
         }
 
-        if (!TrySubstituteGenericInterface(node, generic, underlying, out var interfaceType))
-            return BindType(node, PrimitiveType.Never);
+        if (!TrySubstituteGenericInterface(interfaceInvocation, generic, underlying, out var interfaceType))
+            return BindType(interfaceInvocation, PrimitiveType.Never);
 
-        return BindInterfaceInvocation(node, interfaceType, traitProperties);
+        return BindInterfaceInvocation(interfaceInvocation, interfaceType, traitProperties);
     }
 
     private InterfaceType BindInterfaceInvocation(InterfaceInvocation node, InterfaceType interfaceType, List<ObjectProperty> traitProperties)
