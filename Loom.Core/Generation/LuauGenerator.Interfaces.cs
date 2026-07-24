@@ -86,6 +86,7 @@ public sealed partial class LuauGenerator
 
         var indexer = interfaceDeclaration.Body?.Members.OfType<IndexerDeclaration>().FirstOrDefault();
         var propertyDeclarations = interfaceDeclaration.Body?.Members.OfType<PropertyDeclaration>() ?? [];
+        var eventDeclarations = interfaceDeclaration.Body?.Members.OfType<EventDeclaration>() ?? [];
         var tableIndexer = indexer != null
             ? new TableTypeIndexer(indexer.MutKeyword == null ? LuauVisibility.Read : null, Visit(indexer.IndexType), Visit(indexer.ColonTypeClause))
             : null;
@@ -93,6 +94,7 @@ public sealed partial class LuauGenerator
         var typeParameters = GenerateTypeParameters(interfaceDeclaration.TypeParameters);
         var properties = propertyDeclarations
             .Select(property => GenerateInterfacePropertyType(interfaceDeclaration, property, typeParameters))
+            .Concat(eventDeclarations.Select(GenerateInterfaceEventType))
             .ToList();
 
         var tableType = new TableType(tableIndexer, properties);
@@ -143,6 +145,14 @@ public sealed partial class LuauGenerator
         functionType.ParameterTypes.Insert(0, selfType);
 
         return tableProperty;
+    }
+
+    private TableTypeProperty GenerateInterfaceEventType(EventDeclaration eventDeclaration)
+    {
+        _semanticModel.RuntimeReferences += 1;
+        var parameterTypes = eventDeclaration.Parameters?.ParameterList.ConvertAll(p => Visit(p.ColonTypeClause!.Type)) ?? [];
+        var eventType = LuauFactory.QualifyRuntimeType(new TypeName("Event", parameterTypes));
+        return new TableTypeProperty(LuauVisibility.Read, eventDeclaration.Name.Text, eventType);
     }
 
     public override LuauNode VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)

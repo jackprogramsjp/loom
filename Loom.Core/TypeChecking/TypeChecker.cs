@@ -409,7 +409,8 @@ public sealed partial class TypeChecker
         if (IsEventType(invocation, type, strictlyConsumer: false, out var eventType))
         {
             var argumentTypes = argumentList.ConvertAll(Visit);
-            var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as EventDeclaration;
+            var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as EventDeclaration
+                ?? _semanticModel.GetPropertySymbol(invocation.Expression)?.Declaration as EventDeclaration;
             CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, eventType.Arguments, argumentList);
             return BindType(invocation, Types.PrimitiveType.Void);
         }
