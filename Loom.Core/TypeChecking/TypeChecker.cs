@@ -95,6 +95,7 @@ public sealed partial class TypeChecker
 
     public override Type VisitEventDeclaration(EventDeclaration eventDeclaration)
     {
+        MaybeVisit(eventDeclaration.Attributes);
         if (_semanticModel.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event) is not { } symbol)
         {
             _diagnostics.Error(eventDeclaration, InternalCodes.CannotFindSymbol, $"Cannot find symbol for declaration of event '{eventDeclaration.Name.Text}'.");

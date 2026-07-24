@@ -176,7 +176,11 @@ public sealed partial class TypeChecker
         signatures.ConvertAll(s => new ObjectProperty(false, s.Name.Text, Visit(s)));
 
     private List<ObjectProperty> ResolveInterfaceEvents(InterfaceSymbol symbol, List<EventDeclaration> eventDeclarations) =>
-        eventDeclarations.ConvertAll(e => new ObjectProperty(false, e.Name.Text, Visit(e)));
+        eventDeclarations.ConvertAll(e =>
+        {
+            MaybeVisit(e.Attributes);
+            return new ObjectProperty(false, e.Name.Text, Visit(e));
+        });
 
     private List<ObjectProperty> ResolveInterfaceProperties(List<InterfaceType> constraints, List<PropertyDeclaration> propertyDeclarations)
     {

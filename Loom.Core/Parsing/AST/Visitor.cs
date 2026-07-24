@@ -77,7 +77,7 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitEnumMember(EnumMember enumMember) => VisitWithDefault(enumMember.EqualsValueClause);
 
     public virtual T VisitEventDeclaration(EventDeclaration eventDeclaration) =>
-        CombineResults([VisitWithDefault(eventDeclaration.TypeParameters), VisitWithDefault(eventDeclaration.Parameters)]);
+        CombineResults([VisitWithDefault(eventDeclaration.TypeParameters), VisitWithDefault(eventDeclaration.Parameters), VisitWithDefault(eventDeclaration.Attributes)]);
 
     public virtual T VisitParameters(Parameters parameters) => VisitList(parameters.ParameterList);
 

@@ -89,8 +89,9 @@ public sealed partial class Parser
             {
                 Advance();
                 var attributes = ParseAttributes(token);
-                var mutKeyword = Match(out var kw, SyntaxKind.MutKeyword) ? kw : null;
-                member = ParsePropertyDeclaration(mutKeyword, attributes);
+                member = Match(out var eventKeyword, SyntaxKind.EventKeyword)
+                    ? ParseEventDeclaration(eventKeyword, attributes)
+                    : ParsePropertyDeclaration(Match(out var mutKeyword, SyntaxKind.MutKeyword) ? mutKeyword : null, attributes);
             }
 
             if (member == null) return null;
@@ -107,7 +108,7 @@ public sealed partial class Parser
             return ParseIndexerDeclaration(mutKeyword, leftBracket);
 
         if (mutKeyword == null && Match(out var keyword, SyntaxKind.EventKeyword))
-            return ParseEventDeclaration(keyword);
+            return ParseEventDeclaration(keyword, null);
         
         return ParsePropertyDeclaration(mutKeyword, null);
     }
@@ -304,15 +305,15 @@ public sealed partial class Parser
 
     private EnumMember? ParseEnumMember() => Match(out var name, SyntaxKind.Identifier) ? new EnumMember(name, ParseEqualsValueClause()) : null;
 
-    private Statement ParseEventDeclaration(Token keyword)
+    private Statement ParseEventDeclaration(Token keyword, Attributes? attributes = null)
     {
         var name = ExpectIdentifier();
         var typeParameters = ParseTypeParameters();
         var parameters = ParseParameters();
         if (!ValidateSignatureParameters("event declarations", parameters))
             return new NullStatement(keyword);
-        
-        return new EventDeclaration(keyword, name, typeParameters, parameters);
+
+        return new EventDeclaration(keyword, name, typeParameters, parameters, attributes);
     }
 
     private Parameters? ParseParameters()

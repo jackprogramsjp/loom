@@ -152,7 +152,12 @@ public sealed partial class LuauGenerator
         _semanticModel.RuntimeReferences += 1;
         var parameterTypes = eventDeclaration.Parameters?.ParameterList.ConvertAll(p => Visit(p.ColonTypeClause!.Type)) ?? [];
         var eventType = LuauFactory.QualifyRuntimeType(new TypeName("Event", parameterTypes));
-        return new TableTypeProperty(LuauVisibility.Read, eventDeclaration.Name.Text, eventType);
+        var name = eventDeclaration.Name.Text;
+        if (eventDeclaration.TryGetIntrinsicAttribute(_semanticModel, "luau_name", out var luauNameAttribute)
+            && ValidateLuauNameAttribute(luauNameAttribute, out var nameLiteral))
+            name = nameLiteral.Value;
+
+        return new TableTypeProperty(LuauVisibility.Read, name, eventType);
     }
 
     public override LuauNode VisitInterfaceInvocation(InterfaceInvocation interfaceInvocation)

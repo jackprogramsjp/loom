@@ -2739,4 +2739,62 @@ public class LuauGeneratorTest
         // must resolve to eo1's connection variable, not eo2's
         Assert.Equal(conn1Variable.Name, Assert.IsType<Identifier>(disconnectAccess.Target).Name);
     }
+
+    [Fact]
+    public void Generates_InterfaceEvent_WithLuauNameAttribute_RenamesFieldAndAccessSites()
+    {
+        const string source = """
+            interface EventObject {
+                [luau_name("OnConsume")]
+                event consumer(param: string);
+            }
+
+            fn on_consumer(p: string): void { }
+
+            let eo = none as never as EventObject;
+            eo.consumer += on_consumer;
+            eo.consumer("abc");
+            eo.consumer -= on_consumer;
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+
+        var typeAlias = Assert.IsType<TypeAlias>(luauTree.Statements[0]);
+        var tableType = Assert.IsType<TableType>(typeAlias.Type);
+        var eventProperty = Assert.Single(tableType.Properties);
+        Assert.Equal("OnConsume", eventProperty.Name);
+
+        var connVariable = Assert.IsType<ConstVariable>(luauTree.Statements[3]);
+        var connectCall = Assert.IsType<Call>(connVariable.Initializer);
+        var connectAccess = Assert.IsType<PropertyAccess>(connectCall.Callee);
+        Assert.Equal("Connect", Assert.Single(connectAccess.Names));
+
+        var eventAccess = Assert.IsType<PropertyAccess>(connectAccess.Target);
+        Assert.Equal("OnConsume", Assert.Single(eventAccess.Names));
+        Assert.Equal("eo", Assert.IsType<Identifier>(eventAccess.Target).Name);
+
+        var invocationStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[4]);
+        var invocationCall = Assert.IsType<Call>(invocationStatement.Expression);
+        var invocationAccess = Assert.IsType<PropertyAccess>(invocationCall.Callee);
+        Assert.Equal("OnConsume", Assert.Single(invocationAccess.Names));
+
+        var disconnectStatement = Assert.IsType<ExpressionStatement>(luauTree.Statements[5]);
+        var disconnectCall = Assert.IsType<Call>(disconnectStatement.Expression);
+        var disconnectAccess = Assert.IsType<PropertyAccess>(disconnectCall.Callee);
+        Assert.Equal("Disconnect", Assert.Single(disconnectAccess.Names));
+        Assert.Equal(connVariable.Name, Assert.IsType<Identifier>(disconnectAccess.Target).Name);
+    }
+
+    [Fact]
+    public void Generates_GlobalEvent_WithLuauNameAttribute_HasNoEffectOnGeneratedName()
+    {
+        const string source = """
+            [luau_name("OnConsume")]
+            event my_event(param: string);
+            """;
+
+        var luauTree = Utility.GetLuauAST(source, typeCheck: true);
+        var variable = Assert.IsType<ConstVariable>(Assert.Single(luauTree.Statements));
+        Assert.Equal("my_event", variable.Name);
+    }
 }

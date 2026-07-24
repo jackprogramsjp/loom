@@ -489,7 +489,8 @@ public sealed class Resolver(ParserResult parserResult, CompilationUnit compilat
         var events = body.Members.OfType<EventDeclaration>().ToList();
         foreach (var symbol in
                  from eventDeclaration in events
-                 select new PropertySymbol(eventDeclaration, null, [], SymbolKind.Event) { IsIntrinsic = interfaceSymbol.IsIntrinsic })
+                 let attributeSymbols = eventDeclaration.Attributes?.AttributeList.Select(DeclareAttribute).ToList() ?? []
+                 select new PropertySymbol(eventDeclaration, null, attributeSymbols, SymbolKind.Event) { IsIntrinsic = interfaceSymbol.IsIntrinsic })
         {
             interfaceSymbol.Properties.Add(symbol);
             AddDeclaration(symbol);
