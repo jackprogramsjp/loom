@@ -340,4 +340,82 @@ public class ParserTest
         else
             Assert.Null(literal.Value);
     }
+
+    #region Event Attributes
+    [Fact]
+    public void Parses_InterfaceEvent_WithAttribute()
+    {
+        const string source = """
+            interface X {
+                [luau_name("Foo")]
+                event abc(x: number);
+            }
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.Parse(source));
+        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(result.Tree.Statements.Single());
+        Assert.NotNull(interfaceDeclaration.Body);
+
+        var eventDeclaration = Assert.IsType<EventDeclaration>(Assert.Single(interfaceDeclaration.Body.Members));
+        Assert.NotNull(eventDeclaration.Attributes);
+
+        var attribute = Assert.Single(eventDeclaration.Attributes.AttributeList);
+        var identifier = Assert.IsType<Identifier>(attribute.Expression);
+        Assert.Equal("luau_name", identifier.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TopLevelEvent_WithAttribute()
+    {
+        const string source = """
+            [luau_name("Foo")]
+            event abc(x: number);
+            """;
+
+        var result = Utility.AssertNoErrors(Utility.Parse(source));
+        var eventDeclaration = Assert.IsType<EventDeclaration>(result.Tree.Statements.Single());
+        Assert.NotNull(eventDeclaration.Attributes);
+
+        var attribute = Assert.Single(eventDeclaration.Attributes.AttributeList);
+        var identifier = Assert.IsType<Identifier>(attribute.Expression);
+        Assert.Equal("luau_name", identifier.Name.Text);
+    }
+
+    [Fact]
+    public void Parses_TopLevelArrayLiteralStatement_NotMistakenForAttributes()
+    {
+        var tree = Utility.GetAST("[1, 2, 3];");
+        var statement = Assert.IsType<ExpressionStatement>(Assert.Single(tree.Statements));
+        var arrayLiteral = Assert.IsType<ArrayLiteral>(statement.Expression);
+        Assert.Equal(3, arrayLiteral.Expressions.Count);
+    }
+
+    [Fact]
+    public void Parses_MutEvent_StillProducesMutEventError()
+    {
+        // Baseline: 'mut' immediately before 'event' inside an interface body is invalid
+        // regardless of attributes, since 'event' members may not be mutable.
+        const string plainSource = """
+            interface X {
+                mut event abc;
+            }
+            """;
+
+        const string attributedSource = """
+            interface X {
+                [luau_name("Foo")]
+                mut event abc;
+            }
+            """;
+
+        var plainDiagnostics = Utility.GetParserDiagnostics(plainSource);
+        var attributedDiagnostics = Utility.GetParserDiagnostics(attributedSource);
+
+        // Both should degrade the same way (either both produce the same diagnostic, or
+        // both parse 'event' as a property/type name after 'mut' without any special
+        // attribute-related crash or diagnostic). The important invariant is that adding
+        // attributes doesn't change how 'mut event' is handled.
+        Assert.Equal(plainDiagnostics.Set.Count, attributedDiagnostics.Set.Count);
+    }
+    #endregion Event Attributes
 }

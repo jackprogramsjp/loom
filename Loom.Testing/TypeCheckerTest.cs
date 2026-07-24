@@ -4810,5 +4810,71 @@ public class TypeCheckerTest
             "Consumer events may only be observed, not fired."
         );
     }
+
+    [Fact]
+    public void Checks_InterfaceEvent_WithAttribute_NoErrors() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics(
+                """
+                interface EventObject {
+                    [luau_name("OnConsume")]
+                    event consumer(param: string);
+                }
+                """
+            )
+        );
+
+    [Fact]
+    public void Checks_GlobalEvent_WithAttribute_NoErrors() =>
+        Utility.AssertNoErrors(
+            Utility.GetTypeCheckerDiagnostics(
+                """
+                [luau_name("OnConsume")]
+                event consumer(param: string);
+                """
+            )
+        );
+
+    [Fact]
+    public void ThrowsFor_InterfaceEvent_WithNonFunctionAttribute()
+    {
+        const string source = """
+            let not_a_function = 1;
+            interface EventObject {
+                [not_a_function]
+                event consumer(param: string);
+            }
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.NonFunctionAttribute,
+            "Only functions may be used as attributes."
+        );
+
+        // Guards against attribute expressions being visited (and thus diagnosed) more than
+        // once for the same interface event declaration.
+        Assert.Single(diagnostics.Set, d => d.Code == InternalCodes.NonFunctionAttribute);
+    }
+
+    [Fact]
+    public void ThrowsFor_GlobalEvent_WithNonFunctionAttribute()
+    {
+        const string source = """
+            let not_a_function = 1;
+            [not_a_function]
+            event consumer(param: string);
+            """;
+
+        var diagnostics = Utility.GetTypeCheckerDiagnostics(source);
+        Utility.AssertDiagnostic(
+            diagnostics,
+            InternalCodes.NonFunctionAttribute,
+            "Only functions may be used as attributes."
+        );
+
+        Assert.Single(diagnostics.Set, d => d.Code == InternalCodes.NonFunctionAttribute);
+    }
     #endregion Events
 }

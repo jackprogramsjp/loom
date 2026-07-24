@@ -1163,7 +1163,53 @@ public class ResolverTest
         Assert.False(symbol.IsIntrinsic);
         Assert.False(symbol.IsMutable);
     }
-    
+
+    [Fact]
+    public void Declares_EventPropertySymbol_WithAttribute()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                interface Foo {
+                    [luau_name("OnConsume")]
+                    event abc(x: number);
+                }
+                """
+            )
+        );
+
+        var interfaceDeclaration = Assert.IsType<InterfaceDeclaration>(model.Tree.Statements.Last());
+        Assert.NotNull(interfaceDeclaration.Body);
+
+        var symbol = model.GetDeclarationSymbol(interfaceDeclaration, SymbolKind.Interface);
+        var interfaceSymbol = Assert.IsType<InterfaceSymbol>(symbol);
+
+        var property = Assert.Single(interfaceSymbol.Properties);
+        Assert.Equal(SymbolKind.Event, property.Kind);
+        var attribute = Assert.Single(property.Attributes);
+        Assert.Equal("luau_name", attribute.Name);
+    }
+
+    [Fact]
+    public void Declares_EventSymbol_WithAttribute_HasNoEffect()
+    {
+        var model = Utility.AssertNoErrors(
+            Utility.GetSemanticModel(
+                """
+                [luau_name("OnConsume")]
+                event abc(x: number);
+                """
+            )
+        );
+
+        var eventDeclaration = Assert.IsType<EventDeclaration>(model.Tree.Statements.Last());
+        var symbol = model.GetDeclarationSymbol(eventDeclaration, SymbolKind.Event);
+        Assert.NotNull(symbol);
+        Assert.Equal(SymbolKind.Event, symbol.Kind);
+        Assert.IsNotType<PropertySymbol>(symbol);
+    }
+
+
     [Fact]
     public void Declares_TraitSymbol()
     {
