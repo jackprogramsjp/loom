@@ -56,7 +56,16 @@ public sealed record Diagnostic(LocationSpan Span, DiagnosticSeverity Severity, 
             : $"expected operand of type '{suggestion.OperandType}', not '{operand}'";
     }
 
-    public override string ToString()
+    public override string ToString() =>
+        Severity == DiagnosticSeverity.Debug
+            ? FormatCompact()
+            : FormatFrame();
+
+    private string FormatCompact() =>
+        $"{_severityStyle.PrimaryColor}{Colors.Bold}{_severityStyle.Label}{Colors.Reset} "
+        + $"{Colors.Dim}[{Span}]{Colors.Reset} {Colors.Gray}{Message}{Colors.Reset}";
+
+    private string FormatFrame()
     {
         var lines = new List<string> { FormatHeader(), FormatLocation(), Gutter };
         AppendSource(lines);
