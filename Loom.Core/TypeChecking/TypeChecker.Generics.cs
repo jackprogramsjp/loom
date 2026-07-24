@@ -165,7 +165,7 @@ public sealed partial class TypeChecker
                     type,
                     t => t switch
                     {
-                        _ when TrySubstituteTypeParameter(type, substitution, out var substituted2) => substituted2,
+                        _ when TrySubstituteTypeParameter(t, substitution, out var substituted2) => substituted2,
                         _ => SubstituteTypeParameters(failNode, t, substitution, cache)
                     }
                 );

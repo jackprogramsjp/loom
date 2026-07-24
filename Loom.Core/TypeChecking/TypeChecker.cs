@@ -354,71 +354,89 @@ public sealed partial class TypeChecker
             return BindType(invocation, Types.PrimitiveType.Never);
         }
 
-        var argumentList = invocation.Arguments.ArgumentList;
         if (type is Types.FunctionType functionType)
-        {
-            var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
-            if (functionType.TypeParameters.Count == 0)
-            {
-                var parameterTypes = functionType.ParameterTypes;
-                var argumentTypes = new List<Type>(argumentList.Count);
-                argumentTypes.AddRange(
-                    argumentList.Select((t, i) => i < parameterTypes.Count
-                        ? Check(t, parameterTypes[i])
-                        : Visit(t)
-                    )
-                );
-
-                return BindNonGenericInvocation(invocation, argumentTypes, functionType, declaration);
-            }
-
-            var expectedReturnType = GetContextualType(invocation);
-            if (invocation.TypeArguments != null)
-            {
-                var substitution = ResolveTypeArguments(invocation, functionType, [], expectedReturnType);
-                if (substitution == null)
-                    return BindType(invocation, Types.PrimitiveType.Never);
-
-                var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
-                var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
-                var argumentTypes = new List<Type>(argumentList.Count);
-                argumentTypes.AddRange(
-                    argumentList.Select((t, i) => i < substitutedParameterTypes.Count
-                        ? Check(t, substitutedParameterTypes[i])
-                        : Visit(t)
-                    )
-                );
-
-                CheckArity(invocation.Arguments, declaration?.Parameters, argumentTypes, substitutedParameterTypes);
-                return BindType(invocation, substitutedReturnType);
-            }
-            else
-            {
-                var argumentTypes = argumentList.ConvertAll(Visit);
-                var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
-                if (substitution == null)
-                    return BindType(invocation, Types.PrimitiveType.Never);
-
-                var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
-                var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
-                CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, substitutedParameterTypes, argumentList);
-
-                return BindType(invocation, substitutedReturnType);
-            }
-        }
+            return functionType.TypeParameters.Count == 0
+                ? CheckNonGenericInvocation(invocation, functionType)
+                : CheckGenericInvocation(invocation, functionType);
 
         if (IsEventType(invocation, type, strictlyConsumer: false, out var eventType))
-        {
-            var argumentTypes = argumentList.ConvertAll(Visit);
-            var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as EventDeclaration
-                ?? _semanticModel.GetPropertySymbol(invocation.Expression)?.Declaration as EventDeclaration;
-
-            CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, eventType.Arguments, argumentList);
-            return BindType(invocation, Types.PrimitiveType.Void);
-        }
+            return CheckEventInvocation(invocation, eventType);
 
         _diagnostics.Error(invocation, InternalCodes.InvalidInvocation, $"Cannot call value of type '{type}'.");
         return BindType(invocation, Types.PrimitiveType.Never);
+    }
+
+    private Type CheckNonGenericInvocation(Invocation invocation, Types.FunctionType functionType)
+    {
+        var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
+        var argumentList = invocation.Arguments.ArgumentList;
+        var argumentTypes = BuildArgumentTypes(argumentList, functionType.ParameterTypes);
+
+        return BindNonGenericInvocation(invocation, argumentTypes, functionType, declaration);
+    }
+
+    private Type CheckGenericInvocation(Invocation invocation, Types.FunctionType functionType)
+    {
+        var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as DeclareFunctionSignature;
+        var expectedReturnType = GetContextualType(invocation);
+
+        return invocation.TypeArguments != null
+            ? CheckExplicitGenericInvocation(invocation, functionType, declaration, expectedReturnType)
+            : CheckInferredGenericInvocation(invocation, functionType, declaration, expectedReturnType);
+    }
+
+    private Type CheckExplicitGenericInvocation(Invocation invocation, Types.FunctionType functionType, DeclareFunctionSignature? declaration, Type? expectedReturnType)
+    {
+        var substitution = ResolveTypeArguments(invocation, functionType, [], expectedReturnType);
+        if (substitution == null)
+            return BindType(invocation, Types.PrimitiveType.Never);
+
+        var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
+        var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
+        var argumentList = invocation.Arguments.ArgumentList;
+        var argumentTypes = BuildArgumentTypes(argumentList, substitutedParameterTypes);
+
+        CheckArity(invocation.Arguments, declaration?.Parameters, argumentTypes, substitutedParameterTypes);
+        return BindType(invocation, substitutedReturnType);
+    }
+
+    private Type CheckInferredGenericInvocation(Invocation invocation, Types.FunctionType functionType, DeclareFunctionSignature? declaration, Type? expectedReturnType)
+    {
+        var argumentList = invocation.Arguments.ArgumentList;
+        var argumentTypes = argumentList.ConvertAll(Visit);
+        var substitution = ResolveTypeArguments(invocation, functionType, argumentTypes, expectedReturnType);
+        if (substitution == null)
+            return BindType(invocation, Types.PrimitiveType.Never);
+
+        var substitutedParameterTypes = SubstituteTypeParameters(invocation.Arguments, functionType.ParameterTypes, substitution);
+        var substitutedReturnType = SubstituteTypeParameters(invocation, functionType.ReturnType, substitution);
+        CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, substitutedParameterTypes, argumentList);
+
+        return BindType(invocation, substitutedReturnType);
+    }
+
+    private Type CheckEventInvocation(Invocation invocation, InstantiatedType eventType)
+    {
+        var argumentList = invocation.Arguments.ArgumentList;
+        var argumentTypes = argumentList.ConvertAll(Visit);
+        var declaration = _semanticModel.GetSymbol(invocation.Expression)?.Declaration as EventDeclaration
+            ?? _semanticModel.GetPropertySymbol(invocation.Expression)?.Declaration as EventDeclaration;
+
+        CheckArguments(invocation.Arguments, declaration?.Parameters, argumentTypes, eventType.Arguments, argumentList);
+        return BindType(invocation, Types.PrimitiveType.Void);
+    }
+
+    private List<Type> BuildArgumentTypes(List<Expression> argumentList, List<Type> parameterTypes)
+    {
+        var argumentTypes = new List<Type>(argumentList.Count);
+        argumentTypes.AddRange(
+            argumentList.Select((t, i) => i < parameterTypes.Count
+                ? Check(t, parameterTypes[i])
+                : Visit(t)
+            )
+        );
+
+        return argumentTypes;
     }
 
     private void CheckArguments(Arguments arguments, Parameters? parameters, List<Type> argumentTypes, List<Type> parameterTypes, List<Expression> args)
@@ -508,6 +526,11 @@ public sealed partial class TypeChecker
 
         var targetType = Visit(assignmentOperator.Left);
         var valueType = Check(assignmentOperator.Right, targetType);
+        return CheckImmutableAssignmentTarget(assignmentOperator, valueType);
+    }
+
+    private Type CheckImmutableAssignmentTarget(AssignmentOperator assignmentOperator, Type valueType)
+    {
         if (assignmentOperator.Left is not (ElementAccess or PropertyAccess or QualifiedName))
             return BindType(assignmentOperator, valueType);
 
