@@ -15,7 +15,7 @@ public class CompilationUnitTest
     {
         var config = GetConfig();
         config.NoEmit = true;
-        
+
         var compilationUnit = new CompilationUnit(config);
         var result = compilationUnit.Compile();
         Utility.AssertNoErrors(result);
@@ -24,11 +24,11 @@ public class CompilationUnitTest
         var path = config.Files.OutputDirectory;
         Directory.Delete(path, true);
         Directory.CreateDirectory(path);
-        
+
         var luauFiles = Directory.EnumerateFiles(path);
         Assert.Empty(luauFiles);
     }
-    
+
     [Fact]
     public void Compiles_Project()
     {

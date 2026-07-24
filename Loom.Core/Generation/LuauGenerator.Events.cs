@@ -74,12 +74,13 @@ public sealed partial class LuauGenerator
         return new EventTarget(GetInstanceKey(left), propertySymbol);
     }
 
-    private object? GetInstanceKey(Expression left) => left switch
-    {
-        CorePropertyAccess { Expression: Identifier identifier } => _semanticModel.GetSymbol(identifier),
-        QualifiedName { Identifier: var identifier } => _semanticModel.GetSymbol(identifier),
-        _ => new object()
-    };
+    private object? GetInstanceKey(Expression left) =>
+        left switch
+        {
+            CorePropertyAccess { Expression: Identifier identifier } => _semanticModel.GetSymbol(identifier),
+            QualifiedName { Identifier: var identifier } => _semanticModel.GetSymbol(identifier),
+            _ => new object()
+        };
 
     private LuauExpression GenerateEventAssignment(AssignmentOperator assignmentOperator, EventTarget eventTarget)
     {

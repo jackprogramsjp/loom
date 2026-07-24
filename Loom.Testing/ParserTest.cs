@@ -141,9 +141,7 @@ public class ParserTest
     public void Expect_MissingParen_AtEof_InsertsZeroWidthToken()
     {
         var result = Utility.Parse("let x = foo(");
-        var expectDiagnostic = result.Diagnostics.Find(d =>
-            d.Code == InternalCodes.UnexpectedEof && d.Message == "Expected ')', got EOF."
-        );
+        var expectDiagnostic = result.Diagnostics.Find(d => d.Code == InternalCodes.UnexpectedEof && d.Message == "Expected ')', got EOF.");
         Assert.NotNull(expectDiagnostic);
 
         var declaration = Assert.IsType<VariableDeclaration>(Assert.Single(result.Tree.Statements));
@@ -209,7 +207,6 @@ public class ParserTest
     [Fact]
     public void Synchronize_JunkInsideBlock_PreservesFollowingDeclaration()
     {
-        // Use a real token ('+') bc'@' is dropped by the lexer and truncates the file.
         const string source = """
             fn f() {
             +
@@ -393,8 +390,6 @@ public class ParserTest
     [Fact]
     public void Parses_MutEvent_StillProducesMutEventError()
     {
-        // Baseline: 'mut' immediately before 'event' inside an interface body is invalid
-        // regardless of attributes, since 'event' members may not be mutable.
         const string plainSource = """
             interface X {
                 mut event abc;
@@ -410,11 +405,6 @@ public class ParserTest
 
         var plainDiagnostics = Utility.GetParserDiagnostics(plainSource);
         var attributedDiagnostics = Utility.GetParserDiagnostics(attributedSource);
-
-        // Both should degrade the same way (either both produce the same diagnostic, or
-        // both parse 'event' as a property/type name after 'mut' without any special
-        // attribute-related crash or diagnostic). The important invariant is that adding
-        // attributes doesn't change how 'mut event' is handled.
         Assert.Equal(plainDiagnostics.Set.Count, attributedDiagnostics.Set.Count);
     }
     #endregion Event Attributes

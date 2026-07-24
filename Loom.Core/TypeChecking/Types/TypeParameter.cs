@@ -12,9 +12,10 @@ public sealed class TypeParameter(string name, Type? constraint = null, Type? de
         hash.Add(Name);
         if (Constraint != null)
             hash.Add(Constraint.GetHashCode());
+
         if (DefaultType != null)
             hash.Add(DefaultType.GetHashCode());
-        
+
         return hash.ToHashCode();
     }
 

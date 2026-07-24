@@ -17,11 +17,6 @@ using TypeParameters = Loom.Core.Parsing.AST.TypeParameters;
 
 namespace Loom.Core.Generation;
 
-/// <summary>
-///     Lowers a Loom semantic tree into a Luau syntax tree.
-///     This class is split into partials by concern: statements, expressions,
-///     declarations, types, events, and interfaces each live in their own file.
-/// </summary>
 public sealed partial class LuauGenerator
     : Visitor<LuauNode>
 {
@@ -97,15 +92,12 @@ public sealed partial class LuauGenerator
 
     /// <summary>
     ///     Detects a placeholder '_' binding whose value is nothing more than the identifier
-    ///     a prereq statement in the same scope just declared, which happens when an expression
-    ///     (such as an event connection) proactively binds itself to a named variable while
-    ///     being generated as a bare statement. Emitting both would be redundant, so the
+    ///     a prereq statement in the same scope just declared. Emitting both would be redundant, so the
     ///     placeholder is elided in favor of the prereq statement that already exists.
     /// </summary>
     private static bool IsRedundantOrphanBinding(LuauStatement statement, LuauScope scope) =>
         statement is ConstVariable { Name: "_", Initializer: Identifier identifier }
-        && scope.PrereqStatements.Count > 0
-        && scope.PrereqStatements[^1] is Variable lastPrereq
+        && scope.PrereqStatements is [.., Variable lastPrereq]
         && lastPrereq.Name == identifier.Name;
 
     private static void ApplyPrereqAndPostreq(List<LuauStatement> result, LuauScope scope, LuauStatement luauStatement)

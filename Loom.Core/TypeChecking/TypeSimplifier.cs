@@ -36,8 +36,8 @@ public static class TypeSimplifier
     {
         var flattened = FlattenNestedUnions(union.Types.ConvertAll(Simplify));
         var collapsed = CollapseBooleanLiterals(flattened);
-        var distinct = RemoveDuplicates(collapsed, isUnion: true);
-        var absorbed = ApplyAbsorption(distinct, isUnion: true);
+        var distinct = RemoveDuplicates(collapsed, true);
+        var absorbed = ApplyAbsorption(distinct, true);
         if (!absorbed.Any(Type.IsNone))
             return absorbed.Count switch
             {
@@ -54,7 +54,7 @@ public static class TypeSimplifier
             _ => new OptionalType(SimplifyUnion(new UnionType(nonNullable)))
         };
     }
-    
+
     private static List<Type> CollapseBooleanLiterals(List<Type> types)
     {
         var hasTrue = types.Any(t => t is LiteralType { Value: true });
@@ -74,7 +74,7 @@ public static class TypeSimplifier
     private static Type SimplifyIntersection(IntersectionType intersection)
     {
         var flattened = FlattenNestedIntersections(intersection.Types.ConvertAll(Simplify));
-        var distinct = RemoveDuplicates(flattened, isUnion: false);
+        var distinct = RemoveDuplicates(flattened, false);
 
         if (distinct.Count == 0 || distinct.Any(Type.IsNever))
             return PrimitiveType.Never;
@@ -85,7 +85,7 @@ public static class TypeSimplifier
         if (distinct.Any(t => t is UnionType))
             return Simplify(DistributeIntersection(distinct));
 
-        var absorbed = ApplyAbsorption(distinct, isUnion: false);
+        var absorbed = ApplyAbsorption(distinct, false);
         if (absorbed.Count > 1 && absorbed.All(t => t is PrimitiveType))
             return PrimitiveType.Never;
 
@@ -101,7 +101,6 @@ public static class TypeSimplifier
         foreach (var objectType in objectTypes)
         {
             foreach (var property in objectType.Properties)
-            {
                 if (propertyDictionary.TryGetValue(property.Name, out var existing))
                 {
                     var valueType = Simplify(new IntersectionType([existing.ValueType, property.ValueType]));
@@ -112,7 +111,6 @@ public static class TypeSimplifier
                 {
                     propertyDictionary[property.Name] = property;
                 }
-            }
 
             if (objectType.Indexer == null) continue;
             if (mergedIndexer == null)

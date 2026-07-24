@@ -17,7 +17,9 @@ public class Symbol(Node declaration, SymbolKind kind, string name, bool isMutab
     public bool IsValueSymbol { get; } = IsValueKind(kind);
 
     internal static bool IsTypeKind(SymbolKind kind) => kind is SymbolKind.Interface or SymbolKind.Type or SymbolKind.EnumType or SymbolKind.Trait;
-    private static bool IsValueKind(SymbolKind kind) => kind is SymbolKind.Variable or SymbolKind.Property or SymbolKind.Event or SymbolKind.InjectedPropertyVariable or SymbolKind.Function or SymbolKind.Parameter;
+
+    private static bool IsValueKind(SymbolKind kind) =>
+        kind is SymbolKind.Variable or SymbolKind.Property or SymbolKind.Event or SymbolKind.InjectedPropertyVariable or SymbolKind.Function or SymbolKind.Parameter;
 
     public override string ToString() => $"Symbol({Kind}, {Name})";
 }

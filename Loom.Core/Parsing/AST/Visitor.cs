@@ -77,7 +77,9 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
     public virtual T VisitEnumMember(EnumMember enumMember) => VisitWithDefault(enumMember.EqualsValueClause);
 
     public virtual T VisitEventDeclaration(EventDeclaration eventDeclaration) =>
-        CombineResults([VisitWithDefault(eventDeclaration.TypeParameters), VisitWithDefault(eventDeclaration.Parameters), VisitWithDefault(eventDeclaration.Attributes)]);
+        CombineResults(
+            [VisitWithDefault(eventDeclaration.TypeParameters), VisitWithDefault(eventDeclaration.Parameters), VisitWithDefault(eventDeclaration.Attributes)]
+        );
 
     public virtual T VisitParameters(Parameters parameters) => VisitList(parameters.ParameterList);
 
@@ -169,10 +171,8 @@ public abstract class Visitor<T>(Func<Node?, T> defaultValue)
         T result = default!;
 
         foreach (var item in results)
-        {
             if (item != null)
                 result = item;
-        }
 
         return result;
     }

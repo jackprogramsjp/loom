@@ -1,5 +1,6 @@
 using Loom.Core.FlowAnalysis;
 using Loom.Core.Parsing.AST;
+using ArrayType = Loom.Core.TypeChecking.Types.ArrayType;
 using Type = Loom.Core.TypeChecking.Types.Type;
 
 namespace Loom.Core.TypeChecking;
@@ -10,7 +11,7 @@ public sealed partial class TypeChecker
 
     private Type Check(Expression expression, Type expected, FlowState state)
     {
-        if (expression is ArrayLiteral arrayLiteral && expected is Types.ArrayType arrayType)
+        if (expression is ArrayLiteral arrayLiteral && expected is ArrayType arrayType)
             return CheckArrayLiteral(arrayLiteral, arrayType, state);
 
         // Once more specific rules, add more, but for now it'll just be like that.
@@ -27,7 +28,7 @@ public sealed partial class TypeChecker
         return actual;
     }
 
-    private Types.ArrayType CheckArrayLiteral(ArrayLiteral arrayLiteral, Types.ArrayType expected, FlowState state)
+    private ArrayType CheckArrayLiteral(ArrayLiteral arrayLiteral, ArrayType expected, FlowState state)
     {
         foreach (var element in arrayLiteral.Expressions)
             Check(element, expected.ElementType, state);

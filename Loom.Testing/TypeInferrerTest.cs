@@ -20,27 +20,6 @@ using TypeParameterSubstitution = Dictionary<TypeParameter, Type>;
 [Collection("Assembly")]
 public class TypeInferrerTest
 {
-    private class MockGenericNamedDeclaration(string name)
-        : GenericNamedDeclaration(
-            [],
-            new Token(SyntaxKind.TypeKeyword, LocationSpan.Empty(), "type"),
-            new Token(SyntaxKind.Identifier, LocationSpan.Empty(), name),
-            new TypeParameters(
-                new Token(SyntaxKind.LArrow, LocationSpan.Empty(), "<"),
-                new Token(SyntaxKind.RArrow, LocationSpan.Empty(), ">"),
-                []
-            )
-        )
-    {
-        public override T Accept<T>(Visitor<T> visitor) => default!;
-    }
-
-    private sealed class ExpressionStub()
-        : Expression([], [])
-    {
-        public override T Accept<T>(Visitor<T> visitor) => default!;
-    }
-
     private static TypeParameter TypeParameter(string name, Type? constraint = null, Type? defaultType = null) => new(name, constraint, defaultType);
 
     private static GenericType GenericType(string name, List<TypeParameter> parameters, Type underlying) =>
@@ -211,7 +190,7 @@ public class TypeInferrerTest
     {
         var typeParameter = TypeParameter("T", defaultType: PrimitiveType.String);
         var objectType = ObjectType([ObjectProperty("Value", typeParameter)]);
-        var result = RunInterfaceInference("Container", [typeParameter], objectType, properties: [], indices: []);
+        var result = RunInterfaceInference("Container", [typeParameter], objectType, [], []);
         Assert.Equal(PrimitiveType.String, result[typeParameter]);
     }
 
@@ -224,8 +203,8 @@ public class TypeInferrerTest
             "Container",
             [typeParameter],
             objectType,
-            properties: [],
-            indices: [(PrimitiveType.Number, PrimitiveType.Bool)]
+            [],
+            [(PrimitiveType.Number, PrimitiveType.Bool)]
         );
 
         Assert.Equal(PrimitiveType.String, result[typeParameter]);
@@ -240,8 +219,8 @@ public class TypeInferrerTest
             "Pair",
             [typeParameter],
             objectType,
-            properties: [("First", PrimitiveType.Number), ("Second", PrimitiveType.String)],
-            indices: []
+            [("First", PrimitiveType.Number), ("Second", PrimitiveType.String)],
+            []
         );
 
         Assert.Equal(PrimitiveType.Number, result[typeParameter]);
@@ -257,8 +236,8 @@ public class TypeInferrerTest
             "Rec",
             [firstParameter, secondParameter],
             objectType,
-            properties: [("Age", PrimitiveType.Number)],
-            indices: []
+            [("Age", PrimitiveType.Number)],
+            []
         );
 
         Assert.Equal(PrimitiveType.Unknown, result[firstParameter]);
@@ -301,7 +280,7 @@ public class TypeInferrerTest
     public void InferFunctionTypeArguments_ContextualTypeWithConcreteReturnType_DoesNotThrow()
     {
         var function = FunctionType([], [PrimitiveType.Number], PrimitiveType.Bool);
-        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Number], contextualType: PrimitiveType.String);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Number], PrimitiveType.String);
         Assert.Empty(result);
     }
 
@@ -311,7 +290,7 @@ public class TypeInferrerTest
         var typeParameter = TypeParameter("T");
         var function = FunctionType([typeParameter], [typeParameter], typeParameter);
         var literalInt = new LiteralType(10);
-        var result = TypeInferrer.InferFunctionTypeArguments(function, [literalInt], contextualType: PrimitiveType.Number);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [literalInt], PrimitiveType.Number);
         Assert.True(result[typeParameter].Equals(PrimitiveType.Number) || result[typeParameter].Equals(literalInt.Widen()));
     }
 
@@ -349,8 +328,8 @@ public class TypeInferrerTest
             "Container",
             [typeParameter],
             objectType,
-            properties: [("Value", PrimitiveType.Number)],
-            indices: []
+            [("Value", PrimitiveType.Number)],
+            []
         );
 
         Assert.Equal(PrimitiveType.Number, result[typeParameter]);
@@ -365,8 +344,8 @@ public class TypeInferrerTest
             "Container",
             [typeParameter],
             objectType,
-            properties: [("Missing", PrimitiveType.Bool)],
-            indices: []
+            [("Missing", PrimitiveType.Bool)],
+            []
         );
 
         Assert.Equal(PrimitiveType.String, result[typeParameter]);
@@ -382,8 +361,8 @@ public class TypeInferrerTest
             "Dictionary",
             [keyParameter, valueParameter],
             objectType,
-            properties: [],
-            indices: [(PrimitiveType.String, PrimitiveType.Number)]
+            [],
+            [(PrimitiveType.String, PrimitiveType.Number)]
         );
 
         Assert.Equal(PrimitiveType.String, result[keyParameter]);
@@ -403,8 +382,8 @@ public class TypeInferrerTest
             "Record",
             [sharedParameter],
             objectType,
-            properties: [("Name", PrimitiveType.Number)],
-            indices: [(PrimitiveType.String, PrimitiveType.Number)]
+            [("Name", PrimitiveType.Number)],
+            [(PrimitiveType.String, PrimitiveType.Number)]
         );
 
         Assert.Equal(PrimitiveType.Number, result[sharedParameter]);
@@ -419,8 +398,8 @@ public class TypeInferrerTest
             "Pair",
             [typeParameter],
             objectType,
-            properties: [("First", PrimitiveType.Number), ("Second", new LiteralType(42))],
-            indices: []
+            [("First", PrimitiveType.Number), ("Second", new LiteralType(42))],
+            []
         );
 
         Assert.True(result[typeParameter].Equals(PrimitiveType.Number) || result[typeParameter].Equals(new LiteralType(42).Widen()));
@@ -451,7 +430,7 @@ public class TypeInferrerTest
     {
         var typeParameter = TypeParameter("T");
         var function = FunctionType([typeParameter], [typeParameter], typeParameter);
-        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Number], contextualType: PrimitiveType.String);
+        var result = TypeInferrer.InferFunctionTypeArguments(function, [PrimitiveType.Number], PrimitiveType.String);
         var inferred = result[typeParameter];
         Assert.True(inferred.Equals(PrimitiveType.Number.Widen()) || inferred.Equals(PrimitiveType.String.Widen()));
     }
@@ -469,9 +448,9 @@ public class TypeInferrerTest
     public void InferFunctionTypeArguments_ArrayParameter_InferElementType()
     {
         var elementParameter = TypeParameter("T");
-        var arrayType = new ArrayType(elementParameter, isMutable: false);
+        var arrayType = new ArrayType(elementParameter, false);
         var function = FunctionType([elementParameter], [arrayType], elementParameter);
-        var argumentArray = new ArrayType(PrimitiveType.Number, isMutable: false);
+        var argumentArray = new ArrayType(PrimitiveType.Number, false);
         var result = TypeInferrer.InferFunctionTypeArguments(function, [argumentArray]);
         Assert.Equal(PrimitiveType.Number, result[elementParameter]);
     }
@@ -551,5 +530,26 @@ public class TypeInferrerTest
         var function = FunctionType([elementParameter], [instantiatedParameter], elementParameter);
         var result = TypeInferrer.InferFunctionTypeArguments(function, [instantiatedArgument]);
         Assert.Equal(PrimitiveType.Number, result[elementParameter]);
+    }
+
+    private class MockGenericNamedDeclaration(string name)
+        : GenericNamedDeclaration(
+            [],
+            new Token(SyntaxKind.TypeKeyword, LocationSpan.Empty(), "type"),
+            new Token(SyntaxKind.Identifier, LocationSpan.Empty(), name),
+            new TypeParameters(
+                new Token(SyntaxKind.LArrow, LocationSpan.Empty(), "<"),
+                new Token(SyntaxKind.RArrow, LocationSpan.Empty(), ">"),
+                []
+            )
+        )
+    {
+        public override T Accept<T>(Visitor<T> visitor) => default!;
+    }
+
+    private sealed class ExpressionStub()
+        : Expression([], [])
+    {
+        public override T Accept<T>(Visitor<T> visitor) => default!;
     }
 }

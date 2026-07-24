@@ -108,11 +108,11 @@ public sealed partial class Parser
             return ParseIndexerDeclaration(mutKeyword, leftBracket);
 
         if (mutKeyword == null && Match(out var keyword, SyntaxKind.EventKeyword))
-            return ParseEventDeclaration(keyword, null);
-        
+            return ParseEventDeclaration(keyword);
+
         return ParsePropertyDeclaration(mutKeyword, null);
     }
-    
+
     private IndexerDeclaration? ParseIndexerDeclaration(Token? mutKeyword, Token leftBracket)
     {
         var indexType = ParseType();
@@ -328,7 +328,6 @@ public sealed partial class Parser
         rightParen = Expect(SyntaxKind.RParen);
 
         return new Parameters(leftParen, rightParen, parameters);
-
     }
 
     private Parameter ParseParameter()

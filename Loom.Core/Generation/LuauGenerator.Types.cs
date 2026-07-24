@@ -37,7 +37,7 @@ public sealed partial class LuauGenerator
         var constraint = symbol.Declaration is TypeParameter { ColonTypeClause: { } clause } ? Visit(clause) : null;
         return constraint != null ? new Luau.AST.IntersectionType([luauTypeName, constraint]) : luauTypeName;
     }
-    
+
     public override LuauNode VisitFunctionType(FunctionType functionType) =>
         new Luau.AST.FunctionType(
             MaybeVisit<Luau.AST.TypeParameters>(functionType.TypeParameters),

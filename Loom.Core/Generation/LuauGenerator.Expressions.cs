@@ -127,10 +127,7 @@ public sealed partial class LuauGenerator
 
     /// <summary>
     ///     Determines whether the given expression refers to a trait method that must be called
-    ///     with Luau's ':' method-call syntax, as opposed to a plain function value. Shared by
-    ///     invocation generation (to pick ':' vs '.') and event connection generation (to decide
-    ///     whether a function reference needs wrapping into a fresh closure, and therefore can't
-    ///     later be identified for disconnection).
+    ///     with Luau's ':' method-call syntax, as opposed to a plain function value.
     /// </summary>
     private bool IsMethodReference(Expression expression) =>
         _semanticModel.TryGetIntrinsicAttribute(expression, "luau_method", out _)

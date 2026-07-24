@@ -5,8 +5,8 @@ namespace Loom.Core.Lexing;
 
 public sealed class Lexer(SourceFile file)
 {
-    private static readonly Dictionary<string, SyntaxKind>.AlternateLookup<ReadOnlySpan<char>> _keywordLookup =
-        SyntaxFacts.KeywordMap.GetAlternateLookup<ReadOnlySpan<char>>();
+    private static readonly Dictionary<string, SyntaxKind>.AlternateLookup<ReadOnlySpan<char>> _keywordLookup = SyntaxFacts.KeywordMap
+        .GetAlternateLookup<ReadOnlySpan<char>>();
 
     private readonly DiagnosticBag _diagnostics = new();
     private readonly int _sourceLength = file.SourceText.Length;
@@ -44,7 +44,7 @@ public sealed class Lexer(SourceFile file)
                 yield return LexWhitespace(start);
                 continue;
             }
-            
+
             if (current is '"' or '\'')
             {
                 yield return LexString(start, current);
@@ -56,7 +56,7 @@ public sealed class Lexer(SourceFile file)
                 yield return LexNumber(start);
                 continue;
             }
-            
+
             if (OperatorTrie.TryMatch(file.SourceText, _position, out var operatorKind, out var operatorLength))
             {
                 Advance(operatorLength);
@@ -84,6 +84,7 @@ public sealed class Lexer(SourceFile file)
         {
             if (Current() == '\\' && !IsEof(1))
                 Advance();
+
             Advance();
         }
 
@@ -103,7 +104,6 @@ public sealed class Lexer(SourceFile file)
     private bool TryLexRegexRule(int start, out Token token)
     {
         if (LexerRules.RegexRulesByFirstCharacter.TryGetValue(Current(), out var candidates))
-        {
             foreach (var (rule, regex) in candidates)
             {
                 var match = regex.Match(file.SourceText, _position);
@@ -113,7 +113,6 @@ public sealed class Lexer(SourceFile file)
                 token = CreateToken(rule.Syntax, start);
                 return true;
             }
-        }
 
         token = null!;
         return false;
@@ -218,7 +217,7 @@ public sealed class Lexer(SourceFile file)
     {
         if (IsEof() || Current() != '.')
             return null;
-        
+
         if (!IsEof(1) && Peek(1) == '.')
             return null;
 

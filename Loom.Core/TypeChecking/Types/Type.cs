@@ -4,6 +4,8 @@ public abstract class Type : IEquatable<Type>
 {
     private static readonly HashSet<(Type, Type)> _equalsVisiting = [];
 
+    public abstract bool Equals(Type? other);
+
     protected static bool GuardedEquals(Type a, Type? b, Func<bool> compare)
     {
         if (ReferenceEquals(a, b)) return true;
@@ -26,7 +28,7 @@ public abstract class Type : IEquatable<Type>
     protected static int GetTypeListHash<T>(List<T> types)
         where T : Type =>
         types.Aggregate(0, (current, arg) => current ^ arg.GetHashCode());
-    
+
     protected static bool ListEquals<T>(List<T> list, List<T> otherList)
         where T : Type
     {
@@ -44,7 +46,6 @@ public abstract class Type : IEquatable<Type>
         return equals;
     }
 
-    public abstract bool Equals(Type? other);
     public abstract override string ToString();
     public override bool Equals(object? obj) => Equals(obj as Type);
     public override int GetHashCode() => 0;

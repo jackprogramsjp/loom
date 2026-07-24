@@ -33,9 +33,6 @@ public class TypeCheckerTest
     [Fact]
     public void Allows_UseAfterIf_WhenElseBranchTerminates()
     {
-        // The else branch returns, so after the if the only reachable path is the
-        // then branch which initializes 'x'. VisitIf must read the else branch's exit
-        // state after visiting it, otherwise 'x' is treated as maybe-uninitialized.
         var diagnostics = Utility.GetTypeCheckerDiagnostics(
             """
             fn test(c: bool): number {
@@ -49,6 +46,7 @@ public class TypeCheckerTest
             }
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -61,9 +59,24 @@ public class TypeCheckerTest
             consume(Result.ok);
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
-    
+
+    [Fact]
+    public void WarnsFor_NullCoalescing_NonOptional()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("1 ?? 2");
+        Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.RedundantCode);
+    }
+
+    [Fact]
+    public void WarnsFor_UseRangeLiteral()
+    {
+        var diagnostics = Utility.GetTypeCheckerDiagnostics("new Range { minimum: 69, maximum: 420 }");
+        Utility.AssertDiagnostic(diagnostics, InternalCodes.SimplifiableCode, "Use range literal.");
+    }
+
     #region ThrowsFor
     [Fact]
     public void ThrowsFor_Variable_DeclaredType_Mismatch()
@@ -877,7 +890,7 @@ public class TypeCheckerTest
             "Type '\"\"' is not assignable to type 'number'."
         );
     }
-    
+
     [Fact]
     public void ThrowsFor_UnconstrainedTypeParameter_Index()
     {
@@ -890,20 +903,6 @@ public class TypeCheckerTest
         );
     }
     #endregion ThrowsFor
-
-    [Fact]
-    public void WarnsFor_NullCoalescing_NonOptional()
-    {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("1 ?? 2");
-        Assert.Contains(diagnostics.Set, d => d.Code == InternalCodes.RedundantCode);
-    }
-
-    [Fact]
-    public void WarnsFor_UseRangeLiteral()
-    {
-        var diagnostics = Utility.GetTypeCheckerDiagnostics("new Range { minimum: 69, maximum: 420 }");
-        Utility.AssertDiagnostic(diagnostics, InternalCodes.SimplifiableCode, "Use range literal.");
-    }
 
     #region Checks
     [Theory]
@@ -919,11 +918,11 @@ public class TypeCheckerTest
             get_type("{{typeName}}");
             """
         );
-        
+
         var primitive = Assert.IsType<PrimitiveType>(type);
         Assert.Equal(expectedKind, primitive.Kind);
     }
-    
+
     [Fact]
     public void Checks_Generic_InterfaceIndex()
     {
@@ -931,15 +930,15 @@ public class TypeCheckerTest
             """
             interface Foo { bar: number, baz: string }
             fn idx<T: Foo, K: keyof(T)>(foo: T, k: K) -> foo[k];
-            
+
             let foo = new Foo { bar: 69, baz: "abc" };
             idx(foo, "bar")
             """
         );
-        
+
         Assert.Equal(PrimitiveType.Number, type);
     }
-    
+
     [Fact]
     public void Checks_Generic_ArrayIndex()
     {
@@ -949,10 +948,10 @@ public class TypeCheckerTest
             idx([1, 2, 3], 2);
             """
         );
-        
+
         Assert.Equal(PrimitiveType.Number, type);
     }
-    
+
     [Fact]
     public void Checks_TraitMethod_FromInterfaceInvocation()
     {
@@ -980,11 +979,12 @@ public class TypeCheckerTest
         Assert.Empty(functionType.ParameterTypes);
         Assert.Equal(PrimitiveType.Number, functionType.ReturnType);
     }
-    
+
     [Fact]
     public void Allows_InterfaceProperty_AlongsideTraitMethods() =>
         Utility.AssertNoErrors(
-            Utility.GetTypeCheckerDiagnostics("""
+            Utility.GetTypeCheckerDiagnostics(
+                """
                 trait Iterator {
                     fn next(): number
                 }
@@ -1002,12 +1002,15 @@ public class TypeCheckerTest
                 let foo = new Foo { value: 42 };
                 foo.value;
                 foo.next();
-                """));
+                """
+            )
+        );
 
     [Fact]
     public void Allows_Interface_WithMultipleTraits() =>
         Utility.AssertNoErrors(
-            Utility.GetTypeCheckerDiagnostics("""
+            Utility.GetTypeCheckerDiagnostics(
+                """
                 trait A {
                     fn a: number
                 }
@@ -1033,12 +1036,15 @@ public class TypeCheckerTest
                 let foo = new Foo {};
                 foo.a();
                 foo.b();
-                """));
+                """
+            )
+        );
 
     [Fact]
     public void Allows_GenericTraitImplementation() =>
         Utility.AssertNoErrors(
-            Utility.GetTypeCheckerDiagnostics("""
+            Utility.GetTypeCheckerDiagnostics(
+                """
                 trait Iterator<T> {
                     fn next(): T
                 }
@@ -1050,7 +1056,9 @@ public class TypeCheckerTest
                         return 1
                     }
                 }
-                """));
+                """
+            )
+        );
 
     [Fact]
     public void Allows_InterfaceInvocation_WithImplementedTraitMethod() =>
@@ -1981,7 +1989,7 @@ public class TypeCheckerTest
         Utility.AssertNoErrors(result);
 
         var optional = Assert.IsType<OptionalType>(result.ReturnType);
-        Assert.IsType<PrimitiveType>(optional.NonNullableType, exactMatch: false);
+        Assert.IsType<PrimitiveType>(optional.NonNullableType, false);
         Assert.Equal(typeString, optional.NonNullableType.ToString());
     }
 
@@ -3388,7 +3396,7 @@ public class TypeCheckerTest
         var iface = Assert.IsType<InterfaceType>(type);
         Assert.Equal("I", iface.Name);
     }
-    
+
     [Fact]
     public void Checks_InterfaceInvocation_NonGeneric_ShorthandPropertyInitializers()
     {
@@ -4530,7 +4538,6 @@ public class TypeCheckerTest
     #endregion Checks
 
     #region Bidirectional
-
     [Fact]
     public void Allows_EmptyArrayLiteral_AsAnnotatedFunctionArgument()
     {
@@ -4540,6 +4547,7 @@ public class TypeCheckerTest
             take([]);
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -4553,6 +4561,7 @@ public class TypeCheckerTest
             }
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -4565,6 +4574,7 @@ public class TypeCheckerTest
             let xs: number[] = identity([1, 2]);
             """
         );
+
         Utility.AssertNoErrors(diagnostics);
     }
 
@@ -4577,6 +4587,7 @@ public class TypeCheckerTest
             let xs: number[] = id([1, "no"]);
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4593,6 +4604,7 @@ public class TypeCheckerTest
             id::<number[]>([1, "no"]);
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4609,6 +4621,7 @@ public class TypeCheckerTest
             let p: Point = new Point { x: 1, y: "no" }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4625,6 +4638,7 @@ public class TypeCheckerTest
             new Box { items: [1, "no"] }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4641,6 +4655,7 @@ public class TypeCheckerTest
             new Box { ["k"]: [1, "no"] }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4668,6 +4683,7 @@ public class TypeCheckerTest
             take([1, "no"]);
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4685,6 +4701,7 @@ public class TypeCheckerTest
             }
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4712,6 +4729,7 @@ public class TypeCheckerTest
             xs = [1, "no"];
             """
         );
+
         Utility.AssertDiagnostic(
             diagnostics,
             InternalCodes.TypeMismatch,
@@ -4853,8 +4871,6 @@ public class TypeCheckerTest
             "Only functions may be used as attributes."
         );
 
-        // Guards against attribute expressions being visited (and thus diagnosed) more than
-        // once for the same interface event declaration.
         Assert.Single(diagnostics.Set, d => d.Code == InternalCodes.NonFunctionAttribute);
     }
 
