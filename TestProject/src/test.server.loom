@@ -1,7 +1,8 @@
-let world = get_service::<Workspace>();
-let part = world.find_first_child_of_class::<Part>();
+event score_changed(new_score: number);
 
-fn on_touch(hit: BasePart) -> print(hit);
+fn on_score(n: number): void {
+    print("score is now " + string(n))
+}
 
-if part != none
-    part.touched += on_touch;
+score_changed += on_score;
+score_changed(100);
